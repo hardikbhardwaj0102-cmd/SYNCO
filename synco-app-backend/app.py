@@ -6,7 +6,7 @@ from dotenv import load_dotenv
 
 from models import db
 from seed_games import seed_initial_games
-
+from search import search_bp
 from auth import auth_bp, init_oauth
 from profile import profile_bp
 from games import games_bp
@@ -167,6 +167,7 @@ app.register_blueprint(rewards_bp)
 app.register_blueprint(clubs_bp)
 app.register_blueprint(friends_bp)
 app.register_blueprint(notifications_bp)
+app.register_blueprint(search_bp)
 
 
 # =========================================================
