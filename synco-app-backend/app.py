@@ -42,6 +42,26 @@ app.secret_key = os.getenv(
 
 
 # =========================================================
+# SESSION COOKIE CONFIGURATION
+# =========================================================
+# Required for production authentication between
+# the Render frontend and Render backend.
+# =========================================================
+
+app.config["SESSION_COOKIE_HTTPONLY"] = True
+
+app.config["SESSION_COOKIE_SECURE"] = (
+    os.getenv("FLASK_ENV") == "production"
+)
+
+app.config["SESSION_COOKIE_SAMESITE"] = "None"
+
+app.config["PERMANENT_SESSION_LIFETIME"] = (
+    86400 * 30
+)
+
+
+# =========================================================
 # DATABASE
 # =========================================================
 
@@ -52,13 +72,15 @@ if not DATABASE_URL:
         "DATABASE_URL environment variable is not set."
     )
 
-# Railway/PostgreSQL compatibility
+
+# PostgreSQL compatibility
 if DATABASE_URL.startswith("postgres://"):
     DATABASE_URL = DATABASE_URL.replace(
         "postgres://",
         "postgresql://",
         1
     )
+
 
 app.config["SQLALCHEMY_DATABASE_URI"] = DATABASE_URL
 
@@ -71,17 +93,6 @@ app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
 
 app.config["MAX_CONTENT_LENGTH"] = (
     250 * 1024 * 1024
-)
-
-
-# =========================================================
-# SESSION COOKIE
-# =========================================================
-
-app.config["SESSION_COOKIE_SAMESITE"] = "Lax"
-
-app.config["SESSION_COOKIE_SECURE"] = (
-    os.getenv("FLASK_ENV") == "production"
 )
 
 
@@ -113,13 +124,18 @@ with app.app_context():
 
 
 # =========================================================
-# CORS
+# FRONTEND URL
 # =========================================================
 
 FRONTEND_URL = os.getenv(
     "FRONTEND_URL",
     "http://127.0.0.1:5173"
 )
+
+
+# =========================================================
+# CORS
+# =========================================================
 
 CORS(
     app,
