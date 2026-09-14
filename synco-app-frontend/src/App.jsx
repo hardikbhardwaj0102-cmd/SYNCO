@@ -31,6 +31,12 @@ import Reward from './pages/Reward';
 import AddFriends from './pages/AddFriends';
 import Notification from './pages/notification';
 
+// =========================================================
+// SEARCH
+// =========================================================
+
+import Search from './pages/Search';
+
 
 // =========================================================
 // DYNAMIC INDEX ROUTE
@@ -153,6 +159,17 @@ function App() {
                 ================================================= */}
 
             <Route element={<ProtectedRoute />}>
+
+
+              {/* -------------------------------------------------
+                  SEARCH
+                  ------------------------------------------------- */}
+
+              <Route
+                path="/search"
+                element={<Search />}
+              />
+
 
               {/* -------------------------------------------------
                   DASHBOARD
