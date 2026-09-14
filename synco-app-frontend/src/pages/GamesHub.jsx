@@ -1,9 +1,19 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+
 import '../styles/pages/GamesHub.css';
 import '../styles/components/GameLogos.css';
 
-const API_URL = import.meta.env.VITE_API_URL;
+const API_URL = 'https://synco-backend-vi7b.onrender.com';
+
+const GAME_LOGOS = {
+  bgmi: '/games/bgmi.png.png',
+  cr: '/games/clashroyale.png.png',
+  freefire: '/games/freefire.png.png',
+  pubg: '/games/pubg.png.png',
+  pubgm: '/games/pubgm.png.png',
+  val: '/games/valorant.png.png',
+};
 
 const GamesHub = () => {
   const navigate = useNavigate();
@@ -14,12 +24,6 @@ const GamesHub = () => {
 
   useEffect(() => {
     const fetchGames = async () => {
-      if (!API_URL) {
-        setError('API URL is not configured.');
-        setIsLoading(false);
-        return;
-      }
-
       try {
         const response = await fetch(
           `${API_URL}/api/games`,
@@ -34,7 +38,9 @@ const GamesHub = () => {
         );
 
         if (!response.ok) {
-          throw new Error('Unable to load games');
+          throw new Error(
+            `Unable to load games (${response.status})`
+          );
         }
 
         const data = await response.json();
@@ -86,23 +92,47 @@ const GamesHub = () => {
     <div className="games-hub-container">
       <div className="games-hub-grid">
 
-        {games.map((game) => (
-          <button
-            key={game.id}
-            onClick={() =>
-              navigate(`/games/${game.id}`)
-            }
-            className="game-card-btn"
-          >
-            <div className="game-card-header mb-4 flex h-24 w-full items-center justify-center">
-              <img
-                src={game.logoUrl}
-                alt={`${game.name} Logo`}
-                className={`game-logo h-full w-auto max-w-full drop-shadow-md ${game.id === 'cr' ? 'game-logo--clash-royale' : `game-logo--${game.id}`}`}
-              />
-            </div>
-          </button>
-        ))}
+        {games.map((game) => {
+          const logoUrl = GAME_LOGOS[game.id];
+
+          return (
+            <button
+              key={game.id}
+              type="button"
+              onClick={() =>
+                navigate(`/games/${game.id}`)
+              }
+              className="game-card-btn"
+            >
+              <div className="game-card-header mb-4 flex h-24 w-full items-center justify-center">
+
+                {logoUrl ? (
+                  <img
+                    src={logoUrl}
+                    alt={`${game.name} Logo`}
+                    className={`game-logo ${game.id === 'cr'
+                        ? 'game-logo--clash-royale'
+                        : `game-logo--${game.id}`
+                      }`}
+                    onError={(event) => {
+                      console.error(
+                        `Failed to load game logo: ${logoUrl}`
+                      );
+
+                      event.currentTarget.style.display =
+                        'none';
+                    }}
+                  />
+                ) : (
+                  <span className="text-sm font-medium text-gray-400">
+                    Logo unavailable
+                  </span>
+                )}
+
+              </div>
+            </button>
+          );
+        })}
 
       </div>
     </div>
