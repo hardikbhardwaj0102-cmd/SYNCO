@@ -68,12 +68,15 @@
 }
 
 .game-roster-item {
-  @apply flex flex-col items-center gap-2 cursor-pointer grayscale opacity-60 hover:grayscale-0 hover:opacity-100 transition-all duration-300 min-w-[120px];
+  @apply flex flex-col items-center gap-2 cursor-pointer grayscale opacity-60 hover:grayscale-0 hover:opacity-100 transition-all duration-300 min-w-[140px];
 }
 
-.game-roster-title {
-  @apply text-xl font-header font-bold uppercase tracking-widest text-black;
+.game-roster-logo {
+  @apply h-28 w-full max-w-[240px] object-contain;
+  margin-inline: auto;
+  object-position: center;
 }
+
 
 .game-roster-ign {
   @apply text-[10px] font-bold text-gray-500 uppercase tracking-widest;

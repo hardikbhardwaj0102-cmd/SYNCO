@@ -1,5 +1,7 @@
 import { useEffect, useState } from 'react';
 import '../../styles/components/GameCarousel.css';
+import '../../styles/components/GameLogos.css';
+
 
 const GameCarousel = ({ activeGameId, onSelectGame }) => {
   const [games, setGames] = useState([]);
@@ -19,9 +21,12 @@ const GameCarousel = ({ activeGameId, onSelectGame }) => {
           onClick={() => onSelectGame(game.id)}
           className={`carousel-btn ${activeGameId === game.id ? 'carousel-btn-active' : ''}`}
         >
-          {/* Mocking the game logos with stylized text for now */}
-          <div className="carousel-logo">
-            {game.name}
+          <div className="carousel-item flex h-28 w-full items-center justify-center">
+            <img
+              src={game.logoUrl || '/games/default-placeholder.png'}
+              alt={game.name}
+              className={`game-logo max-h-full max-w-[240px] transition-transform duration-300 hover:scale-105 ${game.id === 'cr' ? 'game-logo--clash-royale' : `game-logo--${game.id}`}`}
+            />
           </div>
           <span className="carousel-status carousel-status-active">
             AVAILABLE

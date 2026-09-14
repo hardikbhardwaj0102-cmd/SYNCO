@@ -18,6 +18,8 @@ import { useAuth } from '../context/AuthContext';
 import { useNavigate, useParams } from 'react-router-dom';
 import '../styles/pages/ProfileView.css';
 import VideoClip from '../components/VideoClip';
+import '../styles/components/GameLogos.css';
+
 
 const API_URL = import.meta.env.VITE_API_URL;
 
@@ -64,11 +66,16 @@ const ProfileView = () => {
   // Modal States
   const [isAddClipModalOpen, setIsAddClipModalOpen] = useState(false);
   const [isClipGameMenuOpen, setIsClipGameMenuOpen] = useState(false);
+  const roleTags = ['Duelist', 'IGL', 'Sniper', 'Support', 'Controller', 'Sentinel', 'Flex'];
+  const skillTags = ['Clutch', 'Ace', 'Entry', 'Skill/Mechanics', 'Teamplay', 'Strategy'];
 
   const [newClip, setNewClip] = useState({
     title: '',
     description: '',
     game: '',
+    gameId: '',
+    roleTag: '',
+    skillTag: '',
     file: null
   });
 
@@ -158,7 +165,6 @@ const ProfileView = () => {
 
     try {
       await navigator.clipboard.writeText(profileUrl);
-      alert('Profile link copied.');
     } catch {
       window.prompt(
         'Copy this profile link:',
@@ -266,7 +272,7 @@ const ProfileView = () => {
         );
       }
 
-      // -------------------------------------------------------
+       // -------------------------------------------------------
       // FORM DATA
       // -------------------------------------------------------
 
@@ -282,6 +288,11 @@ const ProfileView = () => {
         newClip.file
       );
 
+      formData.append('description', newClip.description);
+      formData.append('gameId', newClip.gameId);
+      formData.append('roleTag', newClip.roleTag);
+      formData.append('skillTag', newClip.skillTag);
+
       formData.append(
         'durationSeconds',
         metadata.duration
@@ -296,6 +307,8 @@ const ProfileView = () => {
         'height',
         metadata.height
       );
+
+
 
       // -------------------------------------------------------
       // UPLOAD
@@ -331,6 +344,7 @@ const ProfileView = () => {
       }));
 
       // -------------------------------------------------------
+      // -------------------------------------------------------
       // RESET MODAL
       // -------------------------------------------------------
 
@@ -340,9 +354,14 @@ const ProfileView = () => {
         title: '',
         description: '',
         game: '',
+        gameId: '',
+        roleTag: '',
+        skillTag: '',
         file: null
       });
+
     } catch (error) {
+
       console.error(
         'Error uploading clip:',
         error
@@ -352,10 +371,15 @@ const ProfileView = () => {
         error.message ||
         'Unable to upload clip.'
       );
+
     } finally {
+
       setIsUploadingClip(false);
+
     }
   };
+
+
 
   // =========================================================
   // LOADING
@@ -681,9 +705,12 @@ const ProfileView = () => {
               className="game-roster-item"
               key={game.id}
             >
-              <span className="game-roster-title">
-                {game.gameName}
-              </span>
+              <img
+                src={game.logoUrl || '/games/default-placeholder.png'}
+                alt={game.gameName}
+                className={`game-roster-logo game-logo game-logo--${game.gameName?.toLowerCase().replaceAll(' ', '')}`}
+              />
+
 
               <span className="game-roster-ign">
                 {game.ign}
@@ -923,6 +950,7 @@ const ProfileView = () => {
               className="space-y-4"
             >
 
+
               {/* Video Title */}
 
               <div>
@@ -947,6 +975,7 @@ const ProfileView = () => {
 
               </div>
 
+
               {/* Description */}
 
               <div>
@@ -969,6 +998,7 @@ const ProfileView = () => {
 
               </div>
 
+
               {/* =================================================
                   GAME SELECT
                   ================================================= */}
@@ -978,6 +1008,7 @@ const ProfileView = () => {
                 <label className="block text-[11px] font-bold uppercase tracking-wider text-black/50 mb-2">
                   Game
                 </label>
+
 
                 <button
                   type="button"
@@ -1004,8 +1035,11 @@ const ProfileView = () => {
 
                 </button>
 
+
                 {isClipGameMenuOpen && (
+
                   <>
+
                     {/* Invisible Overlay */}
 
                     <div
@@ -1015,11 +1049,13 @@ const ProfileView = () => {
                       }
                     />
 
+
                     {/* Game Menu */}
 
                     <div className="custom-game-select-menu !top-[70px]">
 
                       {gameCatalog.map((game) => (
+
                         <button
                           type="button"
                           key={game.id}
@@ -1028,14 +1064,18 @@ const ProfileView = () => {
                               : ''
                             }`}
                           onClick={() => {
+
                             setNewClip({
                               ...newClip,
-                              game: game.name
+                              game: game.name,
+                              gameId: game.id
                             });
 
                             setIsClipGameMenuOpen(false);
+
                           }}
                         >
+
 
                           {/* Game Icon */}
 
@@ -1047,6 +1087,7 @@ const ProfileView = () => {
                             />
                             */}
                           </div>
+
 
                           {/* Game Text */}
 
@@ -1064,13 +1105,51 @@ const ProfileView = () => {
                           </div>
 
                         </button>
+
                       ))}
 
                     </div>
+
                   </>
+
                 )}
 
               </div>
+
+              <div>
+                <label className="block text-[11px] font-bold uppercase tracking-wider text-black/50 mb-2">
+                  Role Tag
+                </label>
+                <select
+                  className="w-full h-12 px-4 rounded-xl border border-black/10 bg-white text-black text-sm outline-none focus:border-black focus:ring-1 focus:ring-black"
+                  value={newClip.roleTag}
+                  onChange={(e) => setNewClip({ ...newClip, roleTag: e.target.value })}
+                  required
+                >
+                  <option value="">Select a role</option>
+                  {roleTags.map((roleTag) => (
+                    <option key={roleTag} value={roleTag}>{roleTag}</option>
+                  ))}
+                </select>
+              </div>
+
+              <div>
+                <label className="block text-[11px] font-bold uppercase tracking-wider text-black/50 mb-2">
+                  Skill Tag
+                </label>
+                <select
+                  className="w-full h-12 px-4 rounded-xl border border-black/10 bg-white text-black text-sm outline-none focus:border-black focus:ring-1 focus:ring-black"
+                  value={newClip.skillTag}
+                  onChange={(e) => setNewClip({ ...newClip, skillTag: e.target.value })}
+                  required
+                >
+                  <option value="">Select a skill</option>
+                  {skillTags.map((skillTag) => (
+                    <option key={skillTag} value={skillTag}>{skillTag}</option>
+                  ))}
+                </select>
+              </div>
+
 
               {/* =================================================
                   VIDEO FILE
@@ -1097,13 +1176,17 @@ const ProfileView = () => {
 
               </div>
 
+
               {/* Upload Error */}
 
               {clipUploadError && (
+
                 <p className="clip-upload-error">
                   {clipUploadError}
                 </p>
+
               )}
+
 
               {/* Upload Button */}
 
@@ -1112,12 +1195,15 @@ const ProfileView = () => {
                 disabled={isUploadingClip}
                 className="w-full h-12 mt-4 rounded-xl bg-black text-white text-sm font-bold tracking-wide hover:bg-[#171717] transition-all disabled:opacity-50"
               >
+
                 {isUploadingClip
                   ? 'Checking and uploading...'
                   : 'Upload to Moments'}
+
               </button>
 
             </form>
+
 
           </div>
 
