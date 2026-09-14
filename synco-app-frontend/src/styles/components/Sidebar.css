@@ -6,17 +6,30 @@
 
 .sidebar-logo {
   @apply mb-8 font-header text-3xl font-bold tracking-tighter italic;
+
   font-family: 'Cyber Horizon', 'Oswald', sans-serif;
-  font-size: 1.6vw
+  font-size: 1.6vw;
 }
 
 .sidebar-nav {
-  @apply flex-1 w-full flex flex-col gap-6 overflow-y-visible items-center;
+  @apply flex-1 w-full flex flex-col gap-6 overflow-visible items-center;
 }
 
 .sidebar-item-wrapper {
   @apply w-full relative flex justify-center;
 }
+
+/* =========================================================
+   PLAY ACTIVE / HOVER AREA
+   ========================================================= */
+
+.play-dropdown-active {
+  z-index: 200;
+}
+
+/* =========================================================
+   SIDEBAR LINKS
+   ========================================================= */
 
 .sidebar-link {
   @apply flex flex-col items-center justify-center w-full gap-1 transition-colors;
@@ -33,6 +46,10 @@
 .sidebar-link-text {
   @apply text-[10px] uppercase font-bold text-center px-1;
 }
+
+/* =========================================================
+   BOTTOM SECTION
+   ========================================================= */
 
 .sidebar-bottom-section {
   @apply w-full flex flex-col items-center border-t border-synco-border mt-4 pt-4 gap-4;
@@ -53,6 +70,10 @@
 .sidebar-bottom-text {
   @apply text-[10px] uppercase font-bold;
 }
+
+/* =========================================================
+   PROFILE
+   ========================================================= */
 
 .sidebar-profile-link {
   @apply flex flex-col items-center gap-1 text-synco-textMuted hover:text-black mt-2;

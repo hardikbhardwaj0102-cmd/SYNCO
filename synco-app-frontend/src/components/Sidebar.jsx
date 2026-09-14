@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { NavLink } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
+
 import {
   Home,
   Trophy,
@@ -41,8 +42,9 @@ const Sidebar = () => {
           method: 'GET',
           credentials: 'include',
           headers: {
-            'Content-Type': 'application/json'
-          }
+            Accept: 'application/json'
+          },
+          cache: 'no-store'
         }
       );
 
@@ -75,7 +77,6 @@ const Sidebar = () => {
 
     fetchUnreadCount();
 
-    // Check for new notifications every 30 seconds
     const interval = setInterval(() => {
       fetchUnreadCount();
     }, 30000);
@@ -166,13 +167,20 @@ const Sidebar = () => {
 
           <div
             key={item.label}
-            className="sidebar-item-wrapper"
-            onMouseEnter={() =>
-              item.label === 'Play' && setIsPlayHovered(true)
-            }
-            onMouseLeave={() =>
-              item.label === 'Play' && setIsPlayHovered(false)
-            }
+            className={`sidebar-item-wrapper ${item.label === 'Play' && isPlayHovered
+                ? 'play-dropdown-active'
+                : ''
+              }`}
+            onMouseEnter={() => {
+              if (item.label === 'Play') {
+                setIsPlayHovered(true);
+              }
+            }}
+            onMouseLeave={() => {
+              if (item.label === 'Play') {
+                setIsPlayHovered(false);
+              }
+            }}
           >
 
             <NavLink
@@ -204,6 +212,8 @@ const Sidebar = () => {
             {item.label === 'Play' && (
               <GamesDropdown
                 isVisible={isPlayHovered}
+                onMouseEnter={() => setIsPlayHovered(true)}
+                onMouseLeave={() => setIsPlayHovered(false)}
               />
             )}
 
@@ -242,10 +252,6 @@ const Sidebar = () => {
                 strokeWidth={1.5}
               />
 
-              {/* =============================================
-                  UNREAD BADGE
-                  ============================================= */}
-
               {unreadCount > 0 && (
                 <span
                   style={{
@@ -266,7 +272,9 @@ const Sidebar = () => {
                     boxSizing: 'content-box'
                   }}
                 >
-                  {unreadCount > 99 ? '99+' : unreadCount}
+                  {unreadCount > 99
+                    ? '99+'
+                    : unreadCount}
                 </span>
               )}
 
@@ -322,7 +330,9 @@ const Sidebar = () => {
         <NavLink
           to={
             user?.username
-              ? `/profile/${encodeURIComponent(user.username)}`
+              ? `/profile/${encodeURIComponent(
+                user.username
+              )}`
               : '/settings'
           }
           className="sidebar-profile-link"
@@ -342,7 +352,9 @@ const Sidebar = () => {
           </div>
 
           <span className="sidebar-profile-name">
-            {user?.username || user?.name || 'Profile'}
+            {user?.username ||
+              user?.name ||
+              'Profile'}
           </span>
 
         </NavLink>
