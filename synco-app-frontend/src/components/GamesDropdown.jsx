@@ -49,20 +49,19 @@ const GamesDropdown = ({ isVisible }) => {
           >
             <div className="dropdown-text-container">
               <div className="flex h-20 w-full items-center justify-center">
-                <img
-                  src={
-                    game.logoUrl ||
-                    '/games/default-placeholder.png'
-                  }
-                  alt={game.name}
-                  className={`game-logo max-h-full max-w-[220px] ${game.id === 'cr'
-                      ? 'game-logo--clash-royale'
-                      : `game-logo--${game.id}`
-                    }`}
-                  onError={(event) => {
-                    event.currentTarget.style.display = 'none';
-                  }}
-                />
+                {game.logoUrl && (
+                  <img
+                    src={game.logoUrl}
+                    alt={game.name}
+                    className={`game-logo max-h-full max-w-[220px] ${game.id === 'cr'
+                        ? 'game-logo--clash-royale'
+                        : `game-logo--${game.id}`
+                      }`}
+                    onError={(event) => {
+                      event.currentTarget.style.display = 'none';
+                    }}
+                  />
+                )}
               </div>
             </div>
           </Link>
