@@ -15,7 +15,7 @@ import GameDetails from './pages/GameDetails';
 import CompetitionEngine from './pages/CompetitionEngine';
 import Leaderboards from './pages/Leaderboards';
 import ClubsHub from './pages/ClubsHub';
-import ClubProfile from './pages/ClubProfile';
+import ClubProfile from "./pages/clubprofile";
 import ProfileSettings from './pages/ProfileSettings';
 import ProfileView from './pages/ProfileView';
 import RegistrationGateway from './pages/RegistrationGateway';
