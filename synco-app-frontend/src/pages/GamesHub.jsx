@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import '../styles/pages/GamesHub.css';
+import '../styles/components/GameLogos.css';
 
 const API_URL = import.meta.env.VITE_API_URL;
 
@@ -93,9 +94,13 @@ const GamesHub = () => {
             }
             className="game-card-btn"
           >
-            <span className="game-card-text">
-              {game.name}
-            </span>
+             <div className="game-card-header mb-4 flex h-24 w-full items-center justify-center">
+              <img
+                src={game.logoUrl || '/games/default-placeholder.png'}
+                alt={`${game.name} Logo`}
+                className={`game-logo h-full w-auto max-w-full drop-shadow-md ${game.id === 'cr' ? 'game-logo--clash-royale' : `game-logo--${game.id}`}`}
+              />
+            </div>
           </button>
         ))}
 

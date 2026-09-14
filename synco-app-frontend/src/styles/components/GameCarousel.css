@@ -12,7 +12,12 @@
 }
 
 .carousel-btn {
-  @apply flex flex-col items-center min-w-[120px] gap-2 transition-all opacity-80 hover:opacity-100;
+  @apply flex flex-col items-center min-w-[180px] gap-2 transition-all opacity-80 hover:opacity-100;
+}
+
+.carousel-btn:has(.game-logo--val),
+.carousel-btn:has(.game-logo--valorant) {
+  min-width: 280px;
 }
 
 .carousel-btn-active {

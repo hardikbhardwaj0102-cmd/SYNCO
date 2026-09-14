@@ -8,8 +8,31 @@
   @apply grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4;
 }
 
+@media (min-width: 1024px) {
+  .games-hub-grid > .game-card-btn:nth-child(6):last-child {
+    grid-column: 3;
+  }
+}
+
+@media (min-width: 768px) and (max-width: 1023px) {
+  .games-hub-grid > .game-card-btn:nth-child(6):last-child {
+    grid-column: 2;
+  }
+}
+
+@media (max-width: 767px) {
+  .games-hub-grid > .game-card-btn:nth-child(6):last-child {
+    grid-column: 2;
+  }
+}
+
 .game-card-btn {
-  @apply bg-white rounded-2xl h-24 flex items-center justify-center p-4 hover:shadow-md hover:-translate-y-1 transition-all duration-200;
+  @apply bg-white rounded-2xl h-36 flex items-center justify-center p-4 hover:shadow-md hover:-translate-y-1 transition-all duration-200;
+}
+
+.game-card-btn:has(.game-logo--val),
+.game-card-btn:has(.game-logo--valorant) {
+  min-width: 280px;
 }
 
 .game-card-text {

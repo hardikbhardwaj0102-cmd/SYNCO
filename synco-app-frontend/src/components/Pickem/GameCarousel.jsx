@@ -1,5 +1,7 @@
 import { useEffect, useState } from 'react';
 import '../../styles/components/GameCarousel.css';
+import '../../styles/components/GameLogos.css';
+
 
 const API_URL = 'https://synco-backend-vi7b.onrender.com';
 
@@ -41,8 +43,17 @@ const GameCarousel = ({ activeGameId, onSelectGame }) => {
               : ''
             }`}
         >
+<<<<<<< HEAD
           <div className="carousel-logo">
             {game.name}
+=======
+          <div className="carousel-item flex h-28 w-full items-center justify-center">
+            <img
+              src={game.logoUrl || '/games/default-placeholder.png'}
+              alt={game.name}
+              className={`game-logo max-h-full max-w-[240px] transition-transform duration-300 hover:scale-105 ${game.id === 'cr' ? 'game-logo--clash-royale' : `game-logo--${game.id}`}`}
+            />
+>>>>>>> 0b9287a51c09b21648bbd5423c4d0f061afe57b8
           </div>
 
           <span className="carousel-status carousel-status-active">

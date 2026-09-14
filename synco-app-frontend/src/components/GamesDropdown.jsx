@@ -1,125 +1,50 @@
 import { useNavigate } from 'react-router-dom';
-import {
-  Gamepad2,
-  Crosshair,
-  Swords,
-  Trophy,
-  Target,
-  Zap,
-  Shield
-} from 'lucide-react';
-
+import { useEffect, useState } from 'react';
+import { Link } from 'react-router-dom';
 import '../styles/components/GamesDropdown.css';
+import '../styles/components/GameLogos.css';
 
-const GamesDropdown = ({
-  isVisible,
-  onMouseEnter,
-  onMouseLeave
-}) => {
-  const navigate = useNavigate();
 
-  const games = [
-    {
-      id: 'bgmi',
-      name: 'BGMI',
-      icon: Target
-    },
-    {
-      id: 'pubgm',
-      name: 'PUBG MOBILE',
-      icon: Crosshair
-    },
-    {
-      id: 'cs2',
-      name: 'COUNTER-STRIKE 2',
-      icon: Crosshair
-    },
-    {
-      id: 'valorant',
-      name: 'VALORANT',
-      icon: Zap
-    },
-    {
-      id: 'freefire',
-      name: 'FREE FIRE',
-      icon: Swords
-    },
-    {
-      id: 'pubg',
-      name: 'PUBG',
-      icon: Shield
-    },
-    {
-      id: 'cr',
-      name: 'CLASH ROYALE',
-      icon: Trophy
-    }
-  ];
+const GamesDropdown = ({ isVisible }) => {
+  const [games, setGames] = useState([]);
 
-  if (!isVisible) {
-    return null;
-  }
+  useEffect(() => {
+    if (!isVisible || games.length) return;
+    fetch('/api/games')
+      .then((response) => response.json())
+      .then((data) => setGames(data.games || []))
+      .catch((error) => console.error('Games menu load failed:', error));
+  }, [isVisible, games.length]);
 
-  const handleGameClick = (gameId) => {
-    navigate(`/games/${gameId}`);
-  };
+  if (!isVisible) return null;
 
-  return (
-    <div
-      className="dropdown-container"
-      onMouseEnter={onMouseEnter}
-      onMouseLeave={onMouseLeave}
-    >
-
+ return (
+    <div className="dropdown-container">
       <div className="dropdown-grid">
-
-        {games.map((game) => {
-          const Icon = game.icon;
-
-          return (
-            <button
-              key={game.id}
-              type="button"
-              className="dropdown-item group"
-              onClick={() => handleGameClick(game.id)}
-            >
-
-              <div className="dropdown-icon-box">
-
-                <Icon
-                  size={22}
-                  strokeWidth={1.7}
-                  className="dropdown-icon-text"
+        {games.map((game) => (
+          <Link
+            key={game.id}
+            to={`/games/${game.id}`}
+            className="dropdown-item"
+          >
+            <div className="dropdown-text-container">
+              <div className="flex h-20 w-full items-center justify-center">
+                <img
+                  src={game.logoUrl || '/games/default-placeholder.png'}
+                  alt={game.name}
+                  className={`game-logo max-h-full max-w-[220px] ${game.id === 'cr' ? 'game-logo--clash-royale' : `game-logo--${game.id}`}`}
+                  onError={(event) => {
+                    event.currentTarget.style.display = 'none';
+                  }}
                 />
-
               </div>
-
-              <div className="dropdown-text-container">
-
-                <span className="dropdown-title">
-                  {game.name}
-                </span>
-
-                <span className="dropdown-dates">
-                  EXPLORE GAME
-                </span>
-
-              </div>
-
-              <Gamepad2
-                size={18}
-                strokeWidth={1.5}
-                className="ml-3 flex-shrink-0"
-              />
-
-            </button>
-          );
-        })}
-
+            </div>
+          </Link>
+        ))}
       </div>
-
     </div>
   );
 };
+
 
 export default GamesDropdown;

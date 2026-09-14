@@ -1,0 +1,57 @@
+/* Shared game logo defaults */
+.game-logo {
+  display: block;
+  align-self: center;
+  margin-inline: auto;
+  object-fit: contain;
+  object-position: center;
+  filter: none;
+}
+
+/* Edit each width independently as the logo assets are updated. */
+.game-logo--freefire,
+.game-logo--pubg,
+.game-logo--cr,
+.game-logo--clash-royale,
+.game-logo--clashroyale,
+.game-logo--pubgm,
+.game-logo--bgmi,
+.game-logo--val,
+.game-logo--valorant {
+  height: auto !important;
+  max-width: none !important;
+  max-height: none !important;
+}
+
+.game-logo--freefire {
+  filter: none;
+  width: 200px !important;
+}
+
+.game-logo--pubg {
+  filter: none;
+  width: 200px !important;
+}
+
+.game-logo--cr,
+.game-logo--clash-royale,
+.game-logo--clashroyale {
+  filter: none;
+  width: 200px !important;
+}
+
+.game-logo--pubgm {
+  filter: none;
+  width: 200px !important;
+}
+
+.game-logo--bgmi {
+  filter: none;
+  width: 200px !important;
+}
+
+.game-logo--val,
+.game-logo--valorant {
+  filter: none;
+  width: 180px !important;
+}
