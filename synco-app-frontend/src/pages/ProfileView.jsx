@@ -272,7 +272,7 @@ const ProfileView = () => {
         );
       }
 
-       // -------------------------------------------------------
+      // -------------------------------------------------------
       // FORM DATA
       // -------------------------------------------------------
 
@@ -706,7 +706,7 @@ const ProfileView = () => {
               key={game.id}
             >
               <img
-                src={game.logoUrl || '/games/default-placeholder.png'}
+                src={game.logoUrl}
                 alt={game.gameName}
                 className={`game-roster-logo game-logo game-logo--${game.gameName?.toLowerCase().replaceAll(' ', '')}`}
               />
@@ -735,8 +735,8 @@ const ProfileView = () => {
 
         <button
           className={`profile-tab ${activeTab === 'MOMENTS'
-              ? 'active'
-              : ''
+            ? 'active'
+            : ''
             }`}
           onClick={() => setActiveTab('MOMENTS')}
         >
@@ -748,8 +748,8 @@ const ProfileView = () => {
 
         <button
           className={`profile-tab ${activeTab === 'MATCHES'
-              ? 'active'
-              : ''
+            ? 'active'
+            : ''
             }`}
           onClick={() => setActiveTab('MATCHES')}
         >
@@ -855,8 +855,8 @@ const ProfileView = () => {
 
               <button
                 className={`match-filter-btn ${matchFilter === 'ONGOING'
-                    ? 'active'
-                    : 'inactive'
+                  ? 'active'
+                  : 'inactive'
                   }`}
                 onClick={() =>
                   setMatchFilter('ONGOING')
@@ -867,8 +867,8 @@ const ProfileView = () => {
 
               <button
                 className={`match-filter-btn ${matchFilter === 'COMPLETED'
-                    ? 'active'
-                    : 'inactive'
+                  ? 'active'
+                  : 'inactive'
                   }`}
                 onClick={() =>
                   setMatchFilter('COMPLETED')
@@ -1028,8 +1028,8 @@ const ProfileView = () => {
                   <ChevronDown
                     size={16}
                     className={`text-gray-400 transition-transform duration-200 flex-shrink-0 ${isClipGameMenuOpen
-                        ? 'rotate-180'
-                        : ''
+                      ? 'rotate-180'
+                      : ''
                       }`}
                   />
 
@@ -1060,8 +1060,8 @@ const ProfileView = () => {
                           type="button"
                           key={game.id}
                           className={`custom-game-option ${newClip.game === game.name
-                              ? 'active'
-                              : ''
+                            ? 'active'
+                            : ''
                             }`}
                           onClick={() => {
 

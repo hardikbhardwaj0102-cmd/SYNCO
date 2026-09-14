@@ -94,9 +94,9 @@ const GamesHub = () => {
             }
             className="game-card-btn"
           >
-             <div className="game-card-header mb-4 flex h-24 w-full items-center justify-center">
+            <div className="game-card-header mb-4 flex h-24 w-full items-center justify-center">
               <img
-                src={game.logoUrl || '/games/default-placeholder.png'}
+                src={game.logoUrl}
                 alt={`${game.name} Logo`}
                 className={`game-logo h-full w-auto max-w-full drop-shadow-md ${game.id === 'cr' ? 'game-logo--clash-royale' : `game-logo--${game.id}`}`}
               />
