@@ -16,27 +16,12 @@ db = SQLAlchemy()
 # SYNCO UID GENERATOR
 # =========================================================
 
-# Uppercase letters + numbers
-#
-# Excluded:
-# O -> can look like 0
-# 0 -> can look like O
-# I -> can look like 1
-# 1 -> can look like I
-#
-# Every UID will contain exactly 10 characters.
-
 SYNCO_UID_CHARS = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789"
 
 
 def generate_synco_uid():
     """
     Generate a unique 10-character SYNCO UID.
-
-    Example:
-        A7K29X4P9Q
-        B8M52Z7KQC
-        X4R9T6P2WA
     """
 
     while True:
@@ -46,7 +31,6 @@ def generate_synco_uid():
             for _ in range(10)
         )
 
-        # Check uniqueness
         if not User.query.filter_by(uid=uid).first():
             return uid
 
@@ -267,7 +251,6 @@ class User(db.Model):
         return {
             "id": self.id,
 
-            # SYNCO public identity
             "uid": self.uid,
 
             "name": self.name,
@@ -304,7 +287,6 @@ class User(db.Model):
 @event.listens_for(User, "before_insert")
 def assign_synco_uid(mapper, connection, target):
 
-    # Only generate if UID was not manually provided.
     if not target.uid:
 
         target.uid = generate_synco_uid()
@@ -476,25 +458,6 @@ class Game(db.Model):
 
 # =========================================================
 # PLAYER GAME STATS
-# =========================================================
-#
-# Competitive SYNCO Points are stored separately from XP.
-#
-# XP:
-#   Rewards / progression
-#
-# SYNCO Points:
-#   Competitive ranking
-#
-# One player can have different SYNCO Points for every game.
-#
-# Example:
-#
-# Hardik
-#   BGMI       -> 1500
-#   VALORANT   -> 820
-#   CS2        -> 430
-#
 # =========================================================
 
 class PlayerGameStats(db.Model):
@@ -1408,6 +1371,31 @@ class Club(db.Model):
         default=0
     )
 
+    # =====================================================
+    # COMPATIBILITY ALIAS
+    # =====================================================
+    #
+    # The leaderboard endpoint uses:
+    #
+    #     club.level
+    #
+    # Your actual database field is:
+    #
+    #     club_level
+    #
+    # This property lets both work without creating
+    # another database column.
+    #
+    # =====================================================
+
+    @property
+    def level(self):
+        return self.club_level
+
+    @level.setter
+    def level(self, value):
+        self.club_level = value
+
     # -----------------------------------------------------
     # Status
     # -----------------------------------------------------
@@ -1504,6 +1492,7 @@ class Club(db.Model):
             "avatar": self.avatar,
             "region": self.region,
             "clubLevel": self.club_level,
+            "level": self.club_level,
             "syncoPoints": self.synco_points,
 
             "isActive": self.is_active,
@@ -1739,10 +1728,6 @@ class Notification(db.Model):
         primary_key=True
     )
 
-    # -----------------------------------------------------
-    # Receiver
-    # -----------------------------------------------------
-
     user_id = db.Column(
         db.Integer,
         db.ForeignKey("users.id"),
@@ -1750,19 +1735,11 @@ class Notification(db.Model):
         index=True
     )
 
-    # -----------------------------------------------------
-    # Notification type
-    # -----------------------------------------------------
-
     notification_type = db.Column(
         db.String(50),
         nullable=False,
         index=True
     )
-
-    # -----------------------------------------------------
-    # Content
-    # -----------------------------------------------------
 
     title = db.Column(
         db.String(200),
@@ -1773,10 +1750,6 @@ class Notification(db.Model):
         db.String(500),
         nullable=False
     )
-
-    # -----------------------------------------------------
-    # Optional related object
-    # -----------------------------------------------------
 
     reference_type = db.Column(
         db.String(50),
@@ -1789,19 +1762,11 @@ class Notification(db.Model):
         index=True
     )
 
-    # -----------------------------------------------------
-    # Extra data
-    # -----------------------------------------------------
-
     data = db.Column(
         db.JSON,
         nullable=False,
         default=dict
     )
-
-    # -----------------------------------------------------
-    # Read state
-    # -----------------------------------------------------
 
     is_read = db.Column(
         db.Boolean,
@@ -1810,20 +1775,12 @@ class Notification(db.Model):
         index=True
     )
 
-    # -----------------------------------------------------
-    # Timestamp
-    # -----------------------------------------------------
-
     created_at = db.Column(
         db.DateTime,
         default=datetime.utcnow,
         nullable=False,
         index=True
     )
-
-    # -----------------------------------------------------
-    # Relationship
-    # -----------------------------------------------------
 
     user = db.relationship(
         "User",
@@ -1833,10 +1790,6 @@ class Notification(db.Model):
             cascade="all, delete-orphan"
         )
     )
-
-    # -----------------------------------------------------
-    # Serialization
-    # -----------------------------------------------------
 
     def to_dict(self):
 
@@ -1878,20 +1831,12 @@ class FriendRequest(db.Model):
         primary_key=True
     )
 
-    # -----------------------------------------------------
-    # Sender
-    # -----------------------------------------------------
-
     sender_id = db.Column(
         db.Integer,
         db.ForeignKey("users.id"),
         nullable=False,
         index=True
     )
-
-    # -----------------------------------------------------
-    # Receiver
-    # -----------------------------------------------------
 
     receiver_id = db.Column(
         db.Integer,
@@ -1900,20 +1845,12 @@ class FriendRequest(db.Model):
         index=True
     )
 
-    # -----------------------------------------------------
-    # Status
-    # -----------------------------------------------------
-
     status = db.Column(
         db.String(20),
         nullable=False,
         default="PENDING",
         index=True
     )
-
-    # -----------------------------------------------------
-    # Timestamps
-    # -----------------------------------------------------
 
     created_at = db.Column(
         db.DateTime,
@@ -1925,10 +1862,6 @@ class FriendRequest(db.Model):
         db.DateTime,
         nullable=True
     )
-
-    # -----------------------------------------------------
-    # Relationships
-    # -----------------------------------------------------
 
     sender = db.relationship(
         "User",
@@ -1948,10 +1881,6 @@ class FriendRequest(db.Model):
         )
     )
 
-    # -----------------------------------------------------
-    # Constraints
-    # -----------------------------------------------------
-
     __table_args__ = (
         db.UniqueConstraint(
             "sender_id",
@@ -1960,10 +1889,6 @@ class FriendRequest(db.Model):
             name="unique_friend_request_status"
         ),
     )
-
-    # -----------------------------------------------------
-    # Serialization
-    # -----------------------------------------------------
 
     def to_dict(self):
 
