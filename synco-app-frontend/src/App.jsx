@@ -35,7 +35,7 @@ import Notification from './pages/notification';
 // SEARCH
 // =========================================================
 
-import Search from './pages/Search';
+import Search from './components/Search';
 
 
 // =========================================================
