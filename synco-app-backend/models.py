@@ -574,6 +574,10 @@ class ProfileClip(db.Model):
         primary_key=True
     )
 
+    # -----------------------------------------------------
+    # OWNER
+    # -----------------------------------------------------
+
     user_id = db.Column(
         db.Integer,
         db.ForeignKey("users.id"),
@@ -581,37 +585,86 @@ class ProfileClip(db.Model):
         index=True
     )
 
+    # -----------------------------------------------------
+    # BASIC INFORMATION
+    # -----------------------------------------------------
+
     title = db.Column(
         db.String(160),
         nullable=False
     )
 
+    # -----------------------------------------------------
+    # SUPABASE STORAGE PATH
+    # -----------------------------------------------------
+    #
+    # Example:
+    #
+    # 12/550e8400-e29b-41d4-a716-446655440000.mp4
+    #
+    # This stores ONLY the Supabase object path.
+    # The actual video file is stored in Supabase Storage.
+    #
+    # -----------------------------------------------------
+
     filename = db.Column(
-        db.String(255),
+        db.String(500),
         nullable=False,
-        unique=True
+        unique=True,
+        index=True
     )
+
+    # -----------------------------------------------------
+    # FILE INFORMATION
+    # -----------------------------------------------------
+
+    file_size = db.Column(
+        db.BigInteger,
+        nullable=False,
+        default=0
+    )
+
+    mime_type = db.Column(
+        db.String(100),
+        nullable=False,
+        default="video/mp4"
+    )
+
+    # -----------------------------------------------------
+    # VIDEO METADATA
+    # -----------------------------------------------------
 
     duration_seconds = db.Column(
         db.Float,
-        nullable=False
+        nullable=False,
+        default=0
     )
 
     width = db.Column(
         db.Integer,
-        nullable=False
+        nullable=False,
+        default=0
     )
 
     height = db.Column(
         db.Integer,
-        nullable=False
+        nullable=False,
+        default=0
     )
+
+    # -----------------------------------------------------
+    # CREATED AT
+    # -----------------------------------------------------
 
     created_at = db.Column(
         db.DateTime,
         default=datetime.utcnow,
         nullable=False
     )
+
+    # -----------------------------------------------------
+    # RELATIONSHIPS
+    # -----------------------------------------------------
 
     likes = db.relationship(
         "ProfileClipLike",
@@ -625,17 +678,46 @@ class ProfileClip(db.Model):
         lazy="select"
     )
 
+    # -----------------------------------------------------
+    # SERIALIZATION
+    # -----------------------------------------------------
+
     def to_dict(self, media_url):
 
         return {
             "id": self.id,
+
             "title": self.title,
+
+            # Signed/public Supabase URL
             "url": media_url,
+
+            # Supabase storage path
+            "filename": self.filename,
+
+            # File information
+            "fileSize": self.file_size,
+
+            "mimeType": self.mime_type,
+
+            # Video metadata
             "durationSeconds": self.duration_seconds,
+
             "width": self.width,
+
             "height": self.height,
+
+            # Engagement
             "likes": len(self.likes),
+
             "comments": len(self.comments),
+
+            # Timestamp
+            "createdAt": (
+                self.created_at.isoformat()
+                if self.created_at
+                else None
+            ),
         }
 
 
@@ -719,21 +801,36 @@ class ProfileClipComment(db.Model):
         nullable=False
     )
 
+    # -----------------------------------------------------
+    # USER RELATIONSHIP
+    # -----------------------------------------------------
+
     user = db.relationship(
         "User",
         lazy="joined"
     )
 
+    # -----------------------------------------------------
+    # SERIALIZATION
+    # -----------------------------------------------------
+
     def to_dict(self):
 
         return {
             "id": self.id,
+
             "content": self.content,
+
             "author": (
                 self.user.username
                 or self.user.name
             ),
-            "avatarUrl": self.user.avatar or "",
+
+            "avatarUrl": (
+                self.user.avatar
+                or ""
+            ),
+
             "createdAt": (
                 self.created_at.isoformat()
                 if self.created_at
