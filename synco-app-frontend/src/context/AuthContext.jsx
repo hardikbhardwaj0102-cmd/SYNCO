@@ -1,4 +1,10 @@
-import { createContext, useContext, useEffect, useState } from 'react';
+import {
+  createContext,
+  useContext,
+  useEffect,
+  useState,
+  useCallback,
+} from 'react';
 
 const AuthContext = createContext(null);
 
@@ -8,23 +14,72 @@ export const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
 
-  const checkAuth = async () => {
-    try {
-      const response = await fetch(`${API_URL}/api/auth/me`, {
-        method: 'GET',
-        credentials: 'include',
-      });
+  // =========================================================
+  // CHECK AUTHENTICATION
+  // =========================================================
 
-      if (!response.ok) {
+  const checkAuth = useCallback(async () => {
+    if (!API_URL) {
+      console.error(
+        'VITE_API_URL is not configured.'
+      );
+
+      setUser(null);
+      return false;
+    }
+
+    try {
+      const response = await fetch(
+        `${API_URL}/api/auth/me`,
+        {
+          method: 'GET',
+          credentials: 'include',
+          headers: {
+            Accept: 'application/json',
+          },
+          cache: 'no-store',
+        }
+      );
+
+      // -----------------------------------------------------
+      // NOT AUTHENTICATED
+      // -----------------------------------------------------
+
+      if (response.status === 401) {
         setUser(null);
         return false;
       }
 
+      // -----------------------------------------------------
+      // OTHER SERVER ERROR
+      // -----------------------------------------------------
+
+      if (!response.ok) {
+        console.error(
+          'Auth check returned:',
+          response.status
+        );
+
+        setUser(null);
+        return false;
+      }
+
+      // -----------------------------------------------------
+      // RESPONSE
+      // -----------------------------------------------------
+
       const data = await response.json();
 
-      console.log('Auth response:', data);
+      console.log(
+        'SYNCO authentication response:',
+        data
+      );
 
-      if (data.authenticated) {
+      if (
+        data &&
+        data.authenticated === true &&
+        data.user
+      ) {
         setUser(data.user);
         return true;
       }
@@ -33,49 +88,89 @@ export const AuthProvider = ({ children }) => {
       return false;
 
     } catch (error) {
-      console.error('Auth check failed:', error);
+      console.error(
+        'SYNCO authentication check failed:',
+        error
+      );
+
       setUser(null);
       return false;
     }
-  };
+  }, []);
+
+  // =========================================================
+  // INITIAL AUTH CHECK
+  // =========================================================
 
   useEffect(() => {
+    let mounted = true;
+
     const initializeAuth = async () => {
-      await checkAuth();
-      setLoading(false);
+      try {
+        await checkAuth();
+      } finally {
+        if (mounted) {
+          setLoading(false);
+        }
+      }
     };
 
     initializeAuth();
-  }, []);
+
+    return () => {
+      mounted = false;
+    };
+  }, [checkAuth]);
+
+  // =========================================================
+  // LOGIN
+  // =========================================================
 
   const login = (userData = null) => {
-    // Kept for compatibility with existing frontend components.
-    // Real OAuth login is handled by Flask.
     if (userData) {
       setUser(userData);
     }
   };
 
+  // =========================================================
+  // LOGOUT
+  // =========================================================
+
   const logout = async () => {
     try {
-      await fetch(`${API_URL}/api/auth/logout`, {
-        method: 'GET',
-        credentials: 'include',
-      });
-
-      setUser(null);
-
+      if (API_URL) {
+        await fetch(
+          `${API_URL}/api/auth/logout`,
+          {
+            method: 'GET',
+            credentials: 'include',
+          }
+        );
+      }
     } catch (error) {
-      console.error('Logout failed:', error);
+      console.error(
+        'Logout request failed:',
+        error
+      );
+    } finally {
+      setUser(null);
     }
   };
 
+  // =========================================================
+  // DISCORD COMPATIBILITY
+  // =========================================================
+
   const verifyWithDiscord = (discordData) => {
-    setUser((prev) => ({
-      ...prev,
-      ...discordData,
+    setUser((previousUser) => ({
+      ...(previousUser || {}),
+      ...(discordData || {}),
     }));
   };
+
+  // =========================================================
+  // CONTEXT VALUE
+  // =========================================================
 
   const value = {
     user,
@@ -84,8 +179,12 @@ export const AuthProvider = ({ children }) => {
     login,
     logout,
     verifyWithDiscord,
-    isAuthenticated: !!user,
+    isAuthenticated: Boolean(user),
   };
+
+  // =========================================================
+  // PROVIDER
+  // =========================================================
 
   return (
     <AuthContext.Provider value={value}>
@@ -94,6 +193,18 @@ export const AuthProvider = ({ children }) => {
   );
 };
 
+// =========================================================
+// HOOK
+// =========================================================
+
 export const useAuth = () => {
-  return useContext(AuthContext);
+  const context = useContext(AuthContext);
+
+  if (!context) {
+    throw new Error(
+      'useAuth must be used inside an AuthProvider'
+    );
+  }
+
+  return context;
 };

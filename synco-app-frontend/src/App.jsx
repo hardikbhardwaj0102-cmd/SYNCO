@@ -2,7 +2,8 @@ import {
   BrowserRouter as Router,
   Routes,
   Route,
-  Outlet
+  Outlet,
+  Navigate,
 } from 'react-router-dom';
 
 import { AuthProvider, useAuth } from './context/AuthContext';
@@ -15,7 +16,7 @@ import GameDetails from './pages/GameDetails';
 import CompetitionEngine from './pages/CompetitionEngine';
 import Leaderboards from './pages/Leaderboards';
 import ClubsHub from './pages/ClubsHub';
-import ClubProfile from "./pages/clubprofile";
+import ClubProfile from './pages/clubprofile';
 import ProfileSettings from './pages/ProfileSettings';
 import ProfileView from './pages/ProfileView';
 import RegistrationGateway from './pages/RegistrationGateway';
@@ -36,8 +37,12 @@ import Notification from './pages/notification';
 // =========================================================
 
 const IndexRoute = () => {
+  const { isAuthenticated, loading } = useAuth();
 
-  const { isAuthenticated } = useAuth();
+  // Wait until authentication has been checked.
+  if (loading) {
+    return null;
+  }
 
   return isAuthenticated
     ? <DashboardHome />
@@ -46,8 +51,39 @@ const IndexRoute = () => {
 
 
 // =========================================================
+// PROTECTED ROUTE
+// =========================================================
+// Everything inside this route requires authentication.
+//
+// This prevents the deployed site from rendering the
+// authenticated dashboard while the user is actually logged out.
+// =========================================================
+
+const ProtectedRoute = () => {
+  const {
+    isAuthenticated,
+    loading,
+  } = useAuth();
+
+  // Do not render anything while /api/auth/me is being checked.
+  if (loading) {
+    return null;
+  }
+
+  // User is not logged in.
+  if (!isAuthenticated) {
+    return <Navigate to="/login" replace />;
+  }
+
+  return <Outlet />;
+};
+
+
+// =========================================================
 // AUTH LAYOUT
-// No Navbar / Sidebar / Footer
+// =========================================================
+// Login / Register / Forgot Password / Reset Password
+// have no Navbar, Sidebar or Footer.
 // =========================================================
 
 const AuthLayout = () => {
@@ -60,9 +96,7 @@ const AuthLayout = () => {
 // =========================================================
 
 function App() {
-
   return (
-
     <AuthProvider>
 
       <Router>
@@ -99,14 +133,13 @@ function App() {
 
 
           {/* =================================================
-              MAIN DASHBOARD ROUTES
-              Wrapped inside HybridLayout
+              MAIN ROUTES
               ================================================= */}
 
           <Route element={<HybridLayout />}>
 
             {/* =================================================
-                HOME
+                PUBLIC / DYNAMIC HOME
                 ================================================= */}
 
             <Route
@@ -114,117 +147,140 @@ function App() {
               element={<IndexRoute />}
             />
 
-            <Route
-              path="/home"
-              element={<DashboardHome />}
-            />
-
 
             {/* =================================================
-                GAMING
+                PROTECTED ROUTES
                 ================================================= */}
 
-            <Route
-              path="/play"
-              element={<GamesHub />}
-            />
+            <Route element={<ProtectedRoute />}>
 
-            <Route
-              path="/games/:gameId"
-              element={<GameDetails />}
-            />
+              {/* -------------------------------------------------
+                  DASHBOARD
+                  ------------------------------------------------- */}
 
-
-            {/* =================================================
-                COMPETITIONS
-                ================================================= */}
-
-            <Route
-              path="/competitions"
-              element={<CompetitionEngine />}
-            />
+              <Route
+                path="/home"
+                element={<DashboardHome />}
+              />
 
 
-            {/* =================================================
-                RANKINGS
-                ================================================= */}
+              {/* -------------------------------------------------
+                  GAMING
+                  ------------------------------------------------- */}
 
-            <Route
-              path="/ranking"
-              element={<Leaderboards />}
-            />
+              <Route
+                path="/play"
+                element={<GamesHub />}
+              />
 
-
-            {/* =================================================
-                CLUBS
-                ================================================= */}
-
-            <Route
-              path="/clubs"
-              element={<ClubsHub />}
-            />
-
-            <Route
-              path="/clubs/:clubId"
-              element={<ClubProfile />}
-            />
+              <Route
+                path="/games/:gameId"
+                element={<GameDetails />}
+              />
 
 
-            {/* =================================================
-                REWARDS
-                ================================================= */}
+              {/* -------------------------------------------------
+                  COMPETITIONS
+                  ------------------------------------------------- */}
 
-            <Route
-              path="/rewards"
-              element={<Reward />}
-            />
-
-
-            {/* =================================================
-                FRIENDS
-                ================================================= */}
-
-            <Route
-              path="/add-friends"
-              element={<AddFriends />}
-            />
+              <Route
+                path="/competitions"
+                element={<CompetitionEngine />}
+              />
 
 
-            {/* =================================================
-                NOTIFICATIONS
-                ================================================= */}
+              {/* -------------------------------------------------
+                  RANKINGS
+                  ------------------------------------------------- */}
 
-            <Route
-              path="/notifications"
-              element={<Notification />}
-            />
-
-
-            {/* =================================================
-                PROFILE
-                ================================================= */}
-
-            <Route
-              path="/profile/:username"
-              element={<ProfileView />}
-            />
-
-            <Route
-              path="/settings"
-              element={<ProfileSettings />}
-            />
+              <Route
+                path="/ranking"
+                element={<Leaderboards />}
+              />
 
 
-            {/* =================================================
-                REGISTRATION GATEWAY
-                ================================================= */}
+              {/* -------------------------------------------------
+                  CLUBS
+                  ------------------------------------------------- */}
 
-            <Route
-              path="/gateway"
-              element={<RegistrationGateway />}
-            />
+              <Route
+                path="/clubs"
+                element={<ClubsHub />}
+              />
+
+              <Route
+                path="/clubs/:clubId"
+                element={<ClubProfile />}
+              />
+
+
+              {/* -------------------------------------------------
+                  REWARDS
+                  ------------------------------------------------- */}
+
+              <Route
+                path="/rewards"
+                element={<Reward />}
+              />
+
+
+              {/* -------------------------------------------------
+                  FRIENDS
+                  ------------------------------------------------- */}
+
+              <Route
+                path="/add-friends"
+                element={<AddFriends />}
+              />
+
+
+              {/* -------------------------------------------------
+                  NOTIFICATIONS
+                  ------------------------------------------------- */}
+
+              <Route
+                path="/notifications"
+                element={<Notification />}
+              />
+
+
+              {/* -------------------------------------------------
+                  PROFILE
+                  ------------------------------------------------- */}
+
+              <Route
+                path="/profile/:username"
+                element={<ProfileView />}
+              />
+
+              <Route
+                path="/settings"
+                element={<ProfileSettings />}
+              />
+
+
+              {/* -------------------------------------------------
+                  REGISTRATION GATEWAY
+                  ------------------------------------------------- */}
+
+              <Route
+                path="/gateway"
+                element={<RegistrationGateway />}
+              />
+
+            </Route>
 
           </Route>
+
+
+          {/* =================================================
+              FALLBACK
+              ================================================= */}
+
+          <Route
+            path="*"
+            element={<Navigate to="/" replace />}
+          />
 
         </Routes>
 
