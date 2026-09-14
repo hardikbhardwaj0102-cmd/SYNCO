@@ -81,6 +81,19 @@ _supabase_client = None
 
 
 def _get_supabase() -> Client:
+    """
+    Create and cache the Supabase client.
+
+    IMPORTANT:
+    SUPABASE_URL must be only:
+
+    https://your-project.supabase.co
+
+    Do NOT add:
+    /rest/v1
+    /storage/v1
+    /auth/v1
+    """
 
     global _supabase_client
 
@@ -88,6 +101,7 @@ def _get_supabase() -> Client:
         return _supabase_client
 
     supabase_url = os.getenv("SUPABASE_URL")
+
     supabase_key = os.getenv(
         "SUPABASE_SERVICE_ROLE_KEY"
     )
@@ -101,6 +115,9 @@ def _get_supabase() -> Client:
         raise RuntimeError(
             "SUPABASE_SERVICE_ROLE_KEY is not configured"
         )
+
+    # Remove accidental trailing slash
+    supabase_url = supabase_url.rstrip("/")
 
     _supabase_client = create_client(
         supabase_url,
@@ -241,45 +258,149 @@ def _user_storage_usage(user_id):
 # =========================================================
 
 def _create_signed_url(storage_path):
+    """
+    Create a signed URL for a private Supabase Storage file.
+
+    Compatible with supabase-py 2.31.x.
+
+    Depending on the SDK response, create_signed_url()
+    may return:
+
+        {"signedURL": "..."}
+
+    or:
+
+        {"signedUrl": "..."}
+
+    or an object containing one of those fields.
+
+    This helper supports all of those forms.
+    """
+
+    if not storage_path:
+
+        raise RuntimeError(
+            "Storage path is empty"
+        )
 
     supabase = _get_supabase()
 
-    response = (
-        supabase
-        .storage
-        .from_(SUPABASE_BUCKET)
-        .create_signed_url(
-            storage_path,
-            SIGNED_URL_EXPIRY,
+    try:
+
+        response = (
+            supabase
+            .storage
+            .from_(SUPABASE_BUCKET)
+            .create_signed_url(
+                storage_path,
+                SIGNED_URL_EXPIRY,
+            )
         )
-    )
 
-    data = getattr(
-        response,
-        "data",
-        None,
-    )
+        current_app.logger.info(
+            "Supabase signed URL response type: %s",
+            type(response).__name__,
+        )
 
-    if not data:
+        current_app.logger.info(
+            "Supabase signed URL response: %r",
+            response,
+        )
+
+        # -------------------------------------------------
+        # CASE 1
+        # Direct dictionary response
+        # -------------------------------------------------
+
+        if isinstance(response, dict):
+
+            signed_url = (
+                response.get("signedURL")
+                or response.get("signedUrl")
+                or response.get("signed_url")
+                or response.get("url")
+            )
+
+            if signed_url:
+                return signed_url
+
+            # Some responses may wrap the result
+            # inside "data".
+
+            data = response.get("data")
+
+            if isinstance(data, dict):
+
+                signed_url = (
+                    data.get("signedURL")
+                    or data.get("signedUrl")
+                    or data.get("signed_url")
+                    or data.get("url")
+                )
+
+                if signed_url:
+                    return signed_url
+
+        # -------------------------------------------------
+        # CASE 2
+        # Object response with .data
+        # -------------------------------------------------
+
+        data = getattr(
+            response,
+            "data",
+            None,
+        )
+
+        if isinstance(data, dict):
+
+            signed_url = (
+                data.get("signedURL")
+                or data.get("signedUrl")
+                or data.get("signed_url")
+                or data.get("url")
+            )
+
+            if signed_url:
+                return signed_url
+
+        # -------------------------------------------------
+        # CASE 3
+        # Object response with direct attributes
+        # -------------------------------------------------
+
+        for attribute in (
+            "signedURL",
+            "signedUrl",
+            "signed_url",
+            "url",
+        ):
+
+            signed_url = getattr(
+                response,
+                attribute,
+                None,
+            )
+
+            if signed_url:
+                return signed_url
+
+        # -------------------------------------------------
+        # NOTHING FOUND
+        # -------------------------------------------------
 
         raise RuntimeError(
             "Supabase did not return a signed URL"
         )
 
-    if isinstance(data, dict):
+    except Exception:
 
-        signed_url = (
-            data.get("signedUrl")
-            or data.get("signedURL")
-            or data.get("signed_url")
+        current_app.logger.exception(
+            "Failed to create Supabase signed URL for %s",
+            storage_path,
         )
 
-        if signed_url:
-            return signed_url
-
-    raise RuntimeError(
-        "Unable to extract signed URL from Supabase response"
-    )
+        raise
 
 
 # =========================================================
@@ -295,13 +416,19 @@ def _delete_from_supabase(storage_path):
 
         supabase = _get_supabase()
 
-        (
+        response = (
             supabase
             .storage
             .from_(SUPABASE_BUCKET)
             .remove([
                 storage_path
             ])
+        )
+
+        current_app.logger.info(
+            "Supabase clip deleted: %s | response=%r",
+            storage_path,
+            response,
         )
 
     except Exception as error:
@@ -311,6 +438,8 @@ def _delete_from_supabase(storage_path):
             storage_path,
             error,
         )
+
+        raise
 
 
 # =========================================================
@@ -345,7 +474,9 @@ def _clip_response(clip):
                 error,
             )
 
-            response = clip.to_dict("")
+            response = clip.to_dict(
+                ""
+            )
 
             response["url"] = ""
 
@@ -452,7 +583,9 @@ def upload_clip():
     # GET FILE
     # -----------------------------------------------------
 
-    media = request.files.get("clip")
+    media = request.files.get(
+        "clip"
+    )
 
     if media is None or not media.filename:
 
@@ -677,23 +810,6 @@ def upload_clip():
         # -------------------------------------------------
         # CREATE TEMPORARY FILE
         # -------------------------------------------------
-        #
-        # Flask gives us a SpooledTemporaryFile.
-        #
-        # Supabase Python SDK 2.31.0 expects a filesystem
-        # path for the `file` argument.
-        #
-        # Therefore:
-        #
-        # Flask upload
-        #      ↓
-        # temporary file
-        #      ↓
-        # Supabase
-        #
-        # The temporary file is deleted afterwards.
-        #
-        # -------------------------------------------------
 
         with tempfile.NamedTemporaryFile(
             delete=False,
@@ -713,13 +829,15 @@ def upload_clip():
                 if not chunk:
                     break
 
-                temp_file.write(chunk)
+                temp_file.write(
+                    chunk
+                )
 
         # -------------------------------------------------
         # UPLOAD TO SUPABASE
         # -------------------------------------------------
 
-        (
+        upload_response = (
             supabase
             .storage
             .from_(SUPABASE_BUCKET)
@@ -735,6 +853,12 @@ def upload_clip():
         )
 
         uploaded = True
+
+        current_app.logger.info(
+            "Clip uploaded to Supabase: %s | response=%r",
+            storage_path,
+            upload_response,
+        )
 
         # -------------------------------------------------
         # CREATE DATABASE RECORD
@@ -758,7 +882,9 @@ def upload_clip():
             height=height,
         )
 
-        db.session.add(clip)
+        db.session.add(
+            clip
+        )
 
         db.session.commit()
 
@@ -767,7 +893,9 @@ def upload_clip():
         # -------------------------------------------------
 
         return jsonify(
-            _clip_response(clip)
+            _clip_response(
+                clip
+            )
         ), 201
 
     except Exception as error:
@@ -824,6 +952,7 @@ def upload_clip():
                 if os.path.exists(
                     temp_path
                 ):
+
                     os.remove(
                         temp_path
                     )
