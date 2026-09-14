@@ -1,0 +1,13 @@
+@reference "../global.css";
+
+.layout-container {
+  @apply flex h-screen overflow-hidden bg-synco-light;
+}
+
+.layout-main {
+  @apply flex-1 overflow-y-auto w-full;
+}
+
+.layout-content-wrapper {
+  @apply max-w-7xl mx-auto p-8;
+}

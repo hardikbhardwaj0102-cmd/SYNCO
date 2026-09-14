@@ -1,0 +1,41 @@
+@reference "../global.css";
+
+.carousel-container {
+  @apply flex w-full overflow-x-auto gap-8 border-b border-synco-border pb-4 mb-8;
+  /* Hide scrollbar standard CSS fallback */
+  scrollbar-width: none; 
+  -ms-overflow-style: none;
+}
+
+.carousel-container::-webkit-scrollbar {
+  display: none;
+}
+
+.carousel-btn {
+  @apply flex flex-col items-center min-w-[120px] gap-2 transition-all opacity-80 hover:opacity-100;
+}
+
+.carousel-btn-active {
+  @apply opacity-100;
+}
+
+.carousel-logo {
+  @apply h-12 flex items-end justify-center font-header text-xl font-bold italic tracking-wide text-black;
+  font-family: 'Super Brigade', sans-serif;
+}
+
+.carousel-status {
+  @apply text-[9px] font-bold tracking-widest uppercase;
+}
+
+.carousel-status-active {
+  @apply text-orange-600;
+}
+
+.carousel-status-inactive {
+  @apply text-synco-textMuted;
+}
+
+.carousel-indicator {
+  @apply h-[2px] w-full bg-black mt-2 rounded-t-sm;
+}

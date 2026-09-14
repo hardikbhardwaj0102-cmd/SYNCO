@@ -1,0 +1,79 @@
+@reference "../global.css";
+
+/* --- Container & Silver Glassmorphism --- */
+.dropdown-container {
+  @apply fixed left-[100px] top-[15%] ml-2 p-8 rounded-3xl bg-gradient-to-br from-[#c5c7c9]/90 to-[#c5c7c9]/40 backdrop-blur-2xl border border-white/50 z-[100] min-w-[1000px];
+
+  box-shadow: 0 8px 30px rgba(0, 0, 0, 0.15);
+}
+
+/* --- THE HOVER GAP FIX --- */
+.dropdown-container::before {
+  content: '';
+
+  position: absolute;
+
+  top: 0;
+  bottom: 0;
+
+  left: -20px;
+  width: 20px;
+
+  background: transparent;
+}
+
+/* --- Grid Layout --- */
+.dropdown-grid {
+  @apply grid grid-cols-3 gap-x-8 gap-y-8;
+}
+
+/* --- Interactive Items --- */
+.dropdown-item {
+  @apply w-full flex items-center justify-between p-3 rounded-xl hover:bg-black hover:text-white hover:border-black transition-all text-left cursor-pointer;
+}
+
+/* --- Icon Box --- */
+.dropdown-icon-box {
+  @apply w-10 h-10 bg-black/5 rounded-lg flex items-center justify-center border border-black/10 flex-shrink-0 transition-all duration-200;
+}
+
+.dropdown-icon-text {
+  @apply text-black font-bold text-lg font-header transition-colors duration-200;
+}
+
+/* --- Hover States for Icon Box --- */
+
+.dropdown-item:hover .dropdown-icon-text {
+  @apply text-[#D6C98A];
+}
+
+/* --- Text Styling --- */
+.dropdown-text-container {
+  @apply flex flex-col justify-center;
+
+  flex: 1;
+  min-width: 0;
+}
+
+.dropdown-title {
+  @apply text-black group-hover:text-[#D6C98A] transition-colors uppercase tracking-wide flex-1 pr-4;
+
+  font-family: 'Super Brigade', sans-serif;
+  font-size: 1.6vw;
+  font-weight: normal;
+
+  white-space: normal;
+  line-height: 0.9;
+
+  max-width: 180px;
+}
+
+/* --- Hover State for Title --- */
+
+.dropdown-item:hover .dropdown-title {
+  @apply text-[#D6C98A];
+}
+
+.dropdown-dates {
+  @apply text-[10px] font-bold text-white group-hover:text-white/60 uppercase tracking-widest transition-colors;
+}

@@ -1,0 +1,64 @@
+  @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Oswald:wght@500;700&display=swap');
+  @import url('https://fonts.cdnfonts.com/css/cyber-horizon');
+
+  /* Tailwind v4 import */
+  @import "tailwindcss";
+  @tailwind base;
+  @tailwind components;
+  @tailwind utilities;
+
+  /* Define custom theme variables for v4 */
+  @theme {
+    --color-synco-dark: #0B0E14;
+    --color-synco-darker: #06080A;
+    --color-synco-light: #F4F5F7;
+    --color-synco-card: #FFFFFF;
+    --color-synco-accent: #E5FE00;
+    --color-synco-textMain: #1A1D20;
+    --color-synco-textMuted: #6B7280;
+    --color-synco-border: #E5E7EB;
+
+    --font-header: 'Oswald', ui-sans-serif, system-ui, sans-serif;
+    --font-sans: 'Inter', ui-sans-serif, system-ui, sans-serif;
+  }
+
+  @layer base {
+    body {
+    @apply text-synco-textMain font-sans antialiased;
+    background-color: #F4F5F7; /* Fallback color while image loads */
+    background-image: url('../assets/background.png');
+    background-size: cover;
+    background-position: center;
+    
+    /* Keeps the image static while the user scrolls down the page */
+    background-attachment: fixed; 
+  }
+    
+    h1, h2, h3, h4, h5, h6 {
+      @apply font-header uppercase tracking-wide;
+    }
+  }
+
+  /* Custom scrollbar to match the sleek gaming vibe */
+  ::-webkit-scrollbar {
+    width: 8px;
+  }
+  ::-webkit-scrollbar-track {
+    background: #f1f1f1; 
+  }
+  ::-webkit-scrollbar-thumb {
+    background: #d1d5db; 
+    border-radius: 4px;
+  }
+  ::-webkit-scrollbar-thumb:hover {
+    background: #9ca3af; 
+  }
+
+  @font-face {
+  font-family: 'Super Brigade';
+  src: url('../assets/SuperBrigadeCondensed-ARwy2.otf') format('opentype');
+  font-weight: normal;
+  font-style: normal;
+  font-display: swap;
+}
+

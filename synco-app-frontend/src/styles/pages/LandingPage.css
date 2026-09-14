@@ -1,0 +1,404 @@
+@reference "../global.css";
+
+.landing-page-wrapper {
+  @apply min-h-full bg-transparent;
+}
+
+.landing-page-wrapper > section {
+  min-height: calc(100svh - 88px);
+  box-sizing: border-box;
+}
+
+/* --- Hero Section --- */
+.hero-section {
+  @apply max-w-7xl mx-auto w-full px-8 flex flex-col justify-between py-8;
+}
+
+.hero-content {
+  @apply flex flex-col items-center text-center md:flex-row md:text-left justify-between flex-1;
+}
+
+.hero-text-col {
+  @apply max-w-2xl;
+}
+
+.hero-online-badge {
+  @apply flex items-center gap-2 mb-6 justify-center md:justify-start;
+}
+
+.hero-online-dot {
+  @apply w-2 h-2 rounded-full bg-[#C1A87D];
+}
+
+.hero-online-text {
+  @apply text-xs font-bold text-gray-400 tracking-widest uppercase;
+}
+
+.hero-title {
+  @apply text-8xl font-header font-bold leading-[0.88] mb-8;
+}
+
+.hero-title-highlight {
+  @apply text-[#C1A87D];
+}
+
+.hero-description {
+  @apply text-lg text-gray-500 mb-10 max-w-xl mx-auto md:mx-0 leading-relaxed;
+}
+
+.hero-cta-btn {
+  @apply flex items-center justify-center md:justify-start gap-4 border border-gray-200 px-6 py-3 rounded-xl font-bold hover:shadow-md transition-all mx-auto md:mx-0;
+}
+
+.hero-image-container {
+  @apply hidden md:flex w-[58%] h-[min(85vh,480px)] relative justify-center items-end -mt-16;
+}
+
+.hero-image {
+  @apply w-full h-full object-contain object-bottom drop-shadow-[0_20px_35px_rgba(0,0,0,0.25)] transform scale-110 origin-bottom;
+
+  -webkit-mask-image: linear-gradient(to bottom, black 85%, transparent 100%);
+  mask-image: linear-gradient(to bottom, black 85%, transparent 100%);
+
+}
+
+.scroll-indicator {
+  @apply flex flex-col items-center justify-center gap-2 mt-6 text-gray-400 animate-bounce;
+}
+
+.scroll-text {
+  @apply text-[10px] uppercase font-bold tracking-widest;
+}
+
+/* --- Featured Games --- */
+/* --- Featured Header Area --- */
+.featured-header {
+  @apply flex flex-col md:flex-row md:items-end justify-between mb-10 gap-4;
+}
+
+.featured-title-wrapper {
+  @apply flex flex-col;
+}
+
+.featured-label {
+  @apply text-[10px] font-bold text-[#C1A87D] tracking-widest uppercase mb-2 block;
+}
+
+.featured-title {
+  @apply text-5xl font-header font-bold text-white uppercase m-0 leading-none tracking-wide;
+}
+
+.featured-link {
+  @apply flex items-center gap-2 text-xs font-bold text-gray-400 uppercase tracking-widest hover:text-white transition-colors pb-1 cursor-pointer;
+}
+
+.featured-section {
+  /* Spans full width, applies dark background, and changes top border to fit dark mode */
+  @apply w-full bg-[#111] py-20 border-t border-white/10;
+}
+
+.featured-container {
+  /* Centers the content inside the full-width dark section */
+  @apply max-w-7xl mx-auto px-8;
+}
+
+.featured-grid {
+  @apply grid grid-cols-1 md:grid-cols-4 gap-6;
+}
+
+.featured-card-bgmi {
+  @apply md:col-span-1 bg-[#1A1A1A] rounded-2xl p-8 text-white min-h-[26rem] flex flex-col justify-end relative overflow-hidden border border-gray-800 hover:border-gray-600 transition-colors;
+}
+
+.bgmi-image,
+.valorant-image {
+  @apply absolute inset-0 w-full h-full object-cover opacity-60 transition-transform duration-500;
+}
+
+.featured-card-bgmi:hover .bgmi-image,
+.featured-card-val:hover .valorant-image {
+  @apply scale-105;
+}
+
+.featured-card-val {
+  @apply md:col-span-1 bg-gradient-to-br from-red-900 to-black rounded-2xl p-8 text-white min-h-[26rem] flex flex-col justify-end relative overflow-hidden border border-gray-800 hover:border-red-800 transition-colors;
+}
+
+.featured-card-title {
+  @apply text-2xl font-header font-bold mb-1 relative z-10;
+}
+
+.featured-card-text-bgmi {
+  @apply text-[10px] text-gray-400 relative z-10 uppercase font-bold tracking-wide;
+}
+
+.featured-card-text-val {
+  @apply text-[10px] text-gray-300 uppercase font-bold tracking-wide;
+}
+
+.featured-card-video {
+  @apply md:col-span-2 bg-gray-900 rounded-2xl min-h-[26rem] flex flex-col items-center justify-center relative overflow-hidden cursor-pointer border border-gray-800;
+}
+
+.featured-video {
+  @apply absolute inset-0 w-full h-full object-cover opacity-70;
+}
+
+.featured-video-overlay {
+  @apply absolute inset-0 bg-black/45;
+}
+
+.video-play-btn {
+  @apply w-16 h-16 bg-white/10 backdrop-blur-md rounded-full flex items-center justify-center mb-4 transition-all;
+}
+
+.video-play-icon {
+  @apply w-0 h-0 border-t-[8px] border-t-transparent border-l-[12px] border-l-white border-b-[8px] border-b-transparent ml-1;
+}
+
+.video-card-title {
+  @apply text-xl font-header font-bold text-white uppercase tracking-wide;
+}
+
+/* --- Core Features --- */
+.features-section {
+  @apply bg-transparent flex items-center py-10 border-t border-gray-100;
+}
+
+.features-container {
+  @apply max-w-7xl mx-auto px-8 text-center;
+}
+
+.features-label {
+  @apply text-[10px] font-bold text-gray-400 tracking-widest uppercase mb-4 block;
+}
+
+.features-title {
+  @apply text-6xl font-header font-bold mb-16;
+}
+
+.features-title-highlight {
+  @apply text-[#C1A87D];
+}
+
+.features-grid {
+  @apply grid grid-cols-1 md:grid-cols-4 gap-8 text-left;
+}
+
+.feature-card {
+  @apply flex flex-col gap-5 p-8 min-h-[19rem] rounded-2xl border border-gray-200 bg-white shadow-sm hover:shadow-md transition-shadow;
+}
+
+.feature-icon-box {
+  @apply w-14 h-14 bg-black text-[#C1A87D] rounded-xl flex items-center justify-center;
+}
+
+.feature-card-title {
+  @apply font-bold text-sm uppercase;
+}
+
+.feature-card-title-text {
+  @apply ml-2;
+}
+
+.feature-card-desc {
+  @apply text-sm text-gray-500 leading-relaxed min-h-[72px];
+}
+
+.feature-learn-more {
+  @apply text-[10px] uppercase tracking-widest font-bold text-gray-400 mt-2 hover:text-black w-max flex items-center gap-1;
+}
+
+/* --- CTA Section --- */
+.cta-section {
+  @apply max-w-7xl mx-auto w-full px-8 flex items-center py-10;
+}
+
+.cta-box {
+  @apply w-full min-h-[70%] bg-black rounded-3xl py-24 flex flex-col items-center justify-center text-center;
+}
+
+.cta-title {
+  @apply text-7xl font-header font-bold text-[#C1A87D] mb-10;
+}
+
+.cta-btn {
+  @apply bg-white text-black font-bold uppercase px-8 py-3 rounded-xl hover:bg-gray-100 transition-colors text-sm;
+}
+
+@media (max-width: 767px) {
+  .hero-section,
+  .featured-section,
+  .features-section,
+  .cta-section {
+    min-height: calc(100svh - 76px);
+  }
+
+  .hero-section {
+    @apply px-5 py-6;
+  }
+
+  .hero-title {
+    @apply text-6xl;
+  }
+
+  .hero-description {
+    @apply text-base;
+  }
+
+  .featured-section,
+  .features-section,
+  .cta-section {
+    @apply px-5 py-8;
+  }
+
+  .featured-title {
+    @apply text-4xl mb-8;
+  }
+
+  .featured-grid {
+    @apply grid-cols-1 gap-3;
+  }
+
+  .featured-card-bgmi,
+  .featured-card-val,
+  .featured-card-video {
+    @apply min-h-[10rem];
+  }
+
+  .features-title {
+    @apply text-5xl mb-10;
+  }
+
+  .features-grid {
+    @apply grid-cols-2 gap-3;
+  }
+
+  .feature-card {
+    @apply min-h-[15rem] gap-3 p-4;
+  }
+
+  .feature-card-desc {
+    @apply text-xs min-h-0;
+  }
+
+  .feature-learn-more {
+    @apply text-[9px];
+  }
+
+  .cta-box {
+    @apply min-h-[70%] px-5;
+  }
+
+  .cta-title {
+    @apply text-5xl;
+  }
+}
+
+/* --- New CTA Section --- */
+.cta-page {
+  @apply relative flex items-center justify-center text-center py-32;
+  min-height: 80vh; 
+}
+
+.cta-container {
+  @apply w-full max-w-[900px] flex flex-col items-center;
+}
+
+.cta-section-label {
+  @apply mb-5 text-[10px] font-bold text-gray-400 tracking-widest uppercase;
+}
+
+.cta-title {
+  @apply text-[#111] font-header font-extrabold m-0 mb-6;
+  /* Keeping the custom scaling and typography intact */
+  font-size: clamp(60px, 9vw, 130px);
+  line-height: 0.82;
+  letter-spacing: -0.065em;
+}
+
+.cta-title-highlight {
+  @apply text-[#c1a87d];
+}
+
+.cta-description {
+  @apply m-0 mb-8 text-[#888] text-[13px] leading-[1.7];
+}
+
+.cta-button {
+  @apply inline-flex items-center justify-center gap-3 px-7 py-4 border-none rounded-xl bg-[#111] text-white text-[11px] font-bold tracking-[0.12em] uppercase cursor-pointer transition-all duration-300;
+}
+
+/* Fixed the duplicated selector to be a hover state */
+.cta-button:hover {
+  @apply bg-[#c1a87d] text-[#111] -translate-y-[3px];
+}
+
+.cta-bottom-text {
+  @apply absolute left-1/2 bottom-6 -translate-x-1/2 text-[#aaa] text-[8px] font-bold tracking-[0.25em] whitespace-nowrap;
+}
+
+/* --- Organizer & Recruiter Section --- */
+.organizer-section {
+  @apply bg-[#111] py-32;
+}
+
+.organizer-container {
+  @apply max-w-7xl mx-auto px-8 flex flex-col lg:flex-row items-center gap-16;
+}
+
+.organizer-text-col {
+  @apply flex-1 text-left;
+}
+
+.organizer-label {
+  @apply text-[10px] font-bold text-gray-500 tracking-widest uppercase mb-4 block;
+}
+
+.organizer-title {
+  @apply text-5xl font-header font-bold text-white mb-6 leading-tight;
+}
+
+.organizer-title-highlight {
+  @apply text-[#C1A87D];
+}
+
+.organizer-desc {
+  @apply text-gray-400 text-sm leading-relaxed mb-8 max-w-lg;
+}
+
+.organizer-list {
+  @apply flex flex-col gap-4 mb-10;
+}
+
+.organizer-list-item {
+  @apply flex items-center gap-3 text-white font-bold text-sm uppercase tracking-wide;
+}
+
+.organizer-list-icon {
+  @apply text-[#C1A87D];
+}
+
+.organizer-btn {
+  @apply bg-white text-black font-bold uppercase px-8 py-4 rounded-xl hover:bg-gray-200 transition-colors text-xs tracking-wider inline-flex items-center gap-2;
+}
+
+.organizer-visual-col {
+  @apply flex-1 w-full relative;
+}
+
+.organizer-glass-card {
+  @apply bg-white/5 backdrop-blur-xl border border-white/10 rounded-3xl p-8 shadow-2xl relative z-10;
+}
+
+.organizer-mockup-header {
+  @apply flex justify-between items-center mb-8 border-b border-white/10 pb-4;
+}
+
+.organizer-mockup-title {
+  @apply text-white font-header text-xl uppercase;
+}
+
+.organizer-bracket-line {
+  @apply w-full h-12 border-l-2 border-t-2 border-white/20 rounded-tl-xl ml-4 mb-4;
+}

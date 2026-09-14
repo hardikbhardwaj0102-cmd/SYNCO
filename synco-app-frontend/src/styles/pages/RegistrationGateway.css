@@ -1,0 +1,69 @@
+@reference "../global.css";
+
+.register-wrapper {
+  @apply w-full max-w-[800px] mx-auto pt-8;
+}
+
+.register-card {
+  @apply bg-white rounded-2xl border border-synco-border p-8 shadow-sm;
+}
+
+.register-header-box {
+  @apply mb-6;
+}
+
+.register-title {
+  @apply font-header text-3xl font-bold text-black mb-1;
+}
+
+.register-subtitle {
+  @apply text-synco-textMuted text-sm;
+}
+
+.register-toggle-group {
+  @apply flex bg-synco-light p-1 rounded-xl mb-8;
+}
+
+.register-toggle-btn {
+  @apply flex-1 flex items-center justify-center gap-2 py-3 rounded-lg text-sm font-bold transition-all;
+}
+
+.register-toggle-active {
+  @apply bg-synco-dark text-white;
+}
+
+.register-toggle-inactive {
+  @apply text-synco-textMuted hover:text-black;
+}
+
+.register-form-box {
+  @apply border border-gray-200 rounded-xl p-8 bg-synco-light/50;
+}
+
+.register-form-title {
+  @apply text-lg font-bold text-black mb-1;
+}
+
+.register-form-subtitle {
+  @apply text-xs font-bold text-synco-textMuted mb-6;
+}
+
+.register-form {
+  @apply flex flex-col gap-4;
+}
+
+.register-form-group {
+  @apply flex flex-col gap-1.5;
+}
+
+.register-label {
+  @apply text-xs font-bold text-black;
+}
+
+.register-input {
+  @apply bg-white px-4 py-3 rounded-xl text-sm border border-gray-200 focus:ring-2 focus:ring-black outline-none;
+}
+
+.register-submit-btn {
+  @apply mt-4 bg-synco-accent text-black font-bold uppercase py-3 rounded-xl hover:brightness-105 transition-all;
+}
