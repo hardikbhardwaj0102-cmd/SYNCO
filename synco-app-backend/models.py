@@ -134,11 +134,6 @@ class User(db.Model):
     # SYNCO UID
     # -----------------------------------------------------
 
-    # Exactly 10 uppercase alphanumeric characters.
-    #
-    # Example:
-    # A7K29X4P9Q
-
     uid = db.Column(
         db.String(10),
         unique=True,
@@ -476,6 +471,130 @@ class Game(db.Model):
             "description": self.description,
             "logoUrl": self.logo_url,
             "isActive": self.is_active,
+        }
+
+
+# =========================================================
+# PLAYER GAME STATS
+# =========================================================
+#
+# Competitive SYNCO Points are stored separately from XP.
+#
+# XP:
+#   Rewards / progression
+#
+# SYNCO Points:
+#   Competitive ranking
+#
+# One player can have different SYNCO Points for every game.
+#
+# Example:
+#
+# Hardik
+#   BGMI       -> 1500
+#   VALORANT   -> 820
+#   CS2        -> 430
+#
+# =========================================================
+
+class PlayerGameStats(db.Model):
+
+    __tablename__ = "player_game_stats"
+
+    id = db.Column(
+        db.Integer,
+        primary_key=True
+    )
+
+    user_id = db.Column(
+        db.Integer,
+        db.ForeignKey("users.id", ondelete="CASCADE"),
+        nullable=False,
+        index=True
+    )
+
+    game_id = db.Column(
+        db.String(50),
+        db.ForeignKey("games.id", ondelete="CASCADE"),
+        nullable=False,
+        index=True
+    )
+
+    synco_points = db.Column(
+        db.Integer,
+        nullable=False,
+        default=0
+    )
+
+    created_at = db.Column(
+        db.DateTime,
+        default=datetime.utcnow,
+        nullable=False
+    )
+
+    updated_at = db.Column(
+        db.DateTime,
+        default=datetime.utcnow,
+        onupdate=datetime.utcnow,
+        nullable=False
+    )
+
+    # -----------------------------------------------------
+    # Relationships
+    # -----------------------------------------------------
+
+    user = db.relationship(
+        "User",
+        backref=db.backref(
+            "game_stats",
+            lazy=True,
+            cascade="all, delete-orphan"
+        )
+    )
+
+    game = db.relationship(
+        "Game",
+        backref=db.backref(
+            "player_stats",
+            lazy=True
+        )
+    )
+
+    # -----------------------------------------------------
+    # One record per player + game
+    # -----------------------------------------------------
+
+    __table_args__ = (
+        db.UniqueConstraint(
+            "user_id",
+            "game_id",
+            name="uq_player_game_stats_user_game"
+        ),
+    )
+
+    # -----------------------------------------------------
+    # Serialization
+    # -----------------------------------------------------
+
+    def to_dict(self):
+
+        return {
+            "id": self.id,
+            "userId": self.user_id,
+            "gameId": self.game_id,
+            "syncoPoints": self.synco_points,
+
+            "createdAt": (
+                self.created_at.isoformat()
+                if self.created_at
+                else None
+            ),
+
+            "updatedAt": (
+                self.updated_at.isoformat()
+                if self.updated_at
+                else None
+            )
         }
 
 
@@ -1262,11 +1381,46 @@ class Club(db.Model):
         nullable=False
     )
 
+    # =====================================================
+    # CLUB RANKING
+    # =====================================================
+
+    avatar = db.Column(
+        db.Text,
+        nullable=True
+    )
+
+    region = db.Column(
+        db.String(100),
+        nullable=False,
+        default="Global"
+    )
+
+    club_level = db.Column(
+        db.Integer,
+        nullable=False,
+        default=1
+    )
+
+    synco_points = db.Column(
+        db.Integer,
+        nullable=False,
+        default=0
+    )
+
+    # -----------------------------------------------------
+    # Status
+    # -----------------------------------------------------
+
     is_active = db.Column(
         db.Boolean,
         nullable=False,
         default=True
     )
+
+    # -----------------------------------------------------
+    # Timestamps
+    # -----------------------------------------------------
 
     created_at = db.Column(
         db.DateTime,
@@ -1280,6 +1434,10 @@ class Club(db.Model):
         onupdate=datetime.utcnow,
         nullable=False
     )
+
+    # -----------------------------------------------------
+    # Relationships
+    # -----------------------------------------------------
 
     game = db.relationship(
         "Game",
@@ -1312,14 +1470,20 @@ class Club(db.Model):
         lazy=True
     )
 
+    # -----------------------------------------------------
+    # Serialization
+    # -----------------------------------------------------
+
     def to_dict(self):
 
         return {
             "id": self.id,
+
             "name": self.name,
             "tag": self.tag,
             "description": self.description,
             "privacy": self.privacy,
+
             "gameId": self.game_id,
 
             "game": (
@@ -1335,6 +1499,12 @@ class Club(db.Model):
                 if self.owner
                 else None
             ),
+
+            # Club ranking
+            "avatar": self.avatar,
+            "region": self.region,
+            "clubLevel": self.club_level,
+            "syncoPoints": self.synco_points,
 
             "isActive": self.is_active,
 
@@ -1555,6 +1725,7 @@ class ClubInvite(db.Model):
             )
         }
 
+
 # =========================================================
 # NOTIFICATION
 # =========================================================
@@ -1582,16 +1753,6 @@ class Notification(db.Model):
     # -----------------------------------------------------
     # Notification type
     # -----------------------------------------------------
-    #
-    # Examples:
-    #
-    # CLUB_INVITE
-    # FRIEND_REQUEST
-    # TOURNAMENT_INVITE
-    # SQUAD_REQUEST
-    # ACHIEVEMENT
-    # SYSTEM
-    #
 
     notification_type = db.Column(
         db.String(50),
@@ -1631,15 +1792,6 @@ class Notification(db.Model):
     # -----------------------------------------------------
     # Extra data
     # -----------------------------------------------------
-    #
-    # Example for club invite:
-    #
-    # {
-    #     "inviteId": 12,
-    #     "clubId": 5,
-    #     "clubName": "Team Alpha"
-    # }
-    #
 
     data = db.Column(
         db.JSON,
@@ -1752,13 +1904,6 @@ class FriendRequest(db.Model):
     # Status
     # -----------------------------------------------------
 
-    # Possible values:
-    #
-    # PENDING
-    # ACCEPTED
-    # DECLINED
-    # CANCELLED
-    #
     status = db.Column(
         db.String(20),
         nullable=False,
@@ -1863,6 +2008,7 @@ class FriendRequest(db.Model):
                 else None
             )
         }
+
 
 # =========================================================
 # FRIENDSHIP
