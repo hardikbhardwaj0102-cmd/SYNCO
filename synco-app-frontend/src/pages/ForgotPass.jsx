@@ -4,7 +4,7 @@ import { ArrowLeft, CheckCircle } from 'lucide-react';
 import backgroundImage from '../assets/background.png';
 import '../styles/pages/Auth.css';
 
-const API_URL = 'http://127.0.0.1:5000';
+const API_URL = import.meta.env.VITE_API_URL;
 
 const ForgotPass = () => {
   const navigate = useNavigate();
@@ -54,7 +54,7 @@ const ForgotPass = () => {
     >
       <div className="auth-card-container">
         <div className="auth-card-split">
-          
+
           {/* LEFT PANEL */}
           <div className="auth-left-panel">
             <div className="flex flex-col justify-center flex-1">
@@ -77,7 +77,7 @@ const ForgotPass = () => {
 
           {/* RIGHT PANEL */}
           <div className="auth-right-panel">
-            
+
             <button
               type="button"
               onClick={() => navigate('/login')}

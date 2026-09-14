@@ -4,7 +4,7 @@ import { ArrowLeft, CheckCircle2 } from 'lucide-react';
 import backgroundImage from '../assets/background.png';
 import '../styles/pages/Auth.css';
 
-const API_URL = 'http://127.0.0.1:5000';
+const API_URL = import.meta.env.VITE_API_URL;
 
 const Register = () => {
   const navigate = useNavigate();
@@ -17,7 +17,7 @@ const Register = () => {
 
   const [otpSent, setOtpSent] = useState(false);
   const [otpVerified, setOtpVerified] = useState(false);
-  
+
   const [sendingOTP, setSendingOTP] = useState(false);
   const [verifyingOTP, setVerifyingOTP] = useState(false);
   const [registering, setRegistering] = useState(false);
@@ -169,7 +169,7 @@ const Register = () => {
     >
       <div className="auth-card-container !max-w-[980px]">
         <div className="auth-card-split-reg">
-          
+
           {/* LEFT PANEL */}
           <div className="auth-left-panel !min-h-[650px]">
             <div className="flex flex-col justify-center flex-1">
@@ -205,7 +205,7 @@ const Register = () => {
             </div>
 
             <form onSubmit={handleRegister} className="auth-form-split">
-              
+
               <div>
                 <label className="auth-input-label">Full Name</label>
                 <input

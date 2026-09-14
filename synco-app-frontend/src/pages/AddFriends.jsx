@@ -16,7 +16,7 @@ import {
 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 
-const API_URL = "http://127.0.0.1:5000";
+const API_URL = import.meta.env.VITE_API_URL;
 
 
 // =========================================================
@@ -924,8 +924,8 @@ const AddFriends = () => {
 
                     <div
                         className={`mb-6 flex items-center gap-3 rounded-lg border px-4 py-3 text-sm ${message.type === "success"
-                                ? "border-black/10 bg-white text-black"
-                                : "border-red-200 bg-red-50 text-red-700"
+                            ? "border-black/10 bg-white text-black"
+                            : "border-red-200 bg-red-50 text-red-700"
                             }`}
                     >
 

@@ -11,7 +11,7 @@ import {
 } from 'lucide-react';
 import '../styles/pages/ClubsHub.css';
 
-const API_URL = 'http://127.0.0.1:5000';
+const API_URL = import.meta.env.VITE_API_URL;
 
 const ClubsHub = () => {
   const navigate = useNavigate();
@@ -677,8 +677,8 @@ const ClubsHub = () => {
                     <ChevronDown
                       size={16}
                       className={`text-gray-400 transition-transform ${isGameMenuOpen
-                          ? 'rotate-180'
-                          : ''
+                        ? 'rotate-180'
+                        : ''
                         }`}
                     />
 
@@ -714,8 +714,8 @@ const ClubsHub = () => {
                               type="button"
                               key={game.id}
                               className={`flex items-center gap-3 p-2 rounded-xl text-left transition-all hover:bg-white/40 ${newClub.gameId === game.id
-                                  ? 'bg-white/60 shadow-sm'
-                                  : ''
+                                ? 'bg-white/60 shadow-sm'
+                                : ''
                                 }`}
                               onClick={() =>
                                 handleGameSelect(

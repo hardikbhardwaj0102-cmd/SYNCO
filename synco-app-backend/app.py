@@ -42,21 +42,25 @@ app.secret_key = os.getenv(
 
 
 # =========================================================
-# DATABASE CONFIGURATION
+# DATABASE
 # =========================================================
 
-BASE_DIR = os.path.abspath(
-    os.path.dirname(__file__)
-)
+DATABASE_URL = os.getenv("DATABASE_URL")
 
-DATABASE_PATH = os.path.join(
-    BASE_DIR,
-    "synco.db"
-)
+if not DATABASE_URL:
+    raise RuntimeError(
+        "DATABASE_URL environment variable is not set."
+    )
 
-app.config["SQLALCHEMY_DATABASE_URI"] = (
-    "sqlite:///" + DATABASE_PATH
-)
+# Railway/PostgreSQL compatibility
+if DATABASE_URL.startswith("postgres://"):
+    DATABASE_URL = DATABASE_URL.replace(
+        "postgres://",
+        "postgresql://",
+        1
+    )
+
+app.config["SQLALCHEMY_DATABASE_URI"] = DATABASE_URL
 
 app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
 
@@ -71,11 +75,14 @@ app.config["MAX_CONTENT_LENGTH"] = (
 
 
 # =========================================================
-# SESSION / COOKIE CONFIGURATION
+# SESSION COOKIE
 # =========================================================
 
 app.config["SESSION_COOKIE_SAMESITE"] = "Lax"
-app.config["SESSION_COOKIE_SECURE"] = False
+
+app.config["SESSION_COOKIE_SECURE"] = (
+    os.getenv("FLASK_ENV") == "production"
+)
 
 
 # =========================================================
@@ -86,22 +93,21 @@ db.init_app(app)
 
 
 # =========================================================
-# CREATE DATABASE TABLES
+# DATABASE SETUP
 # =========================================================
 
 with app.app_context():
 
     print("\n===== DATABASE =====")
+
     print(
-        f"Database path: {DATABASE_PATH}"
+        "Database configured:",
+        "PostgreSQL"
     )
+
     print("====================\n")
 
     db.create_all()
-
-    # -----------------------------------------------------
-    # Seed default games
-    # -----------------------------------------------------
 
     seed_initial_games()
 
@@ -110,18 +116,24 @@ with app.app_context():
 # CORS
 # =========================================================
 
+FRONTEND_URL = os.getenv(
+    "FRONTEND_URL",
+    "http://127.0.0.1:5173"
+)
+
 CORS(
     app,
     supports_credentials=True,
     origins=[
         "http://localhost:5173",
-        "http://127.0.0.1:5173"
+        "http://127.0.0.1:5173",
+        FRONTEND_URL
     ]
 )
 
 
 # =========================================================
-# INITIALIZE OAUTH
+# OAUTH
 # =========================================================
 
 init_oauth(app)
@@ -132,19 +144,12 @@ init_oauth(app)
 # =========================================================
 
 app.register_blueprint(auth_bp)
-
 app.register_blueprint(profile_bp)
-
 app.register_blueprint(games_bp)
-
 app.register_blueprint(clips_bp)
-
 app.register_blueprint(rewards_bp)
-
 app.register_blueprint(clubs_bp)
-
 app.register_blueprint(friends_bp)
-
 app.register_blueprint(notifications_bp)
 
 
@@ -156,18 +161,21 @@ app.register_blueprint(notifications_bp)
 def home():
 
     return {
-        "message": "SYNCO backend running"
+        "message": "SYNCO backend running",
+        "status": "ok"
     }
 
 
 # =========================================================
-# RUN SERVER
+# LOCAL DEVELOPMENT
 # =========================================================
 
 if __name__ == "__main__":
 
     print("\n===== SYNCO ROUTES =====")
+
     print(app.url_map)
+
     print("========================\n")
 
     app.run(

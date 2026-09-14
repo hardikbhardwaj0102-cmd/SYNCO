@@ -15,7 +15,7 @@ import {
     RefreshCw,
 } from "lucide-react";
 
-const API_URL = "http://127.0.0.1:5000";
+const API_URL = import.meta.env.VITE_API_URL;
 
 const Reward = () => {
     const [data, setData] = useState(null);
@@ -1496,15 +1496,15 @@ const Reward = () => {
                                                 achievement?.name
                                             }
                                             className={`flex items-center gap-4 rounded-xl border p-4 ${unlocked
-                                                    ? "border-[#ded7c5] bg-[#fbfaf6]"
-                                                    : "border-[#e5e3de] bg-[#f8f8f6]"
+                                                ? "border-[#ded7c5] bg-[#fbfaf6]"
+                                                : "border-[#e5e3de] bg-[#f8f8f6]"
                                                 }`}
                                         >
 
                                             <div
                                                 className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-full ${unlocked
-                                                        ? "bg-[#171717]"
-                                                        : "bg-[#e7e6e2]"
+                                                    ? "bg-[#171717]"
+                                                    : "bg-[#e7e6e2]"
                                                     }`}
                                             >
 
@@ -1676,8 +1676,8 @@ const Reward = () => {
 
                                             <span
                                                 className={`text-[10px] font-black ${positive
-                                                        ? "text-[#8c7440]"
-                                                        : "text-[#8a5f5f]"
+                                                    ? "text-[#8c7440]"
+                                                    : "text-[#8a5f5f]"
                                                     }`}
                                             >
                                                 {typeof amount === "number"

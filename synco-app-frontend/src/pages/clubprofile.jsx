@@ -30,7 +30,7 @@ import {
     ChevronRight,
 } from 'lucide-react';
 
-const API_URL = 'http://127.0.0.1:5000';
+const API_URL = import.meta.env.VITE_API_URL;
 
 const ClubProfile = () => {
     const navigate = useNavigate();
@@ -1172,8 +1172,8 @@ const ClubProfile = () => {
                                         )
                                     }
                                     className={`relative flex items-center gap-2 px-4 py-4 text-sm font-medium transition ${active
-                                            ? 'text-black'
-                                            : 'text-gray-500 hover:text-black'
+                                        ? 'text-black'
+                                        : 'text-gray-500 hover:text-black'
                                         }`}
                                 >
                                     <Icon size={16} />
@@ -1919,12 +1919,12 @@ const ClubProfile = () => {
 
                                                         <span
                                                             className={`hidden items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-[10px] font-semibold uppercase tracking-wide sm:flex ${member.role ===
-                                                                    'OWNER'
-                                                                    ? 'bg-black text-white'
-                                                                    : member.role ===
-                                                                        'ADMIN'
-                                                                        ? 'bg-gray-100 text-gray-700'
-                                                                        : 'border border-gray-200 text-gray-500'
+                                                                'OWNER'
+                                                                ? 'bg-black text-white'
+                                                                : member.role ===
+                                                                    'ADMIN'
+                                                                    ? 'bg-gray-100 text-gray-700'
+                                                                    : 'border border-gray-200 text-gray-500'
                                                                 }`}
                                                         >
 
