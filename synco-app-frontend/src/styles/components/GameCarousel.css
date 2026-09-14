@@ -1,9 +1,14 @@
 @reference "../global.css";
 
+
+/* =========================================================
+   GAME CAROUSEL
+   ========================================================= */
+
 .carousel-container {
   @apply flex w-full overflow-x-auto gap-8 border-b border-synco-border pb-4 mb-8;
-  /* Hide scrollbar standard CSS fallback */
-  scrollbar-width: none; 
+
+  scrollbar-width: none;
   -ms-overflow-style: none;
 }
 
@@ -11,8 +16,16 @@
   display: none;
 }
 
+
+/* =========================================================
+   CAROUSEL BUTTON
+   ========================================================= */
+
 .carousel-btn {
   @apply flex flex-col items-center min-w-[180px] gap-2 transition-all opacity-80 hover:opacity-100;
+
+  overflow: visible;
+  flex-shrink: 0;
 }
 
 .carousel-btn:has(.game-logo--val),
@@ -24,10 +37,75 @@
   @apply opacity-100;
 }
 
+
+/* =========================================================
+   LOGO CONTAINER
+   ========================================================= */
+
 .carousel-logo {
-  @apply h-12 flex items-end justify-center font-header text-xl font-bold italic tracking-wide text-black;
+  @apply flex w-full items-center justify-center font-header text-xl font-bold italic tracking-wide text-black;
+
+  /*
+   * Previously:
+   * h-12 + items-end
+   *
+   * This was causing the larger logos to be cut off.
+   */
+
+  height: 90px;
+  padding: 8px 12px;
+  box-sizing: border-box;
+  overflow: visible;
+
   font-family: 'Super Brigade', sans-serif;
 }
+
+
+/* =========================================================
+   GAME LOGOS
+   ========================================================= */
+
+.carousel-logo .game-logo {
+  display: block;
+
+  width: auto !important;
+  height: auto !important;
+
+  max-width: 180px !important;
+  max-height: 72px !important;
+
+  object-fit: contain;
+  object-position: center;
+
+  margin: 0 auto;
+}
+
+
+/* =========================================================
+   INDIVIDUAL LOGO SIZING
+   ========================================================= */
+
+.carousel-logo .game-logo--freefire,
+.carousel-logo .game-logo--pubg,
+.carousel-logo .game-logo--cr,
+.carousel-logo .game-logo--clash-royale,
+.carousel-logo .game-logo--clashroyale,
+.carousel-logo .game-logo--pubgm,
+.carousel-logo .game-logo--bgmi {
+  max-width: 180px !important;
+  max-height: 72px !important;
+}
+
+.carousel-logo .game-logo--val,
+.carousel-logo .game-logo--valorant {
+  max-width: 210px !important;
+  max-height: 68px !important;
+}
+
+
+/* =========================================================
+   STATUS
+   ========================================================= */
 
 .carousel-status {
   @apply text-[9px] font-bold tracking-widest uppercase;
@@ -40,6 +118,11 @@
 .carousel-status-inactive {
   @apply text-synco-textMuted;
 }
+
+
+/* =========================================================
+   ACTIVE INDICATOR
+   ========================================================= */
 
 .carousel-indicator {
   @apply h-[2px] w-full bg-black mt-2 rounded-t-sm;
