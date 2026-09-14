@@ -1,0 +1,58 @@
+@reference "../global.css";
+
+/* --- Clubs Main Layout --- */
+.clubs-wrapper {
+  @apply w-full h-full flex flex-col gap-6;
+}
+
+/* --- Split-Pane Create Club Card --- */
+.create-club-card {
+  /* This flex-row is what puts the black banner and form side-by-side */
+  @apply flex flex-col lg:flex-row w-full bg-white rounded-3xl shadow-lg border border-gray-200 overflow-hidden min-h-[650px] relative z-10;
+}
+
+/* Left Side: Dark Branding Panel */
+.create-club-banner {
+  @apply bg-black p-10 lg:p-14 flex flex-col justify-center relative overflow-hidden lg:w-[45%];
+}
+
+.create-club-banner::before {
+  content: '';
+  @apply absolute inset-0 bg-gradient-to-br from-white/10 to-transparent pointer-events-none;
+}
+
+.create-club-title {
+  @apply text-white text-5xl md:text-6xl uppercase mb-4 relative z-10;
+  font-family: 'Super Brigade', sans-serif;
+  font-weight: normal;
+  line-height: 0.85;
+}
+
+.create-club-title span {
+  @apply text-[#D6C98A] block mt-2; /* SYNCO Gold */
+}
+
+.create-club-subtitle {
+  @apply text-white/50 text-sm font-bold uppercase tracking-widest mt-6 relative z-10;
+}
+
+/* Right Side: Clean Form Panel */
+.create-club-form-side {
+  @apply flex-1 p-8 lg:p-12 xl:p-16 flex flex-col justify-center bg-white;
+}
+
+.create-club-header {
+  @apply flex items-center justify-between mb-8;
+}
+
+.back-to-directory-btn {
+  @apply flex items-center gap-2 text-xs font-bold text-gray-400 hover:text-black uppercase tracking-widest transition-colors;
+}
+
+.form-section-title {
+  @apply text-3xl font-bold font-header uppercase tracking-wider text-black mb-1;
+}
+
+.form-section-subtitle {
+  @apply text-xs font-semibold text-gray-400 uppercase tracking-widest mb-10;
+}

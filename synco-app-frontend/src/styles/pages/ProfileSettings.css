@@ -1,0 +1,253 @@
+@reference "../global.css";
+
+.profile-wrapper {
+  @apply w-full max-w-[1050px] pb-16;
+}
+
+.profile-header {
+  @apply flex justify-between items-start mb-6;
+}
+
+.profile-heading-group {
+  @apply flex items-center gap-4;
+}
+
+.profile-avatar {
+  @apply w-16 h-16 rounded-full object-cover border-2 border-black;
+}
+
+.profile-title {
+  @apply font-header text-4xl font-bold text-black mb-1 tracking-wide;
+}
+
+.profile-subtitle {
+  @apply text-synco-textMuted text-xs max-w-xl leading-relaxed;
+}
+
+.profile-signout-btn {
+  @apply px-5 py-2.5 bg-gray-100 hover:bg-gray-200 text-xs font-bold rounded-xl transition-all border border-gray-200 tracking-wider;
+}
+
+.profile-header-actions {
+  @apply flex items-center gap-3;
+}
+
+.profile-back-btn {
+  @apply inline-flex items-center gap-2 px-4 py-2.5 bg-white hover:bg-gray-100 text-xs font-bold rounded-xl transition-all border border-gray-200 tracking-wider;
+}
+
+/* Tab Bar */
+.profile-tabs-container {
+  @apply flex flex-wrap gap-2 mb-8 bg-gray-100/80 p-1.5 rounded-2xl w-max border border-gray-200;
+}
+
+.profile-tab-btn {
+  @apply px-5 py-2 rounded-xl text-xs font-bold transition-all tracking-wider uppercase;
+}
+
+.profile-tab-active {
+  @apply bg-black text-white shadow-sm;
+}
+
+.profile-tab-inactive {
+  @apply text-synco-textMuted hover:text-black;
+}
+
+/* Card Container */
+.profile-card {
+  @apply bg-white rounded-3xl p-8 md:p-10 shadow-sm border border-gray-200;
+}
+
+.profile-card-header {
+  @apply mb-8 pb-4 border-b border-gray-100;
+}
+
+.profile-card-header-actions {
+  @apply flex items-center justify-between gap-4;
+}
+
+.profile-card-title {
+  @apply text-xl font-header font-bold text-black uppercase tracking-wide mb-1;
+}
+
+.profile-card-desc {
+  @apply text-xs text-synco-textMuted;
+}
+
+/* Form Elements */
+.profile-grid-2 {
+  @apply grid grid-cols-1 md:grid-cols-2 gap-5;
+}
+
+.profile-grid-3 {
+  @apply grid grid-cols-1 md:grid-cols-3 gap-5;
+}
+
+.profile-field {
+  @apply flex flex-col gap-1.5;
+}
+
+.profile-label {
+  @apply text-xs font-bold text-black flex items-center justify-between;
+}
+
+.profile-label-badge {
+  @apply text-[10px] font-medium text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded-md;
+}
+
+.profile-input {
+  @apply bg-synco-light px-4 py-3 rounded-xl text-sm border border-transparent focus:border-black focus:bg-white outline-none transition-all;
+}
+
+.profile-input-locked {
+  @apply bg-gray-100 text-gray-500 cursor-not-allowed border-dashed border-gray-300;
+}
+
+.profile-input-view {
+  @apply bg-transparent border-transparent cursor-default;
+}
+
+.profile-textarea {
+  @apply bg-synco-light p-4 rounded-xl text-sm border border-transparent focus:border-black focus:bg-white outline-none resize-none h-28 transition-all;
+}
+
+/* Avatar Row */
+.profile-avatar-row {
+  @apply flex items-center gap-6 mb-8 p-4 bg-synco-light rounded-2xl border border-gray-100;
+}
+
+.profile-avatar-img {
+  @apply w-20 h-20 rounded-2xl object-cover border-2 border-white shadow-md bg-gray-200;
+}
+
+/* Gaming Cards */
+.gaming-card {
+  @apply bg-synco-light rounded-2xl p-5 border border-gray-200 flex flex-col gap-3 relative;
+}
+
+.gaming-badge {
+  @apply text-[10px] font-bold px-2 py-0.5 rounded uppercase tracking-wider w-max;
+}
+
+/* Linked Account Cards */
+.linked-acc-item {
+  @apply flex items-center justify-between p-4 rounded-2xl border transition-all;
+}
+
+.linked-acc-active {
+  @apply bg-emerald-50/40 border-emerald-200;
+}
+
+.linked-acc-inactive {
+  @apply bg-synco-light border-gray-200;
+}
+
+/* Save Button */
+.profile-save-btn {
+  @apply mt-8 px-8 py-3 bg-black hover:bg-gray-800 text-white text-xs font-bold uppercase rounded-xl tracking-wider transition-all shadow-md;
+}
+
+.profile-edit-btn,
+.profile-cancel-btn,
+.profile-delete-btn {
+  @apply inline-flex items-center gap-2 px-4 py-2 text-xs font-bold uppercase rounded-lg transition-all;
+}
+
+.profile-edit-btn {
+  @apply bg-black text-white hover:bg-gray-800;
+}
+
+.profile-cancel-btn {
+  @apply bg-gray-100 text-gray-700 hover:bg-gray-200;
+}
+
+.profile-section-actions {
+  @apply flex items-center gap-2;
+}
+
+.profile-danger-zone {
+  @apply mt-10 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 border-t border-red-100 pt-6;
+}
+
+.profile-danger-zone h3 {
+  @apply text-sm font-bold text-red-700 uppercase;
+}
+
+.profile-danger-zone p {
+  @apply mt-1 text-xs text-gray-500;
+}
+
+.profile-delete-btn {
+  @apply bg-red-50 text-red-700 border border-red-200 hover:bg-red-100;
+}
+
+.profile-clips-grid {
+  @apply grid grid-cols-1 md:grid-cols-2 gap-4 mb-6;
+}
+
+.profile-clip-card {
+  @apply overflow-hidden rounded-xl border border-gray-200 bg-black;
+}
+
+.profile-clip-card video {
+  @apply block w-full aspect-video object-cover;
+}
+
+.profile-clip-card-footer {
+  @apply flex items-center justify-between gap-3 px-3 py-2 text-xs font-bold text-white;
+}
+
+.profile-clip-card-footer button {
+  @apply text-gray-300 hover:text-red-400;
+}
+
+.profile-clip-upload {
+  @apply flex flex-col gap-3 rounded-2xl border border-dashed border-gray-300 bg-synco-light p-5;
+}
+
+.profile-clip-error {
+  @apply text-xs font-bold text-red-600;
+}
+
+/* --- Custom Game Select (Glassmorphism 2-Column Grid) --- */
+.custom-game-select-wrapper {
+  @apply relative;
+}
+
+.custom-game-select-trigger {
+  @apply flex items-center gap-2 px-3 py-1.5 bg-gray-50 border border-gray-200 rounded-lg text-[10px] font-bold text-gray-700 uppercase tracking-widest hover:bg-gray-100 transition-colors z-10 relative;
+}
+
+.custom-game-select-overlay {
+  @apply fixed inset-0 z-30 cursor-default;
+}
+
+/* The Silver Glass Panel */
+.custom-game-select-menu {
+  @apply absolute left-0 top-full mt-2 w-max min-w-[480px] grid grid-cols-1 md:grid-cols-2 gap-2 p-3 z-40 rounded-2xl shadow-[0_8px_30px_rgb(0,0,0,0.12)] backdrop-blur-xl bg-white/70 border border-white/60 origin-top-left;
+}
+
+.custom-game-option {
+  @apply flex items-center gap-3 p-2 rounded-xl transition-all hover:bg-white/60 text-left border border-transparent hover:border-white/80 hover:shadow-sm ;
+}
+
+.custom-game-option.active {
+  @apply bg-white/90 border-gray-200 shadow-sm;
+}
+
+/* Placeholder for game icon (black square in your reference image) */
+.game-option-icon {
+  @apply w-10 h-10 rounded-lg bg-black/5 border border-black/10 flex-shrink-0 flex items-center justify-center overflow-hidden transition-colors group-hover:bg-black/10;
+}
+
+.game-option-text {
+  @apply flex flex-col justify-center;
+}
+
+.game-option-title {
+  @apply text-xs font-bold text-black uppercase tracking-wide truncate max-w-[140px];
+}
+
+.game-option-subtitle {
+  @apply text-[9px] font-semibold text-gray-500 uppercase tracking-widest;
+}

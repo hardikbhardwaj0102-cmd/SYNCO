@@ -1,0 +1,32 @@
+@reference "../global.css";
+
+.navbar-header {
+  @apply w-full max-w-7xl mx-auto px-8 py-6 flex justify-between items-center bg-transparent z-50;
+}
+
+.navbar-logo {
+  @apply font-header text-3xl font-bold tracking-tighter italic leading-none mt-1;
+  font-family: 'Cyber Horizon', 'Oswald', sans-serif;
+  font-size: 1.6vw
+}
+
+.navbar-nav {
+  @apply hidden md:flex gap-12 text-sm font-semibold text-gray-500;
+}
+
+.navbar-link {
+  @apply relative hover:text-black transition-colors;
+}
+
+.navbar-link-active {
+  @apply text-black font-bold;
+}
+
+.navbar-link-active::after {
+  content: '';
+  @apply absolute -bottom-2 left-0 right-0 h-0.5 bg-[#C1A87D];
+}
+
+.navbar-btn {
+  @apply border border-gray-200 bg-white px-8 py-2 rounded-lg text-sm font-bold hover:bg-gray-50 transition-colors shadow-sm;
+}

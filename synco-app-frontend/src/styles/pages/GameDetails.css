@@ -1,0 +1,45 @@
+@reference "../global.css";
+
+.game-details-wrapper {
+  @apply w-full max-w-[1200px] mx-auto bg-white rounded-2xl shadow-sm border border-synco-border p-8 min-h-[800px];
+}
+
+.game-header-section {
+  @apply flex items-center gap-6 mb-10 pb-10 border-b border-synco-border;
+}
+
+.game-icon-box {
+  @apply w-24 h-24 bg-synco-dark text-white rounded-2xl flex items-center justify-center font-header text-3xl font-bold;
+}
+
+.game-title {
+  @apply font-header text-5xl font-bold text-black uppercase mb-2;
+}
+
+.game-subtitle {
+  @apply text-synco-textMuted font-bold text-sm;
+}
+
+.game-tabs-container {
+  @apply flex gap-2 mb-8 bg-synco-light w-max p-1 rounded-xl;
+}
+
+.game-tab-btn {
+  @apply px-6 py-2 rounded-lg text-xs font-bold transition-colors;
+}
+
+.game-tab-btn-active {
+  @apply bg-synco-dark text-white;
+}
+
+.game-tab-btn-inactive {
+  @apply text-synco-textMuted hover:text-black;
+}
+
+.game-placeholder-box {
+  @apply text-center py-20 border-2 border-dashed border-gray-200 rounded-xl;
+}
+
+.game-placeholder-text {
+  @apply text-synco-textMuted font-bold uppercase text-sm;
+}

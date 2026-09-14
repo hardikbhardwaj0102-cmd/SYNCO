@@ -1,0 +1,22 @@
+@reference "../global.css";
+
+.games-hub-container {
+  @apply w-full max-w-[1200px] mx-auto pb-12 pt-4;
+}
+
+.games-hub-grid {
+  @apply grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4;
+}
+
+.game-card-btn {
+  @apply bg-white rounded-2xl h-24 flex items-center justify-center p-4 hover:shadow-md hover:-translate-y-1 transition-all duration-200;
+}
+
+.game-card-text {
+  @apply font-header font-bold text-xl text-black tracking-wide text-center uppercase opacity-80 transition-opacity;
+  font-family: 'Super Brigade', sans-serif;
+}
+
+.games-hub-state {
+  @apply flex min-h-[40vh] items-center justify-center text-sm font-bold uppercase tracking-widest text-gray-500;
+}

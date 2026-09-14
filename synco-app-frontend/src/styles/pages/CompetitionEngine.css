@@ -1,0 +1,33 @@
+@reference "../global.css";
+
+.comp-engine-container {
+  @apply w-full max-w-[1200px] mx-auto bg-white rounded-2xl shadow-sm border border-synco-border p-8 min-h-[800px];
+}
+
+.comp-header-box {
+  @apply mb-8;
+}
+
+.comp-title {
+  @apply font-header text-4xl font-bold text-black mb-2 tracking-wide uppercase;
+}
+
+.comp-subtitle {
+  @apply text-synco-textMuted text-sm;
+}
+
+.comp-tabs-container {
+  @apply flex gap-2 mb-10;
+}
+
+.comp-tab-btn {
+  @apply flex-1 py-3 rounded-xl text-xs font-bold transition-all;
+}
+
+.comp-tab-btn-active {
+  @apply bg-synco-dark text-white;
+}
+
+.comp-tab-btn-inactive {
+  @apply bg-synco-light text-synco-textMuted hover:bg-gray-200;
+}

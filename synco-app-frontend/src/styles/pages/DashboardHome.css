@@ -1,0 +1,344 @@
+@reference "../global.css";
+
+.dashboard-wrapper {
+  @apply w-full max-w-[1200px] mx-auto space-y-8 pt-4 pb-12;
+}
+
+.premium-banner {
+  @apply bg-gradient-to-r from-black to-gray-900 rounded-2xl p-8 flex flex-col md:flex-row items-center justify-between shadow-lg border border-gray-800;
+}
+
+.premium-banner-left {
+  @apply flex items-center gap-6 mb-4 md:mb-0;
+}
+
+.premium-banner-icon-box {
+  @apply w-16 h-16 bg-[#C1A87D]/10 rounded-full flex items-center justify-center border border-[#C1A87D]/30 text-[#C1A87D];
+}
+
+.premium-banner-title {
+  @apply font-header text-3xl font-bold text-white tracking-wide uppercase;
+}
+
+.premium-banner-subtitle {
+  @apply text-gray-400 text-sm;
+}
+
+.premium-banner-btn {
+  @apply bg-[#C1A87D] text-black font-bold uppercase px-8 py-3 rounded-xl hover:bg-yellow-600 transition-colors whitespace-nowrap shadow-[0_0_15px_rgba(193,168,125,0.4)];
+}
+
+.dashboard-grid {
+  @apply grid grid-cols-1 lg:grid-cols-3 gap-8;
+}
+
+.stat-card {
+  @apply bg-white rounded-2xl p-6 shadow-sm border border-gray-200 flex flex-col;
+}
+
+.stat-header {
+  @apply flex justify-between items-center mb-6;
+}
+
+.stat-title {
+  @apply font-header text-xl font-bold uppercase;
+}
+
+.stat-select {
+  @apply bg-synco-light border border-gray-200 text-sm font-bold rounded-lg px-3 py-2 outline-none focus:ring-2 focus:ring-black cursor-pointer;
+}
+
+.stat-list {
+  @apply flex-1 flex flex-col gap-4;
+}
+
+.stat-empty-message {
+  @apply mb-4 text-xs font-bold uppercase tracking-wide text-gray-500;
+}
+
+.stat-item {
+  @apply bg-synco-light rounded-xl p-4 flex items-center gap-4;
+}
+
+.stat-item-icon {
+  @apply w-10 h-10 bg-white rounded-lg flex items-center justify-center shadow-sm;
+}
+
+.stat-item-label {
+  @apply text-xs font-bold text-gray-400 uppercase tracking-wider;
+}
+
+.stat-item-value {
+  @apply text-xl font-bold;
+}
+
+.highlights-card {
+  @apply lg:col-span-2 min-w-0 bg-white rounded-2xl p-6 shadow-sm border border-gray-200;
+}
+
+.highlights-header {
+  @apply mb-6;
+}
+
+.highlights-title {
+  @apply font-header text-xl font-bold uppercase mb-1;
+}
+
+.highlights-subtitle {
+  @apply text-xs text-gray-500 font-bold uppercase tracking-wide;
+}
+
+.highlights-grid {
+  @apply grid grid-cols-2 md:grid-cols-3 gap-4;
+}
+
+.highlight-slot-filled {
+  @apply aspect-video bg-black rounded-xl overflow-hidden relative border border-gray-200;
+}
+
+.highlight-thumb {
+  @apply w-full h-full object-cover;
+}
+
+.highlight-overlay {
+  @apply absolute inset-0 flex flex-col items-center justify-center;
+}
+
+.highlight-video-title {
+  @apply absolute bottom-2 left-2 right-2 text-white text-xs font-bold uppercase tracking-wider px-2 text-center;
+}
+
+.dashboard-empty-clips {
+  @apply col-span-full py-10 text-center text-xs font-bold uppercase tracking-wider text-gray-500;
+}
+
+.highlight-remove-btn {
+  @apply absolute top-2 right-2 bg-red-600 text-white text-[10px] px-2 py-1 rounded font-bold opacity-0 transition-opacity;
+}
+
+.highlight-slot-empty {
+  @apply aspect-video bg-synco-light rounded-xl border-2 border-dashed border-gray-300 flex flex-col items-center justify-center text-gray-400 hover:text-black hover:border-black hover:bg-gray-50 transition-all;
+}
+
+.highlight-empty-text {
+  @apply text-[10px] font-bold uppercase tracking-wider;
+}
+
+/* --- Custom Video Player --- */
+.custom-video-container {
+  @apply relative w-full aspect-video bg-black rounded-xl overflow-hidden cursor-pointer flex-shrink-0;
+  /* Enforce a minimum width so they don't shrink when scrolling */
+  min-width: 280px; 
+  max-width: 400px;
+}
+
+.custom-video-element {
+  @apply w-full h-full object-cover transition-opacity duration-300;
+}
+
+/* Hide default controls */
+.custom-video-element::-webkit-media-controls {
+  display: none !important;
+}
+
+.video-play-overlay {
+  @apply absolute inset-0 flex items-center justify-center bg-black/40 group-hover:bg-black/20 transition-colors z-10;
+}
+
+.video-play-icon {
+  @apply w-12 h-12 bg-white/20 backdrop-blur-sm rounded-full flex items-center justify-center text-white border border-white/40 shadow-lg transform group-hover:scale-110 transition-transform;
+}
+
+.video-title-bar {
+  @apply absolute bottom-0 left-0 right-0 p-3 bg-gradient-to-t from-black/80 to-transparent z-10;
+}
+
+.video-title-text {
+  @apply text-white text-xs font-bold tracking-widest uppercase;
+}
+
+/* --- Horizontal Scrolling Containers --- */
+.moments-scroll-container,
+.highlights-scroll-container {
+  @apply flex gap-4 overflow-x-auto pb-4 snap-x snap-mandatory;
+  /* Hide scrollbar for a cleaner look */
+  scrollbar-width: none; 
+  -ms-overflow-style: none;
+}
+
+.moments-scroll-container::-webkit-scrollbar,
+.highlights-scroll-container::-webkit-scrollbar {
+  display: none;
+}
+
+.scroll-item {
+  @apply snap-center;
+}
+
+
+/* --- Single-Clip Scroll Reel (Dashboard) --- */
+.dashboard-highlights-scroll {
+  @apply flex w-full min-w-0 flex-col gap-4 overflow-y-auto overflow-x-hidden overscroll-y-contain pb-2;
+  max-height: 520px;
+  scrollbar-width: thin;
+  scrollbar-color: #c1a87d transparent;
+}
+
+.dashboard-highlights-scroll::-webkit-scrollbar {
+  width: 6px;
+}
+
+.dashboard-highlights-scroll::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.dashboard-highlights-scroll::-webkit-scrollbar-thumb {
+  background: #c1a87d;
+  border-radius: 999px;
+}
+
+/* Make each wrapper exactly 100% width and prevent it from shrinking */
+.dashboard-clip-wrapper {
+  @apply w-full min-w-0 flex-none;
+}
+
+/* Force the video to obey the dashboard wrapper instead of the Profile constraints */
+.dashboard-clip-wrapper .custom-video-container {
+  max-width: 100% !important;
+  min-width: 100% !important;
+  width: 100% !important;
+  margin: 0 !important;
+}
+
+
+/* --- Custom Game Select (Glassmorphism 2-Column Grid) --- */
+.custom-game-select-wrapper {
+  @apply relative;
+}
+
+.custom-game-select-trigger {
+  @apply flex items-center gap-2 px-3 py-1.5 bg-gray-50 border border-gray-200 rounded-lg text-[10px] font-bold text-gray-700 uppercase tracking-widest hover:bg-gray-100 transition-colors z-10 relative;
+}
+
+.custom-game-select-overlay {
+  @apply fixed inset-0 z-30 cursor-default;
+}
+
+/* The Silver Glass Panel */
+.custom-game-select-menu {
+  @apply absolute left-0 top-full mt-2 w-max min-w-[450px] grid grid-cols-1 md:grid-cols-2 gap-2 p-3 z-40 rounded-2xl shadow-[0_8px_30px_rgb(0,0,0,0.12)] backdrop-blur-xl bg-white/70 border border-white/60 origin-top-left;
+}
+
+.custom-game-option {
+  @apply flex items-center gap-3 p-2 rounded-xl transition-all hover:bg-white/60 text-left border border-transparent hover:border-white/80 hover:shadow-sm ;
+}
+
+.custom-game-option.active {
+  @apply bg-white/90 border-gray-200 shadow-sm;
+}
+
+/* Placeholder for game icon (black square in your reference image) */
+.game-option-icon {
+  @apply w-10 h-10 rounded-lg bg-black/5 border border-black/10 flex-shrink-0 flex items-center justify-center overflow-hidden transition-colors group-hover:bg-black/10;
+}
+
+.game-option-text {
+  @apply flex flex-col justify-center;
+}
+
+.game-option-title {
+  @apply text-xs font-bold text-black uppercase tracking-wide truncate max-w-[140px];
+}
+
+.game-option-subtitle {
+  @apply text-[9px] font-semibold text-gray-500 uppercase tracking-widest;
+}
+
+/* --- Dynamic Stats Container Utilities --- */
+.stat-box {
+  @apply flex flex-col items-center justify-center p-6 bg-gray-50 rounded-2xl border border-gray-100 transition-all hover:border-gray-200 hover:shadow-sm gap-3;
+}
+
+.stat-icon-wrapper {
+  @apply w-10 h-10 bg-white border border-gray-200 rounded-xl flex items-center justify-center text-black shadow-sm;
+}
+
+.stat-text {
+  @apply flex flex-col items-center gap-1;
+}
+
+.stat-label {
+  @apply text-[10px] font-bold text-gray-400 uppercase tracking-widest;
+}
+
+.stat-value {
+  @apply text-lg font-bold text-black uppercase font-header tracking-wider;
+}
+
+/* --- Redesigned Performance Stats Banner --- */
+.stats-entry-banner {
+  @apply w-full h-full min-h-[420px] flex-1 flex flex-col justify-between bg-black rounded-2xl relative overflow-hidden transition-transform duration-300 hover:scale-[1.01] text-left p-8 md:p-10 shadow-lg border border-white/5 cursor-pointer;
+}
+
+.stats-entry-banner::before {
+  content: '';
+  @apply absolute inset-0 bg-gradient-to-br from-white/10 to-transparent pointer-events-none;
+}
+
+.stats-entry-content {
+  @apply relative z-10 flex flex-col h-full justify-start items-start text-center;
+}
+
+.stats-entry-eyebrow {
+  @apply text-[#D6C98A] text-[10px] font-bold uppercase tracking-[0.3em] mb-4 block text-center;
+}
+
+.stats-entry-title {
+  @apply text-white text-4xl xl:text-5xl uppercase mb-4;
+  margin-top: 75px;
+  margin-bottom: 80px;
+  font-size: 50px;
+  font-family: 'Super Brigade', sans-serif;
+  font-weight: normal;
+  line-height: 1.1;
+}
+
+.stats-entry-title span {
+  @apply text-[#D6C98A] block mt-1;
+}
+
+.stats-entry-action-wrapper {
+  @apply w-full flex flex-col items-center gap-4 pt-0;
+}
+
+.stats-entry-action {
+  @apply inline-flex items-center gap-2 text-black bg-[#D6C98A] hover:bg-white text-xs font-bold uppercase tracking-widest px-6 py-3 rounded-xl transition-colors w-max shadow-sm;
+}
+
+.stats-entry-footer-text {
+  @apply text-white/40 text-[10px] font-bold uppercase tracking-widest text-center mt-auto w-full pt-4;
+}
+
+/* --- Text-Only Vertical Game Selector (Matching GamesDropdown Style) --- */
+.stats-game-option-btn {
+  @apply w-full flex items-center justify-between p-4 rounded-xl bg-gray-50 hover:bg-black hover:text-white border border-gray-100 hover:border-black transition-all text-left cursor-pointer;
+}
+
+.stats-game-option-title {
+  font-family: 'Super Brigade', sans-serif;
+  font-size: 1.3vw;
+  font-weight: normal;
+  @apply text-black group-hover:text-[#D6C98A] transition-colors uppercase tracking-wide flex-1 pr-4 whitespace-nowrap;
+}
+
+.stats-game-option-sub {
+  @apply text-[10px] font-bold text-gray-400 group-hover:text-white/60 uppercase tracking-widest justify-center w-full;
+}
+
+/* Active Stats Header Game Title */
+.stats-active-game-title {
+  font-family: 'Super Brigade', sans-serif;
+  font-size: 45px;
+  font-weight: normal;
+  @apply text-black uppercase tracking-wide text-center w-full block;
+}

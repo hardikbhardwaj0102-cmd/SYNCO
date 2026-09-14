@@ -1,0 +1,30 @@
+@reference "../global.css";
+
+.hybrid-auth-container {
+  @apply flex h-screen overflow-hidden bg-transparent;
+}
+
+.hybrid-auth-main {
+  @apply flex-1 overflow-y-auto w-full;
+}
+
+.hybrid-auth-content {
+  @apply max-w-7xl mx-auto p-8;
+}
+
+.hybrid-public-container {
+  @apply h-screen overflow-hidden bg-transparent text-black font-sans flex flex-col;
+}
+
+.hybrid-public-main {
+  @apply flex flex-1 min-h-0 flex-col overflow-y-auto pb-0;
+}
+
+.hybrid-public-page-content {
+  flex: 0 0 auto;
+}
+
+.hybrid-public-main > .footer-wrapper {
+  flex-shrink: 0;
+  margin-top: 3rem;
+}
