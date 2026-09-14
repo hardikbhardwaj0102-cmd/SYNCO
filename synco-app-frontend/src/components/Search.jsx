@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
+
 import {
   Search as SearchIcon,
   User,
@@ -16,9 +17,19 @@ import '../styles/components/Search.css';
 // API
 // =========================================================
 
-const API_URL =
-  import.meta.env.VITE_API_URL ||
-  'https://synco-backend-vi7b.onrender.com';
+// Production backend
+const API_URL = 'https://synco-backend-vi7b.onrender.com';
+
+
+// =========================================================
+// EMPTY RESULTS
+// =========================================================
+
+const EMPTY_RESULTS = {
+  users: [],
+  clubs: [],
+  games: [],
+};
 
 
 // =========================================================
@@ -37,11 +48,9 @@ const Search = () => {
 
   const [error, setError] = useState('');
 
-  const [results, setResults] = useState({
-    users: [],
-    clubs: [],
-    games: [],
-  });
+  const [results, setResults] = useState(EMPTY_RESULTS);
+
+  const [searchVersion, setSearchVersion] = useState(0);
 
 
   // =====================================================
@@ -76,14 +85,13 @@ const Search = () => {
 
     const query = searchQuery.trim();
 
+    // -----------------------------------------------
+    // Empty search
+    // -----------------------------------------------
+
     if (!query) {
 
-      setResults({
-        users: [],
-        clubs: [],
-        games: [],
-      });
-
+      setResults(EMPTY_RESULTS);
       setIsLoading(false);
       setError('');
 
@@ -102,34 +110,73 @@ const Search = () => {
 
       try {
 
+        const url =
+          `${API_URL}/api/search` +
+          `?q=${encodeURIComponent(query)}` +
+          `&type=${encodeURIComponent(activeTab)}`;
+
+
+        console.log(
+          'SYNCO SEARCH REQUEST:',
+          url
+        );
+
+
         const response = await fetch(
-          `${API_URL}/api/search?q=${encodeURIComponent(query)}&type=${activeTab}`,
+          url,
           {
             method: 'GET',
             credentials: 'include',
             headers: {
-              'Content-Type': 'application/json',
+              Accept: 'application/json',
             },
           }
         );
 
 
-        let data = null;
+        console.log(
+          'SYNCO SEARCH STATUS:',
+          response.status
+        );
 
-        try {
-          data = await response.json();
-        } catch {
+
+        const contentType =
+          response.headers.get(
+            'content-type'
+          ) || '';
+
+
+        if (!contentType.includes('application/json')) {
+
+          const text =
+            await response.text();
+
+          console.error(
+            'Search returned non-JSON:',
+            text
+          );
+
           throw new Error(
-            'The server returned an invalid response.'
+            `Server returned an invalid response (${response.status}).`
           );
         }
+
+
+        const data =
+          await response.json();
+
+
+        console.log(
+          'SYNCO SEARCH RESPONSE:',
+          data
+        );
 
 
         if (!response.ok) {
 
           throw new Error(
             data?.message ||
-            'Search request failed.'
+            `Search failed (${response.status}).`
           );
         }
 
@@ -139,13 +186,29 @@ const Search = () => {
         }
 
 
-        setResults(
-          data?.results || {
-            users: [],
-            clubs: [],
-            games: [],
-          }
-        );
+        setResults({
+          users:
+            Array.isArray(
+              data?.results?.users
+            )
+              ? data.results.users
+              : [],
+
+          clubs:
+            Array.isArray(
+              data?.results?.clubs
+            )
+              ? data.results.clubs
+              : [],
+
+          games:
+            Array.isArray(
+              data?.results?.games
+            )
+              ? data.results.games
+              : [],
+        });
+
 
       } catch (err) {
 
@@ -153,21 +216,21 @@ const Search = () => {
           return;
         }
 
+
         console.error(
-          'Search failed:',
+          'SYNCO SEARCH ERROR:',
           err
         );
 
-        setResults({
-          users: [],
-          clubs: [],
-          games: [],
-        });
+
+        setResults(EMPTY_RESULTS);
+
 
         setError(
-          err.message ||
+          err?.message ||
           'Unable to search right now.'
         );
+
 
       } finally {
 
@@ -178,14 +241,15 @@ const Search = () => {
     };
 
 
-    // -------------------------------------------------
+    // -----------------------------------------------
     // Debounce
-    // -------------------------------------------------
+    // -----------------------------------------------
 
-    const debounceTimer = setTimeout(
-      fetchSearchResults,
-      350
-    );
+    const debounceTimer =
+      setTimeout(
+        fetchSearchResults,
+        350
+      );
 
 
     return () => {
@@ -197,9 +261,11 @@ const Search = () => {
       );
     };
 
+
   }, [
     searchQuery,
     activeTab,
+    searchVersion,
   ]);
 
 
@@ -211,13 +277,23 @@ const Search = () => {
 
     setSearchQuery('');
 
-    setResults({
-      users: [],
-      clubs: [],
-      games: [],
-    });
+    setResults(EMPTY_RESULTS);
 
     setError('');
+  };
+
+
+  // =====================================================
+  // RETRY
+  // =====================================================
+
+  const retrySearch = () => {
+
+    setError('');
+
+    setSearchVersion(
+      current => current + 1
+    );
   };
 
 
@@ -235,20 +311,21 @@ const Search = () => {
     if (user.username) {
 
       navigate(
-        `/profile/${user.username}`
+        `/profile/${encodeURIComponent(
+          user.username
+        )}`
       );
 
       return;
     }
 
 
-    // Fallback using UID if username
-    // has not been created yet.
-
     if (user.uid) {
 
       navigate(
-        `/profile/${user.uid}`
+        `/profile/${encodeURIComponent(
+          user.uid
+        )}`
       );
     }
   };
@@ -259,6 +336,7 @@ const Search = () => {
     if (!club?.id) {
       return;
     }
+
 
     navigate(
       `/clubs/${club.id}`
@@ -276,7 +354,9 @@ const Search = () => {
     if (game.slug) {
 
       navigate(
-        `/games/${game.slug}`
+        `/games/${encodeURIComponent(
+          game.slug
+        )}`
       );
 
       return;
@@ -286,7 +366,9 @@ const Search = () => {
     if (game.id) {
 
       navigate(
-        `/games/${game.id}`
+        `/games/${encodeURIComponent(
+          game.id
+        )}`
       );
     }
   };
@@ -297,13 +379,13 @@ const Search = () => {
   // =====================================================
 
   const hasUsers =
-    results.users?.length > 0;
+    results.users.length > 0;
 
   const hasClubs =
-    results.clubs?.length > 0;
+    results.clubs.length > 0;
 
   const hasGames =
-    results.games?.length > 0;
+    results.games.length > 0;
 
   const hasResults =
     hasUsers ||
@@ -321,7 +403,9 @@ const Search = () => {
       key={`user-${user.id}`}
       type="button"
       className="search-result-card group"
-      onClick={() => handleUserClick(user)}
+      onClick={() =>
+        handleUserClick(user)
+      }
     >
 
       <div className="search-result-icon">
@@ -332,6 +416,10 @@ const Search = () => {
             src={user.avatar}
             alt=""
             className="w-full h-full rounded-full object-cover"
+            onError={(event) => {
+              event.currentTarget.style.display =
+                'none';
+            }}
           />
 
         ) : (
@@ -349,17 +437,16 @@ const Search = () => {
 
           {user.username
             ? `@${user.username}`
-            : user.uid
-              ? user.uid
-              : user.name
-          }
+            : user.name ||
+            user.uid ||
+            'SYNCO User'}
 
         </span>
 
 
         <span className="search-result-subtitle">
 
-          {user.name}
+          {user.name || 'SYNCO Player'}
 
           {user.level ? (
             ` · Level ${user.level}`
@@ -392,7 +479,9 @@ const Search = () => {
       key={`club-${club.id}`}
       type="button"
       className="search-result-card group"
-      onClick={() => handleClubClick(club)}
+      onClick={() =>
+        handleClubClick(club)
+      }
     >
 
       <div className="search-result-icon">
@@ -446,7 +535,9 @@ const Search = () => {
       key={`game-${game.id}`}
       type="button"
       className="search-result-card group"
-      onClick={() => handleGameClick(game)}
+      onClick={() =>
+        handleGameClick(game)
+      }
     >
 
       <div className="search-result-icon">
@@ -544,9 +635,9 @@ const Search = () => {
             className="search-input"
             placeholder="Search players, clubs, games, or SYNCO UID..."
             value={searchQuery}
-            onChange={(e) =>
+            onChange={(event) =>
               setSearchQuery(
-                e.target.value
+                event.target.value
               )
             }
             autoFocus
@@ -615,9 +706,9 @@ const Search = () => {
       <div className="search-results-container scrollbar-thin">
 
 
-        {/* -------------------------------------------------
+        {/* =================================================
                     LOADING
-                ------------------------------------------------- */}
+                ================================================= */}
 
         {isLoading && (
 
@@ -638,41 +729,40 @@ const Search = () => {
         )}
 
 
-        {/* -------------------------------------------------
+        {/* =================================================
                     ERROR
-                ------------------------------------------------- */}
+                ================================================= */}
 
-        {!isLoading && error && (
+        {!isLoading &&
+          error && (
 
-          <div className="search-empty-state">
+            <div className="search-empty-state">
 
-            <p className="text-red-600">
-              {error}
-            </p>
-
-            <button
-              type="button"
-              onClick={() =>
-                setSearchQuery(
-                  (current) =>
-                    current
-                )
-              }
-              className="mt-4 px-4 py-2 border border-black/10 rounded-lg text-sm font-semibold hover:bg-black hover:text-white transition"
-            >
-
-              Try Again
-
-            </button>
-
-          </div>
-
-        )}
+              <p className="text-red-600">
+                {error}
+              </p>
 
 
-        {/* -------------------------------------------------
+              <button
+                type="button"
+                onClick={
+                  retrySearch
+                }
+                className="mt-4 px-4 py-2 border border-black/10 rounded-lg text-sm font-semibold hover:bg-black hover:text-white transition"
+              >
+
+                Try Again
+
+              </button>
+
+            </div>
+
+          )}
+
+
+        {/* =================================================
                     EMPTY QUERY
-                ------------------------------------------------- */}
+                ================================================= */}
 
         {!isLoading &&
           !error &&
@@ -686,8 +776,9 @@ const Search = () => {
               />
 
               <p>
-                Search for players, clubs,
-                games, or a SYNCO UID.
+                Search for players,
+                clubs, games, or a
+                SYNCO UID.
               </p>
 
             </div>
@@ -695,9 +786,9 @@ const Search = () => {
           )}
 
 
-        {/* -------------------------------------------------
+        {/* =================================================
                     NO RESULTS
-                ------------------------------------------------- */}
+                ================================================= */}
 
         {!isLoading &&
           !error &&
@@ -718,9 +809,9 @@ const Search = () => {
           )}
 
 
-        {/* -------------------------------------------------
+        {/* =================================================
                     RESULTS
-                ------------------------------------------------- */}
+                ================================================= */}
 
         {!isLoading &&
           !error &&
@@ -731,8 +822,8 @@ const Search = () => {
 
 
               {/* =========================================
-                            USERS
-                        ========================================= */}
+                                USERS
+                            ========================================= */}
 
               {(activeTab === 'all' ||
                 activeTab === 'users') &&
@@ -767,8 +858,8 @@ const Search = () => {
 
 
               {/* =========================================
-                            CLUBS
-                        ========================================= */}
+                                CLUBS
+                            ========================================= */}
 
               {(activeTab === 'all' ||
                 activeTab === 'clubs') &&
@@ -803,8 +894,8 @@ const Search = () => {
 
 
               {/* =========================================
-                            GAMES
-                        ========================================= */}
+                                GAMES
+                            ========================================= */}
 
               {(activeTab === 'all' ||
                 activeTab === 'games') &&
