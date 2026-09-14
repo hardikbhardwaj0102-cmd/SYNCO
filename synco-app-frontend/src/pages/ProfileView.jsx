@@ -11,17 +11,41 @@ import {
   X,
   ChevronDown,
   Copy,
-  Check
+  Check,
 } from 'lucide-react';
 
 import { useAuth } from '../context/AuthContext';
 import { useNavigate, useParams } from 'react-router-dom';
+
 import '../styles/pages/ProfileView.css';
 import VideoClip from '../components/VideoClip';
 import '../styles/components/GameLogos.css';
 
 
-const API_URL = import.meta.env.VITE_API_URL;
+// =========================================================
+// API
+// =========================================================
+
+const API_URL = 'https://synco-backend-vi7b.onrender.com';
+
+
+// =========================================================
+// LOCAL GAME LOGOS
+// =========================================================
+
+const GAME_LOGOS = {
+  bgmi: '/games/bgmi.png.png',
+  cr: '/games/clashroyale.png.png',
+  freefire: '/games/freefire.png.png',
+  pubg: '/games/pubg.png.png',
+  pubgm: '/games/pubgm.png.png',
+  val: '/games/valorant.png.png',
+};
+
+
+// =========================================================
+// SOCIAL PROFILE BASES
+// =========================================================
 
 const SOCIAL_PROFILE_BASES = {
   youtube: 'https://youtube.com/',
@@ -29,6 +53,11 @@ const SOCIAL_PROFILE_BASES = {
   twitch: 'https://twitch.tv/',
   x: 'https://x.com/',
 };
+
+
+// =========================================================
+// SOCIAL URL HELPER
+// =========================================================
 
 const externalSocialUrl = (value, platform) => {
   const trimmedValue = value?.trim();
@@ -48,6 +77,40 @@ const externalSocialUrl = (value, platform) => {
   return `${SOCIAL_PROFILE_BASES[platform]}${trimmedValue.replace(/^@/, '')}`;
 };
 
+
+// =========================================================
+// GAME LOGO HELPER
+// =========================================================
+
+const getGameLogo = (gameId, gameName = '') => {
+  if (gameId && GAME_LOGOS[gameId]) {
+    return GAME_LOGOS[gameId];
+  }
+
+  const normalizedName = gameName
+    ?.toLowerCase()
+    .replace(/[^a-z0-9]/g, '');
+
+  const nameMap = {
+    bgmi: GAME_LOGOS.bgmi,
+    clashroyale: GAME_LOGOS.cr,
+    freefire: GAME_LOGOS.freefire,
+    freefiremax: GAME_LOGOS.freefire,
+    pubg: GAME_LOGOS.pubg,
+    pubgbattlegrounds: GAME_LOGOS.pubg,
+    pubgm: GAME_LOGOS.pubgm,
+    pubgmobile: GAME_LOGOS.pubgm,
+    valorant: GAME_LOGOS.val,
+  };
+
+  return nameMap[normalizedName] || '';
+};
+
+
+// =========================================================
+// COMPONENT
+// =========================================================
+
 const ProfileView = () => {
   const navigate = useNavigate();
   const { username } = useParams();
@@ -55,19 +118,52 @@ const ProfileView = () => {
 
   const [activeTab, setActiveTab] = useState('MOMENTS');
   const [matchFilter, setMatchFilter] = useState('ONGOING');
+
   const [profile, setProfile] = useState(null);
   const [gameCatalog, setGameCatalog] = useState([]);
+
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState('');
 
-  // UID Copy State
+  // =========================================================
+  // UID COPY STATE
+  // =========================================================
+
   const [uidCopied, setUidCopied] = useState(false);
 
-  // Modal States
+  // =========================================================
+  // MODAL STATES
+  // =========================================================
+
   const [isAddClipModalOpen, setIsAddClipModalOpen] = useState(false);
   const [isClipGameMenuOpen, setIsClipGameMenuOpen] = useState(false);
-  const roleTags = ['Duelist', 'IGL', 'Sniper', 'Support', 'Controller', 'Sentinel', 'Flex'];
-  const skillTags = ['Clutch', 'Ace', 'Entry', 'Skill/Mechanics', 'Teamplay', 'Strategy'];
+
+  // =========================================================
+  // CLIP TAGS
+  // =========================================================
+
+  const roleTags = [
+    'Duelist',
+    'IGL',
+    'Sniper',
+    'Support',
+    'Controller',
+    'Sentinel',
+    'Flex',
+  ];
+
+  const skillTags = [
+    'Clutch',
+    'Ace',
+    'Entry',
+    'Skill/Mechanics',
+    'Teamplay',
+    'Strategy',
+  ];
+
+  // =========================================================
+  // NEW CLIP STATE
+  // =========================================================
 
   const [newClip, setNewClip] = useState({
     title: '',
@@ -76,14 +172,15 @@ const ProfileView = () => {
     gameId: '',
     roleTag: '',
     skillTag: '',
-    file: null
+    file: null,
   });
 
   const [isUploadingClip, setIsUploadingClip] = useState(false);
   const [clipUploadError, setClipUploadError] = useState('');
 
+
   // =========================================================
-  // LOAD PROFILE
+  // LOAD PROFILE + GAME CATALOG
   // =========================================================
 
   useEffect(() => {
@@ -92,26 +189,27 @@ const ProfileView = () => {
       setError('');
 
       try {
-        const [profileResponse, catalogResponse] = await Promise.all([
-          fetch(
-            `${API_URL}/api/profile/${encodeURIComponent(username)}`,
-            {
+        const [profileResponse, catalogResponse] =
+          await Promise.all([
+            fetch(
+              `${API_URL}/api/profile/${encodeURIComponent(username)}`,
+              {
+                credentials: 'include',
+                headers: {
+                  Accept: 'application/json',
+                },
+                cache: 'no-store',
+              }
+            ),
+
+            fetch(`${API_URL}/api/games`, {
               credentials: 'include',
               headers: {
-                Accept: 'application/json'
+                Accept: 'application/json',
               },
-              cache: 'no-store'
-            }
-          ),
-
-          fetch(`${API_URL}/api/games`, {
-            credentials: 'include',
-            headers: {
-              Accept: 'application/json'
-            },
-            cache: 'no-store'
-          })
-        ]);
+              cache: 'no-store',
+            }),
+          ]);
 
         if (!profileResponse.ok) {
           throw new Error('Profile not found');
@@ -124,11 +222,6 @@ const ProfileView = () => {
         if (catalogResponse.ok) {
           const catalogData = await catalogResponse.json();
 
-          // Supports both:
-          // { games: [...] }
-          // and
-          // [...]
-
           setGameCatalog(
             catalogData.games ||
             catalogData ||
@@ -136,7 +229,11 @@ const ProfileView = () => {
           );
         }
       } catch (loadError) {
-        console.error('Error loading profile:', loadError);
+        console.error(
+          'Error loading profile:',
+          loadError
+        );
+
         setError(loadError.message);
       } finally {
         setIsLoading(false);
@@ -148,6 +245,7 @@ const ProfileView = () => {
     }
   }, [username]);
 
+
   // =========================================================
   // OWNER CHECK
   // =========================================================
@@ -155,6 +253,7 @@ const ProfileView = () => {
   const isOwner =
     profile?.isOwner ||
     user?.username === username;
+
 
   // =========================================================
   // SHARE PROFILE
@@ -173,6 +272,7 @@ const ProfileView = () => {
     }
   };
 
+
   // =========================================================
   // COPY SYNCO UID
   // =========================================================
@@ -188,13 +288,14 @@ const ProfileView = () => {
       setTimeout(() => {
         setUidCopied(false);
       }, 2000);
-    } catch (error) {
+    } catch (copyError) {
       console.error(
         'Failed to copy SYNCO UID:',
-        error
+        copyError
       );
     }
   };
+
 
   // =========================================================
   // ADD CLIP
@@ -210,6 +311,13 @@ const ProfileView = () => {
       return;
     }
 
+    if (!newClip.gameId) {
+      setClipUploadError(
+        'Please select a game.'
+      );
+      return;
+    }
+
     setClipUploadError('');
     setIsUploadingClip(true);
 
@@ -220,7 +328,8 @@ const ProfileView = () => {
 
       const metadata = await new Promise(
         (resolve, reject) => {
-          const video = document.createElement('video');
+          const video =
+            document.createElement('video');
 
           const objectUrl =
             URL.createObjectURL(newClip.file);
@@ -233,7 +342,7 @@ const ProfileView = () => {
             resolve({
               duration: video.duration,
               width: video.videoWidth,
-              height: video.videoHeight
+              height: video.videoHeight,
             });
           };
 
@@ -250,6 +359,7 @@ const ProfileView = () => {
           video.src = objectUrl;
         }
       );
+
 
       // -------------------------------------------------------
       // VIDEO VALIDATION
@@ -272,6 +382,7 @@ const ProfileView = () => {
         );
       }
 
+
       // -------------------------------------------------------
       // FORM DATA
       // -------------------------------------------------------
@@ -288,10 +399,25 @@ const ProfileView = () => {
         newClip.file
       );
 
-      formData.append('description', newClip.description);
-      formData.append('gameId', newClip.gameId);
-      formData.append('roleTag', newClip.roleTag);
-      formData.append('skillTag', newClip.skillTag);
+      formData.append(
+        'description',
+        newClip.description
+      );
+
+      formData.append(
+        'gameId',
+        newClip.gameId
+      );
+
+      formData.append(
+        'roleTag',
+        newClip.roleTag
+      );
+
+      formData.append(
+        'skillTag',
+        newClip.skillTag
+      );
 
       formData.append(
         'durationSeconds',
@@ -309,7 +435,6 @@ const ProfileView = () => {
       );
 
 
-
       // -------------------------------------------------------
       // UPLOAD
       // -------------------------------------------------------
@@ -319,7 +444,7 @@ const ProfileView = () => {
         {
           method: 'POST',
           credentials: 'include',
-          body: formData
+          body: formData,
         }
       );
 
@@ -327,9 +452,11 @@ const ProfileView = () => {
 
       if (!response.ok) {
         throw new Error(
-          data.message || 'Upload failed.'
+          data.message ||
+          'Upload failed.'
         );
       }
+
 
       // -------------------------------------------------------
       // UPDATE PROFILE LOCALLY
@@ -339,16 +466,17 @@ const ProfileView = () => {
         ...prev,
         clips: [
           data,
-          ...(prev.clips || [])
-        ]
+          ...(prev.clips || []),
+        ],
       }));
 
-      // -------------------------------------------------------
+
       // -------------------------------------------------------
       // RESET MODAL
       // -------------------------------------------------------
 
       setIsAddClipModalOpen(false);
+      setIsClipGameMenuOpen(false);
 
       setNewClip({
         title: '',
@@ -357,28 +485,23 @@ const ProfileView = () => {
         gameId: '',
         roleTag: '',
         skillTag: '',
-        file: null
+        file: null,
       });
 
-    } catch (error) {
-
+    } catch (uploadError) {
       console.error(
         'Error uploading clip:',
-        error
+        uploadError
       );
 
       setClipUploadError(
-        error.message ||
+        uploadError.message ||
         'Unable to upload clip.'
       );
-
     } finally {
-
       setIsUploadingClip(false);
-
     }
   };
-
 
 
   // =========================================================
@@ -393,6 +516,7 @@ const ProfileView = () => {
     );
   }
 
+
   // =========================================================
   // ERROR
   // =========================================================
@@ -405,11 +529,17 @@ const ProfileView = () => {
     );
   }
 
+
   // =========================================================
   // MOMENTS
   // =========================================================
 
   const moments = profile.clips || [];
+
+
+  // =========================================================
+  // RENDER
+  // =========================================================
 
   return (
     <div className="public-profile-wrapper">
@@ -438,13 +568,12 @@ const ProfileView = () => {
           </div>
         )}
 
+
         {/* ===================================================
             CENTER — INFO & STATS
             =================================================== */}
 
         <div className="profile-info-col">
-
-          {/* Username */}
 
           <div className="profile-username-row">
             <h1 className="profile-username">
@@ -460,11 +589,10 @@ const ProfileView = () => {
             )}
           </div>
 
-          {/* Name / UID / Bio */}
+
+          {/* Name / Region / UID / Bio */}
 
           <div className="mb-4">
-
-            {/* Name + Region */}
 
             <span className="profile-bio-name">
               {profile.name}
@@ -473,9 +601,8 @@ const ProfileView = () => {
                 ` • ${profile.region}`}
             </span>
 
-            {/* =================================================
-                SYNCO UID
-                ================================================= */}
+
+            {/* SYNCO UID */}
 
             {profile.uid && (
               <div className="flex items-center gap-2 mt-2">
@@ -510,6 +637,7 @@ const ProfileView = () => {
               </div>
             )}
 
+
             {/* Bio */}
 
             <p className="profile-bio-text">
@@ -519,9 +647,8 @@ const ProfileView = () => {
 
           </div>
 
-          {/* =================================================
-              PROFILE STATS
-              ================================================= */}
+
+          {/* PROFILE STATS */}
 
           <div className="profile-stats-container">
 
@@ -535,6 +662,7 @@ const ProfileView = () => {
               </span>
             </div>
 
+
             <div className="stat-item">
               <span className="stat-value">
                 {profile.stats?.winRate || 0}%
@@ -544,6 +672,7 @@ const ProfileView = () => {
                 Win Rate
               </span>
             </div>
+
 
             <div className="stat-item">
               <span className="stat-value">
@@ -559,13 +688,12 @@ const ProfileView = () => {
 
         </div>
 
+
         {/* ===================================================
             RIGHT — ACTIONS & SOCIALS
             =================================================== */}
 
         <div className="profile-actions-col">
-
-          {/* Top Actions */}
 
           <div className="profile-top-actions">
 
@@ -589,9 +717,8 @@ const ProfileView = () => {
 
           </div>
 
-          {/* =================================================
-              SOCIAL LINKS
-              ================================================= */}
+
+          {/* SOCIAL LINKS */}
 
           <div className="profile-socials-container">
 
@@ -618,6 +745,7 @@ const ProfileView = () => {
               </a>
             )}
 
+
             {/* Instagram */}
 
             {profile.socials?.instagram && (
@@ -640,6 +768,7 @@ const ProfileView = () => {
                 </span>
               </a>
             )}
+
 
             {/* Twitch */}
 
@@ -664,7 +793,8 @@ const ProfileView = () => {
               </a>
             )}
 
-            {/* X / Twitter */}
+
+            {/* X */}
 
             {profile.socials?.x && (
               <a
@@ -693,6 +823,7 @@ const ProfileView = () => {
 
       </div>
 
+
       {/* =====================================================
           2. PROFESSIONAL GAME ROSTER
           ===================================================== */}
@@ -700,30 +831,68 @@ const ProfileView = () => {
       <div className="profile-games-roster">
 
         {profile.games?.length > 0 ? (
-          profile.games.map((game) => (
-            <div
-              className="game-roster-item"
-              key={game.id}
-            >
-              <img
-                src={game.logoUrl}
-                alt={game.gameName}
-                className={`game-roster-logo game-logo game-logo--${game.gameName?.toLowerCase().replaceAll(' ', '')}`}
-              />
 
+          profile.games.map((game) => {
 
-              <span className="game-roster-ign">
-                {game.ign}
-              </span>
-            </div>
-          ))
+            const logoUrl = getGameLogo(
+              game.id,
+              game.gameName || game.name
+            );
+
+            const logoClass = game.id === 'cr'
+              ? 'game-logo--clash-royale'
+              : `game-logo--${game.id}`;
+
+            return (
+              <div
+                className="game-roster-item"
+                key={game.id}
+              >
+
+                {logoUrl ? (
+                  <img
+                    src={logoUrl}
+                    alt={`${game.gameName || game.name} Logo`}
+                    className={`game-roster-logo game-logo ${logoClass}`}
+                    onError={(event) => {
+                      console.error(
+                        `Failed to load game logo: ${logoUrl}`
+                      );
+
+                      event.currentTarget.style.display =
+                        'none';
+                    }}
+                  />
+                ) : (
+                  <div className="game-roster-logo game-roster-logo-fallback">
+                    {(
+                      game.gameName ||
+                      game.name ||
+                      '?'
+                    )
+                      .slice(0, 1)
+                      .toUpperCase()}
+                  </div>
+                )}
+
+                <span className="game-roster-ign">
+                  {game.ign}
+                </span>
+
+              </div>
+            );
+          })
+
         ) : (
+
           <span className="text-xs font-bold text-gray-400 uppercase tracking-widest">
             No verified game titles registered.
           </span>
+
         )}
 
       </div>
+
 
       {/* =====================================================
           3. ESPORTS NAVIGATION
@@ -731,33 +900,35 @@ const ProfileView = () => {
 
       <div className="profile-tabs">
 
-        {/* Moments */}
-
         <button
           className={`profile-tab ${activeTab === 'MOMENTS'
-            ? 'active'
-            : ''
+              ? 'active'
+              : ''
             }`}
-          onClick={() => setActiveTab('MOMENTS')}
+          onClick={() =>
+            setActiveTab('MOMENTS')
+          }
         >
           <Video size={16} />
           Moments
         </button>
 
-        {/* Matches */}
 
         <button
           className={`profile-tab ${activeTab === 'MATCHES'
-            ? 'active'
-            : ''
+              ? 'active'
+              : ''
             }`}
-          onClick={() => setActiveTab('MATCHES')}
+          onClick={() =>
+            setActiveTab('MATCHES')
+          }
         >
           <PlaySquare size={16} />
           Matches
         </button>
 
       </div>
+
 
       {/* =====================================================
           4. TAB CONTENT
@@ -770,12 +941,14 @@ const ProfileView = () => {
             =================================================== */}
 
         {activeTab === 'MOMENTS' && (
+
           <div className="flex flex-col gap-4">
 
             {/* Add Clip Button */}
 
             {isOwner &&
               moments.length < 6 && (
+
                 <button
                   className="add-clip-small-btn"
                   onClick={() =>
@@ -785,16 +958,20 @@ const ProfileView = () => {
                   <Plus size={14} />
                   Add New Clip ({moments.length}/6)
                 </button>
+
               )}
+
 
             {/* Clips */}
 
             {moments.length > 0 ? (
+
               <div className="moments-grid-container">
 
                 {moments
                   .slice(0, 6)
                   .map((moment) => (
+
                     <VideoClip
                       key={moment.id}
                       id={moment.id}
@@ -805,10 +982,13 @@ const ProfileView = () => {
                       initialLikes={moment.likes}
                       initialComments={moment.comments}
                     />
+
                   ))}
 
               </div>
+
             ) : (
+
               <div className="empty-content-area w-full border-none mt-4">
 
                 <Video
@@ -825,6 +1005,7 @@ const ProfileView = () => {
                 </p>
 
                 {isOwner && (
+
                   <button
                     className="add-clip-small-btn"
                     onClick={() =>
@@ -834,29 +1015,32 @@ const ProfileView = () => {
                     <Plus size={14} />
                     Upload First Clip
                   </button>
+
                 )}
 
               </div>
+
             )}
 
           </div>
+
         )}
+
 
         {/* ===================================================
             MATCHES
             =================================================== */}
 
         {activeTab === 'MATCHES' && (
-          <div className="mt-4">
 
-            {/* Match Filters */}
+          <div className="mt-4">
 
             <div className="match-filters">
 
               <button
                 className={`match-filter-btn ${matchFilter === 'ONGOING'
-                  ? 'active'
-                  : 'inactive'
+                    ? 'active'
+                    : 'inactive'
                   }`}
                 onClick={() =>
                   setMatchFilter('ONGOING')
@@ -865,10 +1049,11 @@ const ProfileView = () => {
                 Ongoing
               </button>
 
+
               <button
                 className={`match-filter-btn ${matchFilter === 'COMPLETED'
-                  ? 'active'
-                  : 'inactive'
+                    ? 'active'
+                    : 'inactive'
                   }`}
                 onClick={() =>
                   setMatchFilter('COMPLETED')
@@ -879,7 +1064,6 @@ const ProfileView = () => {
 
             </div>
 
-            {/* Empty Matches */}
 
             <div className="empty-content-area border-none w-full">
 
@@ -899,20 +1083,24 @@ const ProfileView = () => {
             </div>
 
           </div>
+
         )}
 
       </div>
+
 
       {/* =====================================================
           5. ADD CLIP MODAL
           ===================================================== */}
 
       {isAddClipModalOpen && (
+
         <div
           className="clip-modal-overlay"
-          onClick={() =>
-            setIsAddClipModalOpen(false)
-          }
+          onClick={() => {
+            setIsAddClipModalOpen(false);
+            setIsClipGameMenuOpen(false);
+          }}
         >
 
           <div
@@ -931,9 +1119,10 @@ const ProfileView = () => {
               </h3>
 
               <button
-                onClick={() =>
-                  setIsAddClipModalOpen(false)
-                }
+                onClick={() => {
+                  setIsAddClipModalOpen(false);
+                  setIsClipGameMenuOpen(false);
+                }}
                 className="text-gray-400 hover:text-black transition-colors"
               >
                 <X size={20} />
@@ -941,15 +1130,13 @@ const ProfileView = () => {
 
             </div>
 
-            {/* =================================================
-                UPLOAD FORM
-                ================================================= */}
+
+            {/* Upload Form */}
 
             <form
               onSubmit={handleAddClipSubmit}
               className="space-y-4"
             >
-
 
               {/* Video Title */}
 
@@ -967,7 +1154,7 @@ const ProfileView = () => {
                   onChange={(e) =>
                     setNewClip({
                       ...newClip,
-                      title: e.target.value
+                      title: e.target.value,
                     })
                   }
                   required
@@ -991,7 +1178,7 @@ const ProfileView = () => {
                   onChange={(e) =>
                     setNewClip({
                       ...newClip,
-                      description: e.target.value
+                      description: e.target.value,
                     })
                   }
                 />
@@ -1020,27 +1207,57 @@ const ProfileView = () => {
                   }
                 >
 
-                  <span className="text-left truncate">
-                    {newClip.game ||
-                      'Select a registered game'}
-                  </span>
+                  <div className="flex items-center gap-3 min-w-0">
+
+                    {newClip.gameId &&
+                      getGameLogo(
+                        newClip.gameId,
+                        newClip.game
+                      ) && (
+
+                        <img
+                          src={getGameLogo(
+                            newClip.gameId,
+                            newClip.game
+                          )}
+                          alt=""
+                          className={`game-logo ${newClip.gameId === 'cr'
+                              ? 'game-logo--clash-royale'
+                              : `game-logo--${newClip.gameId}`
+                            }`}
+                          style={{
+                            width: '32px',
+                            height: '32px',
+                            objectFit: 'contain',
+                          }}
+                        />
+
+                      )}
+
+                    <span className="text-left truncate">
+                      {newClip.game ||
+                        'Select a registered game'}
+                    </span>
+
+                  </div>
+
 
                   <ChevronDown
                     size={16}
                     className={`text-gray-400 transition-transform duration-200 flex-shrink-0 ${isClipGameMenuOpen
-                      ? 'rotate-180'
-                      : ''
+                        ? 'rotate-180'
+                        : ''
                       }`}
                   />
 
                 </button>
 
 
+                {/* GAME MENU */}
+
                 {isClipGameMenuOpen && (
 
                   <>
-
-                    {/* Invisible Overlay */}
 
                     <div
                       className="custom-game-select-overlay"
@@ -1050,63 +1267,96 @@ const ProfileView = () => {
                     />
 
 
-                    {/* Game Menu */}
-
                     <div className="custom-game-select-menu !top-[70px]">
 
-                      {gameCatalog.map((game) => (
+                      {gameCatalog.map((game) => {
 
-                        <button
-                          type="button"
-                          key={game.id}
-                          className={`custom-game-option ${newClip.game === game.name
-                            ? 'active'
-                            : ''
-                            }`}
-                          onClick={() => {
+                        const logoUrl =
+                          getGameLogo(
+                            game.id,
+                            game.name
+                          );
 
-                            setNewClip({
-                              ...newClip,
-                              game: game.name,
-                              gameId: game.id
-                            });
+                        return (
 
-                            setIsClipGameMenuOpen(false);
+                          <button
+                            type="button"
+                            key={game.id}
+                            className={`custom-game-option ${newClip.game === game.name
+                                ? 'active'
+                                : ''
+                              }`}
+                            onClick={() => {
 
-                          }}
-                        >
+                              setNewClip({
+                                ...newClip,
+                                game: game.name,
+                                gameId: game.id,
+                              });
+
+                              setIsClipGameMenuOpen(
+                                false
+                              );
+
+                            }}
+                          >
+
+                            {/* GAME ICON */}
+
+                            <div className="game-option-icon">
+
+                              {logoUrl ? (
+
+                                <img
+                                  src={logoUrl}
+                                  alt={`${game.name} Logo`}
+                                  className={`game-logo ${game.id === 'cr'
+                                      ? 'game-logo--clash-royale'
+                                      : `game-logo--${game.id}`
+                                    }`}
+                                  style={{
+                                    width: '42px',
+                                    height: '42px',
+                                    objectFit: 'contain',
+                                  }}
+                                  onError={(event) => {
+                                    event.currentTarget.style.display =
+                                      'none';
+                                  }}
+                                />
+
+                              ) : (
+
+                                <span className="text-xs font-bold text-gray-400">
+                                  {game.name
+                                    ?.slice(0, 1)
+                                    .toUpperCase()}
+                                </span>
+
+                              )}
+
+                            </div>
 
 
-                          {/* Game Icon */}
+                            {/* GAME TEXT */}
 
-                          <div className="game-option-icon">
-                            {/* Optional:
-                            <img
-                              src={game.logoUrl}
-                              alt={game.name}
-                            />
-                            */}
-                          </div>
+                            <div className="game-option-text">
 
+                              <span className="game-option-title">
+                                {game.name}
+                              </span>
 
-                          {/* Game Text */}
+                              <span className="game-option-subtitle">
+                                {game.shortName ||
+                                  game.name}
+                              </span>
 
-                          <div className="game-option-text">
+                            </div>
 
-                            <span className="game-option-title">
-                              {game.name}
-                            </span>
+                          </button>
 
-                            <span className="game-option-subtitle">
-                              {game.shortName ||
-                                game.name}
-                            </span>
-
-                          </div>
-
-                        </button>
-
-                      ))}
+                        );
+                      })}
 
                     </div>
 
@@ -1116,44 +1366,84 @@ const ProfileView = () => {
 
               </div>
 
+
+              {/* ROLE TAG */}
+
               <div>
+
                 <label className="block text-[11px] font-bold uppercase tracking-wider text-black/50 mb-2">
                   Role Tag
                 </label>
+
                 <select
                   className="w-full h-12 px-4 rounded-xl border border-black/10 bg-white text-black text-sm outline-none focus:border-black focus:ring-1 focus:ring-black"
                   value={newClip.roleTag}
-                  onChange={(e) => setNewClip({ ...newClip, roleTag: e.target.value })}
+                  onChange={(e) =>
+                    setNewClip({
+                      ...newClip,
+                      roleTag: e.target.value,
+                    })
+                  }
                   required
                 >
-                  <option value="">Select a role</option>
+
+                  <option value="">
+                    Select a role
+                  </option>
+
                   {roleTags.map((roleTag) => (
-                    <option key={roleTag} value={roleTag}>{roleTag}</option>
+                    <option
+                      key={roleTag}
+                      value={roleTag}
+                    >
+                      {roleTag}
+                    </option>
                   ))}
+
                 </select>
+
               </div>
 
+
+              {/* SKILL TAG */}
+
               <div>
+
                 <label className="block text-[11px] font-bold uppercase tracking-wider text-black/50 mb-2">
                   Skill Tag
                 </label>
+
                 <select
                   className="w-full h-12 px-4 rounded-xl border border-black/10 bg-white text-black text-sm outline-none focus:border-black focus:ring-1 focus:ring-black"
                   value={newClip.skillTag}
-                  onChange={(e) => setNewClip({ ...newClip, skillTag: e.target.value })}
+                  onChange={(e) =>
+                    setNewClip({
+                      ...newClip,
+                      skillTag: e.target.value,
+                    })
+                  }
                   required
                 >
-                  <option value="">Select a skill</option>
+
+                  <option value="">
+                    Select a skill
+                  </option>
+
                   {skillTags.map((skillTag) => (
-                    <option key={skillTag} value={skillTag}>{skillTag}</option>
+                    <option
+                      key={skillTag}
+                      value={skillTag}
+                    >
+                      {skillTag}
+                    </option>
                   ))}
+
                 </select>
+
               </div>
 
 
-              {/* =================================================
-                  VIDEO FILE
-                  ================================================= */}
+              {/* VIDEO FILE */}
 
               <div>
 
@@ -1168,7 +1458,9 @@ const ProfileView = () => {
                   onChange={(e) =>
                     setNewClip({
                       ...newClip,
-                      file: e.target.files?.[0] || null
+                      file:
+                        e.target.files?.[0] ||
+                        null,
                     })
                   }
                   required
@@ -1177,7 +1469,7 @@ const ProfileView = () => {
               </div>
 
 
-              {/* Upload Error */}
+              {/* UPLOAD ERROR */}
 
               {clipUploadError && (
 
@@ -1188,26 +1480,24 @@ const ProfileView = () => {
               )}
 
 
-              {/* Upload Button */}
+              {/* UPLOAD BUTTON */}
 
               <button
                 type="submit"
                 disabled={isUploadingClip}
                 className="w-full h-12 mt-4 rounded-xl bg-black text-white text-sm font-bold tracking-wide hover:bg-[#171717] transition-all disabled:opacity-50"
               >
-
                 {isUploadingClip
                   ? 'Checking and uploading...'
                   : 'Upload to Moments'}
-
               </button>
 
             </form>
 
-
           </div>
 
         </div>
+
       )}
 
     </div>
