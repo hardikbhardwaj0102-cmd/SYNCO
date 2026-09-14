@@ -1,3 +1,4 @@
+
 import os
 import uuid
 from pathlib import Path
@@ -10,6 +11,8 @@ from flask import (
     session,
 )
 
+from supabase import create_client
+
 from models import (
     db,
     ProfileClip,
@@ -20,8 +23,6 @@ from models import (
     UserProfile,
     discord_avatar_url,
 )
-
-from supabase import create_client
 
 
 # =========================================================
@@ -49,8 +50,6 @@ SUPABASE_SERVICE_ROLE_KEY = os.getenv(
     "",
 ).strip()
 
-# Change this in Render environment variables if your
-# actual Supabase bucket has another name.
 SUPABASE_CLIP_BUCKET = os.getenv(
     "SUPABASE_CLIP_BUCKET",
     "profile-clips",
@@ -61,7 +60,6 @@ _supabase = None
 
 
 def _get_supabase():
-
     global _supabase
 
     if _supabase is not None:
@@ -158,7 +156,6 @@ def _profile_for(user):
         )
 
         db.session.add(profile)
-
         db.session.commit()
 
     return profile
@@ -181,7 +178,7 @@ def _avatar_url(user):
 
 
 # =========================================================
-# SUPABASE CLIP URL
+# CREATE SIGNED SUPABASE CLIP URL
 # =========================================================
 
 def _clip_media_url(filename):
@@ -189,15 +186,18 @@ def _clip_media_url(filename):
     if not filename:
         return ""
 
-    supabase = _get_supabase()
-
     try:
 
-        result = supabase.storage.from_(
-            SUPABASE_CLIP_BUCKET
-        ).create_signed_url(
-            filename,
-            60 * 60 * 24 * 7,
+        supabase = _get_supabase()
+
+        result = (
+            supabase
+            .storage
+            .from_(SUPABASE_CLIP_BUCKET)
+            .create_signed_url(
+                filename,
+                60 * 60 * 24 * 7,
+            )
         )
 
         if isinstance(result, dict):
@@ -213,9 +213,8 @@ def _clip_media_url(filename):
 
     except Exception as error:
 
-        current_app.logger.error(
-            "Unable to create clip signed URL: %s",
-            error,
+        current_app.logger.exception(
+            "Failed to create Supabase signed URL"
         )
 
         return ""
@@ -231,16 +230,16 @@ def _public_profile(user):
 
     basic_data = profile.basic_data or {}
 
-
     clips = (
         ProfileClip.query
-        .filter_by(user_id=user.id)
+        .filter_by(
+            user_id=user.id
+        )
         .order_by(
             ProfileClip.created_at.desc()
         )
         .all()
     )
-
 
     return {
 
@@ -372,15 +371,10 @@ def get_profile():
     if error:
         return error
 
-
     profile = _profile_for(user)
 
     avatar_url = _avatar_url(user)
 
-
-    # -----------------------------------------------------
-    # BASIC DATA
-    # -----------------------------------------------------
 
     basic_data = {
 
@@ -393,20 +387,18 @@ def get_profile():
         "email": user.email or "",
 
         "avatarUrl": (
+
             avatar_url
 
             or (profile.basic_data or {}).get(
                 "avatarUrl",
                 "",
             )
+
         ),
 
     }
 
-
-    # -----------------------------------------------------
-    # LINKED ACCOUNTS
-    # -----------------------------------------------------
 
     linked_status = {
 
@@ -429,23 +421,17 @@ def get_profile():
     }
 
 
-    # -----------------------------------------------------
-    # CLIPS
-    # -----------------------------------------------------
-
     clips = (
         ProfileClip.query
-        .filter_by(user_id=user.id)
+        .filter_by(
+            user_id=user.id
+        )
         .order_by(
             ProfileClip.created_at.desc()
         )
         .all()
     )
 
-
-    # -----------------------------------------------------
-    # RESPONSE
-    # -----------------------------------------------------
 
     return jsonify({
 
@@ -572,10 +558,6 @@ def update_profile():
         or {}
     )
 
-
-    # -----------------------------------------------------
-    # ALLOWED BASIC FIELDS
-    # -----------------------------------------------------
 
     allowed_basic_fields = {
 
@@ -720,17 +702,13 @@ def delete_account():
         return error
 
 
-    # -----------------------------------------------------
-    # FIND CLIPS
-    # -----------------------------------------------------
-
     clips = ProfileClip.query.filter_by(
         user_id=user.id
     ).all()
 
 
     # -----------------------------------------------------
-    # DELETE CLIPS FROM SUPABASE
+    # DELETE SUPABASE CLIPS
     # -----------------------------------------------------
 
     if clips:
@@ -739,28 +717,35 @@ def delete_account():
 
             supabase = _get_supabase()
 
-            paths = [
+            storage_paths = [
+
                 clip.filename
+
                 for clip in clips
+
                 if clip.filename
+
             ]
 
-            if paths:
+
+            if storage_paths:
 
                 supabase.storage.from_(
                     SUPABASE_CLIP_BUCKET
-                ).remove(paths)
+                ).remove(
+                    storage_paths
+                )
+
 
         except Exception as error:
 
-            current_app.logger.error(
-                "Failed to delete Supabase clips: %s",
-                error,
+            current_app.logger.exception(
+                "Failed to delete Supabase clips"
             )
 
 
     # -----------------------------------------------------
-    # DELETE DATABASE RECORDS
+    # DELETE DATABASE DATA
     # -----------------------------------------------------
 
     ProfileClip.query.filter_by(
@@ -786,10 +771,6 @@ def delete_account():
 
     db.session.commit()
 
-
-    # -----------------------------------------------------
-    # CLEAR SESSION
-    # -----------------------------------------------------
 
     session.clear()
 
@@ -838,10 +819,6 @@ def add_game():
     )
 
 
-    # -----------------------------------------------------
-    # REQUIRED FIELDS
-    # -----------------------------------------------------
-
     required_fields = (
 
         "gameName",
@@ -873,67 +850,48 @@ def add_game():
             "success": False,
 
             "message": (
-
                 "gameName, ign, and uid "
-
                 "are required"
-
             ),
 
         }), 400
 
-
-    # -----------------------------------------------------
-    # CREATE GAME
-    # -----------------------------------------------------
 
     game = ProfileGame(
 
         user_id=user.id,
 
         game_name=str(
-
             game_data["gameName"]
-
         ).strip(),
 
         ign=str(
-
             game_data["ign"]
-
         ).strip(),
 
         uid=str(
-
             game_data["uid"]
-
         ).strip(),
 
         role=str(
-
             game_data.get(
                 "role",
                 "",
             )
-
         ).strip(),
 
         tier=str(
-
             game_data.get(
                 "tier",
                 "Semi-Pro",
             )
-
         ).strip(),
 
         experience=str(
-
             game_data.get(
                 "experience",
                 "",
             )
-
         ).strip(),
 
     )
@@ -1016,10 +974,58 @@ def upload_clip():
 
 
     # -----------------------------------------------------
-    # FILE
+    # CHECK SUPABASE CONFIGURATION
     # -----------------------------------------------------
 
-    clip_file = request.files.get("clip")
+    if not SUPABASE_URL:
+
+        return jsonify({
+
+            "success": False,
+
+            "message": (
+                "SUPABASE_URL is not configured "
+                "on the backend."
+            ),
+
+        }), 500
+
+
+    if not SUPABASE_SERVICE_ROLE_KEY:
+
+        return jsonify({
+
+            "success": False,
+
+            "message": (
+                "SUPABASE_SERVICE_ROLE_KEY is not "
+                "configured on the backend."
+            ),
+
+        }), 500
+
+
+    if not SUPABASE_CLIP_BUCKET:
+
+        return jsonify({
+
+            "success": False,
+
+            "message": (
+                "SUPABASE_CLIP_BUCKET is not "
+                "configured on the backend."
+            ),
+
+        }), 500
+
+
+    # -----------------------------------------------------
+    # GET FILE
+    # -----------------------------------------------------
+
+    clip_file = request.files.get(
+        "clip"
+    )
 
 
     if clip_file is None:
@@ -1028,7 +1034,7 @@ def upload_clip():
 
             "success": False,
 
-            "message": "Video file is required",
+            "message": "Video file is required.",
 
         }), 400
 
@@ -1039,7 +1045,7 @@ def upload_clip():
 
             "success": False,
 
-            "message": "Video file is required",
+            "message": "Video file is required.",
 
         }), 400
 
@@ -1049,8 +1055,11 @@ def upload_clip():
     # -----------------------------------------------------
 
     mime_type = (
+
         clip_file.mimetype
+
         or "video/mp4"
+
     ).lower()
 
 
@@ -1085,12 +1094,10 @@ def upload_clip():
     # TITLE
     # -----------------------------------------------------
 
-    title = (
-        request.form.get(
-            "title",
-            "",
-        ).strip()
-    )
+    title = request.form.get(
+        "title",
+        "",
+    ).strip()
 
 
     if not title:
@@ -1112,55 +1119,20 @@ def upload_clip():
 
 
     # -----------------------------------------------------
-    # DESCRIPTION
-    # -----------------------------------------------------
-
-    description = (
-        request.form.get(
-            "description",
-            "",
-        ).strip()
-    )
-
-
-    # -----------------------------------------------------
-    # GAME / TAG DATA
-    # -----------------------------------------------------
-
-    game_id = (
-        request.form.get(
-            "gameId",
-            "",
-        ).strip()
-    )
-
-    role_tag = (
-        request.form.get(
-            "roleTag",
-            "",
-        ).strip()
-    )
-
-    skill_tag = (
-        request.form.get(
-            "skillTag",
-            "",
-        ).strip()
-    )
-
-
-    # -----------------------------------------------------
     # VIDEO METADATA
     # -----------------------------------------------------
 
     try:
 
         duration_seconds = float(
+
             request.form.get(
                 "durationSeconds",
                 0,
             )
+
             or 0
+
         )
 
     except (TypeError, ValueError):
@@ -1171,11 +1143,14 @@ def upload_clip():
     try:
 
         width = int(
+
             request.form.get(
                 "width",
                 0,
             )
+
             or 0
+
         )
 
     except (TypeError, ValueError):
@@ -1186,11 +1161,14 @@ def upload_clip():
     try:
 
         height = int(
+
             request.form.get(
                 "height",
                 0,
             )
+
             or 0
+
         )
 
     except (TypeError, ValueError):
@@ -1236,9 +1214,7 @@ def upload_clip():
 
             "success": False,
 
-            "message": (
-                "Invalid video resolution."
-            ),
+            "message": "Invalid video resolution.",
 
         }), 400
 
@@ -1270,7 +1246,7 @@ def upload_clip():
 
 
     # -----------------------------------------------------
-    # READ FILE
+    # READ VIDEO
     # -----------------------------------------------------
 
     file_bytes = clip_file.read()
@@ -1293,12 +1269,10 @@ def upload_clip():
     # -----------------------------------------------------
     # MAX FILE SIZE
     # -----------------------------------------------------
-    #
-    # 250 MB maximum.
-    #
-    # -----------------------------------------------------
 
-    max_file_size = 250 * 1024 * 1024
+    max_file_size = (
+        250 * 1024 * 1024
+    )
 
 
     if file_size > max_file_size:
@@ -1350,14 +1324,7 @@ def upload_clip():
 
 
     # -----------------------------------------------------
-    # SUPABASE OBJECT PATH
-    # -----------------------------------------------------
-    #
-    # Example:
-    #
-    # 12/
-    # 550e8400-e29b-41d4-a716-446655440000.mp4
-    #
+    # SUPABASE STORAGE PATH
     # -----------------------------------------------------
 
     storage_path = (
@@ -1378,18 +1345,60 @@ def upload_clip():
         supabase = _get_supabase()
 
 
-        supabase.storage.from_(
-            SUPABASE_CLIP_BUCKET
-        ).upload(
+        current_app.logger.info(
+
+            "Uploading SYNCO profile clip: "
+            "bucket=%s path=%s size=%s mime=%s",
+
+            SUPABASE_CLIP_BUCKET,
 
             storage_path,
 
-            file_bytes,
+            file_size,
 
-            file_options={
-                "content-type": mime_type,
-                "upsert": "false",
-            },
+            mime_type,
+
+        )
+
+
+        # -------------------------------------------------
+        # IMPORTANT:
+        # Supabase Python SDK expects the file options
+        # dictionary as the third positional argument.
+        # -------------------------------------------------
+
+        upload_result = (
+
+            supabase
+
+            .storage
+
+            .from_(SUPABASE_CLIP_BUCKET)
+
+            .upload(
+
+                storage_path,
+
+                file_bytes,
+
+                {
+
+                    "content-type": mime_type,
+
+                    "upsert": "false",
+
+                },
+
+            )
+
+        )
+
+
+        current_app.logger.info(
+
+            "Supabase clip upload successful: %s",
+
+            upload_result,
 
         )
 
@@ -1397,7 +1406,9 @@ def upload_clip():
     except Exception as upload_error:
 
         current_app.logger.exception(
-            "Supabase clip upload failed"
+
+            "SUPABASE CLIP UPLOAD FAILED"
+
         )
 
 
@@ -1413,11 +1424,13 @@ def upload_clip():
                 upload_error
             ),
 
+            "bucket": SUPABASE_CLIP_BUCKET,
+
         }), 500
 
 
     # -----------------------------------------------------
-    # CREATE DATABASE RECORD
+    # SAVE DATABASE RECORD
     # -----------------------------------------------------
 
     try:
@@ -1453,7 +1466,9 @@ def upload_clip():
         db.session.rollback()
 
 
-        # Remove uploaded file if DB creation failed.
+        # -----------------------------------------------
+        # Roll back Supabase upload if DB fails.
+        # -----------------------------------------------
 
         try:
 
@@ -1469,7 +1484,9 @@ def upload_clip():
 
 
         current_app.logger.exception(
-            "Profile clip database insert failed"
+
+            "PROFILE CLIP DATABASE INSERT FAILED"
+
         )
 
 
@@ -1482,7 +1499,20 @@ def upload_clip():
                 "saved to the profile."
             ),
 
+            "error": str(
+                database_error
+            ),
+
         }), 500
+
+
+    # -----------------------------------------------------
+    # CREATE SIGNED URL
+    # -----------------------------------------------------
+
+    media_url = _clip_media_url(
+        clip.filename
+    )
 
 
     # -----------------------------------------------------
@@ -1496,9 +1526,7 @@ def upload_clip():
         "message": "Clip uploaded successfully.",
 
         "clip": clip.to_dict(
-            _clip_media_url(
-                clip.filename
-            )
+            media_url
         ),
 
     }), 201
@@ -1541,7 +1569,7 @@ def delete_clip(clip_id):
 
 
     # -----------------------------------------------------
-    # DELETE STORAGE OBJECT
+    # DELETE FROM SUPABASE
     # -----------------------------------------------------
 
     if clip.filename:
@@ -1558,9 +1586,10 @@ def delete_clip(clip_id):
 
         except Exception as storage_error:
 
-            current_app.logger.error(
-                "Failed to delete clip from Supabase: %s",
-                storage_error,
+            current_app.logger.exception(
+
+                "Failed to delete clip from Supabase"
+
             )
 
 
@@ -1615,13 +1644,14 @@ def toggle_clip_like(clip_id):
         }), 404
 
 
-    existing_like = ProfileClipLike.query.filter_by(
-
-        clip_id=clip.id,
-
-        user_id=user.id,
-
-    ).first()
+    existing_like = (
+        ProfileClipLike.query
+        .filter_by(
+            clip_id=clip.id,
+            user_id=user.id,
+        )
+        .first()
+    )
 
 
     if existing_like:
@@ -1652,9 +1682,13 @@ def toggle_clip_like(clip_id):
     db.session.commit()
 
 
-    likes_count = ProfileClipLike.query.filter_by(
-        clip_id=clip.id
-    ).count()
+    likes_count = (
+        ProfileClipLike.query
+        .filter_by(
+            clip_id=clip.id
+        )
+        .count()
+    )
 
 
     return jsonify({
@@ -1766,10 +1800,12 @@ def add_clip_comment(clip_id):
 
 
     content = str(
+
         data.get(
             "content",
             "",
         )
+
     ).strip()
 
 
