@@ -4,6 +4,7 @@
 
 import os
 import uuid
+import tempfile
 from pathlib import Path
 
 from flask import (
@@ -42,38 +43,30 @@ clips_bp = Blueprint(
 # CONFIGURATION
 # =========================================================
 
-# Supported video extensions
 ALLOWED_EXTENSIONS = {
     "mp4",
     "webm",
     "mov",
 }
 
-# Supported MIME types
 ALLOWED_MIME_TYPES = {
     "video/mp4",
     "video/webm",
     "video/quicktime",
 }
 
-
-# Maximum number of clips per user
 MAX_CLIPS = 6
-
 
 # Maximum size of ONE video
 # 50 MB
 MAX_FILE_SIZE = 50 * 1024 * 1024
 
-
 # Maximum TOTAL storage per user
 # 500 MB
 MAX_USER_STORAGE = 500 * 1024 * 1024
 
-
 # Supabase bucket
 SUPABASE_BUCKET = "synco-videos"
-
 
 # Signed URL validity
 # 1 hour
@@ -95,7 +88,9 @@ def _get_supabase() -> Client:
         return _supabase_client
 
     supabase_url = os.getenv("SUPABASE_URL")
-    supabase_key = os.getenv("SUPABASE_SERVICE_ROLE_KEY")
+    supabase_key = os.getenv(
+        "SUPABASE_SERVICE_ROLE_KEY"
+    )
 
     if not supabase_url:
         raise RuntimeError(
@@ -141,6 +136,7 @@ def _require_user():
     user = _current_user()
 
     if user is None:
+
         return (
             None,
             (
@@ -173,10 +169,10 @@ def _get_extension(filename):
 # MIME TYPE HELPER
 # =========================================================
 
-def _get_mime_type(extension, supplied_mime=None):
-
-    # Trust our extension mapping rather than relying entirely
-    # on browser-provided MIME types.
+def _get_mime_type(
+    extension,
+    supplied_mime=None,
+):
 
     mime_map = {
         "mp4": "video/mp4",
@@ -194,8 +190,7 @@ def _get_mime_type(extension, supplied_mime=None):
 # LOCAL MEDIA DIRECTORY
 # =========================================================
 #
-# Kept ONLY for backwards compatibility with old clips
-# that may still exist on the local server.
+# Kept ONLY for backwards compatibility with old clips.
 #
 # New clips are stored in Supabase.
 #
@@ -226,7 +221,9 @@ def _user_storage_usage(user_id):
     usage = (
         db.session.query(
             db.func.coalesce(
-                db.func.sum(ProfileClip.file_size),
+                db.func.sum(
+                    ProfileClip.file_size
+                ),
                 0,
             )
         )
@@ -264,17 +261,10 @@ def _create_signed_url(storage_path):
     )
 
     if not data:
+
         raise RuntimeError(
             "Supabase did not return a signed URL"
         )
-
-    # Current SDK normally returns:
-    #
-    # {
-    #     "signedUrl": "..."
-    # }
-    #
-    # Keep a fallback for alternate response formatting.
 
     if isinstance(data, dict):
 
@@ -366,7 +356,8 @@ def _clip_response(clip):
     # -----------------------------------------------------
 
     return clip.to_dict(
-        f"/api/profile/clips/media/{secure_filename(filename)}"
+        f"/api/profile/clips/media/"
+        f"{secure_filename(filename)}"
     )
 
 
@@ -402,11 +393,14 @@ def list_clips():
 
     return jsonify({
         "success": True,
+
         "clips": [
             _clip_response(clip)
             for clip in clips
         ],
+
         "limit": MAX_CLIPS,
+
         "storage": {
             "usedBytes": _user_storage_usage(
                 user.id
@@ -499,9 +493,7 @@ def upload_clip():
 
         return jsonify({
             "success": False,
-            "message": (
-                "Unsupported video format"
-            ),
+            "message": "Unsupported video format",
         }), 400
 
     # -----------------------------------------------------
@@ -578,9 +570,7 @@ def upload_clip():
 
         file_size = media.stream.tell()
 
-        media.stream.seek(
-            0
-        )
+        media.stream.seek(0)
 
     except Exception:
 
@@ -663,14 +653,6 @@ def upload_clip():
     # -----------------------------------------------------
     # UNIQUE STORAGE PATH
     # -----------------------------------------------------
-    #
-    # Example:
-    #
-    # 42/8a9f4c7e8d2f4a9a9b1d3c.mp4
-    #
-    # User ID keeps each user's files organized.
-    #
-    # -----------------------------------------------------
 
     storage_filename = (
         f"{uuid.uuid4().hex}.{extension}"
@@ -682,6 +664,7 @@ def upload_clip():
 
     supabase = None
     uploaded = False
+    temp_path = None
 
     try:
 
@@ -692,10 +675,45 @@ def upload_clip():
         supabase = _get_supabase()
 
         # -------------------------------------------------
-        # RESET FILE POINTER
+        # CREATE TEMPORARY FILE
+        # -------------------------------------------------
+        #
+        # Flask gives us a SpooledTemporaryFile.
+        #
+        # Supabase Python SDK 2.31.0 expects a filesystem
+        # path for the `file` argument.
+        #
+        # Therefore:
+        #
+        # Flask upload
+        #      ↓
+        # temporary file
+        #      ↓
+        # Supabase
+        #
+        # The temporary file is deleted afterwards.
+        #
         # -------------------------------------------------
 
-        media.stream.seek(0)
+        with tempfile.NamedTemporaryFile(
+            delete=False,
+            suffix=f".{extension}",
+        ) as temp_file:
+
+            temp_path = temp_file.name
+
+            media.stream.seek(0)
+
+            while True:
+
+                chunk = media.stream.read(
+                    1024 * 1024
+                )
+
+                if not chunk:
+                    break
+
+                temp_file.write(chunk)
 
         # -------------------------------------------------
         # UPLOAD TO SUPABASE
@@ -707,7 +725,7 @@ def upload_clip():
             .from_(SUPABASE_BUCKET)
             .upload(
                 path=storage_path,
-                file=media.stream,
+                file=temp_path,
                 file_options={
                     "content-type": mime_type,
                     "cache-control": "3600",
@@ -790,10 +808,32 @@ def upload_clip():
 
         return jsonify({
             "success": False,
-            "message": (
-                "Failed to upload clip"
-            ),
+            "message": "Failed to upload clip",
         }), 500
+
+    finally:
+
+        # -------------------------------------------------
+        # DELETE TEMPORARY FILE
+        # -------------------------------------------------
+
+        if temp_path:
+
+            try:
+
+                if os.path.exists(
+                    temp_path
+                ):
+                    os.remove(
+                        temp_path
+                    )
+
+            except Exception as cleanup_error:
+
+                current_app.logger.error(
+                    "Failed to remove temporary clip file: %s",
+                    cleanup_error,
+                )
 
 
 # =========================================================
@@ -841,7 +881,10 @@ def delete_clip(clip_id):
     # DELETE SUPABASE FILE
     # -----------------------------------------------------
 
-    if storage_path and "/" in storage_path:
+    if (
+        storage_path
+        and "/" in storage_path
+    ):
 
         try:
 
@@ -872,7 +915,9 @@ def delete_clip(clip_id):
         if path.exists():
 
             try:
+
                 path.unlink()
+
             except Exception as error:
 
                 current_app.logger.error(
@@ -886,7 +931,9 @@ def delete_clip(clip_id):
 
     try:
 
-        db.session.delete(clip)
+        db.session.delete(
+            clip
+        )
 
         db.session.commit()
 
