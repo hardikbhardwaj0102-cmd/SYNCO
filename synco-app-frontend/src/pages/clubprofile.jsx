@@ -403,7 +403,7 @@ const ClubProfile = () => {
                             'application/json',
                     },
                     body: JSON.stringify({
-                        inviteeId: userId,
+                        userId: userId,
                     }),
                 }
             );
