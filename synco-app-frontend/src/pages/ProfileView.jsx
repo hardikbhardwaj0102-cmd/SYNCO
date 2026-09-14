@@ -15,13 +15,11 @@ import {
 } from 'lucide-react';
 
 import { useAuth } from '../context/AuthContext';
-
 import { useNavigate, useParams } from 'react-router-dom';
-
 import '../styles/pages/ProfileView.css';
-
 import VideoClip from '../components/VideoClip';
 
+const API_URL = import.meta.env.VITE_API_URL;
 
 const SOCIAL_PROFILE_BASES = {
   youtube: 'https://youtube.com/',
@@ -29,7 +27,6 @@ const SOCIAL_PROFILE_BASES = {
   twitch: 'https://twitch.tv/',
   x: 'https://x.com/',
 };
-
 
 const externalSocialUrl = (value, platform) => {
   const trimmedValue = value?.trim();
@@ -49,7 +46,6 @@ const externalSocialUrl = (value, platform) => {
   return `${SOCIAL_PROFILE_BASES[platform]}${trimmedValue.replace(/^@/, '')}`;
 };
 
-
 const ProfileView = () => {
   const navigate = useNavigate();
   const { username } = useParams();
@@ -57,10 +53,8 @@ const ProfileView = () => {
 
   const [activeTab, setActiveTab] = useState('MOMENTS');
   const [matchFilter, setMatchFilter] = useState('ONGOING');
-
   const [profile, setProfile] = useState(null);
   const [gameCatalog, setGameCatalog] = useState([]);
-
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState('');
 
@@ -81,7 +75,6 @@ const ProfileView = () => {
   const [isUploadingClip, setIsUploadingClip] = useState(false);
   const [clipUploadError, setClipUploadError] = useState('');
 
-
   // =========================================================
   // LOAD PROFILE
   // =========================================================
@@ -93,8 +86,24 @@ const ProfileView = () => {
 
       try {
         const [profileResponse, catalogResponse] = await Promise.all([
-          fetch(`/api/profile/${encodeURIComponent(username)}`),
-          fetch('/api/games')
+          fetch(
+            `${API_URL}/api/profile/${encodeURIComponent(username)}`,
+            {
+              credentials: 'include',
+              headers: {
+                Accept: 'application/json'
+              },
+              cache: 'no-store'
+            }
+          ),
+
+          fetch(`${API_URL}/api/games`, {
+            credentials: 'include',
+            headers: {
+              Accept: 'application/json'
+            },
+            cache: 'no-store'
+          })
         ]);
 
         if (!profileResponse.ok) {
@@ -112,13 +121,13 @@ const ProfileView = () => {
           // { games: [...] }
           // and
           // [...]
+
           setGameCatalog(
             catalogData.games ||
             catalogData ||
             []
           );
         }
-
       } catch (loadError) {
         console.error('Error loading profile:', loadError);
         setError(loadError.message);
@@ -130,9 +139,7 @@ const ProfileView = () => {
     if (username) {
       loadData();
     }
-
   }, [username]);
-
 
   // =========================================================
   // OWNER CHECK
@@ -141,7 +148,6 @@ const ProfileView = () => {
   const isOwner =
     profile?.isOwner ||
     user?.username === username;
-
 
   // =========================================================
   // SHARE PROFILE
@@ -152,9 +158,7 @@ const ProfileView = () => {
 
     try {
       await navigator.clipboard.writeText(profileUrl);
-
       alert('Profile link copied.');
-
     } catch {
       window.prompt(
         'Copy this profile link:',
@@ -162,7 +166,6 @@ const ProfileView = () => {
       );
     }
   };
-
 
   // =========================================================
   // COPY SYNCO UID
@@ -179,7 +182,6 @@ const ProfileView = () => {
       setTimeout(() => {
         setUidCopied(false);
       }, 2000);
-
     } catch (error) {
       console.error(
         'Failed to copy SYNCO UID:',
@@ -187,7 +189,6 @@ const ProfileView = () => {
       );
     }
   };
-
 
   // =========================================================
   // ADD CLIP
@@ -200,7 +201,6 @@ const ProfileView = () => {
       setClipUploadError(
         'Please select a video file to upload.'
       );
-
       return;
     }
 
@@ -208,14 +208,12 @@ const ProfileView = () => {
     setIsUploadingClip(true);
 
     try {
-
       // -------------------------------------------------------
       // READ VIDEO METADATA
       // -------------------------------------------------------
 
       const metadata = await new Promise(
         (resolve, reject) => {
-
           const video = document.createElement('video');
 
           const objectUrl =
@@ -224,7 +222,6 @@ const ProfileView = () => {
           video.preload = 'metadata';
 
           video.onloadedmetadata = () => {
-
             URL.revokeObjectURL(objectUrl);
 
             resolve({
@@ -232,11 +229,9 @@ const ProfileView = () => {
               width: video.videoWidth,
               height: video.videoHeight
             });
-
           };
 
           video.onerror = () => {
-
             URL.revokeObjectURL(objectUrl);
 
             reject(
@@ -244,14 +239,11 @@ const ProfileView = () => {
                 'The selected file is not a readable video.'
               )
             );
-
           };
 
           video.src = objectUrl;
-
         }
       );
-
 
       // -------------------------------------------------------
       // VIDEO VALIDATION
@@ -263,7 +255,6 @@ const ProfileView = () => {
         );
       }
 
-
       if (
         metadata.width < 1280 ||
         metadata.height < 720 ||
@@ -274,7 +265,6 @@ const ProfileView = () => {
           'Clips must be between 720p and 1080p.'
         );
       }
-
 
       // -------------------------------------------------------
       // FORM DATA
@@ -307,29 +297,26 @@ const ProfileView = () => {
         metadata.height
       );
 
-
       // -------------------------------------------------------
       // UPLOAD
       // -------------------------------------------------------
 
       const response = await fetch(
-        '/api/profile/clips',
+        `${API_URL}/api/profile/clips`,
         {
           method: 'POST',
+          credentials: 'include',
           body: formData
         }
       );
 
-
       const data = await response.json();
-
 
       if (!response.ok) {
         throw new Error(
           data.message || 'Upload failed.'
         );
       }
-
 
       // -------------------------------------------------------
       // UPDATE PROFILE LOCALLY
@@ -343,7 +330,6 @@ const ProfileView = () => {
         ]
       }));
 
-
       // -------------------------------------------------------
       // RESET MODAL
       // -------------------------------------------------------
@@ -356,9 +342,7 @@ const ProfileView = () => {
         game: '',
         file: null
       });
-
     } catch (error) {
-
       console.error(
         'Error uploading clip:',
         error
@@ -368,14 +352,10 @@ const ProfileView = () => {
         error.message ||
         'Unable to upload clip.'
       );
-
     } finally {
-
       setIsUploadingClip(false);
-
     }
   };
-
 
   // =========================================================
   // LOADING
@@ -389,7 +369,6 @@ const ProfileView = () => {
     );
   }
 
-
   // =========================================================
   // ERROR
   // =========================================================
@@ -402,17 +381,14 @@ const ProfileView = () => {
     );
   }
 
-
   // =========================================================
   // MOMENTS
   // =========================================================
 
   const moments = profile.clips || [];
 
-
   return (
     <div className="public-profile-wrapper">
-
 
       {/* =====================================================
           1. PLAYER CARD HEADER
@@ -420,29 +396,23 @@ const ProfileView = () => {
 
       <div className="profile-card-container">
 
-
         {/* ===================================================
             LEFT — AVATAR
             =================================================== */}
 
         {profile.avatarUrl ? (
-
           <img
             src={profile.avatarUrl}
             alt={`${profile.username} avatar`}
             className="profile-avatar-large"
           />
-
         ) : (
-
           <div className="profile-avatar-large profile-avatar-fallback">
             {profile.username
               ?.slice(0, 1)
               .toUpperCase()}
           </div>
-
         )}
-
 
         {/* ===================================================
             CENTER — INFO & STATS
@@ -450,11 +420,9 @@ const ProfileView = () => {
 
         <div className="profile-info-col">
 
-
           {/* Username */}
 
           <div className="profile-username-row">
-
             <h1 className="profile-username">
               {profile.username}
             </h1>
@@ -466,14 +434,11 @@ const ProfileView = () => {
                 aria-label="Discord verified"
               />
             )}
-
           </div>
-
 
           {/* Name / UID / Bio */}
 
           <div className="mb-4">
-
 
             {/* Name + Region */}
 
@@ -484,13 +449,11 @@ const ProfileView = () => {
                 ` • ${profile.region}`}
             </span>
 
-
             {/* =================================================
                 SYNCO UID
                 ================================================= */}
 
             {profile.uid && (
-
               <div className="flex items-center gap-2 mt-2">
 
                 <span className="text-[10px] font-bold uppercase tracking-widest text-gray-400">
@@ -507,7 +470,6 @@ const ProfileView = () => {
                   className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg border border-black/10 bg-white text-[10px] font-bold uppercase tracking-wider text-gray-500 hover:text-black hover:border-black/30 transition-all"
                   title="Copy SYNCO UID"
                 >
-
                   {uidCopied ? (
                     <>
                       <Check size={12} />
@@ -519,13 +481,10 @@ const ProfileView = () => {
                       Copy
                     </>
                   )}
-
                 </button>
 
               </div>
-
             )}
-
 
             {/* Bio */}
 
@@ -536,7 +495,6 @@ const ProfileView = () => {
 
           </div>
 
-
           {/* =================================================
               PROFILE STATS
               ================================================= */}
@@ -544,7 +502,6 @@ const ProfileView = () => {
           <div className="profile-stats-container">
 
             <div className="stat-item">
-
               <span className="stat-value">
                 {profile.stats?.matches || 0}
               </span>
@@ -552,12 +509,9 @@ const ProfileView = () => {
               <span className="stat-label">
                 Matches
               </span>
-
             </div>
 
-
             <div className="stat-item">
-
               <span className="stat-value">
                 {profile.stats?.winRate || 0}%
               </span>
@@ -565,12 +519,9 @@ const ProfileView = () => {
               <span className="stat-label">
                 Win Rate
               </span>
-
             </div>
 
-
             <div className="stat-item">
-
               <span className="stat-value">
                 {profile.stats?.trophies || 0}
               </span>
@@ -578,20 +529,17 @@ const ProfileView = () => {
               <span className="stat-label">
                 Trophies
               </span>
-
             </div>
 
           </div>
 
         </div>
 
-
         {/* ===================================================
             RIGHT — ACTIONS & SOCIALS
             =================================================== */}
 
         <div className="profile-actions-col">
-
 
           {/* Top Actions */}
 
@@ -605,9 +553,7 @@ const ProfileView = () => {
               <Share2 size={18} />
             </button>
 
-
             {isOwner && (
-
               <button
                 onClick={() => navigate('/settings')}
                 className="text-gray-400 hover:text-black transition-colors"
@@ -615,11 +561,9 @@ const ProfileView = () => {
               >
                 <Settings size={20} />
               </button>
-
             )}
 
           </div>
-
 
           {/* =================================================
               SOCIAL LINKS
@@ -627,11 +571,9 @@ const ProfileView = () => {
 
           <div className="profile-socials-container">
 
-
             {/* YouTube */}
 
             {profile.socials?.youtube && (
-
               <a
                 href={externalSocialUrl(
                   profile.socials.youtube,
@@ -641,7 +583,6 @@ const ProfileView = () => {
                 rel="noopener noreferrer"
                 className="social-link-btn group"
               >
-
                 <Link2
                   size={14}
                   className="group-hover:text-red-500 transition-colors"
@@ -650,16 +591,12 @@ const ProfileView = () => {
                 <span className="hidden md:inline">
                   YouTube
                 </span>
-
               </a>
-
             )}
-
 
             {/* Instagram */}
 
             {profile.socials?.instagram && (
-
               <a
                 href={externalSocialUrl(
                   profile.socials.instagram,
@@ -669,7 +606,6 @@ const ProfileView = () => {
                 rel="noopener noreferrer"
                 className="social-link-btn group"
               >
-
                 <Link2
                   size={14}
                   className="group-hover:text-pink-500 transition-colors"
@@ -678,16 +614,12 @@ const ProfileView = () => {
                 <span className="hidden md:inline">
                   Instagram
                 </span>
-
               </a>
-
             )}
-
 
             {/* Twitch */}
 
             {profile.socials?.twitch && (
-
               <a
                 href={externalSocialUrl(
                   profile.socials.twitch,
@@ -697,7 +629,6 @@ const ProfileView = () => {
                 rel="noopener noreferrer"
                 className="social-link-btn group"
               >
-
                 <Link2
                   size={14}
                   className="group-hover:text-purple-500 transition-colors"
@@ -706,16 +637,12 @@ const ProfileView = () => {
                 <span className="hidden md:inline">
                   Twitch
                 </span>
-
               </a>
-
             )}
-
 
             {/* X / Twitter */}
 
             {profile.socials?.x && (
-
               <a
                 href={externalSocialUrl(
                   profile.socials.x,
@@ -725,7 +652,6 @@ const ProfileView = () => {
                 rel="noopener noreferrer"
                 className="social-link-btn group"
               >
-
                 <Link2
                   size={14}
                   className="group-hover:text-blue-400 transition-colors"
@@ -734,9 +660,7 @@ const ProfileView = () => {
                 <span className="hidden md:inline">
                   Twitter
                 </span>
-
               </a>
-
             )}
 
           </div>
@@ -745,7 +669,6 @@ const ProfileView = () => {
 
       </div>
 
-
       {/* =====================================================
           2. PROFESSIONAL GAME ROSTER
           ===================================================== */}
@@ -753,14 +676,11 @@ const ProfileView = () => {
       <div className="profile-games-roster">
 
         {profile.games?.length > 0 ? (
-
           profile.games.map((game) => (
-
             <div
               className="game-roster-item"
               key={game.id}
             >
-
               <span className="game-roster-title">
                 {game.gameName}
               </span>
@@ -768,28 +688,21 @@ const ProfileView = () => {
               <span className="game-roster-ign">
                 {game.ign}
               </span>
-
             </div>
-
           ))
-
         ) : (
-
           <span className="text-xs font-bold text-gray-400 uppercase tracking-widest">
             No verified game titles registered.
           </span>
-
         )}
 
       </div>
-
 
       {/* =====================================================
           3. ESPORTS NAVIGATION
           ===================================================== */}
 
       <div className="profile-tabs">
-
 
         {/* Moments */}
 
@@ -800,13 +713,9 @@ const ProfileView = () => {
             }`}
           onClick={() => setActiveTab('MOMENTS')}
         >
-
           <Video size={16} />
-
           Moments
-
         </button>
-
 
         {/* Matches */}
 
@@ -817,15 +726,11 @@ const ProfileView = () => {
             }`}
           onClick={() => setActiveTab('MATCHES')}
         >
-
           <PlaySquare size={16} />
-
           Matches
-
         </button>
 
       </div>
-
 
       {/* =====================================================
           4. TAB CONTENT
@@ -833,47 +738,36 @@ const ProfileView = () => {
 
       <div className="tab-content mt-4">
 
-
         {/* ===================================================
             MOMENTS
             =================================================== */}
 
         {activeTab === 'MOMENTS' && (
-
           <div className="flex flex-col gap-4">
-
 
             {/* Add Clip Button */}
 
             {isOwner &&
               moments.length < 6 && (
-
                 <button
                   className="add-clip-small-btn"
                   onClick={() =>
                     setIsAddClipModalOpen(true)
                   }
                 >
-
                   <Plus size={14} />
-
                   Add New Clip ({moments.length}/6)
-
                 </button>
-
               )}
-
 
             {/* Clips */}
 
             {moments.length > 0 ? (
-
               <div className="moments-grid-container">
 
                 {moments
                   .slice(0, 6)
                   .map((moment) => (
-
                     <VideoClip
                       key={moment.id}
                       id={moment.id}
@@ -884,13 +778,10 @@ const ProfileView = () => {
                       initialLikes={moment.likes}
                       initialComments={moment.comments}
                     />
-
                   ))}
 
               </div>
-
             ) : (
-
               <div className="empty-content-area w-full border-none mt-4">
 
                 <Video
@@ -906,41 +797,30 @@ const ProfileView = () => {
                   Gameplay highlights will appear here.
                 </p>
 
-
                 {isOwner && (
-
                   <button
                     className="add-clip-small-btn"
                     onClick={() =>
                       setIsAddClipModalOpen(true)
                     }
                   >
-
                     <Plus size={14} />
-
                     Upload First Clip
-
                   </button>
-
                 )}
 
               </div>
-
             )}
 
           </div>
-
         )}
-
 
         {/* ===================================================
             MATCHES
             =================================================== */}
 
         {activeTab === 'MATCHES' && (
-
           <div className="mt-4">
-
 
             {/* Match Filters */}
 
@@ -958,7 +838,6 @@ const ProfileView = () => {
                 Ongoing
               </button>
 
-
               <button
                 className={`match-filter-btn ${matchFilter === 'COMPLETED'
                     ? 'active'
@@ -972,7 +851,6 @@ const ProfileView = () => {
               </button>
 
             </div>
-
 
             {/* Empty Matches */}
 
@@ -994,18 +872,15 @@ const ProfileView = () => {
             </div>
 
           </div>
-
         )}
 
       </div>
-
 
       {/* =====================================================
           5. ADD CLIP MODAL
           ===================================================== */}
 
       {isAddClipModalOpen && (
-
         <div
           className="clip-modal-overlay"
           onClick={() =>
@@ -1019,7 +894,6 @@ const ProfileView = () => {
               e.stopPropagation()
             }
           >
-
 
             {/* Modal Header */}
 
@@ -1040,7 +914,6 @@ const ProfileView = () => {
 
             </div>
 
-
             {/* =================================================
                 UPLOAD FORM
                 ================================================= */}
@@ -1049,7 +922,6 @@ const ProfileView = () => {
               onSubmit={handleAddClipSubmit}
               className="space-y-4"
             >
-
 
               {/* Video Title */}
 
@@ -1075,7 +947,6 @@ const ProfileView = () => {
 
               </div>
 
-
               {/* Description */}
 
               <div>
@@ -1098,7 +969,6 @@ const ProfileView = () => {
 
               </div>
 
-
               {/* =================================================
                   GAME SELECT
                   ================================================= */}
@@ -1108,7 +978,6 @@ const ProfileView = () => {
                 <label className="block text-[11px] font-bold uppercase tracking-wider text-black/50 mb-2">
                   Game
                 </label>
-
 
                 <button
                   type="button"
@@ -1135,11 +1004,8 @@ const ProfileView = () => {
 
                 </button>
 
-
                 {isClipGameMenuOpen && (
-
                   <>
-
                     {/* Invisible Overlay */}
 
                     <div
@@ -1149,13 +1015,11 @@ const ProfileView = () => {
                       }
                     />
 
-
                     {/* Game Menu */}
 
                     <div className="custom-game-select-menu !top-[70px]">
 
                       {gameCatalog.map((game) => (
-
                         <button
                           type="button"
                           key={game.id}
@@ -1164,17 +1028,14 @@ const ProfileView = () => {
                               : ''
                             }`}
                           onClick={() => {
-
                             setNewClip({
                               ...newClip,
                               game: game.name
                             });
 
                             setIsClipGameMenuOpen(false);
-
                           }}
                         >
-
 
                           {/* Game Icon */}
 
@@ -1186,7 +1047,6 @@ const ProfileView = () => {
                             />
                             */}
                           </div>
-
 
                           {/* Game Text */}
 
@@ -1204,17 +1064,13 @@ const ProfileView = () => {
                           </div>
 
                         </button>
-
                       ))}
 
                     </div>
-
                   </>
-
                 )}
 
               </div>
-
 
               {/* =================================================
                   VIDEO FILE
@@ -1241,17 +1097,13 @@ const ProfileView = () => {
 
               </div>
 
-
               {/* Upload Error */}
 
               {clipUploadError && (
-
                 <p className="clip-upload-error">
                   {clipUploadError}
                 </p>
-
               )}
-
 
               {/* Upload Button */}
 
@@ -1260,11 +1112,9 @@ const ProfileView = () => {
                 disabled={isUploadingClip}
                 className="w-full h-12 mt-4 rounded-xl bg-black text-white text-sm font-bold tracking-wide hover:bg-[#171717] transition-all disabled:opacity-50"
               >
-
                 {isUploadingClip
                   ? 'Checking and uploading...'
                   : 'Upload to Moments'}
-
               </button>
 
             </form>
@@ -1272,12 +1122,10 @@ const ProfileView = () => {
           </div>
 
         </div>
-
       )}
 
     </div>
   );
 };
-
 
 export default ProfileView;
