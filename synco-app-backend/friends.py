@@ -11,7 +11,8 @@ from models import (
     db,
     User,
     FriendRequest,
-    Friendship
+    Friendship,
+    Notification
 )
 
 
@@ -340,6 +341,41 @@ def send_friend_request():
 
     db.session.add(
         friend_request
+    )
+
+    # -----------------------------------------------------
+    # Flush so the FriendRequest gets its ID
+    # -----------------------------------------------------
+
+    db.session.flush()
+
+    # -----------------------------------------------------
+    # Create notification for receiver
+    # -----------------------------------------------------
+
+    notification = Notification(
+        user_id=target_user.id,
+        notification_type="FRIEND_REQUEST",
+        title="New Friend Request",
+        message=(
+            f"{current_user.name} sent you "
+            f"a friend request."
+        ),
+        reference_type="FRIEND_REQUEST",
+        reference_id=friend_request.id,
+        data={
+            "requestId": friend_request.id,
+            "senderId": current_user.id,
+            "senderUid": current_user.uid,
+            "senderUsername": current_user.username,
+            "senderName": current_user.name,
+            "senderAvatar": current_user.avatar,
+        },
+        is_read=False
+    )
+
+    db.session.add(
+        notification
     )
 
     db.session.commit()
