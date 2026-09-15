@@ -16,7 +16,7 @@ from rewards import rewards_bp
 from clubs import clubs_bp
 from friends import friends_bp
 from notifications import notifications_bp
-from leaderboards import leaderboarads_bp
+from leaderboards import leaderboards_bp
 
 
 # =========================================================
@@ -44,7 +44,7 @@ app.secret_key = os.getenv(
 
 
 # =========================================================
-# SESSION COOKIE CONFIGURATION
+# SESSION CONFIGURATION
 # =========================================================
 
 app.config["SESSION_COOKIE_HTTPONLY"] = True
@@ -61,7 +61,7 @@ app.config["PERMANENT_SESSION_LIFETIME"] = (
 
 
 # =========================================================
-# DATABASE
+# DATABASE CONFIGURATION
 # =========================================================
 
 DATABASE_URL = os.getenv("DATABASE_URL")
@@ -72,7 +72,7 @@ if not DATABASE_URL:
     )
 
 
-# PostgreSQL compatibility
+# Render/PostgreSQL compatibility
 if DATABASE_URL.startswith("postgres://"):
     DATABASE_URL = DATABASE_URL.replace(
         "postgres://",
@@ -87,7 +87,7 @@ app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
 
 
 # =========================================================
-# FILE UPLOAD LIMIT
+# UPLOAD LIMIT
 # =========================================================
 
 app.config["MAX_CONTENT_LENGTH"] = (
@@ -103,7 +103,7 @@ db.init_app(app)
 
 
 # =========================================================
-# DATABASE SETUP
+# DATABASE INITIALIZATION
 # =========================================================
 
 with app.app_context():
@@ -159,14 +159,23 @@ init_oauth(app)
 # =========================================================
 
 app.register_blueprint(auth_bp)
+
 app.register_blueprint(profile_bp)
+
 app.register_blueprint(games_bp)
+
 app.register_blueprint(clips_bp)
+
 app.register_blueprint(rewards_bp)
+
 app.register_blueprint(clubs_bp)
+
 app.register_blueprint(friends_bp)
+
 app.register_blueprint(notifications_bp)
+
 app.register_blueprint(search_bp)
+
 app.register_blueprint(leaderboards_bp)
 
 
@@ -184,7 +193,7 @@ def home():
 
 
 # =========================================================
-# LOCAL DEVELOPMENT
+# RUN SERVER
 # =========================================================
 
 if __name__ == "__main__":
