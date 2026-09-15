@@ -1,901 +1,1804 @@
-import { useEffect, useMemo, useState } from 'react';
-import { useNavigate, useParams } from 'react-router-dom';
+import { useEffect, useMemo, useState } from "react";
+import { useNavigate, useParams } from "react-router-dom";
 
 import {
     ArrowLeft,
-    Shield,
-    Users,
-    Lock,
-    Globe,
-    UserPlus,
-    Mail,
-    MoreVertical,
-    Crown,
-    UserMinus,
-    X,
-    Search,
     Check,
-    Send,
-    Trophy,
-    BarChart3,
-    Target,
-    UserRoundPlus,
-    LogOut,
-    Settings,
-    Gamepad2,
-    CalendarDays,
+    ChevronDown,
     Clock3,
-    Swords,
-    Award,
-    ChevronRight,
-} from 'lucide-react';
+    Crown,
+    Edit3,
+    Globe2,
+    Image as ImageIcon,
+    Lock,
+    MoreHorizontal,
+    Plus,
+    Search,
+    Settings,
+    Shield,
+    Trash2,
+    UserCheck,
+    UserPlus,
+    Users,
+    X,
+} from "lucide-react";
 
-const API_URL = import.meta.env.VITE_API_URL;
 
-const ClubProfile = () => {
-    const navigate = useNavigate();
+const API = "/api";
+
+
+function firstDefined(...values) {
+    return values.find(
+        (value) =>
+            value !== undefined &&
+            value !== null &&
+            value !== ""
+    );
+}
+
+
+function getErrorMessage(data, fallback) {
+    return firstDefined(
+        data?.message,
+        data?.error,
+        fallback
+    );
+}
+
+
+function formatDate(value) {
+
+    if (!value) {
+        return "Unknown";
+    }
+
+    try {
+
+        return new Date(value).toLocaleDateString(
+            "en-IN",
+            {
+                day: "numeric",
+                month: "short",
+                year: "numeric",
+            }
+        );
+
+    } catch {
+
+        return "Unknown";
+    }
+}
+
+
+function getUserName(user) {
+
+    if (!user) {
+        return "Unknown Player";
+    }
+
+    return (
+        user.username ||
+        user.name ||
+        "Unknown Player"
+    );
+}
+
+
+function getUserInitials(user) {
+
+    const name = getUserName(user);
+
+    return name
+        .split(" ")
+        .filter(Boolean)
+        .slice(0, 2)
+        .map(
+            (part) =>
+                part.charAt(0).toUpperCase()
+        )
+        .join("");
+}
+
+
+function getAvatar(user) {
+
+    return firstDefined(
+        user?.avatar,
+        user?.avatarUrl,
+        ""
+    );
+}
+
+
+function getGameName(game) {
+
+    if (!game) {
+        return "Unknown Game";
+    }
+
+    return firstDefined(
+        game.name,
+        game.shortName,
+        game.id,
+        "Unknown Game"
+    );
+}
+
+
+function formatRole(role) {
+
+    const normalized =
+        String(role || "MEMBER")
+            .toUpperCase();
+
+    if (normalized === "OWNER") {
+        return "Owner";
+    }
+
+    if (normalized === "ADMIN") {
+        return "Admin";
+    }
+
+    return "Member";
+}
+
+
+function Modal({
+    title,
+    subtitle,
+    onClose,
+    children,
+    width = "max-w-2xl",
+}) {
+
+    return (
+        <div
+            className="fixed inset-0 z-[100] flex items-center justify-center bg-black/60 px-4 py-6 backdrop-blur-sm"
+            onMouseDown={(event) => {
+                if (
+                    event.target === event.currentTarget
+                ) {
+                    onClose();
+                }
+            }}
+        >
+            <div
+                className={`w-full ${width} max-h-[92vh] overflow-hidden rounded-2xl border border-[#dedbd3] bg-white shadow-2xl`}
+            >
+                <div className="flex items-start justify-between border-b border-[#ebe8e1] px-6 py-5">
+                    <div>
+                        <h2 className="text-lg font-black tracking-tight text-[#151515]">
+                            {title}
+                        </h2>
+
+                        {subtitle && (
+                            <p className="mt-1 text-xs font-medium text-[#85878e]">
+                                {subtitle}
+                            </p>
+                        )}
+                    </div>
+
+                    <button
+                        type="button"
+                        onClick={onClose}
+                        className="flex h-9 w-9 items-center justify-center rounded-lg border border-[#e3e0d9] text-[#777] transition hover:bg-[#f6f4ef] hover:text-black"
+                    >
+                        <X size={17} />
+                    </button>
+                </div>
+
+                <div className="max-h-[calc(92vh-82px)] overflow-y-auto p-6">
+                    {children}
+                </div>
+            </div>
+        </div>
+    );
+}
+
+
+function Input({
+    label,
+    value,
+    onChange,
+    placeholder,
+    type = "text",
+    disabled = false,
+}) {
+
+    return (
+        <label className="block">
+            <span className="mb-2 block text-[10px] font-black uppercase tracking-[0.18em] text-[#777a82]">
+                {label}
+            </span>
+
+            <input
+                type={type}
+                value={value}
+                disabled={disabled}
+                onChange={onChange}
+                placeholder={placeholder}
+                className="w-full rounded-xl border border-[#dedbd3] bg-white px-4 py-3 text-sm font-medium text-[#171717] outline-none transition placeholder:text-[#aaa9a4] focus:border-[#9b8148] focus:ring-2 focus:ring-[#9b8148]/10 disabled:bg-[#f4f2ed]"
+            />
+        </label>
+    );
+}
+
+
+function Textarea({
+    label,
+    value,
+    onChange,
+    placeholder,
+    rows = 4,
+}) {
+
+    return (
+        <label className="block">
+            <span className="mb-2 block text-[10px] font-black uppercase tracking-[0.18em] text-[#777a82]">
+                {label}
+            </span>
+
+            <textarea
+                rows={rows}
+                value={value}
+                onChange={onChange}
+                placeholder={placeholder}
+                className="w-full resize-none rounded-xl border border-[#dedbd3] bg-white px-4 py-3 text-sm font-medium text-[#171717] outline-none transition placeholder:text-[#aaa9a4] focus:border-[#9b8148] focus:ring-2 focus:ring-[#9b8148]/10"
+            />
+        </label>
+    );
+}
+
+
+function SelectField({
+    label,
+    value,
+    onChange,
+    children,
+}) {
+
+    return (
+        <label className="block">
+            <span className="mb-2 block text-[10px] font-black uppercase tracking-[0.18em] text-[#777a82]">
+                {label}
+            </span>
+
+            <div className="relative">
+                <select
+                    value={value}
+                    onChange={onChange}
+                    className="w-full appearance-none rounded-xl border border-[#dedbd3] bg-white px-4 py-3 pr-10 text-sm font-medium text-[#171717] outline-none transition focus:border-[#9b8148] focus:ring-2 focus:ring-[#9b8148]/10"
+                >
+                    {children}
+                </select>
+
+                <ChevronDown
+                    size={16}
+                    className="pointer-events-none absolute right-4 top-1/2 -translate-y-1/2 text-[#85878e]"
+                />
+            </div>
+        </label>
+    );
+}
+
+
+function Toggle({
+    label,
+    description,
+    checked,
+    onChange,
+}) {
+
+    return (
+        <button
+            type="button"
+            onClick={() => onChange(!checked)}
+            className="flex w-full items-center justify-between rounded-xl border border-[#e1ded7] bg-[#faf9f6] p-4 text-left transition hover:border-[#cfc9bb]"
+        >
+            <div className="pr-5">
+                <p className="text-sm font-black text-[#191919]">
+                    {label}
+                </p>
+
+                {description && (
+                    <p className="mt-1 text-xs leading-5 text-[#85878e]">
+                        {description}
+                    </p>
+                )}
+            </div>
+
+            <span
+                className={`relative h-6 w-11 shrink-0 rounded-full transition ${checked
+                        ? "bg-[#9b8148]"
+                        : "bg-[#d5d2cb]"
+                    }`}
+            >
+                <span
+                    className={`absolute top-1 h-4 w-4 rounded-full bg-white shadow transition ${checked
+                            ? "left-6"
+                            : "left-1"
+                        }`}
+                />
+            </span>
+        </button>
+    );
+}
+
+
+export default function ClubProfile() {
+
     const { clubId } = useParams();
-
-    // =========================================================
-    // STATE
-    // =========================================================
+    const navigate = useNavigate();
 
     const [club, setClub] = useState(null);
     const [members, setMembers] = useState([]);
 
-    const [loading, setLoading] = useState(true);
-    const [membersLoading, setMembersLoading] = useState(true);
+    const [joinRequests, setJoinRequests] =
+        useState([]);
 
-    const [error, setError] = useState('');
-    const [success, setSuccess] = useState('');
+    const [recruitmentPosts, setRecruitmentPosts] =
+        useState([]);
 
-    const [activeTab, setActiveTab] = useState('overview');
+    const [incomingInvites, setIncomingInvites] =
+        useState([]);
 
-    const [showMemberModal, setShowMemberModal] = useState(false);
+    const [loading, setLoading] =
+        useState(true);
 
-    const [searchQuery, setSearchQuery] = useState('');
-    const [users, setUsers] = useState([]);
-    const [searchingUsers, setSearchingUsers] = useState(false);
+    const [membersLoading, setMembersLoading] =
+        useState(false);
 
-    const [actionLoading, setActionLoading] = useState(false);
-    const [menuOpen, setMenuOpen] = useState(null);
+    const [requestsLoading, setRequestsLoading] =
+        useState(false);
 
-    const [incomingInvites, setIncomingInvites] = useState([]);
-    const [invitesLoading, setInvitesLoading] = useState(false);
+    const [recruitmentLoading, setRecruitmentLoading] =
+        useState(false);
 
-    const [showSettings, setShowSettings] = useState(false);
+    const [error, setError] =
+        useState("");
 
-    // =========================================================
+    const [success, setSuccess] =
+        useState("");
+
+    const [activeTab, setActiveTab] =
+        useState("overview");
+
+    const [inviteModal, setInviteModal] =
+        useState(false);
+
+    const [inviteSearch, setInviteSearch] =
+        useState("");
+
+    const [inviteResults, setInviteResults] =
+        useState([]);
+
+    const [inviteSearching, setInviteSearching] =
+        useState(false);
+
+    const [actionLoading, setActionLoading] =
+        useState(false);
+
+    const [openMemberMenu, setOpenMemberMenu] =
+        useState(null);
+
+    const [showSettings, setShowSettings] =
+        useState(false);
+
+    const [showJoinRequestModal, setShowJoinRequestModal] =
+        useState(false);
+
+    const [joinMessage, setJoinMessage] =
+        useState("");
+
+    const [showRecruitmentForm, setShowRecruitmentForm] =
+        useState(false);
+
+    const [editingRecruitment, setEditingRecruitment] =
+        useState(null);
+
+    const [showIncomingInvites, setShowIncomingInvites] =
+        useState(false);
+
+    const [settingsForm, setSettingsForm] =
+        useState({
+            name: "",
+            tag: "",
+            description: "",
+            avatar: "",
+            banner: "",
+            region: "Global",
+            gameId: "",
+            privacy: "Public",
+            allowMemberInvites: true,
+            isActive: true,
+        });
+
+    const [recruitmentForm, setRecruitmentForm] =
+        useState({
+            title: "",
+            description: "",
+            gameId: "",
+            role: "",
+            rankRequirement: "",
+            region: "",
+            micRequired: false,
+            status: "OPEN",
+        });
+
+
+    // =====================================================
     // HELPERS
-    // =========================================================
+    // =====================================================
 
-    const clearMessages = () => {
-        setError('');
-        setSuccess('');
-    };
+    function clearMessages() {
+        setError("");
+        setSuccess("");
+    }
 
-    const showSuccess = (message) => {
-        setError('');
+
+    function showSuccessMessage(message) {
+        setError("");
         setSuccess(message);
 
-        setTimeout(() => {
-            setSuccess('');
+        window.setTimeout(() => {
+            setSuccess("");
         }, 3500);
-    };
+    }
 
-    const showError = (message) => {
-        setSuccess('');
+
+    function showErrorMessage(message) {
+        setSuccess("");
         setError(message);
 
-        setTimeout(() => {
-            setError('');
+        window.setTimeout(() => {
+            setError("");
         }, 5000);
-    };
+    }
 
-    const getUserName = (user) => {
-        if (!user) return 'Unknown Player';
 
-        return (
-            user.username ||
-            user.name ||
-            user.displayName ||
-            'Unknown Player'
-        );
-    };
+    async function fetchJson(
+        url,
+        options = {}
+    ) {
 
-    const getUserInitials = (user) => {
-        const name = getUserName(user);
-
-        return name
-            .split(' ')
-            .map((part) => part[0])
-            .join('')
-            .slice(0, 2)
-            .toUpperCase();
-    };
-
-    const getAvatar = (user) => {
-        return (
-            user?.avatar ||
-            user?.avatarUrl ||
-            user?.avatar_url ||
-            null
-        );
-    };
-
-    const formatDate = (date) => {
-        if (!date) return 'Unknown';
-
-        const parsed = new Date(date);
-
-        if (Number.isNaN(parsed.getTime())) {
-            return 'Unknown';
-        }
-
-        return parsed.toLocaleDateString('en-IN', {
-            day: 'numeric',
-            month: 'short',
-            year: 'numeric',
-        });
-    };
-
-    const formatRole = (role) => {
-        if (!role) return 'Member';
-
-        return (
-            role.charAt(0) +
-            role.slice(1).toLowerCase()
-        );
-    };
-
-    // =========================================================
-    // LOAD CLUB
-    // =========================================================
-
-    const loadClub = async () => {
-        try {
-            setLoading(true);
-
-            const response = await fetch(
-                `${API_URL}/api/clubs/${clubId}`,
-                {
-                    credentials: 'include',
-                }
-            );
-
-            const data = await response.json();
-
-            if (!response.ok || !data.success) {
-                throw new Error(
-                    data.message || 'Unable to load club.'
-                );
+        const response = await fetch(
+            url,
+            {
+                credentials: "include",
+                ...options,
+                headers: {
+                    "Content-Type": "application/json",
+                    ...(options.headers || {}),
+                },
             }
+        );
 
-            setClub(data.club);
-        } catch (err) {
-            console.error('Club load error:', err);
+        const data =
+            await response.json()
+                .catch(() => ({}));
 
-            setClub(null);
+        if (!response.ok) {
 
-            showError(
-                err.message || 'Unable to load club.'
+            throw new Error(
+                getErrorMessage(
+                    data,
+                    "Something went wrong."
+                )
             );
-        } finally {
-            setLoading(false);
         }
-    };
 
-    // =========================================================
-    // LOAD MEMBERS
-    // =========================================================
+        return data;
+    }
 
-    const loadMembers = async () => {
+
+    // =====================================================
+    // LOAD CLUB
+    // =====================================================
+
+    async function loadClub() {
+
         try {
+
+            const data = await fetchJson(
+                `${API}/clubs/${clubId}`
+            );
+
+            setClub(
+                data.club
+            );
+
+        } catch (err) {
+
+            showErrorMessage(
+                err.message
+            );
+        }
+    }
+
+
+    // =====================================================
+    // LOAD MEMBERS
+    // =====================================================
+
+    async function loadMembers() {
+
+        try {
+
             setMembersLoading(true);
 
-            const response = await fetch(
-                `${API_URL}/api/clubs/${clubId}/members`,
-                {
-                    credentials: 'include',
-                }
+            const data = await fetchJson(
+                `${API}/clubs/${clubId}/members`
             );
 
-            const data = await response.json();
+            setMembers(
+                data.members || []
+            );
 
-            if (!response.ok || !data.success) {
-                throw new Error(
-                    data.message ||
-                    'Unable to load members.'
-                );
-            }
-
-            setMembers(data.members || []);
         } catch (err) {
-            console.error(
-                'Members load error:',
-                err
+
+            showErrorMessage(
+                err.message
             );
 
-            setMembers([]);
-
-            showError(
-                err.message ||
-                'Unable to load members.'
-            );
         } finally {
+
             setMembersLoading(false);
         }
-    };
+    }
 
-    // =========================================================
-    // LOAD MY INVITES
-    // =========================================================
 
-    const loadIncomingInvites = async () => {
+    // =====================================================
+    // LOAD REQUESTS
+    // =====================================================
+
+    async function loadJoinRequests(
+        showErrorOnFailure = false
+    ) {
+
+        if (!club?.canManage && !club?.currentUser) {
+            // Permission is confirmed by the API anyway.
+        }
+
         try {
-            setInvitesLoading(true);
 
-            const response = await fetch(
-                `${API_URL}/api/clubs/invites/mine`,
-                {
-                    credentials: 'include',
-                }
+            setRequestsLoading(true);
+
+            const data = await fetchJson(
+                `${API}/clubs/${clubId}/join-requests`
             );
 
-            const data = await response.json();
+            setJoinRequests(
+                data.requests || []
+            );
 
-            if (!response.ok || !data.success) {
-                return;
+        } catch (err) {
+
+            if (showErrorOnFailure) {
+
+                showErrorMessage(
+                    err.message
+                );
             }
 
-            setIncomingInvites(data.invites || []);
-        } catch (err) {
-            console.error(
-                'Incoming invite error:',
-                err
-            );
         } finally {
-            setInvitesLoading(false);
-        }
-    };
 
-    // =========================================================
+            setRequestsLoading(false);
+        }
+    }
+
+
+    // =====================================================
+    // LOAD RECRUITMENT
+    // =====================================================
+
+    async function loadRecruitment(
+        includeClosed = false
+    ) {
+
+        try {
+
+            setRecruitmentLoading(true);
+
+            const query =
+                includeClosed
+                    ? "?includeClosed=true"
+                    : "";
+
+            const data = await fetchJson(
+                `${API}/clubs/${clubId}/recruitment${query}`
+            );
+
+            setRecruitmentPosts(
+                data.posts || []
+            );
+
+        } catch (err) {
+
+            showErrorMessage(
+                err.message
+            );
+
+        } finally {
+
+            setRecruitmentLoading(false);
+        }
+    }
+
+
+    // =====================================================
+    // LOAD INVITES
+    // =====================================================
+
+    async function loadInvites() {
+
+        try {
+
+            const data = await fetchJson(
+                `${API}/clubs/invites/mine`
+            );
+
+            setIncomingInvites(
+                data.invites || []
+            );
+
+        } catch {
+            // Invite loading is non-critical.
+        }
+    }
+
+
+    // =====================================================
     // INITIAL LOAD
-    // =========================================================
+    // =====================================================
 
     useEffect(() => {
-        if (!clubId) return;
 
-        loadClub();
-        loadMembers();
-        loadIncomingInvites();
-    }, [clubId]);
+        let mounted = true;
 
-    // =========================================================
-    // SEARCH USERS
-    // USERNAME OR UID ONLY
-    // =========================================================
+        async function load() {
 
-    useEffect(() => {
-        if (!showMemberModal) return;
-
-        const query = searchQuery.trim();
-
-        if (!query) {
-            setUsers([]);
-            setSearchingUsers(false);
-            return;
-        }
-
-        const timer = setTimeout(async () => {
             try {
-                setSearchingUsers(true);
 
-                const response = await fetch(
-                    `${API_URL}/api/clubs/users/search?q=${encodeURIComponent(
-                        query
-                    )}&clubId=${clubId}`,
-                    {
-                        credentials: 'include',
-                    }
+                setLoading(true);
+
+                const [
+                    clubResponse,
+                    membersResponse,
+                    inviteResponse,
+                ] = await Promise.all([
+                    fetchJson(
+                        `${API}/clubs/${clubId}`
+                    ),
+                    fetchJson(
+                        `${API}/clubs/${clubId}/members`
+                    ),
+                    fetchJson(
+                        `${API}/clubs/invites/mine`
+                    ),
+                ]);
+
+                if (!mounted) {
+                    return;
+                }
+
+                setClub(
+                    clubResponse.club
                 );
 
-                const data = await response.json();
+                setMembers(
+                    membersResponse.members || []
+                );
 
-                if (!response.ok || !data.success) {
-                    throw new Error(
-                        data.message ||
-                        'Unable to search players.'
+                setIncomingInvites(
+                    inviteResponse.invites || []
+                );
+
+            } catch (err) {
+
+                if (mounted) {
+
+                    setError(
+                        err.message
                     );
                 }
 
-                setUsers(data.users || []);
-            } catch (err) {
-                console.error(
-                    'Player search error:',
-                    err
-                );
-
-                setUsers([]);
             } finally {
-                setSearchingUsers(false);
-            }
-        }, 350);
 
-        return () => clearTimeout(timer);
+                if (mounted) {
+
+                    setLoading(false);
+                }
+            }
+        }
+
+        load();
+
+        return () => {
+            mounted = false;
+        };
+
+    }, [clubId]);
+
+
+    // =====================================================
+    // LOAD RECRUITMENT WHEN TAB OPENS
+    // =====================================================
+
+    useEffect(() => {
+
+        if (
+            activeTab !== "recruitment"
+        ) {
+            return;
+        }
+
+        loadRecruitment(
+            canManage
+        );
+
     }, [
-        searchQuery,
-        showMemberModal,
+        activeTab,
         clubId,
     ]);
 
-    // =========================================================
-    // USER PERMISSIONS
-    // =========================================================
 
-    const currentUser = club?.currentUser || null;
+    // =====================================================
+    // CURRENT USER
+    // =====================================================
 
-    const isMember = Boolean(currentUser);
+    const currentUser =
+        club?.currentUser || null;
 
-    const canManage = Boolean(club?.canManage);
+    const currentMembership =
+        members.find(
+            (member) =>
+                member.userId ===
+                currentUser?.id
+        );
+
+    const isMember =
+        Boolean(
+            currentMembership
+        );
 
     const isOwner =
-        currentUser?.role === 'OWNER';
+        Boolean(
+            club?.isOwner ||
+            currentMembership?.role === "OWNER"
+        );
 
     const isAdmin =
-        currentUser?.role === 'ADMIN';
+        String(
+            currentMembership?.role || ""
+        ).toUpperCase()
+        === "ADMIN";
 
-    // =========================================================
-    // MEMBER STATS
-    // =========================================================
+    const canManage =
+        Boolean(
+            club?.canManage ||
+            isOwner ||
+            isAdmin
+        );
 
-    const ownerCount = useMemo(() => {
-        return members.filter(
-            (member) => member.role === 'OWNER'
+    const pendingJoinRequest =
+        club?.pendingJoinRequest || null;
+
+    const hasPendingRequest =
+        Boolean(
+            pendingJoinRequest
+        );
+
+
+    // =====================================================
+    // STATS
+    // =====================================================
+
+    const ownerCount =
+        members.filter(
+            (member) =>
+                String(
+                    member.role
+                ).toUpperCase()
+                === "OWNER"
         ).length;
-    }, [members]);
 
-    const adminCount = useMemo(() => {
-        return members.filter(
-            (member) => member.role === 'ADMIN'
+    const adminCount =
+        members.filter(
+            (member) =>
+                String(
+                    member.role
+                ).toUpperCase()
+                === "ADMIN"
         ).length;
-    }, [members]);
 
-    // =========================================================
-    // INVITE MODAL
-    // =========================================================
+    const memberCount =
+        members.length;
 
-    const openInviteModal = () => {
+
+    // =====================================================
+    // JOIN
+    // =====================================================
+
+    function openJoinRequest() {
+
         clearMessages();
 
-        setSearchQuery('');
-        setUsers([]);
+        setJoinMessage("");
 
-        setShowMemberModal(true);
-    };
+        setShowJoinRequestModal(
+            true
+        );
+    }
 
-    const closeMemberModal = () => {
-        if (actionLoading) return;
 
-        setShowMemberModal(false);
-        setSearchQuery('');
-        setUsers([]);
-    };
-
-    // =========================================================
-    // SEND INVITE
-    // =========================================================
-
-    const sendInvite = async (userId) => {
-        if (!userId) return;
+    async function sendJoinRequest() {
 
         try {
-            setActionLoading(true);
-            clearMessages();
 
-            const response = await fetch(
-                `${API_URL}/api/clubs/${clubId}/invites`,
+            setActionLoading(true);
+
+            const data = await fetchJson(
+                `${API}/clubs/${clubId}/join`,
                 {
-                    method: 'POST',
-                    credentials: 'include',
-                    headers: {
-                        'Content-Type':
-                            'application/json',
-                    },
+                    method: "POST",
                     body: JSON.stringify({
-                        userId: userId,
+                        message:
+                            joinMessage.trim()
+                            || null,
                     }),
                 }
             );
 
-            const data = await response.json();
-
-            if (!response.ok || !data.success) {
-                throw new Error(
-                    data.message ||
-                    'Unable to send invite.'
-                );
-            }
-
-            showSuccess(
-                'Invitation sent successfully.'
+            setShowJoinRequestModal(
+                false
             );
 
-            setSearchQuery('');
-            setUsers([]);
+            setJoinMessage("");
 
             await loadClub();
-        } catch (err) {
-            console.error(
-                'Invite error:',
-                err
+
+            showSuccessMessage(
+                data.message ||
+                "Join request sent."
             );
 
-            showError(
-                err.message ||
-                'Unable to send invitation.'
+        } catch (err) {
+
+            showErrorMessage(
+                err.message
             );
+
         } finally {
+
             setActionLoading(false);
         }
-    };
+    }
 
-    // =========================================================
-    // JOIN CLUB
-    // =========================================================
 
-    const joinClub = async () => {
+    // =====================================================
+    // CANCEL JOIN REQUEST
+    // =====================================================
+
+    async function cancelJoinRequest() {
+
+        if (
+            !pendingJoinRequest?.id
+        ) {
+            return;
+        }
+
         try {
-            setActionLoading(true);
-            clearMessages();
 
-            const response = await fetch(
-                `${API_URL}/api/clubs/${clubId}/join`,
+            setActionLoading(true);
+
+            const data = await fetchJson(
+                `${API}/clubs/join-requests/${pendingJoinRequest.id}/cancel`,
                 {
-                    method: 'POST',
-                    credentials: 'include',
+                    method: "POST",
                 }
             );
 
-            const data = await response.json();
-
-            if (!response.ok || !data.success) {
-                throw new Error(
-                    data.message ||
-                    'Unable to join club.'
-                );
-            }
-
-            showSuccess(
-                'You joined the club.'
-            );
-
             await loadClub();
-            await loadMembers();
-        } catch (err) {
-            console.error(
-                'Join club error:',
-                err
+
+            showSuccessMessage(
+                data.message ||
+                "Join request cancelled."
             );
 
-            showError(
-                err.message ||
-                'Unable to join club.'
+        } catch (err) {
+
+            showErrorMessage(
+                err.message
             );
+
         } finally {
+
             setActionLoading(false);
         }
-    };
+    }
 
-    // =========================================================
-    // LEAVE CLUB
-    // =========================================================
 
-    const leaveClub = async () => {
-        const confirmed = window.confirm(
-            'Are you sure you want to leave this club?'
+    // =====================================================
+    // LOAD MANAGER REQUESTS
+    // =====================================================
+
+    async function openJoinRequests() {
+
+        clearMessages();
+
+        setActiveTab(
+            "overview"
         );
 
-        if (!confirmed) return;
-
-        try {
-            setActionLoading(true);
-            clearMessages();
-
-            const response = await fetch(
-                `${API_URL}/api/clubs/${clubId}/leave`,
-                {
-                    method: 'POST',
-                    credentials: 'include',
-                }
-            );
-
-            const data = await response.json();
-
-            if (!response.ok || !data.success) {
-                throw new Error(
-                    data.message ||
-                    'Unable to leave club.'
-                );
-            }
-
-            showSuccess(
-                'You left the club.'
-            );
-
-            await loadClub();
-            await loadMembers();
-        } catch (err) {
-            console.error(
-                'Leave club error:',
-                err
-            );
-
-            showError(
-                err.message ||
-                'Unable to leave club.'
-            );
-        } finally {
-            setActionLoading(false);
-        }
-    };
-
-    // =========================================================
-    // REMOVE MEMBER
-    // =========================================================
-
-    const removeMember = async (member) => {
-        if (!member?.userId) return;
-
-        const name = getUserName(member.user);
-
-        const confirmed = window.confirm(
-            `Remove ${name} from this club?`
+        await loadJoinRequests(
+            true
         );
+    }
 
-        if (!confirmed) return;
+
+    // =====================================================
+    // APPROVE
+    // =====================================================
+
+    async function approveJoinRequest(
+        requestId
+    ) {
 
         try {
-            setActionLoading(true);
-            clearMessages();
-            setMenuOpen(null);
 
-            const response = await fetch(
-                `${API_URL}/api/clubs/${clubId}/members/${member.userId}`,
+            setActionLoading(true);
+
+            const data = await fetchJson(
+                `${API}/clubs/join-requests/${requestId}/approve`,
                 {
-                    method: 'DELETE',
-                    credentials: 'include',
+                    method: "POST",
                 }
             );
 
-            const data = await response.json();
+            await Promise.all([
+                loadClub(),
+                loadMembers(),
+                loadJoinRequests(),
+            ]);
 
-            if (!response.ok || !data.success) {
-                throw new Error(
-                    data.message ||
-                    'Unable to remove member.'
-                );
-            }
+            showSuccessMessage(
+                data.message ||
+                "Player approved."
+            );
 
-            showSuccess(
-                `${name} was removed from the club.`
+        } catch (err) {
+
+            showErrorMessage(
+                err.message
+            );
+
+        } finally {
+
+            setActionLoading(false);
+        }
+    }
+
+
+    // =====================================================
+    // REJECT
+    // =====================================================
+
+    async function rejectJoinRequest(
+        requestId
+    ) {
+
+        try {
+
+            setActionLoading(true);
+
+            const data = await fetchJson(
+                `${API}/clubs/join-requests/${requestId}/reject`,
+                {
+                    method: "POST",
+                }
+            );
+
+            await loadJoinRequests();
+
+            showSuccessMessage(
+                data.message ||
+                "Join request rejected."
+            );
+
+        } catch (err) {
+
+            showErrorMessage(
+                err.message
+            );
+
+        } finally {
+
+            setActionLoading(false);
+        }
+    }
+
+
+    // =====================================================
+    // LEAVE
+    // =====================================================
+
+    async function leaveClub() {
+
+        const confirmed =
+            window.confirm(
+                "Are you sure you want to leave this club?"
+            );
+
+        if (!confirmed) {
+            return;
+        }
+
+        try {
+
+            setActionLoading(true);
+
+            const data = await fetchJson(
+                `${API}/clubs/${clubId}/leave`,
+                {
+                    method: "POST",
+                }
+            );
+
+            await Promise.all([
+                loadClub(),
+                loadMembers(),
+            ]);
+
+            showSuccessMessage(
+                data.message ||
+                "You left the club."
+            );
+
+        } catch (err) {
+
+            showErrorMessage(
+                err.message
+            );
+
+        } finally {
+
+            setActionLoading(false);
+        }
+    }
+
+
+    // =====================================================
+    // MEMBER REMOVE
+    // =====================================================
+
+    async function removeMember(
+        userId
+    ) {
+
+        try {
+
+            setActionLoading(true);
+
+            const data = await fetchJson(
+                `${API}/clubs/${clubId}/members/${userId}`,
+                {
+                    method: "DELETE",
+                }
+            );
+
+            setOpenMemberMenu(
+                null
             );
 
             await loadMembers();
-            await loadClub();
-        } catch (err) {
-            console.error(
-                'Remove member error:',
-                err
+
+            showSuccessMessage(
+                data.message ||
+                "Member removed."
             );
 
-            showError(
-                err.message ||
-                'Unable to remove member.'
+        } catch (err) {
+
+            showErrorMessage(
+                err.message
             );
+
         } finally {
+
             setActionLoading(false);
         }
-    };
+    }
 
-    // =========================================================
-    // CHANGE ROLE
-    // =========================================================
 
-    const changeRole = async (
-        member,
+    // =====================================================
+    // MEMBER ROLE
+    // =====================================================
+
+    async function changeRole(
+        userId,
         role
-    ) => {
-        if (!member?.userId) return;
+    ) {
 
         try {
-            setActionLoading(true);
-            clearMessages();
-            setMenuOpen(null);
 
-            const response = await fetch(
-                `${API_URL}/api/clubs/${clubId}/members/${member.userId}`,
+            setActionLoading(true);
+
+            const data = await fetchJson(
+                `${API}/clubs/${clubId}/members/${userId}/role`,
                 {
-                    method: 'PATCH',
-                    credentials: 'include',
-                    headers: {
-                        'Content-Type':
-                            'application/json',
-                    },
+                    method: "PATCH",
                     body: JSON.stringify({
                         role,
                     }),
                 }
             );
 
-            const data = await response.json();
-
-            if (!response.ok || !data.success) {
-                throw new Error(
-                    data.message ||
-                    'Unable to change role.'
-                );
-            }
-
-            showSuccess(
-                role === 'ADMIN'
-                    ? 'Member promoted to admin.'
-                    : 'Admin role removed.'
+            setOpenMemberMenu(
+                null
             );
 
             await loadMembers();
-            await loadClub();
-        } catch (err) {
-            console.error(
-                'Role update error:',
-                err
+
+            showSuccessMessage(
+                data.message ||
+                "Member role updated."
             );
 
-            showError(
-                err.message ||
-                'Unable to change member role.'
+        } catch (err) {
+
+            showErrorMessage(
+                err.message
             );
+
         } finally {
+
             setActionLoading(false);
         }
-    };
+    }
 
-    // =========================================================
+
+    // =====================================================
+    // INVITE SEARCH
+    // =====================================================
+
+    useEffect(() => {
+
+        if (
+            !inviteModal ||
+            inviteSearch.trim().length < 2
+        ) {
+
+            setInviteResults([]);
+
+            return;
+        }
+
+        const timer =
+            window.setTimeout(
+                async () => {
+
+                    try {
+
+                        setInviteSearching(
+                            true
+                        );
+
+                        const data =
+                            await fetchJson(
+                                `${API}/clubs/users/search?q=${encodeURIComponent(
+                                    inviteSearch.trim()
+                                )}&clubId=${clubId}`
+                            );
+
+                        setInviteResults(
+                            data.users || []
+                        );
+
+                    } catch (err) {
+
+                        showErrorMessage(
+                            err.message
+                        );
+
+                    } finally {
+
+                        setInviteSearching(
+                            false
+                        );
+                    }
+                },
+                300
+            );
+
+        return () => {
+            window.clearTimeout(
+                timer
+            );
+        };
+
+    }, [
+        inviteSearch,
+        inviteModal,
+        clubId,
+    ]);
+
+
+    // =====================================================
+    // SEND INVITE
+    // =====================================================
+
+    async function sendInvite(
+        userId
+    ) {
+
+        try {
+
+            setActionLoading(true);
+
+            const data = await fetchJson(
+                `${API}/clubs/${clubId}/invites`,
+                {
+                    method: "POST",
+                    body: JSON.stringify({
+                        userId,
+                    }),
+                }
+            );
+
+            setInviteSearch("");
+
+            setInviteResults([]);
+
+            showSuccessMessage(
+                data.message ||
+                "Invitation sent."
+            );
+
+        } catch (err) {
+
+            showErrorMessage(
+                err.message
+            );
+
+        } finally {
+
+            setActionLoading(false);
+        }
+    }
+
+
+    // =====================================================
     // ACCEPT INVITE
-    // =========================================================
+    // =====================================================
 
-    const acceptInvite = async (invite) => {
-        const inviteId = invite?.id;
-
-        if (!inviteId) {
-            return;
-        }
+    async function acceptInvite(
+        inviteId
+    ) {
 
         try {
-            setActionLoading(true);
-            clearMessages();
 
-            const response = await fetch(
-                `${API_URL}/api/clubs/invites/${inviteId}/accept`,
+            setActionLoading(true);
+
+            const data = await fetchJson(
+                `${API}/clubs/invites/${inviteId}/accept`,
                 {
-                    method: 'POST',
-                    credentials: 'include',
+                    method: "POST",
                 }
             );
 
-            const data = await response.json();
+            await Promise.all([
+                loadInvites(),
+                loadClub(),
+                loadMembers(),
+            ]);
 
-            if (!response.ok || !data.success) {
-                throw new Error(
-                    data.message ||
-                    'Unable to accept invite.'
-                );
-            }
-
-            showSuccess(
-                'Club invitation accepted.'
+            showSuccessMessage(
+                data.message ||
+                "You joined the club."
             );
 
-            await loadIncomingInvites();
-
-            const targetClubId =
-                invite?.club?.id;
-
-            if (
-                String(targetClubId) ===
-                String(clubId)
-            ) {
-                await loadClub();
-                await loadMembers();
-            }
         } catch (err) {
-            console.error(
-                'Accept invite error:',
-                err
+
+            showErrorMessage(
+                err.message
             );
 
-            showError(
-                err.message ||
-                'Unable to accept invitation.'
-            );
         } finally {
+
             setActionLoading(false);
         }
-    };
+    }
 
-    // =========================================================
+
+    // =====================================================
     // DECLINE INVITE
-    // =========================================================
+    // =====================================================
 
-    const declineInvite = async (invite) => {
-        const inviteId = invite?.id;
+    async function declineInvite(
+        inviteId
+    ) {
 
-        if (!inviteId) {
+        try {
+
+            setActionLoading(true);
+
+            const data = await fetchJson(
+                `${API}/clubs/invites/${inviteId}/decline`,
+                {
+                    method: "POST",
+                }
+            );
+
+            await loadInvites();
+
+            showSuccessMessage(
+                data.message ||
+                "Invitation declined."
+            );
+
+        } catch (err) {
+
+            showErrorMessage(
+                err.message
+            );
+
+        } finally {
+
+            setActionLoading(false);
+        }
+    }
+
+
+    // =====================================================
+    // OPEN SETTINGS
+    // =====================================================
+
+    function openSettings() {
+
+        setSettingsForm({
+            name:
+                club?.name || "",
+
+            tag:
+                club?.tag || "",
+
+            description:
+                club?.description || "",
+
+            avatar:
+                club?.avatar || "",
+
+            banner:
+                club?.banner || "",
+
+            region:
+                club?.region || "Global",
+
+            gameId:
+                club?.gameId || "",
+
+            privacy:
+                club?.privacy || "Public",
+
+            allowMemberInvites:
+                club?.allowMemberInvites !== false,
+
+            isActive:
+                club?.isActive !== false,
+        });
+
+        setShowSettings(
+            true
+        );
+    }
+
+
+    // =====================================================
+    // SAVE SETTINGS
+    // =====================================================
+
+    async function saveSettings() {
+
+        try {
+
+            setActionLoading(true);
+
+            const data = await fetchJson(
+                `${API}/clubs/${clubId}/settings`,
+                {
+                    method: "PATCH",
+                    body: JSON.stringify({
+                        ...settingsForm,
+                    }),
+                }
+            );
+
+            setClub(
+                data.club
+            );
+
+            setShowSettings(
+                false
+            );
+
+            showSuccessMessage(
+                data.message ||
+                "Club settings updated."
+            );
+
+        } catch (err) {
+
+            showErrorMessage(
+                err.message
+            );
+
+        } finally {
+
+            setActionLoading(false);
+        }
+    }
+
+
+    // =====================================================
+    // OPEN RECRUITMENT FORM
+    // =====================================================
+
+    function openRecruitmentCreate() {
+
+        setEditingRecruitment(
+            null
+        );
+
+        setRecruitmentForm({
+            title: "",
+            description: "",
+            gameId:
+                club?.gameId || "",
+            role: "",
+            rankRequirement: "",
+            region:
+                club?.region || "",
+            micRequired: false,
+            status: "OPEN",
+        });
+
+        setShowRecruitmentForm(
+            true
+        );
+    }
+
+
+    // =====================================================
+    // OPEN RECRUITMENT EDIT
+    // =====================================================
+
+    function openRecruitmentEdit(
+        post
+    ) {
+
+        setEditingRecruitment(
+            post
+        );
+
+        setRecruitmentForm({
+            title:
+                post.title || "",
+
+            description:
+                post.description || "",
+
+            gameId:
+                post.gameId ||
+                club?.gameId ||
+                "",
+
+            role:
+                post.role || "",
+
+            rankRequirement:
+                post.rankRequirement || "",
+
+            region:
+                post.region ||
+                club?.region ||
+                "",
+
+            micRequired:
+                Boolean(
+                    post.micRequired
+                ),
+
+            status:
+                post.status ||
+                "OPEN",
+        });
+
+        setShowRecruitmentForm(
+            true
+        );
+    }
+
+
+    // =====================================================
+    // SAVE RECRUITMENT
+    // =====================================================
+
+    async function saveRecruitment() {
+
+        try {
+
+            setActionLoading(true);
+
+            const isEditing =
+                Boolean(
+                    editingRecruitment
+                );
+
+            const endpoint =
+                isEditing
+                    ? `${API}/clubs/recruitment/${editingRecruitment.id}`
+                    : `${API}/clubs/${clubId}/recruitment`;
+
+            const data = await fetchJson(
+                endpoint,
+                {
+                    method:
+                        isEditing
+                            ? "PATCH"
+                            : "POST",
+
+                    body: JSON.stringify(
+                        recruitmentForm
+                    ),
+                }
+            );
+
+            setShowRecruitmentForm(
+                false
+            );
+
+            setEditingRecruitment(
+                null
+            );
+
+            await loadRecruitment(
+                canManage
+            );
+
+            showSuccessMessage(
+                data.message ||
+                (
+                    isEditing
+                        ? "Recruitment post updated."
+                        : "Recruitment post created."
+                )
+            );
+
+        } catch (err) {
+
+            showErrorMessage(
+                err.message
+            );
+
+        } finally {
+
+            setActionLoading(false);
+        }
+    }
+
+
+    // =====================================================
+    // CLOSE / OPEN RECRUITMENT
+    // =====================================================
+
+    async function toggleRecruitment(
+        post
+    ) {
+
+        try {
+
+            setActionLoading(true);
+
+            const action =
+                post.status === "OPEN"
+                    ? "close"
+                    : "open";
+
+            const data = await fetchJson(
+                `${API}/clubs/recruitment/${post.id}/${action}`,
+                {
+                    method: "POST",
+                }
+            );
+
+            await loadRecruitment(
+                canManage
+            );
+
+            showSuccessMessage(
+                data.message ||
+                "Recruitment updated."
+            );
+
+        } catch (err) {
+
+            showErrorMessage(
+                err.message
+            );
+
+        } finally {
+
+            setActionLoading(false);
+        }
+    }
+
+
+    // =====================================================
+    // DELETE RECRUITMENT
+    // =====================================================
+
+    async function deleteRecruitment(
+        post
+    ) {
+
+        const confirmed =
+            window.confirm(
+                "Delete this recruitment post?"
+            );
+
+        if (!confirmed) {
             return;
         }
 
         try {
-            setActionLoading(true);
-            clearMessages();
 
-            const response = await fetch(
-                `${API_URL}/api/clubs/invites/${inviteId}/decline`,
+            setActionLoading(true);
+
+            const data = await fetchJson(
+                `${API}/clubs/recruitment/${post.id}`,
                 {
-                    method: 'POST',
-                    credentials: 'include',
+                    method: "DELETE",
                 }
             );
 
-            const data = await response.json();
-
-            if (!response.ok || !data.success) {
-                throw new Error(
-                    data.message ||
-                    'Unable to decline invite.'
-                );
-            }
-
-            showSuccess(
-                'Invitation declined.'
+            await loadRecruitment(
+                canManage
             );
 
-            await loadIncomingInvites();
+            showSuccessMessage(
+                data.message ||
+                "Recruitment post deleted."
+            );
+
         } catch (err) {
-            console.error(
-                'Decline invite error:',
-                err
+
+            showErrorMessage(
+                err.message
             );
 
-            showError(
-                err.message ||
-                'Unable to decline invitation.'
-            );
         } finally {
+
             setActionLoading(false);
         }
-    };
+    }
 
-    // =========================================================
-    // TABS
-    // =========================================================
+
+    // =====================================================
+    // TAB DEFINITIONS
+    // =====================================================
 
     const tabs = [
         {
-            id: 'overview',
-            label: 'Overview',
-            icon: BarChart3,
+            id: "overview",
+            label: "Overview",
         },
         {
-            id: 'members',
-            label: 'Members',
-            icon: Users,
+            id: "members",
+            label: "Members",
         },
         {
-            id: 'recruitment',
-            label: 'Recruitment',
-            icon: UserRoundPlus,
+            id: "recruitment",
+            label: "Recruitment",
         },
         {
-            id: 'tournaments',
-            label: 'Tournaments',
-            icon: Trophy,
+            id: "tournaments",
+            label: "Tournaments",
         },
         {
-            id: 'stats',
-            label: 'Stats',
-            icon: Target,
+            id: "stats",
+            label: "Stats",
         },
     ];
 
-    // =========================================================
+
+    // =====================================================
+    // MEMBER PREVIEW
+    // =====================================================
+
+    const memberPreview =
+        useMemo(
+            () =>
+                members.slice(
+                    0,
+                    6
+                ),
+            [members]
+        );
+
+
+    // =====================================================
     // LOADING
-    // =========================================================
+    // =====================================================
 
     if (loading) {
-        return (
-            <div className="min-h-screen bg-white text-black">
-                <div className="flex min-h-screen items-center justify-center">
-                    <div className="flex flex-col items-center gap-4">
-                        <div className="h-8 w-8 animate-spin rounded-full border-2 border-black border-t-transparent" />
 
-                        <p className="text-sm text-gray-500">
-                            Loading club...
-                        </p>
+        return (
+            <div className="min-h-screen bg-[#f6f5f1] px-6 py-10">
+                <div className="mx-auto max-w-7xl animate-pulse">
+                    <div className="h-72 rounded-3xl bg-[#e8e5dd]" />
+
+                    <div className="mt-6 h-16 rounded-2xl bg-[#e8e5dd]" />
+
+                    <div className="mt-6 grid gap-6 lg:grid-cols-3">
+                        <div className="h-80 rounded-2xl bg-[#e8e5dd]" />
+                        <div className="h-80 rounded-2xl bg-[#e8e5dd] lg:col-span-2" />
                     </div>
                 </div>
             </div>
         );
     }
 
-    // =========================================================
-    // NOT FOUND
-    // =========================================================
 
     if (!club) {
+
         return (
-            <div className="min-h-screen bg-white px-6 text-black">
-                <div className="mx-auto flex min-h-screen max-w-3xl items-center justify-center">
-                    <div className="w-full rounded-2xl border border-gray-200 bg-white p-10 text-center shadow-sm">
+            <div className="flex min-h-screen items-center justify-center bg-[#f6f5f1] px-6">
+                <div className="w-full max-w-md rounded-2xl border border-[#dedbd3] bg-white p-8 text-center shadow-sm">
+                    <h1 className="text-xl font-black">
+                        Club not found
+                    </h1>
 
-                        <div className="mx-auto mb-5 flex h-16 w-16 items-center justify-center rounded-2xl bg-black text-white">
-                            <Shield size={30} />
-                        </div>
-
-                        <h2 className="text-2xl font-semibold tracking-tight">
-                            Club not found
-                        </h2>
-
-                        <p className="mx-auto mt-2 max-w-md text-sm leading-6 text-gray-500">
-                            This club may have been removed
-                            or is no longer available.
-                        </p>
-
-                        <button
-                            type="button"
-                            onClick={() =>
-                                navigate('/clubs')
-                            }
-                            className="mt-7 inline-flex items-center gap-2 rounded-xl bg-black px-5 py-3 text-sm font-medium text-white transition hover:bg-gray-800"
-                        >
-                            <ArrowLeft size={16} />
-                            Back to Clubs
-                        </button>
-
-                    </div>
-                </div>
-            </div>
-        );
-    }
-
-    // =========================================================
-    // MAIN
-    // =========================================================
-
-    return (
-        <div
-            className="min-h-screen bg-white text-black"
-            onClick={() => setMenuOpen(null)}
-        >
-
-            {/* =================================================
-                TOP BAR
-            ================================================= */}
-
-            <div className="sticky top-0 z-40 border-b border-gray-200 bg-white/95 backdrop-blur">
-
-                <div className="mx-auto flex h-16 max-w-7xl items-center justify-between px-4 sm:px-6 lg:px-8">
+                    <p className="mt-2 text-sm text-[#85878e]">
+                        This club may have been removed or is no longer available.
+                    </p>
 
                     <button
                         type="button"
                         onClick={() =>
-                            navigate('/clubs')
+                            navigate("/clubs")
                         }
-                        className="group flex items-center gap-2 text-sm font-medium text-gray-600 transition hover:text-black"
+                        className="mt-6 rounded-xl bg-[#171717] px-5 py-3 text-xs font-black uppercase tracking-wider text-white transition hover:bg-[#2b2b2b]"
                     >
-                        <ArrowLeft
-                            size={17}
-                            className="transition-transform group-hover:-translate-x-0.5"
-                        />
+                        Back to Clubs
+                    </button>
+                </div>
+            </div>
+        );
+    }
+
+
+    // =====================================================
+    // RENDER
+    // =====================================================
+
+    return (
+        <div className="min-h-screen bg-[#f6f5f1] text-[#171717]">
+
+            {/* =================================================
+                TOP NAV
+            ================================================= */}
+
+            <div className="border-b border-[#e1ded7] bg-white">
+                <div className="mx-auto flex max-w-7xl items-center justify-between px-4 py-4 sm:px-6 lg:px-8">
+
+                    <button
+                        type="button"
+                        onClick={() =>
+                            navigate("/clubs")
+                        }
+                        className="flex items-center gap-2 text-xs font-black uppercase tracking-wider text-[#777a82] transition hover:text-black"
+                    >
+                        <ArrowLeft size={16} />
                         Clubs
                     </button>
 
@@ -905,966 +1808,382 @@ const ClubProfile = () => {
                             <button
                                 type="button"
                                 onClick={() =>
-                                    setActiveTab(
-                                        'overview'
+                                    setShowIncomingInvites(
+                                        true
                                     )
                                 }
-                                className="hidden items-center gap-2 rounded-lg border border-gray-200 px-3 py-2 text-xs font-medium text-gray-700 transition hover:border-gray-300 hover:bg-gray-50 sm:flex"
+                                className="relative flex items-center gap-2 rounded-xl border border-[#dedbd3] bg-white px-4 py-2.5 text-xs font-black uppercase tracking-wider transition hover:bg-[#f7f5f0]"
                             >
-                                <Mail size={15} />
+                                <UserPlus size={15} />
 
                                 Invitations
 
-                                <span className="flex h-5 min-w-5 items-center justify-center rounded-full bg-black px-1.5 text-[10px] text-white">
-                                    {
-                                        incomingInvites.length
-                                    }
+                                <span className="flex h-5 min-w-5 items-center justify-center rounded-full bg-[#9b8148] px-1 text-[9px] font-black text-white">
+                                    {incomingInvites.length}
                                 </span>
                             </button>
                         )}
 
-                        {isMember && canManage && (
+                        {canManage && (
                             <button
                                 type="button"
-                                onClick={(event) => {
-                                    event.stopPropagation();
-
-                                    setShowSettings(
-                                        (prev) => !prev
-                                    );
-                                }}
-                                className="flex items-center gap-2 rounded-lg border border-gray-200 px-3 py-2 text-xs font-medium text-gray-700 transition hover:border-gray-300 hover:bg-gray-50"
+                                onClick={openSettings}
+                                className="flex items-center gap-2 rounded-xl bg-[#171717] px-4 py-2.5 text-xs font-black uppercase tracking-wider text-white transition hover:bg-[#2b2b2b]"
                             >
                                 <Settings size={15} />
-
-                                <span className="hidden sm:inline">
-                                    Manage
-                                </span>
+                                Settings
                             </button>
                         )}
 
                     </div>
-
                 </div>
             </div>
 
+
             {/* =================================================
-                ALERTS
+                HERO
+            ================================================= */}
+
+            <section className="border-b border-[#e1ded7] bg-white">
+
+                <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+
+                    <div className="relative overflow-hidden rounded-b-3xl border-x border-b border-[#e1ded7] bg-[#181818]">
+
+                        {club.banner ? (
+                            <img
+                                src={club.banner}
+                                alt=""
+                                className="absolute inset-0 h-full w-full object-cover opacity-45"
+                            />
+                        ) : (
+                            <div className="absolute inset-0 bg-[linear-gradient(135deg,#191919_0%,#24231f_55%,#151515_100%)]" />
+                        )}
+
+                        <div className="absolute inset-0 bg-black/45" />
+
+                        <div className="relative px-6 py-12 sm:px-10 lg:px-14 lg:py-16">
+
+                            <div className="flex flex-col gap-8 lg:flex-row lg:items-end lg:justify-between">
+
+                                <div className="flex min-w-0 flex-col gap-6 sm:flex-row sm:items-center">
+
+                                    <div className="flex h-28 w-28 shrink-0 items-center justify-center overflow-hidden rounded-3xl border border-white/15 bg-[#252525] shadow-2xl">
+
+                                        {club.avatar ? (
+                                            <img
+                                                src={club.avatar}
+                                                alt={club.name}
+                                                className="h-full w-full object-cover"
+                                            />
+                                        ) : (
+                                            <Shield
+                                                size={46}
+                                                className="text-[#c7aa6a]"
+                                            />
+                                        )}
+
+                                    </div>
+
+                                    <div className="min-w-0">
+
+                                        <div className="mb-3 flex flex-wrap items-center gap-2">
+
+                                            <span className="rounded-full border border-white/15 bg-white/10 px-3 py-1 text-[9px] font-black uppercase tracking-[0.18em] text-white/80">
+                                                [{club.tag}]
+                                            </span>
+
+                                            <span className="rounded-full border border-[#c7aa6a]/30 bg-[#c7aa6a]/10 px-3 py-1 text-[9px] font-black uppercase tracking-[0.18em] text-[#e0c78e]">
+                                                {club.privacy}
+                                            </span>
+
+                                        </div>
+
+                                        <h1 className="truncate text-3xl font-black tracking-tight text-white sm:text-5xl">
+                                            {club.name}
+                                        </h1>
+
+                                        <div className="mt-4 flex flex-wrap items-center gap-x-5 gap-y-2 text-xs font-bold text-white/65">
+
+                                            <span>
+                                                {getGameName(
+                                                    club.game
+                                                )}
+                                            </span>
+
+                                            <span className="h-1 w-1 rounded-full bg-white/30" />
+
+                                            <span>
+                                                {club.region || "Global"}
+                                            </span>
+
+                                            <span className="h-1 w-1 rounded-full bg-white/30" />
+
+                                            <span>
+                                                {memberCount} members
+                                            </span>
+
+                                            <span className="h-1 w-1 rounded-full bg-white/30" />
+
+                                            <span>
+                                                Since{" "}
+                                                {formatDate(
+                                                    club.createdAt
+                                                )}
+                                            </span>
+
+                                        </div>
+
+                                        {club.description && (
+                                            <p className="mt-5 max-w-2xl text-sm leading-6 text-white/65">
+                                                {club.description}
+                                            </p>
+                                        )}
+
+                                    </div>
+
+                                </div>
+
+
+                                <div className="flex flex-wrap gap-3">
+
+                                    {!isMember &&
+                                        !isOwner &&
+                                        !hasPendingRequest &&
+                                        club.privacy !== "Private" && (
+                                            <button
+                                                type="button"
+                                                disabled={
+                                                    actionLoading
+                                                }
+                                                onClick={
+                                                    openJoinRequest
+                                                }
+                                                className="rounded-xl bg-white px-5 py-3 text-xs font-black uppercase tracking-wider text-[#171717] transition hover:bg-[#f0ede6] disabled:cursor-not-allowed disabled:opacity-60"
+                                            >
+                                                Request to Join
+                                            </button>
+                                        )}
+
+                                    {!isMember &&
+                                        !isOwner &&
+                                        hasPendingRequest && (
+                                            <>
+                                                <button
+                                                    type="button"
+                                                    disabled
+                                                    className="flex items-center gap-2 rounded-xl border border-white/15 bg-white/10 px-5 py-3 text-xs font-black uppercase tracking-wider text-white/70"
+                                                >
+                                                    <Clock3
+                                                        size={15}
+                                                    />
+                                                    Request Pending
+                                                </button>
+
+                                                <button
+                                                    type="button"
+                                                    disabled={
+                                                        actionLoading
+                                                    }
+                                                    onClick={
+                                                        cancelJoinRequest
+                                                    }
+                                                    className="rounded-xl border border-white/15 bg-transparent px-5 py-3 text-xs font-black uppercase tracking-wider text-white transition hover:bg-white/10 disabled:opacity-60"
+                                                >
+                                                    Cancel
+                                                </button>
+                                            </>
+                                        )}
+
+                                    {isMember &&
+                                        !isOwner && (
+                                            <button
+                                                type="button"
+                                                disabled={
+                                                    actionLoading
+                                                }
+                                                onClick={
+                                                    leaveClub
+                                                }
+                                                className="rounded-xl border border-white/15 bg-white/10 px-5 py-3 text-xs font-black uppercase tracking-wider text-white transition hover:bg-white/15 disabled:opacity-60"
+                                            >
+                                                Leave Club
+                                            </button>
+                                        )}
+
+                                    {canManage && (
+                                        <button
+                                            type="button"
+                                            onClick={() =>
+                                                setInviteModal(
+                                                    true
+                                                )
+                                            }
+                                            className="flex items-center gap-2 rounded-xl border border-[#c7aa6a]/30 bg-[#c7aa6a]/10 px-5 py-3 text-xs font-black uppercase tracking-wider text-[#e0c78e] transition hover:bg-[#c7aa6a]/20"
+                                        >
+                                            <UserPlus
+                                                size={15}
+                                            />
+                                            Invite Players
+                                        </button>
+                                    )}
+
+                                </div>
+
+                            </div>
+
+                        </div>
+
+                    </div>
+
+                </div>
+
+            </section>
+
+
+            {/* =================================================
+                MESSAGES
             ================================================= */}
 
             {(error || success) && (
-                <div className="fixed left-1/2 top-20 z-50 w-[calc(100%-32px)] max-w-lg -translate-x-1/2">
+                <div className="mx-auto max-w-7xl px-4 pt-5 sm:px-6 lg:px-8">
 
                     {error && (
-                        <div className="flex items-start gap-3 rounded-xl border border-red-200 bg-white px-4 py-3 text-sm text-red-700 shadow-lg">
-
-                            <X
-                                size={17}
-                                className="mt-0.5 shrink-0"
-                            />
-
-                            <span>{error}</span>
-
+                        <div className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm font-semibold text-red-700">
+                            {error}
                         </div>
                     )}
 
                     {success && (
-                        <div className="flex items-start gap-3 rounded-xl border border-green-200 bg-white px-4 py-3 text-sm text-green-700 shadow-lg">
-
-                            <Check
-                                size={17}
-                                className="mt-0.5 shrink-0"
-                            />
-
-                            <span>{success}</span>
-
+                        <div className="rounded-xl border border-[#d9cfb7] bg-[#f8f4ea] px-4 py-3 text-sm font-semibold text-[#806a3c]">
+                            {success}
                         </div>
                     )}
 
                 </div>
             )}
 
-            {/* =================================================
-                HERO
-            ================================================= */}
-
-            <section className="relative overflow-hidden border-b border-gray-200 bg-gray-50">
-
-                <div className="pointer-events-none absolute inset-0 opacity-[0.035]">
-
-                    <div className="absolute -right-24 -top-24 h-96 w-96 rounded-full border-[70px] border-black" />
-
-                    <div className="absolute -bottom-32 -left-24 h-80 w-80 rotate-45 border border-black" />
-
-                </div>
-
-                <div className="relative mx-auto flex max-w-7xl flex-col justify-between gap-8 px-4 py-10 sm:px-6 lg:flex-row lg:items-end lg:px-8 lg:py-14">
-
-                    <div className="flex min-w-0 flex-col gap-6 sm:flex-row sm:items-center">
-
-                        <div className="flex h-24 w-24 shrink-0 items-center justify-center rounded-2xl bg-black text-white shadow-sm sm:h-28 sm:w-28">
-                            <Shield
-                                size={48}
-                                strokeWidth={1.5}
-                            />
-                        </div>
-
-                        <div className="min-w-0">
-
-                            <div className="mb-2 flex flex-wrap items-center gap-2">
-
-                                <span className="rounded-md bg-black px-2 py-1 text-[10px] font-semibold uppercase tracking-widest text-white">
-                                    Club
-                                </span>
-
-                                {club.isActive && (
-                                    <span className="rounded-md border border-gray-200 bg-white px-2 py-1 text-[10px] font-medium uppercase tracking-widest text-gray-500">
-                                        Active
-                                    </span>
-                                )}
-
-                            </div>
-
-                            <div className="flex flex-wrap items-center gap-3">
-
-                                <h1 className="truncate text-3xl font-bold tracking-tight sm:text-4xl">
-                                    {club.name}
-                                </h1>
-
-                                <span className="rounded-lg border border-gray-200 bg-white px-2.5 py-1 text-xs font-semibold text-gray-600">
-                                    #{club.tag}
-                                </span>
-
-                            </div>
-
-                            <div className="mt-4 flex flex-wrap gap-x-5 gap-y-2 text-xs text-gray-500">
-
-                                <span className="flex items-center gap-1.5">
-                                    <Gamepad2 size={14} />
-
-                                    {club.game?.name ||
-                                        'Gaming'}
-                                </span>
-
-                                <span className="flex items-center gap-1.5">
-
-                                    {club.privacy ===
-                                        'Private' ? (
-                                        <Lock size={14} />
-                                    ) : (
-                                        <Globe size={14} />
-                                    )}
-
-                                    {club.privacy}
-
-                                </span>
-
-                                <span className="flex items-center gap-1.5">
-                                    <Users size={14} />
-
-                                    {club.memberCount ??
-                                        members.length}{' '}
-                                    Members
-                                </span>
-
-                                <span className="flex items-center gap-1.5">
-                                    <CalendarDays size={14} />
-
-                                    Since{' '}
-
-                                    {formatDate(
-                                        club.createdAt
-                                    )}
-                                </span>
-
-                            </div>
-
-                            {club.description && (
-                                <p className="mt-4 max-w-2xl text-sm leading-6 text-gray-600">
-                                    {club.description}
-                                </p>
-                            )}
-
-                        </div>
-
-                    </div>
-
-                    {/* ACTIONS */}
-
-                    <div className="flex shrink-0 flex-wrap gap-2">
-
-                        {!isMember && (
-                            <button
-                                type="button"
-                                onClick={joinClub}
-                                disabled={
-                                    actionLoading
-                                }
-                                className="inline-flex items-center justify-center gap-2 rounded-xl bg-black px-5 py-3 text-sm font-semibold text-white transition hover:bg-gray-800 disabled:cursor-not-allowed disabled:opacity-50"
-                            >
-                                <UserPlus size={17} />
-
-                                {actionLoading
-                                    ? 'Joining...'
-                                    : 'Join Club'}
-                            </button>
-                        )}
-
-                        {isMember &&
-                            !canManage && (
-                                <button
-                                    type="button"
-                                    onClick={
-                                        leaveClub
-                                    }
-                                    disabled={
-                                        actionLoading
-                                    }
-                                    className="inline-flex items-center justify-center gap-2 rounded-xl border border-gray-200 bg-white px-5 py-3 text-sm font-medium text-gray-700 transition hover:border-red-200 hover:bg-red-50 hover:text-red-600 disabled:opacity-50"
-                                >
-                                    <LogOut size={16} />
-                                    Leave Club
-                                </button>
-                            )}
-
-                        {canManage && (
-                            <button
-                                type="button"
-                                onClick={
-                                    openInviteModal
-                                }
-                                className="inline-flex items-center justify-center gap-2 rounded-xl bg-black px-4 py-3 text-sm font-semibold text-white transition hover:bg-gray-800"
-                            >
-                                <Send size={16} />
-                                Invite Player
-                            </button>
-                        )}
-
-                    </div>
-
-                </div>
-            </section>
 
             {/* =================================================
                 TABS
             ================================================= */}
 
-            <div className="sticky top-16 z-30 border-b border-gray-200 bg-white">
+            <div className="mx-auto max-w-7xl px-4 pt-6 sm:px-6 lg:px-8">
 
-                <div className="mx-auto max-w-7xl overflow-x-auto px-4 sm:px-6 lg:px-8">
+                <div className="flex overflow-x-auto border-b border-[#dedbd3]">
 
-                    <div className="flex min-w-max">
+                    {tabs.map((tab) => (
 
-                        {tabs.map((tab) => {
-                            const Icon = tab.icon;
+                        <button
+                            key={tab.id}
+                            type="button"
+                            onClick={() =>
+                                setActiveTab(
+                                    tab.id
+                                )
+                            }
+                            className={`whitespace-nowrap border-b-2 px-5 py-3 text-[10px] font-black uppercase tracking-[0.16em] transition ${activeTab === tab.id
+                                    ? "border-[#9b8148] text-[#9b8148]"
+                                    : "border-transparent text-[#85878e] hover:text-[#222]"
+                                }`}
+                        >
+                            {tab.label}
+                        </button>
 
-                            const active =
-                                activeTab ===
-                                tab.id;
-
-                            return (
-                                <button
-                                    key={tab.id}
-                                    type="button"
-                                    onClick={() =>
-                                        setActiveTab(
-                                            tab.id
-                                        )
-                                    }
-                                    className={`relative flex items-center gap-2 px-4 py-4 text-sm font-medium transition ${active
-                                        ? 'text-black'
-                                        : 'text-gray-500 hover:text-black'
-                                        }`}
-                                >
-                                    <Icon size={16} />
-
-                                    {tab.label}
-
-                                    {active && (
-                                        <span className="absolute bottom-0 left-3 right-3 h-0.5 bg-black" />
-                                    )}
-                                </button>
-                            );
-                        })}
-
-                    </div>
+                    ))}
 
                 </div>
+
             </div>
+
 
             {/* =================================================
                 CONTENT
             ================================================= */}
 
-            <main className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8 lg:py-10">
+            <main className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
+
 
                 {/* =================================================
                     OVERVIEW
                 ================================================= */}
 
-                {activeTab ===
-                    'overview' && (
-                        <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_340px]">
+                {activeTab === "overview" && (
 
-                            <div className="space-y-6">
+                    <div className="grid gap-6 lg:grid-cols-3">
 
-                                {/* ABOUT */}
+                        <div className="space-y-6 lg:col-span-2">
 
-                                <section className="rounded-2xl border border-gray-200 bg-white p-6 shadow-sm">
+                            {/* ABOUT */}
 
-                                    <div className="mb-6 flex items-start justify-between">
+                            <section className="rounded-2xl border border-[#dedbd3] bg-white p-6 shadow-sm">
 
-                                        <div>
-                                            <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-gray-400">
-                                                Club
-                                            </p>
+                                <div className="flex items-center justify-between">
 
-                                            <h2 className="mt-1 text-xl font-semibold tracking-tight">
-                                                About the Club
-                                            </h2>
-                                        </div>
-
-                                        <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-gray-50 text-gray-600">
-                                            <Shield size={18} />
-                                        </div>
-
-                                    </div>
-
-                                    <p className="max-w-3xl text-sm leading-7 text-gray-600">
-                                        {club.description ||
-                                            'This club has not added a description yet.'}
-                                    </p>
-
-                                </section>
-
-                                {/* MEMBER PREVIEW */}
-
-                                <section className="rounded-2xl border border-gray-200 bg-white p-6 shadow-sm">
-
-                                    <div className="mb-6 flex items-center justify-between">
-
-                                        <div>
-                                            <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-gray-400">
-                                                Community
-                                            </p>
-
-                                            <h2 className="mt-1 text-xl font-semibold tracking-tight">
-                                                Members
-                                            </h2>
-                                        </div>
-
-                                        <button
-                                            type="button"
-                                            onClick={() =>
-                                                setActiveTab(
-                                                    'members'
-                                                )
-                                            }
-                                            className="flex items-center gap-1 text-xs font-medium text-gray-500 transition hover:text-black"
-                                        >
-                                            View all
-                                            <ChevronRight
-                                                size={14}
-                                            />
-                                        </button>
-
-                                    </div>
-
-                                    {membersLoading ? (
-                                        <div className="flex h-24 items-center justify-center text-sm text-gray-400">
-                                            Loading members...
-                                        </div>
-                                    ) : members.length ===
-                                        0 ? (
-                                        <div className="rounded-xl border border-dashed border-gray-200 px-5 py-10 text-center">
-
-                                            <Users
-                                                size={28}
-                                                className="mx-auto text-gray-300"
-                                            />
-
-                                            <p className="mt-3 text-sm text-gray-500">
-                                                No members found.
-                                            </p>
-
-                                        </div>
-                                    ) : (
-                                        <div className="grid gap-2 sm:grid-cols-2">
-
-                                            {members
-                                                .slice(0, 6)
-                                                .map(
-                                                    (
-                                                        member
-                                                    ) => {
-                                                        const user =
-                                                            member.user;
-
-                                                        const avatar =
-                                                            getAvatar(
-                                                                user
-                                                            );
-
-                                                        return (
-                                                            <button
-                                                                key={
-                                                                    member.id
-                                                                }
-                                                                type="button"
-                                                                onClick={() => {
-                                                                    if (
-                                                                        user?.id
-                                                                    ) {
-                                                                        navigate(
-                                                                            `/profile/${user.id}`
-                                                                        );
-                                                                    }
-                                                                }}
-                                                                className="flex items-center gap-3 rounded-xl border border-gray-100 p-3 text-left transition hover:border-gray-200 hover:bg-gray-50"
-                                                            >
-
-                                                                <div className="flex h-10 w-10 shrink-0 items-center justify-center overflow-hidden rounded-full bg-black text-xs font-semibold text-white">
-
-                                                                    {avatar ? (
-                                                                        <img
-                                                                            src={
-                                                                                avatar
-                                                                            }
-                                                                            alt=""
-                                                                            className="h-full w-full object-cover"
-                                                                        />
-                                                                    ) : (
-                                                                        getUserInitials(
-                                                                            user
-                                                                        )
-                                                                    )}
-
-                                                                </div>
-
-                                                                <div className="min-w-0">
-
-                                                                    <p className="truncate text-sm font-semibold text-gray-900">
-                                                                        {getUserName(
-                                                                            user
-                                                                        )}
-                                                                    </p>
-
-                                                                    <p className="mt-0.5 text-xs text-gray-500">
-                                                                        {formatRole(
-                                                                            member.role
-                                                                        )}
-                                                                    </p>
-
-                                                                </div>
-
-                                                            </button>
-                                                        );
-                                                    }
-                                                )}
-
-                                        </div>
-                                    )}
-
-                                </section>
-
-                                {/* INVITATIONS */}
-
-                                {incomingInvites.length >
-                                    0 && (
-                                        <section className="rounded-2xl border border-gray-200 bg-white p-6 shadow-sm">
-
-                                            <div className="mb-6 flex items-center justify-between">
-
-                                                <div>
-                                                    <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-gray-400">
-                                                        Invitations
-                                                    </p>
-
-                                                    <h2 className="mt-1 text-xl font-semibold tracking-tight">
-                                                        Club Invitations
-                                                    </h2>
-                                                </div>
-
-                                                <Mail
-                                                    size={20}
-                                                    className="text-gray-400"
-                                                />
-
-                                            </div>
-
-                                            <div className="space-y-3">
-
-                                                {incomingInvites.map(
-                                                    (
-                                                        invite
-                                                    ) => (
-                                                        <div
-                                                            key={
-                                                                invite.id
-                                                            }
-                                                            className="flex flex-col gap-4 rounded-xl border border-gray-100 p-4 sm:flex-row sm:items-center sm:justify-between"
-                                                        >
-
-                                                            <div className="flex items-center gap-3">
-
-                                                                <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-black text-white">
-                                                                    <Shield
-                                                                        size={
-                                                                            19
-                                                                        }
-                                                                    />
-                                                                </div>
-
-                                                                <div>
-
-                                                                    <p className="text-sm font-semibold">
-                                                                        {
-                                                                            invite
-                                                                                .club
-                                                                                ?.name
-                                                                        }
-                                                                    </p>
-
-                                                                    <p className="mt-1 text-xs text-gray-500">
-                                                                        Invited by{' '}
-                                                                        {getUserName(
-                                                                            invite.inviter
-                                                                        )}
-                                                                    </p>
-
-                                                                </div>
-
-                                                            </div>
-
-                                                            <div className="flex gap-2">
-
-                                                                <button
-                                                                    type="button"
-                                                                    onClick={() =>
-                                                                        acceptInvite(
-                                                                            invite
-                                                                        )
-                                                                    }
-                                                                    disabled={
-                                                                        actionLoading
-                                                                    }
-                                                                    className="inline-flex items-center gap-1.5 rounded-lg bg-black px-3.5 py-2 text-xs font-semibold text-white transition hover:bg-gray-800 disabled:opacity-50"
-                                                                >
-                                                                    <Check
-                                                                        size={
-                                                                            14
-                                                                        }
-                                                                    />
-                                                                    Accept
-                                                                </button>
-
-                                                                <button
-                                                                    type="button"
-                                                                    onClick={() =>
-                                                                        declineInvite(
-                                                                            invite
-                                                                        )
-                                                                    }
-                                                                    disabled={
-                                                                        actionLoading
-                                                                    }
-                                                                    className="rounded-lg border border-gray-200 px-3.5 py-2 text-xs font-medium text-gray-600 transition hover:bg-gray-50 disabled:opacity-50"
-                                                                >
-                                                                    Decline
-                                                                </button>
-
-                                                            </div>
-
-                                                        </div>
-                                                    )
-                                                )}
-
-                                            </div>
-
-                                        </section>
-                                    )}
-
-                                {/* ACTIVITY */}
-
-                                <section className="rounded-2xl border border-gray-200 bg-white p-6 shadow-sm">
-
-                                    <div className="mb-6 flex items-center justify-between">
-
-                                        <div>
-                                            <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-gray-400">
-                                                Activity
-                                            </p>
-
-                                            <h2 className="mt-1 text-xl font-semibold tracking-tight">
-                                                Recent Activity
-                                            </h2>
-                                        </div>
-
-                                        <Clock3
-                                            size={20}
-                                            className="text-gray-400"
-                                        />
-
-                                    </div>
-
-                                    <div className="rounded-xl border border-dashed border-gray-200 px-6 py-12 text-center">
-
-                                        <Swords
-                                            size={32}
-                                            className="mx-auto text-gray-300"
-                                        />
-
-                                        <h3 className="mt-4 text-sm font-semibold">
-                                            No activity yet
-                                        </h3>
-
-                                        <p className="mx-auto mt-2 max-w-md text-xs leading-5 text-gray-500">
-                                            Matches, tournaments
-                                            and club activity
-                                            will appear here
-                                            once those systems
-                                            are connected.
+                                    <div>
+                                        <p className="text-[10px] font-black uppercase tracking-[0.2em] text-[#9b8148]">
+                                            Club
                                         </p>
 
-                                    </div>
-
-                                </section>
-
-                            </div>
-
-                            {/* SIDEBAR */}
-
-                            <aside className="space-y-6">
-
-                                {/* INFO */}
-
-                                <section className="rounded-2xl border border-gray-200 bg-white p-6 shadow-sm">
-
-                                    <div className="mb-5">
-
-                                        <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-gray-400">
-                                            Details
-                                        </p>
-
-                                        <h2 className="mt-1 text-lg font-semibold tracking-tight">
-                                            Club Information
+                                        <h2 className="mt-1 text-xl font-black">
+                                            About
                                         </h2>
-
                                     </div>
 
-                                    <div className="space-y-4">
+                                    <Shield
+                                        size={19}
+                                        className="text-[#9b8148]"
+                                    />
 
-                                        <div className="flex items-center justify-between gap-4">
+                                </div>
 
-                                            <span className="flex items-center gap-2 text-xs text-gray-500">
-                                                <Gamepad2 size={15} />
-                                                Game
-                                            </span>
+                                <p className="mt-5 text-sm leading-7 text-[#66686e]">
+                                    {club.description ||
+                                        "This club has not added a description yet."}
+                                </p>
 
-                                            <strong className="text-right text-xs font-semibold text-gray-900">
-                                                {club.game
-                                                    ?.name ||
-                                                    'Not specified'}
-                                            </strong>
+                            </section>
 
-                                        </div>
 
-                                        <div className="h-px bg-gray-100" />
+                            {/* MEMBER PREVIEW */}
 
-                                        <div className="flex items-center justify-between gap-4">
+                            <section className="rounded-2xl border border-[#dedbd3] bg-white p-6 shadow-sm">
 
-                                            <span className="flex items-center gap-2 text-xs text-gray-500">
+                                <div className="flex items-center justify-between">
 
-                                                {club.privacy ===
-                                                    'Private' ? (
-                                                    <Lock size={15} />
-                                                ) : (
-                                                    <Globe size={15} />
-                                                )}
-
-                                                Privacy
-                                            </span>
-
-                                            <strong className="text-xs font-semibold text-gray-900">
-                                                {club.privacy}
-                                            </strong>
-
-                                        </div>
-
-                                        <div className="h-px bg-gray-100" />
-
-                                        <div className="flex items-center justify-between gap-4">
-
-                                            <span className="flex items-center gap-2 text-xs text-gray-500">
-                                                <Users size={15} />
-                                                Members
-                                            </span>
-
-                                            <strong className="text-xs font-semibold text-gray-900">
-                                                {club.memberCount ??
-                                                    members.length}
-                                            </strong>
-
-                                        </div>
-
-                                        <div className="h-px bg-gray-100" />
-
-                                        <div className="flex items-center justify-between gap-4">
-
-                                            <span className="flex items-center gap-2 text-xs text-gray-500">
-                                                <CalendarDays
-                                                    size={15}
-                                                />
-                                                Created
-                                            </span>
-
-                                            <strong className="text-right text-xs font-semibold text-gray-900">
-                                                {formatDate(
-                                                    club.createdAt
-                                                )}
-                                            </strong>
-
-                                        </div>
-
-                                    </div>
-
-                                </section>
-
-                                {/* STATS */}
-
-                                <section className="rounded-2xl border border-gray-200 bg-white p-6 shadow-sm">
-
-                                    <div className="mb-5">
-
-                                        <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-gray-400">
+                                    <div>
+                                        <p className="text-[10px] font-black uppercase tracking-[0.2em] text-[#9b8148]">
                                             Community
                                         </p>
 
-                                        <h2 className="mt-1 text-lg font-semibold tracking-tight">
-                                            Club Stats
+                                        <h2 className="mt-1 text-xl font-black">
+                                            Members
                                         </h2>
-
                                     </div>
 
-                                    <div className="grid grid-cols-2 gap-2">
-
-                                        <div className="rounded-xl bg-gray-50 p-4">
-
-                                            <Users
-                                                size={16}
-                                                className="text-gray-400"
-                                            />
-
-                                            <p className="mt-3 text-2xl font-bold tracking-tight">
-                                                {members.length}
-                                            </p>
-
-                                            <p className="mt-1 text-[11px] text-gray-500">
-                                                Members
-                                            </p>
-
-                                        </div>
-
-                                        <div className="rounded-xl bg-gray-50 p-4">
-
-                                            <Crown
-                                                size={16}
-                                                className="text-gray-400"
-                                            />
-
-                                            <p className="mt-3 text-2xl font-bold tracking-tight">
-                                                {ownerCount}
-                                            </p>
-
-                                            <p className="mt-1 text-[11px] text-gray-500">
-                                                Owner
-                                            </p>
-
-                                        </div>
-
-                                        <div className="rounded-xl bg-gray-50 p-4">
-
-                                            <Shield
-                                                size={16}
-                                                className="text-gray-400"
-                                            />
-
-                                            <p className="mt-3 text-2xl font-bold tracking-tight">
-                                                {adminCount}
-                                            </p>
-
-                                            <p className="mt-1 text-[11px] text-gray-500">
-                                                Admins
-                                            </p>
-
-                                        </div>
-
-                                        <div className="rounded-xl bg-gray-50 p-4">
-
-                                            <Gamepad2
-                                                size={16}
-                                                className="text-gray-400"
-                                            />
-
-                                            <p className="mt-3 truncate text-lg font-bold tracking-tight">
-                                                {club.game
-                                                    ?.shortName ||
-                                                    club.game
-                                                        ?.name ||
-                                                    '—'}
-                                            </p>
-
-                                            <p className="mt-1 text-[11px] text-gray-500">
-                                                Game
-                                            </p>
-
-                                        </div>
-
-                                    </div>
-
-                                </section>
-
-                                {/* CURRENT ROLE */}
-
-                                {isMember && (
-                                    <section className="rounded-2xl border border-gray-200 bg-black p-5 text-white">
-
-                                        <div className="flex items-center gap-3">
-
-                                            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-white/10">
-
-                                                {isOwner ? (
-                                                    <Crown
-                                                        size={19}
-                                                    />
-                                                ) : (
-                                                    <Shield
-                                                        size={19}
-                                                    />
-                                                )}
-
-                                            </div>
-
-                                            <div>
-
-                                                <p className="text-sm font-semibold">
-                                                    {isOwner
-                                                        ? 'Club Owner'
-                                                        : isAdmin
-                                                            ? 'Club Admin'
-                                                            : 'Club Member'}
-                                                </p>
-
-                                                <p className="mt-1 text-xs text-gray-400">
-                                                    Your current
-                                                    role in this
-                                                    club
-                                                </p>
-
-                                            </div>
-
-                                        </div>
-
-                                    </section>
-                                )}
-
-                            </aside>
-
-                        </div>
-                    )}
-
-                {/* =================================================
-                    MEMBERS TAB
-                ================================================= */}
-
-                {activeTab ===
-                    'members' && (
-                        <section className="rounded-2xl border border-gray-200 bg-white shadow-sm">
-
-                            <div className="flex flex-col gap-5 border-b border-gray-100 p-6 sm:flex-row sm:items-center sm:justify-between">
-
-                                <div>
-
-                                    <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-gray-400">
-                                        Community
-                                    </p>
-
-                                    <h2 className="mt-1 text-xl font-semibold tracking-tight">
-                                        Club Members
-                                    </h2>
-
-                                    <p className="mt-1 text-xs text-gray-500">
-                                        {members.length}{' '}
-                                        members currently
-                                        in this club.
-                                    </p>
-
-                                </div>
-
-                                {canManage && (
                                     <button
                                         type="button"
-                                        onClick={
-                                            openInviteModal
+                                        onClick={() =>
+                                            setActiveTab(
+                                                "members"
+                                            )
                                         }
-                                        className="inline-flex items-center gap-2 rounded-lg bg-black px-4 py-2.5 text-xs font-semibold text-white transition hover:bg-gray-800"
+                                        className="text-[10px] font-black uppercase tracking-wider text-[#9b8148]"
                                     >
-                                        <Send size={15} />
-                                        Invite Player
+                                        View All
                                     </button>
-                                )}
-
-                            </div>
-
-                            {membersLoading ? (
-                                <div className="flex h-64 items-center justify-center text-sm text-gray-400">
-                                    Loading members...
-                                </div>
-                            ) : members.length ===
-                                0 ? (
-                                <div className="p-12 text-center">
-
-                                    <Users
-                                        size={36}
-                                        className="mx-auto text-gray-300"
-                                    />
-
-                                    <h3 className="mt-4 text-sm font-semibold">
-                                        No members yet
-                                    </h3>
-
-                                    <p className="mt-2 text-xs text-gray-500">
-                                        Start building your
-                                        club community.
-                                    </p>
 
                                 </div>
-                            ) : (
-                                <div className="divide-y divide-gray-100">
 
-                                    {members.map(
+
+                                <div className="mt-6 grid gap-3 sm:grid-cols-2">
+
+                                    {memberPreview.map(
                                         (member) => {
-                                            const user =
-                                                member.user;
 
                                             const avatar =
                                                 getAvatar(
-                                                    user
-                                                );
-
-                                            const canEdit =
-                                                canManage &&
-                                                member.role !==
-                                                'OWNER' &&
-                                                member.userId !==
-                                                currentUser?.id &&
-                                                (
-                                                    isOwner ||
-                                                    (
-                                                        isAdmin &&
-                                                        member.role ===
-                                                        'MEMBER'
-                                                    )
+                                                    member.user
                                                 );
 
                                             return (
@@ -1872,187 +2191,40 @@ const ClubProfile = () => {
                                                     key={
                                                         member.id
                                                     }
-                                                    className="relative flex items-center justify-between gap-4 px-6 py-4"
+                                                    className="flex items-center gap-3 rounded-xl border border-[#ebe8e1] p-3"
                                                 >
 
-                                                    <div className="flex min-w-0 items-center gap-3">
-
-                                                        <div className="flex h-11 w-11 shrink-0 items-center justify-center overflow-hidden rounded-full bg-black text-xs font-semibold text-white">
-
-                                                            {avatar ? (
-                                                                <img
-                                                                    src={
-                                                                        avatar
-                                                                    }
-                                                                    alt=""
-                                                                    className="h-full w-full object-cover"
-                                                                />
-                                                            ) : (
+                                                    {avatar ? (
+                                                        <img
+                                                            src={
+                                                                avatar
+                                                            }
+                                                            alt=""
+                                                            className="h-11 w-11 rounded-xl object-cover"
+                                                        />
+                                                    ) : (
+                                                        <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-[#ece9e2] text-xs font-black">
+                                                            {
                                                                 getUserInitials(
-                                                                    user
+                                                                    member.user
                                                                 )
+                                                            }
+                                                        </div>
+                                                    )}
+
+                                                    <div className="min-w-0 flex-1">
+
+                                                        <p className="truncate text-sm font-black">
+                                                            {getUserName(
+                                                                member.user
                                                             )}
+                                                        </p>
 
-                                                        </div>
-
-                                                        <div className="min-w-0">
-
-                                                            <p className="truncate text-sm font-semibold">
-                                                                {getUserName(
-                                                                    user
-                                                                )}
-                                                            </p>
-
-                                                            <p className="mt-0.5 truncate text-xs text-gray-500">
-                                                                {user?.username
-                                                                    ? `@${user.username}`
-                                                                    : user?.uid
-                                                                        ? `UID: ${user.uid}`
-                                                                        : 'SYNCO Player'}
-                                                            </p>
-
-                                                        </div>
-
-                                                    </div>
-
-                                                    <div className="flex shrink-0 items-center gap-3">
-
-                                                        <span
-                                                            className={`hidden items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-[10px] font-semibold uppercase tracking-wide sm:flex ${member.role ===
-                                                                'OWNER'
-                                                                ? 'bg-black text-white'
-                                                                : member.role ===
-                                                                    'ADMIN'
-                                                                    ? 'bg-gray-100 text-gray-700'
-                                                                    : 'border border-gray-200 text-gray-500'
-                                                                }`}
-                                                        >
-
-                                                            {member.role ===
-                                                                'OWNER' && (
-                                                                    <Crown
-                                                                        size={
-                                                                            12
-                                                                        }
-                                                                    />
-                                                                )}
-
-                                                            {member.role ===
-                                                                'ADMIN' && (
-                                                                    <Shield
-                                                                        size={
-                                                                            12
-                                                                        }
-                                                                    />
-                                                                )}
-
+                                                        <p className="mt-1 text-[10px] font-bold uppercase tracking-wider text-[#8a8b90]">
                                                             {formatRole(
                                                                 member.role
                                                             )}
-
-                                                        </span>
-
-                                                        {canEdit ? (
-                                                            <div
-                                                                className="relative"
-                                                                onClick={(
-                                                                    event
-                                                                ) =>
-                                                                    event.stopPropagation()
-                                                                }
-                                                            >
-
-                                                                <button
-                                                                    type="button"
-                                                                    onClick={() =>
-                                                                        setMenuOpen(
-                                                                            menuOpen ===
-                                                                                member.id
-                                                                                ? null
-                                                                                : member.id
-                                                                        )
-                                                                    }
-                                                                    className="flex h-9 w-9 items-center justify-center rounded-lg text-gray-400 transition hover:bg-gray-100 hover:text-black"
-                                                                >
-                                                                    <MoreVertical
-                                                                        size={
-                                                                            18
-                                                                        }
-                                                                    />
-                                                                </button>
-
-                                                                {menuOpen ===
-                                                                    member.id && (
-                                                                        <div className="absolute right-0 top-11 z-30 w-48 overflow-hidden rounded-xl border border-gray-200 bg-white py-1 shadow-xl">
-
-                                                                            {isOwner &&
-                                                                                member.role ===
-                                                                                'MEMBER' && (
-                                                                                    <button
-                                                                                        type="button"
-                                                                                        onClick={() =>
-                                                                                            changeRole(
-                                                                                                member,
-                                                                                                'ADMIN'
-                                                                                            )
-                                                                                        }
-                                                                                        className="flex w-full items-center gap-2 px-3 py-2.5 text-left text-xs font-medium text-gray-700 transition hover:bg-gray-50"
-                                                                                    >
-                                                                                        <Shield
-                                                                                            size={
-                                                                                                15
-                                                                                            }
-                                                                                        />
-                                                                                        Make Admin
-                                                                                    </button>
-                                                                                )}
-
-                                                                            {isOwner &&
-                                                                                member.role ===
-                                                                                'ADMIN' && (
-                                                                                    <button
-                                                                                        type="button"
-                                                                                        onClick={() =>
-                                                                                            changeRole(
-                                                                                                member,
-                                                                                                'MEMBER'
-                                                                                            )
-                                                                                        }
-                                                                                        className="flex w-full items-center gap-2 px-3 py-2.5 text-left text-xs font-medium text-gray-700 transition hover:bg-gray-50"
-                                                                                    >
-                                                                                        <Shield
-                                                                                            size={
-                                                                                                15
-                                                                                            }
-                                                                                        />
-                                                                                        Remove Admin
-                                                                                    </button>
-                                                                                )}
-
-                                                                            <button
-                                                                                type="button"
-                                                                                onClick={() =>
-                                                                                    removeMember(
-                                                                                        member
-                                                                                    )
-                                                                                }
-                                                                                className="flex w-full items-center gap-2 px-3 py-2.5 text-left text-xs font-medium text-red-600 transition hover:bg-red-50"
-                                                                            >
-                                                                                <UserMinus
-                                                                                    size={
-                                                                                        15
-                                                                                    }
-                                                                                />
-                                                                                Remove Member
-                                                                            </button>
-
-                                                                        </div>
-                                                                    )}
-
-                                                            </div>
-                                                        ) : (
-                                                            <div className="h-9 w-9" />
-                                                        )}
+                                                        </p>
 
                                                     </div>
 
@@ -2061,549 +2233,558 @@ const ClubProfile = () => {
                                         }
                                     )}
 
-                                </div>
-                            )}
-
-                        </section>
-                    )}
-
-                {/* =================================================
-                    RECRUITMENT
-                ================================================= */}
-
-                {activeTab ===
-                    'recruitment' && (
-                        <div className="grid gap-6 lg:grid-cols-2">
-
-                            <section className="rounded-2xl border border-gray-200 bg-white p-8 shadow-sm">
-
-                                <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-black text-white">
-                                    <UserRoundPlus
-                                        size={22}
-                                    />
-                                </div>
-
-                                <p className="mt-7 text-[10px] font-semibold uppercase tracking-[0.18em] text-gray-400">
-                                    Recruitment
-                                </p>
-
-                                <h2 className="mt-2 text-2xl font-semibold tracking-tight">
-                                    Find the right
-                                    players
-                                </h2>
-
-                                <p className="mt-3 max-w-md text-sm leading-6 text-gray-500">
-                                    Create recruitment posts
-                                    for roles your club needs
-                                    and let SYNCO players
-                                    apply.
-                                </p>
-
-                                <button
-                                    type="button"
-                                    disabled
-                                    className="mt-7 inline-flex items-center gap-2 rounded-xl bg-black px-5 py-3 text-sm font-semibold text-white opacity-50"
-                                >
-                                    <UserRoundPlus
-                                        size={16}
-                                    />
-                                    Create Recruitment
-                                    Post
-                                </button>
-
-                                <p className="mt-3 text-[11px] text-gray-400">
-                                    Recruitment backend coming
-                                    next.
-                                </p>
-
-                            </section>
-
-                            <section className="rounded-2xl border border-gray-200 bg-white p-8 shadow-sm">
-
-                                <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-gray-100 text-gray-700">
-                                    <Users size={22} />
-                                </div>
-
-                                <p className="mt-7 text-[10px] font-semibold uppercase tracking-[0.18em] text-gray-400">
-                                    Current Roster
-                                </p>
-
-                                <h2 className="mt-2 text-2xl font-semibold tracking-tight">
-                                    Build your squad
-                                </h2>
-
-                                <p className="mt-3 max-w-md text-sm leading-6 text-gray-500">
-                                    Manage your roster and
-                                    invite SYNCO players directly
-                                    into your club.
-                                </p>
-
-                                <button
-                                    type="button"
-                                    onClick={() =>
-                                        setActiveTab(
-                                            'members'
-                                        )
-                                    }
-                                    className="mt-7 inline-flex items-center gap-2 rounded-xl border border-gray-200 px-5 py-3 text-sm font-medium transition hover:bg-gray-50"
-                                >
-                                    <Users size={16} />
-                                    Manage Members
-                                </button>
-
-                            </section>
-
-                        </div>
-                    )}
-
-                {/* =================================================
-                    TOURNAMENTS
-                ================================================= */}
-
-                {activeTab ===
-                    'tournaments' && (
-                        <section className="rounded-2xl border border-gray-200 bg-white p-8 shadow-sm">
-
-                            <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-black text-white">
-                                <Trophy size={23} />
-                            </div>
-
-                            <p className="mt-7 text-[10px] font-semibold uppercase tracking-[0.18em] text-gray-400">
-                                Competition
-                            </p>
-
-                            <h2 className="mt-2 text-2xl font-semibold tracking-tight">
-                                Club Tournaments
-                            </h2>
-
-                            <p className="mt-3 max-w-xl text-sm leading-6 text-gray-500">
-                                Track your club's upcoming
-                                competitions, tournament
-                                results and competitive history
-                                here.
-                            </p>
-
-                            <div className="mt-8 rounded-xl border border-dashed border-gray-200 px-6 py-14 text-center">
-
-                                <Trophy
-                                    size={36}
-                                    className="mx-auto text-gray-300"
-                                />
-
-                                <h3 className="mt-4 text-sm font-semibold">
-                                    No tournaments yet
-                                </h3>
-
-                                <p className="mx-auto mt-2 max-w-md text-xs leading-5 text-gray-500">
-                                    Tournament participation will
-                                    appear here once the SYNCO
-                                    tournament system is connected
-                                    to clubs.
-                                </p>
-
-                                <button
-                                    type="button"
-                                    onClick={() =>
-                                        navigate(
-                                            '/competitions'
-                                        )
-                                    }
-                                    className="mt-5 inline-flex items-center gap-2 rounded-lg border border-gray-200 px-4 py-2.5 text-xs font-medium transition hover:bg-gray-50"
-                                >
-                                    Explore Tournaments
-                                    <ChevronRight
-                                        size={14}
-                                    />
-                                </button>
-
-                            </div>
-
-                        </section>
-                    )}
-
-                {/* =================================================
-                    STATS
-                ================================================= */}
-
-                {activeTab ===
-                    'stats' && (
-                        <div className="space-y-6">
-
-                            <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-
-                                <div className="rounded-2xl border border-gray-200 bg-white p-6 shadow-sm">
-                                    <Users
-                                        size={19}
-                                        className="text-gray-400"
-                                    />
-
-                                    <p className="mt-5 text-[10px] font-semibold uppercase tracking-widest text-gray-400">
-                                        Members
-                                    </p>
-
-                                    <p className="mt-2 text-3xl font-bold tracking-tight">
-                                        {members.length}
-                                    </p>
-
-                                    <p className="mt-1 text-xs text-gray-500">
-                                        Current club members
-                                    </p>
-                                </div>
-
-                                <div className="rounded-2xl border border-gray-200 bg-white p-6 shadow-sm">
-
-                                    <Shield
-                                        size={19}
-                                        className="text-gray-400"
-                                    />
-
-                                    <p className="mt-5 text-[10px] font-semibold uppercase tracking-widest text-gray-400">
-                                        Admins
-                                    </p>
-
-                                    <p className="mt-2 text-3xl font-bold tracking-tight">
-                                        {adminCount}
-                                    </p>
-
-                                    <p className="mt-1 text-xs text-gray-500">
-                                        Active administrators
-                                    </p>
-
-                                </div>
-
-                                <div className="rounded-2xl border border-gray-200 bg-white p-6 shadow-sm">
-
-                                    <Gamepad2
-                                        size={19}
-                                        className="text-gray-400"
-                                    />
-
-                                    <p className="mt-5 text-[10px] font-semibold uppercase tracking-widest text-gray-400">
-                                        Game
-                                    </p>
-
-                                    <p className="mt-2 truncate text-xl font-bold tracking-tight">
-                                        {club.game
-                                            ?.shortName ||
-                                            club.game
-                                                ?.name ||
-                                            '—'}
-                                    </p>
-
-                                    <p className="mt-1 text-xs text-gray-500">
-                                        Primary club game
-                                    </p>
-
-                                </div>
-
-                                <div className="rounded-2xl border border-gray-200 bg-white p-6 shadow-sm">
-
-                                    <Award
-                                        size={19}
-                                        className="text-gray-400"
-                                    />
-
-                                    <p className="mt-5 text-[10px] font-semibold uppercase tracking-widest text-gray-400">
-                                        Status
-                                    </p>
-
-                                    <p className="mt-2 text-2xl font-bold tracking-tight">
-                                        {club.isActive
-                                            ? 'Active'
-                                            : 'Inactive'}
-                                    </p>
-
-                                    <p className="mt-1 text-xs text-gray-500">
-                                        Current club status
-                                    </p>
-
-                                </div>
-
-                            </div>
-
-                            <section className="rounded-2xl border border-gray-200 bg-white p-8 shadow-sm">
-
-                                <div className="flex items-center gap-3">
-
-                                    <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-gray-100">
-                                        <BarChart3
-                                            size={19}
-                                        />
-                                    </div>
-
-                                    <div>
-
-                                        <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-gray-400">
-                                            Performance
-                                        </p>
-
-                                        <h2 className="mt-1 text-xl font-semibold tracking-tight">
-                                            Competitive Statistics
-                                        </h2>
-
-                                    </div>
-
-                                </div>
-
-                                <div className="mt-8 rounded-xl border border-dashed border-gray-200 px-6 py-14 text-center">
-
-                                    <Target
-                                        size={36}
-                                        className="mx-auto text-gray-300"
-                                    />
-
-                                    <h3 className="mt-4 text-sm font-semibold">
-                                        Competitive stats are
-                                        not connected yet
-                                    </h3>
-
-                                    <p className="mx-auto mt-2 max-w-lg text-xs leading-5 text-gray-500">
-                                        Match results, win rate,
-                                        tournament placements
-                                        and player performance
-                                        will be shown here once
-                                        SYNCO's competitive
-                                        backend is connected.
-                                    </p>
-
-                                </div>
-
-                            </section>
-
-                        </div>
-                    )}
-
-            </main>
-
-            {/* =================================================
-                INVITE PLAYER MODAL
-            ================================================= */}
-
-            {showMemberModal && (
-                <div
-                    className="fixed inset-0 z-[100] flex items-center justify-center bg-black/50 px-4 backdrop-blur-sm"
-                    onMouseDown={(event) => {
-                        if (
-                            event.target ===
-                            event.currentTarget
-                        ) {
-                            closeMemberModal();
-                        }
-                    }}
-                >
-
-                    <div className="w-full max-w-lg overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-2xl">
-
-                        {/* MODAL HEADER */}
-
-                        <div className="flex items-start justify-between border-b border-gray-100 p-6">
-
-                            <div>
-
-                                <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-gray-400">
-                                    Club Invitation
-                                </p>
-
-                                <h2 className="mt-1 text-xl font-semibold tracking-tight">
-                                    Invite a Player
-                                </h2>
-
-                                <p className="mt-1 text-xs text-gray-500">
-                                    Find a SYNCO player using
-                                    their username or UID.
-                                </p>
-
-                            </div>
-
-                            <button
-                                type="button"
-                                onClick={
-                                    closeMemberModal
-                                }
-                                disabled={
-                                    actionLoading
-                                }
-                                className="flex h-9 w-9 items-center justify-center rounded-lg text-gray-400 transition hover:bg-gray-100 hover:text-black disabled:opacity-50"
-                            >
-                                <X size={18} />
-                            </button>
-
-                        </div>
-
-                        {/* SEARCH */}
-
-                        <div className="p-6">
-
-                            <div className="flex items-center gap-3 rounded-xl border border-gray-200 px-4 py-3 focus-within:border-black">
-
-                                <Search
-                                    size={17}
-                                    className="shrink-0 text-gray-400"
-                                />
-
-                                <input
-                                    type="text"
-                                    value={
-                                        searchQuery
-                                    }
-                                    onChange={(
-                                        event
-                                    ) =>
-                                        setSearchQuery(
-                                            event.target
-                                                .value
-                                        )
-                                    }
-                                    placeholder="Search by username or UID..."
-                                    autoFocus
-                                    className="w-full bg-transparent text-sm text-black outline-none placeholder:text-gray-400"
-                                />
-
-                            </div>
-
-                            {/* RESULTS */}
-
-                            <div className="mt-4 max-h-80 overflow-y-auto">
-
-                                {searchingUsers && (
-                                    <div className="flex items-center justify-center py-10 text-xs text-gray-400">
-                                        Searching
-                                        players...
-                                    </div>
-                                )}
-
-                                {!searchingUsers &&
-                                    searchQuery.trim() &&
-                                    users.length ===
-                                    0 && (
-                                        <div className="py-10 text-center">
-
-                                            <Search
-                                                size={28}
-                                                className="mx-auto text-gray-300"
-                                            />
-
-                                            <p className="mt-3 text-sm font-medium">
-                                                No players
-                                                found
-                                            </p>
-
-                                            <p className="mt-1 text-xs text-gray-400">
-                                                Try another
-                                                username or
-                                                UID.
-                                            </p>
-
+                                    {memberPreview.length === 0 && (
+                                        <div className="col-span-full rounded-xl border border-dashed border-[#dedbd3] py-10 text-center text-xs font-bold text-[#999]">
+                                            No members yet.
                                         </div>
                                     )}
 
-                                {!searchQuery.trim() && (
-                                    <div className="py-10 text-center">
+                                </div>
 
-                                        <Users
-                                            size={30}
-                                            className="mx-auto text-gray-300"
-                                        />
+                            </section>
 
-                                        <p className="mt-3 text-sm font-medium">
-                                            Search SYNCO
-                                            players
-                                        </p>
 
-                                        <p className="mt-1 text-xs text-gray-400">
-                                            Enter a username
-                                            or UID above.
-                                        </p>
+                            {/* JOIN REQUESTS */}
+
+                            {canManage && (
+                                <section className="rounded-2xl border border-[#dedbd3] bg-white p-6 shadow-sm">
+
+                                    <div className="flex items-start justify-between">
+
+                                        <div>
+                                            <p className="text-[10px] font-black uppercase tracking-[0.2em] text-[#9b8148]">
+                                                Management
+                                            </p>
+
+                                            <h2 className="mt-1 text-xl font-black">
+                                                Join Requests
+                                            </h2>
+
+                                            <p className="mt-1 text-xs text-[#85878e]">
+                                                Review players who want to join your club.
+                                            </p>
+                                        </div>
+
+                                        <button
+                                            type="button"
+                                            onClick={() =>
+                                                loadJoinRequests(
+                                                    true
+                                                )
+                                            }
+                                            className="rounded-lg border border-[#dedbd3] p-2 text-[#777] hover:bg-[#f5f3ee]"
+                                        >
+                                            <Search
+                                                size={16}
+                                            />
+                                        </button>
 
                                     </div>
-                                )}
 
-                                {users.map(
-                                    (user) => {
+
+                                    <div className="mt-5">
+
+                                        {requestsLoading ? (
+
+                                            <div className="py-8 text-center text-xs font-bold text-[#888]">
+                                                Loading requests...
+                                            </div>
+
+                                        ) : joinRequests.length === 0 ? (
+
+                                            <div className="rounded-xl border border-dashed border-[#dedbd3] px-5 py-8 text-center">
+
+                                                <UserCheck
+                                                    size={22}
+                                                    className="mx-auto text-[#aaa]"
+                                                />
+
+                                                <p className="mt-3 text-xs font-black uppercase tracking-wider text-[#777]">
+                                                    No pending requests
+                                                </p>
+
+                                            </div>
+
+                                        ) : (
+
+                                            <div className="space-y-3">
+
+                                                {joinRequests.map(
+                                                    (request) => {
+
+                                                        const requester =
+                                                            request.user;
+
+                                                        return (
+                                                            <div
+                                                                key={
+                                                                    request.id
+                                                                }
+                                                                className="rounded-xl border border-[#ebe8e1] p-4"
+                                                            >
+
+                                                                <div className="flex items-start gap-3">
+
+                                                                    {getAvatar(
+                                                                        requester
+                                                                    ) ? (
+                                                                        <img
+                                                                            src={getAvatar(
+                                                                                requester
+                                                                            )}
+                                                                            alt=""
+                                                                            className="h-11 w-11 rounded-xl object-cover"
+                                                                        />
+                                                                    ) : (
+                                                                        <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-[#ece9e2] text-xs font-black">
+                                                                            {getUserInitials(
+                                                                                requester
+                                                                            )}
+                                                                        </div>
+                                                                    )}
+
+                                                                    <div className="min-w-0 flex-1">
+
+                                                                        <p className="text-sm font-black">
+                                                                            {getUserName(
+                                                                                requester
+                                                                            )}
+                                                                        </p>
+
+                                                                        <p className="mt-1 text-[10px] font-bold uppercase tracking-wider text-[#929398]">
+                                                                            Requested{" "}
+                                                                            {formatDate(
+                                                                                request.createdAt
+                                                                            )}
+                                                                        </p>
+
+                                                                        {request.message && (
+                                                                            <p className="mt-3 rounded-lg bg-[#f7f5f0] p-3 text-xs leading-5 text-[#67696f]">
+                                                                                {request.message}
+                                                                            </p>
+                                                                        )}
+
+                                                                    </div>
+
+                                                                </div>
+
+
+                                                                <div className="mt-4 flex gap-2">
+
+                                                                    <button
+                                                                        type="button"
+                                                                        disabled={
+                                                                            actionLoading
+                                                                        }
+                                                                        onClick={() =>
+                                                                            approveJoinRequest(
+                                                                                request.id
+                                                                            )
+                                                                        }
+                                                                        className="flex-1 rounded-lg bg-[#171717] px-4 py-2.5 text-[10px] font-black uppercase tracking-wider text-white hover:bg-[#2b2b2b] disabled:opacity-60"
+                                                                    >
+                                                                        Approve
+                                                                    </button>
+
+                                                                    <button
+                                                                        type="button"
+                                                                        disabled={
+                                                                            actionLoading
+                                                                        }
+                                                                        onClick={() =>
+                                                                            rejectJoinRequest(
+                                                                                request.id
+                                                                            )
+                                                                        }
+                                                                        className="flex-1 rounded-lg border border-[#dedbd3] px-4 py-2.5 text-[10px] font-black uppercase tracking-wider text-[#555] hover:bg-[#f6f4ef] disabled:opacity-60"
+                                                                    >
+                                                                        Reject
+                                                                    </button>
+
+                                                                </div>
+
+                                                            </div>
+                                                        );
+                                                    }
+                                                )}
+
+                                            </div>
+                                        )}
+
+                                    </div>
+
+                                </section>
+                            )}
+
+                        </div>
+
+
+                        {/* SIDEBAR */}
+
+                        <aside className="space-y-6">
+
+                            <section className="rounded-2xl border border-[#dedbd3] bg-white p-6 shadow-sm">
+
+                                <p className="text-[10px] font-black uppercase tracking-[0.2em] text-[#9b8148]">
+                                    Club Info
+                                </p>
+
+                                <div className="mt-5 space-y-4">
+
+                                    <div className="flex items-center justify-between">
+                                        <span className="text-xs font-semibold text-[#85878e]">
+                                            Game
+                                        </span>
+
+                                        <span className="text-xs font-black">
+                                            {getGameName(
+                                                club.game
+                                            )}
+                                        </span>
+                                    </div>
+
+                                    <div className="flex items-center justify-between">
+                                        <span className="text-xs font-semibold text-[#85878e]">
+                                            Region
+                                        </span>
+
+                                        <span className="text-xs font-black">
+                                            {club.region ||
+                                                "Global"}
+                                        </span>
+                                    </div>
+
+                                    <div className="flex items-center justify-between">
+                                        <span className="text-xs font-semibold text-[#85878e]">
+                                            Privacy
+                                        </span>
+
+                                        <span className="flex items-center gap-1.5 text-xs font-black">
+                                            {club.privacy ===
+                                                "Private" ? (
+                                                <Lock
+                                                    size={13}
+                                                />
+                                            ) : (
+                                                <Globe2
+                                                    size={13}
+                                                />
+                                            )}
+
+                                            {club.privacy}
+                                        </span>
+                                    </div>
+
+                                    <div className="flex items-center justify-between">
+                                        <span className="text-xs font-semibold text-[#85878e]">
+                                            Club Level
+                                        </span>
+
+                                        <span className="text-xs font-black">
+                                            {club.level ||
+                                                club.clubLevel ||
+                                                1}
+                                        </span>
+                                    </div>
+
+                                    <div className="flex items-center justify-between">
+                                        <span className="text-xs font-semibold text-[#85878e]">
+                                            SYNCO Points
+                                        </span>
+
+                                        <span className="text-xs font-black">
+                                            {club.syncoPoints ||
+                                                0}
+                                        </span>
+                                    </div>
+
+                                </div>
+
+                            </section>
+
+
+                            <section className="rounded-2xl border border-[#dedbd3] bg-white p-6 shadow-sm">
+
+                                <p className="text-[10px] font-black uppercase tracking-[0.2em] text-[#9b8148]">
+                                    Statistics
+                                </p>
+
+                                <div className="mt-5 grid grid-cols-2 gap-3">
+
+                                    <div className="rounded-xl bg-[#f7f5f0] p-4">
+                                        <Users
+                                            size={16}
+                                            className="text-[#8a8a86]"
+                                        />
+
+                                        <p className="mt-3 text-2xl font-black">
+                                            {memberCount}
+                                        </p>
+
+                                        <p className="mt-1 text-[9px] font-black uppercase tracking-wider text-[#898a8e]">
+                                            Members
+                                        </p>
+                                    </div>
+
+                                    <div className="rounded-xl bg-[#f7f5f0] p-4">
+                                        <Shield
+                                            size={16}
+                                            className="text-[#8a8a86]"
+                                        />
+
+                                        <p className="mt-3 text-2xl font-black">
+                                            {adminCount}
+                                        </p>
+
+                                        <p className="mt-1 text-[9px] font-black uppercase tracking-wider text-[#898a8e]">
+                                            Admins
+                                        </p>
+                                    </div>
+
+                                    <div className="rounded-xl bg-[#f7f5f0] p-4">
+                                        <Crown
+                                            size={16}
+                                            className="text-[#8a8a86]"
+                                        />
+
+                                        <p className="mt-3 text-2xl font-black">
+                                            {ownerCount}
+                                        </p>
+
+                                        <p className="mt-1 text-[9px] font-black uppercase tracking-wider text-[#898a8e]">
+                                            Owners
+                                        </p>
+                                    </div>
+
+                                    <div className="rounded-xl bg-[#f7f5f0] p-4">
+                                        <Clock3
+                                            size={16}
+                                            className="text-[#8a8a86]"
+                                        />
+
+                                        <p className="mt-3 text-sm font-black">
+                                            {formatDate(
+                                                club.createdAt
+                                            )}
+                                        </p>
+
+                                        <p className="mt-1 text-[9px] font-black uppercase tracking-wider text-[#898a8a8e]">
+                                            Created
+                                        </p>
+                                    </div>
+
+                                </div>
+
+                            </section>
+
+                        </aside>
+
+                    </div>
+                )}
+
+
+                {/* =================================================
+                    MEMBERS
+                ================================================= */}
+
+                {activeTab === "members" && (
+
+                    <section className="rounded-2xl border border-[#dedbd3] bg-white p-6 shadow-sm">
+
+                        <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+
+                            <div>
+                                <p className="text-[10px] font-black uppercase tracking-[0.2em] text-[#9b8148]">
+                                    Community
+                                </p>
+
+                                <h2 className="mt-1 text-2xl font-black">
+                                    Club Members
+                                </h2>
+
+                                <p className="mt-1 text-xs text-[#85878e]">
+                                    {memberCount} members in this club.
+                                </p>
+                            </div>
+
+                            {canManage && (
+                                <div className="flex gap-2">
+
+                                    <button
+                                        type="button"
+                                        onClick={() =>
+                                            setInviteModal(
+                                                true
+                                            )
+                                        }
+                                        className="flex items-center gap-2 rounded-xl bg-[#171717] px-4 py-3 text-xs font-black uppercase tracking-wider text-white hover:bg-[#2b2b2b]"
+                                    >
+                                        <UserPlus
+                                            size={15}
+                                        />
+                                        Invite Player
+                                    </button>
+
+                                    <button
+                                        type="button"
+                                        onClick={() =>
+                                            loadJoinRequests(
+                                                true
+                                            )
+                                        }
+                                        className="flex items-center gap-2 rounded-xl border border-[#dedbd3] px-4 py-3 text-xs font-black uppercase tracking-wider text-[#555] hover:bg-[#f7f5f0]"
+                                    >
+                                        <UserCheck
+                                            size={15}
+                                        />
+                                        Requests
+                                    </button>
+
+                                </div>
+                            )}
+
+                        </div>
+
+
+                        {membersLoading ? (
+
+                            <div className="py-16 text-center text-xs font-bold text-[#888]">
+                                Loading members...
+                            </div>
+
+                        ) : (
+
+                            <div className="mt-8 grid gap-3 md:grid-cols-2 xl:grid-cols-3">
+
+                                {members.map(
+                                    (member) => {
+
                                         const avatar =
                                             getAvatar(
-                                                user
+                                                member.user
                                             );
+
+                                        const memberIsOwner =
+                                            String(
+                                                member.role
+                                            ).toUpperCase()
+                                            === "OWNER";
 
                                         return (
                                             <div
                                                 key={
-                                                    user.id
+                                                    member.id
                                                 }
-                                                className="flex items-center justify-between gap-3 border-b border-gray-100 py-3 last:border-0"
+                                                className="relative rounded-2xl border border-[#ebe8e1] p-4"
                                             >
 
-                                                <div className="flex min-w-0 items-center gap-3">
+                                                <div className="flex items-center gap-3">
 
-                                                    <div className="flex h-10 w-10 shrink-0 items-center justify-center overflow-hidden rounded-full bg-black text-xs font-semibold text-white">
+                                                    {avatar ? (
+                                                        <img
+                                                            src={
+                                                                avatar
+                                                            }
+                                                            alt=""
+                                                            className="h-12 w-12 rounded-xl object-cover"
+                                                        />
+                                                    ) : (
+                                                        <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-[#ece9e2] text-xs font-black">
+                                                            {getUserInitials(
+                                                                member.user
+                                                            )}
+                                                        </div>
+                                                    )}
 
-                                                        {avatar ? (
-                                                            <img
-                                                                src={
-                                                                    avatar
-                                                                }
-                                                                alt=""
-                                                                className="h-full w-full object-cover"
-                                                            />
-                                                        ) : (
-                                                            getUserInitials(
-                                                                user
-                                                            )
-                                                        )}
+                                                    <div className="min-w-0 flex-1">
 
-                                                    </div>
-
-                                                    <div className="min-w-0">
-
-                                                        <p className="truncate text-sm font-semibold">
+                                                        <p className="truncate text-sm font-black">
                                                             {getUserName(
-                                                                user
+                                                                member.user
                                                             )}
                                                         </p>
 
-                                                        <p className="mt-0.5 truncate text-xs text-gray-500">
-                                                            {user.username
-                                                                ? `@${user.username}`
-                                                                : 'SYNCO Player'}
+                                                        <p className="mt-1 text-[10px] font-bold uppercase tracking-wider text-[#88898e]">
+                                                            {formatRole(
+                                                                member.role
+                                                            )}
                                                         </p>
-
-                                                        {user.uid && (
-                                                            <p className="mt-0.5 truncate text-[11px] text-gray-400">
-                                                                UID:{' '}
-                                                                {
-                                                                    user.uid
-                                                                }
-                                                            </p>
-                                                        )}
 
                                                     </div>
 
+                                                    {memberIsOwner ? (
+                                                        <Crown
+                                                            size={16}
+                                                            className="text-[#9b8148]"
+                                                        />
+                                                    ) : (
+                                                        canManage &&
+                                                        member.userId !== currentUser?.id && (
+                                                            <button
+                                                                type="button"
+                                                                onClick={() =>
+                                                                    setOpenMemberMenu(
+                                                                        openMemberMenu === member.id
+                                                                            ? null
+                                                                            : member.id
+                                                                    )
+                                                                }
+                                                                className="flex h-8 w-8 items-center justify-center rounded-lg hover:bg-[#f4f2ed]"
+                                                            >
+                                                                <MoreHorizontal
+                                                                    size={17}
+                                                                />
+                                                            </button>
+                                                        )
+                                                    )}
+
                                                 </div>
 
-                                                <button
-                                                    type="button"
-                                                    onClick={() =>
-                                                        sendInvite(
-                                                            user.id
-                                                        )
-                                                    }
-                                                    disabled={
-                                                        actionLoading
-                                                    }
-                                                    className="inline-flex shrink-0 items-center gap-1.5 rounded-lg bg-black px-3 py-2 text-xs font-semibold text-white transition hover:bg-gray-800 disabled:cursor-not-allowed disabled:opacity-50"
-                                                >
 
-                                                    <Send
-                                                        size={
-                                                            14
-                                                        }
-                                                    />
+                                                {openMemberMenu ===
+                                                    member.id && (
+                                                        <div className="absolute right-4 top-14 z-20 w-44 rounded-xl border border-[#dedbd3] bg-white p-2 shadow-xl">
 
-                                                    {actionLoading
-                                                        ? 'Sending...'
-                                                        : 'Send Invite'}
+                                                            <button
+                                                                type="button"
+                                                                onClick={() =>
+                                                                    changeRole(
+                                                                        member.userId,
+                                                                        member.role === "ADMIN"
+                                                                            ? "MEMBER"
+                                                                            : "ADMIN"
+                                                                    )
+                                                                }
+                                                                className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-[10px] font-black uppercase tracking-wider hover:bg-[#f6f4ef]"
+                                                            >
+                                                                <Shield
+                                                                    size={14}
+                                                                />
 
-                                                </button>
+                                                                {member.role ===
+                                                                    "ADMIN"
+                                                                    ? "Remove Admin"
+                                                                    : "Make Admin"}
+                                                            </button>
+
+                                                            <button
+                                                                type="button"
+                                                                onClick={() =>
+                                                                    removeMember(
+                                                                        member.userId
+                                                                    )
+                                                                }
+                                                                className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-[10px] font-black uppercase tracking-wider text-red-600 hover:bg-red-50"
+                                                            >
+                                                                <Trash2
+                                                                    size={14}
+                                                                />
+
+                                                                Remove
+                                                            </button>
+
+                                                        </div>
+                                                    )}
 
                                             </div>
                                         );
@@ -2612,40 +2793,704 @@ const ClubProfile = () => {
 
                             </div>
 
+                        )}
+
+                    </section>
+                )}
+
+
+                {/* =================================================
+                    RECRUITMENT
+                ================================================= */}
+
+                {activeTab === "recruitment" && (
+
+                    <section className="rounded-2xl border border-[#dedbd3] bg-white p-6 shadow-sm">
+
+                        <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+
+                            <div>
+                                <p className="text-[10px] font-black uppercase tracking-[0.2em] text-[#9b8148]">
+                                    Team Building
+                                </p>
+
+                                <h2 className="mt-1 text-2xl font-black">
+                                    Recruitment
+                                </h2>
+
+                                <p className="mt-1 text-xs text-[#85878e]">
+                                    Find players for your club.
+                                </p>
+                            </div>
+
+                            {canManage && (
+                                <button
+                                    type="button"
+                                    onClick={
+                                        openRecruitmentCreate
+                                    }
+                                    className="flex items-center gap-2 rounded-xl bg-[#171717] px-4 py-3 text-xs font-black uppercase tracking-wider text-white hover:bg-[#2b2b2b]"
+                                >
+                                    <Plus
+                                        size={15}
+                                    />
+                                    Create Recruitment Post
+                                </button>
+                            )}
+
                         </div>
+
+
+                        {recruitmentLoading ? (
+
+                            <div className="py-16 text-center text-xs font-bold text-[#888]">
+                                Loading recruitment...
+                            </div>
+
+                        ) : recruitmentPosts.length === 0 ? (
+
+                            <div className="mt-8 rounded-2xl border border-dashed border-[#dedbd3] px-6 py-16 text-center">
+
+                                <UserPlus
+                                    size={28}
+                                    className="mx-auto text-[#aaa39a]"
+                                />
+
+                                <h3 className="mt-4 text-sm font-black uppercase tracking-wider">
+                                    No recruitment posts
+                                </h3>
+
+                                <p className="mx-auto mt-2 max-w-md text-xs leading-5 text-[#8b8c91]">
+                                    {canManage
+                                        ? "Create a recruitment post to tell players exactly who your club is looking for."
+                                        : "This club is not currently recruiting."}
+                                </p>
+
+                                {canManage && (
+                                    <button
+                                        type="button"
+                                        onClick={
+                                            openRecruitmentCreate
+                                        }
+                                        className="mt-5 rounded-xl bg-[#171717] px-5 py-3 text-[10px] font-black uppercase tracking-wider text-white"
+                                    >
+                                        Create Post
+                                    </button>
+                                )}
+
+                            </div>
+
+                        ) : (
+
+                            <div className="mt-8 grid gap-4 lg:grid-cols-2">
+
+                                {recruitmentPosts.map(
+                                    (post) => (
+
+                                        <article
+                                            key={
+                                                post.id
+                                            }
+                                            className="rounded-2xl border border-[#ebe8e1] p-5"
+                                        >
+
+                                            <div className="flex items-start justify-between gap-4">
+
+                                                <div className="min-w-0">
+
+                                                    <div className="flex flex-wrap items-center gap-2">
+
+                                                        <span
+                                                            className={`rounded-full px-2.5 py-1 text-[8px] font-black uppercase tracking-wider ${post.status ===
+                                                                    "OPEN"
+                                                                    ? "bg-[#edf5ee] text-[#47704e]"
+                                                                    : "bg-[#f0eeea] text-[#777]"
+                                                                }`}
+                                                        >
+                                                            {post.status}
+                                                        </span>
+
+                                                        {post.role && (
+                                                            <span className="rounded-full bg-[#f7f5f0] px-2.5 py-1 text-[8px] font-black uppercase tracking-wider text-[#777]">
+                                                                {post.role}
+                                                            </span>
+                                                        )}
+
+                                                    </div>
+
+                                                    <h3 className="mt-3 text-lg font-black">
+                                                        {post.title}
+                                                    </h3>
+
+                                                </div>
+
+                                                {canManage && (
+                                                    <div className="flex shrink-0 gap-1">
+
+                                                        <button
+                                                            type="button"
+                                                            onClick={() =>
+                                                                openRecruitmentEdit(
+                                                                    post
+                                                                )
+                                                            }
+                                                            className="flex h-8 w-8 items-center justify-center rounded-lg border border-[#dedbd3] hover:bg-[#f6f4ef]"
+                                                        >
+                                                            <Edit3
+                                                                size={14}
+                                                            />
+                                                        </button>
+
+                                                        <button
+                                                            type="button"
+                                                            onClick={() =>
+                                                                deleteRecruitment(
+                                                                    post
+                                                                )
+                                                            }
+                                                            className="flex h-8 w-8 items-center justify-center rounded-lg border border-red-200 text-red-600 hover:bg-red-50"
+                                                        >
+                                                            <Trash2
+                                                                size={14}
+                                                            />
+                                                        </button>
+
+                                                    </div>
+                                                )}
+
+                                            </div>
+
+
+                                            <p className="mt-4 text-sm leading-6 text-[#66686e]">
+                                                {post.description}
+                                            </p>
+
+
+                                            <div className="mt-5 grid grid-cols-2 gap-2">
+
+                                                <div className="rounded-xl bg-[#f7f5f0] p-3">
+
+                                                    <p className="text-[8px] font-black uppercase tracking-wider text-[#999]">
+                                                        Game
+                                                    </p>
+
+                                                    <p className="mt-1 text-xs font-black">
+                                                        {getGameName(
+                                                            post.game
+                                                        )}
+                                                    </p>
+
+                                                </div>
+
+                                                <div className="rounded-xl bg-[#f7f5f0] p-3">
+
+                                                    <p className="text-[8px] font-black uppercase tracking-wider text-[#999]">
+                                                        Rank
+                                                    </p>
+
+                                                    <p className="mt-1 text-xs font-black">
+                                                        {post.rankRequirement ||
+                                                            "Any"}
+                                                    </p>
+
+                                                </div>
+
+                                                <div className="rounded-xl bg-[#f7f5f0] p-3">
+
+                                                    <p className="text-[8px] font-black uppercase tracking-wider text-[#999]">
+                                                        Region
+                                                    </p>
+
+                                                    <p className="mt-1 text-xs font-black">
+                                                        {post.region ||
+                                                            "Any"}
+                                                    </p>
+
+                                                </div>
+
+                                                <div className="rounded-xl bg-[#f7f5f0] p-3">
+
+                                                    <p className="text-[8px] font-black uppercase tracking-wider text-[#999]">
+                                                        Mic
+                                                    </p>
+
+                                                    <p className="mt-1 text-xs font-black">
+                                                        {post.micRequired
+                                                            ? "Required"
+                                                            : "Optional"}
+                                                    </p>
+
+                                                </div>
+
+                                            </div>
+
+
+                                            {canManage && (
+                                                <button
+                                                    type="button"
+                                                    onClick={() =>
+                                                        toggleRecruitment(
+                                                            post
+                                                        )
+                                                    }
+                                                    className="mt-4 flex w-full items-center justify-center gap-2 rounded-xl border border-[#dedbd3] px-4 py-2.5 text-[10px] font-black uppercase tracking-wider text-[#555] hover:bg-[#f6f4ef]"
+                                                >
+                                                    {post.status ===
+                                                        "OPEN"
+                                                        ? "Close Recruitment"
+                                                        : "Reopen Recruitment"}
+                                                </button>
+                                            )}
+
+                                        </article>
+
+                                    )
+                                )}
+
+                            </div>
+
+                        )}
+
+                    </section>
+                )}
+
+
+                {/* =================================================
+                    TOURNAMENTS
+                ================================================= */}
+
+                {activeTab === "tournaments" && (
+
+                    <section className="rounded-2xl border border-[#dedbd3] bg-white p-10 text-center shadow-sm">
+
+                        <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl bg-[#f2ede1]">
+                            <Crown
+                                size={24}
+                                className="text-[#9b8148]"
+                            />
+                        </div>
+
+                        <h2 className="mt-5 text-xl font-black">
+                            Club Tournaments
+                        </h2>
+
+                        <p className="mx-auto mt-2 max-w-md text-sm leading-6 text-[#85878e]">
+                            Tournament management for clubs will be connected here.
+                        </p>
+
+                    </section>
+                )}
+
+
+                {/* =================================================
+                    STATS
+                ================================================= */}
+
+                {activeTab === "stats" && (
+
+                    <section className="rounded-2xl border border-[#dedbd3] bg-white p-6 shadow-sm">
+
+                        <div>
+                            <p className="text-[10px] font-black uppercase tracking-[0.2em] text-[#9b8148]">
+                                Performance
+                            </p>
+
+                            <h2 className="mt-1 text-2xl font-black">
+                                Club Stats
+                            </h2>
+                        </div>
+
+                        <div className="mt-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+
+                            <div className="rounded-2xl bg-[#f7f5f0] p-5">
+                                <p className="text-[9px] font-black uppercase tracking-wider text-[#999]">
+                                    Members
+                                </p>
+
+                                <p className="mt-3 text-3xl font-black">
+                                    {memberCount}
+                                </p>
+                            </div>
+
+                            <div className="rounded-2xl bg-[#f7f5f0] p-5">
+                                <p className="text-[9px] font-black uppercase tracking-wider text-[#999]">
+                                    Admins
+                                </p>
+
+                                <p className="mt-3 text-3xl font-black">
+                                    {adminCount}
+                                </p>
+                            </div>
+
+                            <div className="rounded-2xl bg-[#f7f5f0] p-5">
+                                <p className="text-[9px] font-black uppercase tracking-wider text-[#999]">
+                                    Club Level
+                                </p>
+
+                                <p className="mt-3 text-3xl font-black">
+                                    {club.level ||
+                                        club.clubLevel ||
+                                        1}
+                                </p>
+                            </div>
+
+                            <div className="rounded-2xl bg-[#f7f5f0] p-5">
+                                <p className="text-[9px] font-black uppercase tracking-wider text-[#999]">
+                                    SYNCO Points
+                                </p>
+
+                                <p className="mt-3 text-3xl font-black">
+                                    {club.syncoPoints ||
+                                        0}
+                                </p>
+                            </div>
+
+                        </div>
+
+                    </section>
+                )}
+
+            </main>
+
+
+            {/* =================================================
+                JOIN REQUEST MODAL
+            ================================================= */}
+
+            {showJoinRequestModal && (
+
+                <Modal
+                    title="Request to Join"
+                    subtitle={`Send a request to join ${club.name}.`}
+                    onClose={() =>
+                        setShowJoinRequestModal(
+                            false
+                        )
+                    }
+                    width="max-w-lg"
+                >
+
+                    <Textarea
+                        label="Message (Optional)"
+                        value={joinMessage}
+                        onChange={(event) =>
+                            setJoinMessage(
+                                event.target.value
+                            )
+                        }
+                        placeholder="Tell the club why you want to join..."
+                        rows={5}
+                    />
+
+                    <div className="mt-2 flex justify-between text-[9px] font-bold text-[#999]">
+                        <span>
+                            Optional
+                        </span>
+
+                        <span>
+                            {joinMessage.length}/500
+                        </span>
+                    </div>
+
+                    <div className="mt-6 flex justify-end gap-3">
+
+                        <button
+                            type="button"
+                            onClick={() =>
+                                setShowJoinRequestModal(
+                                    false
+                                )
+                            }
+                            className="rounded-xl border border-[#dedbd3] px-5 py-3 text-xs font-black uppercase tracking-wider text-[#555]"
+                        >
+                            Cancel
+                        </button>
+
+                        <button
+                            type="button"
+                            disabled={
+                                actionLoading
+                            }
+                            onClick={
+                                sendJoinRequest
+                            }
+                            className="rounded-xl bg-[#171717] px-5 py-3 text-xs font-black uppercase tracking-wider text-white disabled:opacity-60"
+                        >
+                            {actionLoading
+                                ? "Sending..."
+                                : "Send Request"}
+                        </button>
 
                     </div>
 
-                </div>
+                </Modal>
             )}
 
+
             {/* =================================================
-                MANAGE PANEL
+                SETTINGS MODAL
             ================================================= */}
 
-            {showSettings &&
-                canManage && (
-                    <div
-                        className="fixed right-4 top-20 z-50 w-[calc(100%-32px)] max-w-sm overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-2xl sm:right-6"
-                        onClick={(event) =>
-                            event.stopPropagation()
-                        }
-                    >
+            {showSettings && (
 
-                        <div className="flex items-start justify-between border-b border-gray-100 p-5">
+                <Modal
+                    title="Club Settings"
+                    subtitle="Manage the identity, visibility and access settings of your club."
+                    onClose={() =>
+                        setShowSettings(
+                            false
+                        )
+                    }
+                >
 
-                            <div>
+                    <div className="space-y-6">
 
-                                <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-gray-400">
-                                    Club Management
-                                </p>
+                        <div className="grid gap-4 sm:grid-cols-2">
 
-                                <h3 className="mt-1 text-base font-semibold">
-                                    Manage{' '}
-                                    {club.name}
-                                </h3>
+                            <Input
+                                label="Club Name"
+                                value={
+                                    settingsForm.name
+                                }
+                                onChange={(event) =>
+                                    setSettingsForm(
+                                        (previous) => ({
+                                            ...previous,
+                                            name:
+                                                event.target.value,
+                                        })
+                                    )
+                                }
+                            />
+
+                            <Input
+                                label="Tag"
+                                value={
+                                    settingsForm.tag
+                                }
+                                onChange={(event) =>
+                                    setSettingsForm(
+                                        (previous) => ({
+                                            ...previous,
+                                            tag:
+                                                event.target.value
+                                                    .toUpperCase()
+                                                    .slice(
+                                                        0,
+                                                        5
+                                                    ),
+                                        })
+                                    )
+                                }
+                            />
+
+                        </div>
+
+
+                        <Textarea
+                            label="Description"
+                            value={
+                                settingsForm.description
+                            }
+                            onChange={(event) =>
+                                setSettingsForm(
+                                    (previous) => ({
+                                        ...previous,
+                                        description:
+                                            event.target.value,
+                                    })
+                                )
+                            }
+                            placeholder="Describe your club..."
+                            rows={5}
+                        />
+
+
+                        <div className="grid gap-4 sm:grid-cols-2">
+
+                            <Input
+                                label="Avatar URL"
+                                value={
+                                    settingsForm.avatar
+                                }
+                                onChange={(event) =>
+                                    setSettingsForm(
+                                        (previous) => ({
+                                            ...previous,
+                                            avatar:
+                                                event.target.value,
+                                        })
+                                    )
+                                }
+                                placeholder="https://..."
+                            />
+
+                            <Input
+                                label="Banner URL"
+                                value={
+                                    settingsForm.banner
+                                }
+                                onChange={(event) =>
+                                    setSettingsForm(
+                                        (previous) => ({
+                                            ...previous,
+                                            banner:
+                                                event.target.value,
+                                        })
+                                    )
+                                }
+                                placeholder="https://..."
+                            />
+
+                        </div>
+
+
+                        <div className="grid gap-4 sm:grid-cols-2">
+
+                            <Input
+                                label="Region"
+                                value={
+                                    settingsForm.region
+                                }
+                                onChange={(event) =>
+                                    setSettingsForm(
+                                        (previous) => ({
+                                            ...previous,
+                                            region:
+                                                event.target.value,
+                                        })
+                                    )
+                                }
+                                placeholder="India"
+                            />
+
+                            <SelectField
+                                label="Game"
+                                value={
+                                    settingsForm.gameId
+                                }
+                                onChange={(event) =>
+                                    setSettingsForm(
+                                        (previous) => ({
+                                            ...previous,
+                                            gameId:
+                                                event.target.value,
+                                        })
+                                    )
+                                }
+                            >
+                                <option value="">
+                                    Select game
+                                </option>
+
+                                {club.game && (
+                                    <option
+                                        value={
+                                            club.game.id
+                                        }
+                                    >
+                                        {getGameName(
+                                            club.game
+                                        )}
+                                    </option>
+                                )}
+                            </SelectField>
+
+                        </div>
+
+
+                        <SelectField
+                            label="Privacy"
+                            value={
+                                settingsForm.privacy
+                            }
+                            onChange={(event) =>
+                                setSettingsForm(
+                                    (previous) => ({
+                                        ...previous,
+                                        privacy:
+                                            event.target.value,
+                                    })
+                                )
+                            }
+                        >
+                            <option value="Public">
+                                Public
+                            </option>
+
+                            <option value="Private">
+                                Private
+                            </option>
+                        </SelectField>
+
+
+                        <div className="space-y-3">
+
+                            <Toggle
+                                label="Allow member invitations"
+                                description="Allow club managers to invite players into the club."
+                                checked={
+                                    settingsForm.allowMemberInvites
+                                }
+                                onChange={(value) =>
+                                    setSettingsForm(
+                                        (previous) => ({
+                                            ...previous,
+                                            allowMemberInvites:
+                                                value,
+                                        })
+                                    )
+                                }
+                            />
+
+                            <div className="rounded-xl border border-[#e1ded7] bg-[#faf9f6] p-4">
+
+                                <div className="flex items-start gap-3">
+
+                                    <div className="mt-0.5 flex h-8 w-8 items-center justify-center rounded-lg bg-[#f0e9da]">
+                                        <UserCheck
+                                            size={15}
+                                            className="text-[#9b8148]"
+                                        />
+                                    </div>
+
+                                    <div>
+                                        <p className="text-sm font-black">
+                                            Join approval
+                                        </p>
+
+                                        <p className="mt-1 text-xs leading-5 text-[#85878e]">
+                                            Public club members always require approval before entering the club.
+                                        </p>
+                                    </div>
+
+                                </div>
 
                             </div>
+
+                            {isOwner && (
+                                <Toggle
+                                    label="Club active"
+                                    description="Deactivate the club if you want to temporarily close it."
+                                    checked={
+                                        settingsForm.isActive
+                                    }
+                                    onChange={(value) =>
+                                        setSettingsForm(
+                                            (previous) => ({
+                                                ...previous,
+                                                isActive:
+                                                    value,
+                                            })
+                                        )
+                                    }
+                                />
+                            )}
+
+                        </div>
+
+
+                        <div className="flex justify-end gap-3 border-t border-[#ebe8e1] pt-5">
 
                             <button
                                 type="button"
@@ -2654,123 +3499,552 @@ const ClubProfile = () => {
                                         false
                                     )
                                 }
-                                className="flex h-8 w-8 items-center justify-center rounded-lg text-gray-400 hover:bg-gray-100 hover:text-black"
+                                className="rounded-xl border border-[#dedbd3] px-5 py-3 text-xs font-black uppercase tracking-wider text-[#555]"
                             >
-                                <X size={17} />
-                            </button>
-
-                        </div>
-
-                        <div className="p-2">
-
-                            <button
-                                type="button"
-                                onClick={() => {
-                                    setActiveTab(
-                                        'members'
-                                    );
-
-                                    setShowSettings(
-                                        false
-                                    );
-                                }}
-                                className="flex w-full items-center gap-3 rounded-xl p-3 text-left transition hover:bg-gray-50"
-                            >
-
-                                <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-gray-100">
-                                    <Users size={16} />
-                                </div>
-
-                                <div>
-
-                                    <p className="text-xs font-semibold">
-                                        Manage Members
-                                    </p>
-
-                                    <p className="mt-0.5 text-[11px] text-gray-400">
-                                        Roles and member
-                                        permissions
-                                    </p>
-
-                                </div>
-
+                                Cancel
                             </button>
 
                             <button
                                 type="button"
-                                onClick={() => {
-                                    setShowSettings(
-                                        false
-                                    );
-
-                                    openInviteModal();
-                                }}
-                                className="flex w-full items-center gap-3 rounded-xl p-3 text-left transition hover:bg-gray-50"
+                                disabled={
+                                    actionLoading
+                                }
+                                onClick={
+                                    saveSettings
+                                }
+                                className="rounded-xl bg-[#171717] px-5 py-3 text-xs font-black uppercase tracking-wider text-white disabled:opacity-60"
                             >
-
-                                <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-gray-100">
-                                    <Mail size={16} />
-                                </div>
-
-                                <div>
-
-                                    <p className="text-xs font-semibold">
-                                        Invite Players
-                                    </p>
-
-                                    <p className="mt-0.5 text-[11px] text-gray-400">
-                                        Send invitations to
-                                        SYNCO players
-                                    </p>
-
-                                </div>
-
+                                {actionLoading
+                                    ? "Saving..."
+                                    : "Save Changes"}
                             </button>
-
-                            <button
-                                type="button"
-                                disabled
-                                className="flex w-full items-center gap-3 rounded-xl p-3 text-left opacity-50"
-                            >
-
-                                <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-gray-100">
-                                    <Settings
-                                        size={16}
-                                    />
-                                </div>
-
-                                <div>
-
-                                    <p className="text-xs font-semibold">
-                                        Club Settings
-                                    </p>
-
-                                    <p className="mt-0.5 text-[11px] text-gray-400">
-                                        Edit club details
-                                    </p>
-
-                                </div>
-
-                            </button>
-
-                        </div>
-
-                        <div className="border-t border-gray-100 px-5 py-4">
-
-                            <p className="text-[11px] leading-5 text-gray-400">
-                                Club editing and ownership
-                                transfer will be connected
-                                when the settings backend is
-                                added.
-                            </p>
 
                         </div>
 
                     </div>
-                )}
+
+                </Modal>
+            )}
+
+
+            {/* =================================================
+                RECRUITMENT FORM
+            ================================================= */}
+
+            {showRecruitmentForm && (
+
+                <Modal
+                    title={
+                        editingRecruitment
+                            ? "Edit Recruitment Post"
+                            : "Create Recruitment Post"
+                    }
+                    subtitle="Tell players exactly who your club needs."
+                    onClose={() => {
+                        setShowRecruitmentForm(
+                            false
+                        );
+
+                        setEditingRecruitment(
+                            null
+                        );
+                    }}
+                >
+
+                    <div className="space-y-5">
+
+                        <Input
+                            label="Title"
+                            value={
+                                recruitmentForm.title
+                            }
+                            onChange={(event) =>
+                                setRecruitmentForm(
+                                    (previous) => ({
+                                        ...previous,
+                                        title:
+                                            event.target.value,
+                                    })
+                                )
+                            }
+                            placeholder="Looking for active players"
+                        />
+
+
+                        <Textarea
+                            label="Description"
+                            value={
+                                recruitmentForm.description
+                            }
+                            onChange={(event) =>
+                                setRecruitmentForm(
+                                    (previous) => ({
+                                        ...previous,
+                                        description:
+                                            event.target.value,
+                                    })
+                                )
+                            }
+                            placeholder="Describe the player you are looking for..."
+                            rows={6}
+                        />
+
+
+                        <div className="grid gap-4 sm:grid-cols-2">
+
+                            <SelectField
+                                label="Game"
+                                value={
+                                    recruitmentForm.gameId
+                                }
+                                onChange={(event) =>
+                                    setRecruitmentForm(
+                                        (previous) => ({
+                                            ...previous,
+                                            gameId:
+                                                event.target.value,
+                                        })
+                                    )
+                                }
+                            >
+
+                                <option value="">
+                                    Select game
+                                </option>
+
+                                {club.game && (
+                                    <option
+                                        value={
+                                            club.game.id
+                                        }
+                                    >
+                                        {getGameName(
+                                            club.game
+                                        )}
+                                    </option>
+                                )}
+
+                            </SelectField>
+
+
+                            <Input
+                                label="Role"
+                                value={
+                                    recruitmentForm.role
+                                }
+                                onChange={(event) =>
+                                    setRecruitmentForm(
+                                        (previous) => ({
+                                            ...previous,
+                                            role:
+                                                event.target.value,
+                                        })
+                                    )
+                                }
+                                placeholder="Duelist / IGL / Support"
+                            />
+
+                        </div>
+
+
+                        <div className="grid gap-4 sm:grid-cols-2">
+
+                            <Input
+                                label="Rank Requirement"
+                                value={
+                                    recruitmentForm.rankRequirement
+                                }
+                                onChange={(event) =>
+                                    setRecruitmentForm(
+                                        (previous) => ({
+                                            ...previous,
+                                            rankRequirement:
+                                                event.target.value,
+                                        })
+                                    )
+                                }
+                                placeholder="Ascendant+"
+                            />
+
+                            <Input
+                                label="Region"
+                                value={
+                                    recruitmentForm.region
+                                }
+                                onChange={(event) =>
+                                    setRecruitmentForm(
+                                        (previous) => ({
+                                            ...previous,
+                                            region:
+                                                event.target.value,
+                                        })
+                                    )
+                                }
+                                placeholder="India"
+                            />
+
+                        </div>
+
+
+                        <Toggle
+                            label="Microphone required"
+                            description="Players should have a working microphone."
+                            checked={
+                                recruitmentForm.micRequired
+                            }
+                            onChange={(value) =>
+                                setRecruitmentForm(
+                                    (previous) => ({
+                                        ...previous,
+                                        micRequired:
+                                            value,
+                                    })
+                                )
+                            }
+                        />
+
+
+                        <SelectField
+                            label="Status"
+                            value={
+                                recruitmentForm.status
+                            }
+                            onChange={(event) =>
+                                setRecruitmentForm(
+                                    (previous) => ({
+                                        ...previous,
+                                        status:
+                                            event.target.value,
+                                    })
+                                )
+                            }
+                        >
+
+                            <option value="OPEN">
+                                Open
+                            </option>
+
+                            <option value="CLOSED">
+                                Closed
+                            </option>
+
+                        </SelectField>
+
+
+                        <div className="flex justify-end gap-3 border-t border-[#ebe8e1] pt-5">
+
+                            <button
+                                type="button"
+                                onClick={() => {
+                                    setShowRecruitmentForm(
+                                        false
+                                    );
+
+                                    setEditingRecruitment(
+                                        null
+                                    );
+                                }}
+                                className="rounded-xl border border-[#dedbd3] px-5 py-3 text-xs font-black uppercase tracking-wider text-[#555]"
+                            >
+                                Cancel
+                            </button>
+
+                            <button
+                                type="button"
+                                disabled={
+                                    actionLoading
+                                }
+                                onClick={
+                                    saveRecruitment
+                                }
+                                className="rounded-xl bg-[#171717] px-5 py-3 text-xs font-black uppercase tracking-wider text-white disabled:opacity-60"
+                            >
+                                {actionLoading
+                                    ? "Saving..."
+                                    : editingRecruitment
+                                        ? "Update Post"
+                                        : "Create Post"}
+                            </button>
+
+                        </div>
+
+                    </div>
+
+                </Modal>
+            )}
+
+
+            {/* =================================================
+                INVITE MODAL
+            ================================================= */}
+
+            {inviteModal && (
+
+                <Modal
+                    title="Invite Players"
+                    subtitle="Search for SYNCO players and invite them to this club."
+                    onClose={() => {
+                        setInviteModal(
+                            false
+                        );
+
+                        setInviteSearch("");
+
+                        setInviteResults([]);
+                    }}
+                    width="max-w-xl"
+                >
+
+                    <div className="relative">
+
+                        <Search
+                            size={17}
+                            className="absolute left-4 top-1/2 -translate-y-1/2 text-[#999]"
+                        />
+
+                        <input
+                            value={
+                                inviteSearch
+                            }
+                            onChange={(event) =>
+                                setInviteSearch(
+                                    event.target.value
+                                )
+                            }
+                            placeholder="Search by username, name or SYNCO UID"
+                            className="w-full rounded-xl border border-[#dedbd3] bg-white py-3 pl-11 pr-4 text-sm outline-none focus:border-[#9b8148]"
+                        />
+
+                    </div>
+
+
+                    <div className="mt-5">
+
+                        {inviteSearching && (
+                            <div className="py-8 text-center text-xs font-bold text-[#888]">
+                                Searching...
+                            </div>
+                        )}
+
+
+                        {!inviteSearching &&
+                            inviteSearch.trim().length >= 2 &&
+                            inviteResults.length === 0 && (
+                                <div className="rounded-xl border border-dashed border-[#dedbd3] py-10 text-center text-xs font-bold text-[#888]">
+                                    No players found.
+                                </div>
+                            )}
+
+
+                        {!inviteSearching &&
+                            inviteResults.length > 0 && (
+
+                                <div className="space-y-2">
+
+                                    {inviteResults.map(
+                                        (player) => {
+
+                                            const avatar =
+                                                getAvatar(
+                                                    player
+                                                );
+
+                                            return (
+                                                <div
+                                                    key={
+                                                        player.id
+                                                    }
+                                                    className="flex items-center gap-3 rounded-xl border border-[#ebe8e1] p-3"
+                                                >
+
+                                                    {avatar ? (
+                                                        <img
+                                                            src={
+                                                                avatar
+                                                            }
+                                                            alt=""
+                                                            className="h-11 w-11 rounded-xl object-cover"
+                                                        />
+                                                    ) : (
+                                                        <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-[#ece9e2] text-xs font-black">
+                                                            {getUserInitials(
+                                                                player
+                                                            )}
+                                                        </div>
+                                                    )}
+
+                                                    <div className="min-w-0 flex-1">
+
+                                                        <p className="truncate text-sm font-black">
+                                                            {getUserName(
+                                                                player
+                                                            )}
+                                                        </p>
+
+                                                        <p className="mt-1 text-[10px] font-bold uppercase tracking-wider text-[#929398]">
+                                                            UID:{" "}
+                                                            {player.uid ||
+                                                                "—"}
+                                                        </p>
+
+                                                    </div>
+
+                                                    <button
+                                                        type="button"
+                                                        disabled={
+                                                            actionLoading
+                                                        }
+                                                        onClick={() =>
+                                                            sendInvite(
+                                                                player.id
+                                                            )
+                                                        }
+                                                        className="rounded-lg bg-[#171717] px-3 py-2 text-[9px] font-black uppercase tracking-wider text-white disabled:opacity-60"
+                                                    >
+                                                        Invite
+                                                    </button>
+
+                                                </div>
+                                            );
+                                        }
+                                    )}
+
+                                </div>
+                            )}
+
+                    </div>
+
+                </Modal>
+            )}
+
+
+            {/* =================================================
+                INCOMING INVITES
+            ================================================= */}
+
+            {showIncomingInvites && (
+
+                <Modal
+                    title="Club Invitations"
+                    subtitle="Clubs that have invited you to join."
+                    onClose={() =>
+                        setShowIncomingInvites(
+                            false
+                        )
+                    }
+                    width="max-w-xl"
+                >
+
+                    <div className="space-y-3">
+
+                        {incomingInvites.length === 0 ? (
+
+                            <div className="py-10 text-center text-xs font-bold text-[#888]">
+                                No pending invitations.
+                            </div>
+
+                        ) : (
+
+                            incomingInvites.map(
+                                (invite) => {
+
+                                    const invitedClub =
+                                        invite.club;
+
+                                    return (
+                                        <div
+                                            key={
+                                                invite.id
+                                            }
+                                            className="rounded-xl border border-[#ebe8e1] p-4"
+                                        >
+
+                                            <div className="flex items-center gap-3">
+
+                                                <div className="flex h-11 w-11 items-center justify-center overflow-hidden rounded-xl bg-[#ece9e2]">
+
+                                                    {invitedClub?.avatar ? (
+                                                        <img
+                                                            src={
+                                                                invitedClub.avatar
+                                                            }
+                                                            alt=""
+                                                            className="h-full w-full object-cover"
+                                                        />
+                                                    ) : (
+                                                        <Shield
+                                                            size={18}
+                                                            className="text-[#9b8148]"
+                                                        />
+                                                    )}
+
+                                                </div>
+
+                                                <div className="min-w-0 flex-1">
+
+                                                    <p className="truncate text-sm font-black">
+                                                        {invitedClub?.name ||
+                                                            "Club"}
+                                                    </p>
+
+                                                    <p className="mt-1 text-[10px] font-bold text-[#898a8e]">
+                                                        Invited by{" "}
+                                                        {getUserName(
+                                                            invite.inviter
+                                                        )}
+                                                    </p>
+
+                                                </div>
+
+                                            </div>
+
+
+                                            <div className="mt-4 flex gap-2">
+
+                                                <button
+                                                    type="button"
+                                                    disabled={
+                                                        actionLoading
+                                                    }
+                                                    onClick={() =>
+                                                        acceptInvite(
+                                                            invite.id
+                                                        )
+                                                    }
+                                                    className="flex-1 rounded-lg bg-[#171717] px-4 py-2.5 text-[10px] font-black uppercase tracking-wider text-white disabled:opacity-60"
+                                                >
+                                                    Accept
+                                                </button>
+
+                                                <button
+                                                    type="button"
+                                                    disabled={
+                                                        actionLoading
+                                                    }
+                                                    onClick={() =>
+                                                        declineInvite(
+                                                            invite.id
+                                                        )
+                                                    }
+                                                    className="flex-1 rounded-lg border border-[#dedbd3] px-4 py-2.5 text-[10px] font-black uppercase tracking-wider text-[#555] disabled:opacity-60"
+                                                >
+                                                    Decline
+                                                </button>
+
+                                            </div>
+
+                                        </div>
+                                    );
+                                }
+                            )
+
+                        )}
+
+                    </div>
+
+                </Modal>
+            )}
 
         </div>
     );
-};
-
-export default ClubProfile;
+}

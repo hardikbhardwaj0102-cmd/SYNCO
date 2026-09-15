@@ -25,7 +25,6 @@ def generate_synco_uid():
     """
 
     while True:
-
         uid = "".join(
             secrets.choice(SYNCO_UID_CHARS)
             for _ in range(10)
@@ -40,7 +39,6 @@ def generate_synco_uid():
 # =========================================================
 
 def discord_avatar_url(user_id, avatar):
-
     if not user_id or not avatar:
         return None
 
@@ -250,9 +248,7 @@ class User(db.Model):
 
         return {
             "id": self.id,
-
             "uid": self.uid,
-
             "name": self.name,
             "email": self.email,
             "username": self.username,
@@ -265,7 +261,6 @@ class User(db.Model):
             "email_verified": self.email_verified,
             "discord_verified": self.discord_verified,
 
-            # Rewards
             "xp": self.xp,
             "level": self.level,
             "credits": self.credits,
@@ -288,7 +283,6 @@ class User(db.Model):
 def assign_synco_uid(mapper, connection, target):
 
     if not target.uid:
-
         target.uid = generate_synco_uid()
 
 
@@ -502,10 +496,6 @@ class PlayerGameStats(db.Model):
         nullable=False
     )
 
-    # -----------------------------------------------------
-    # Relationships
-    # -----------------------------------------------------
-
     user = db.relationship(
         "User",
         backref=db.backref(
@@ -523,10 +513,6 @@ class PlayerGameStats(db.Model):
         )
     )
 
-    # -----------------------------------------------------
-    # One record per player + game
-    # -----------------------------------------------------
-
     __table_args__ = (
         db.UniqueConstraint(
             "user_id",
@@ -534,10 +520,6 @@ class PlayerGameStats(db.Model):
             name="uq_player_game_stats_user_game"
         ),
     )
-
-    # -----------------------------------------------------
-    # Serialization
-    # -----------------------------------------------------
 
     def to_dict(self):
 
@@ -574,10 +556,6 @@ class ProfileClip(db.Model):
         primary_key=True
     )
 
-    # -----------------------------------------------------
-    # OWNER
-    # -----------------------------------------------------
-
     user_id = db.Column(
         db.Integer,
         db.ForeignKey("users.id"),
@@ -585,27 +563,10 @@ class ProfileClip(db.Model):
         index=True
     )
 
-    # -----------------------------------------------------
-    # BASIC INFORMATION
-    # -----------------------------------------------------
-
     title = db.Column(
         db.String(160),
         nullable=False
     )
-
-    # -----------------------------------------------------
-    # SUPABASE STORAGE PATH
-    # -----------------------------------------------------
-    #
-    # Example:
-    #
-    # 12/550e8400-e29b-41d4-a716-446655440000.mp4
-    #
-    # This stores ONLY the Supabase object path.
-    # The actual video file is stored in Supabase Storage.
-    #
-    # -----------------------------------------------------
 
     filename = db.Column(
         db.String(500),
@@ -613,10 +574,6 @@ class ProfileClip(db.Model):
         unique=True,
         index=True
     )
-
-    # -----------------------------------------------------
-    # FILE INFORMATION
-    # -----------------------------------------------------
 
     file_size = db.Column(
         db.BigInteger,
@@ -629,10 +586,6 @@ class ProfileClip(db.Model):
         nullable=False,
         default="video/mp4"
     )
-
-    # -----------------------------------------------------
-    # VIDEO METADATA
-    # -----------------------------------------------------
 
     duration_seconds = db.Column(
         db.Float,
@@ -652,19 +605,11 @@ class ProfileClip(db.Model):
         default=0
     )
 
-    # -----------------------------------------------------
-    # CREATED AT
-    # -----------------------------------------------------
-
     created_at = db.Column(
         db.DateTime,
         default=datetime.utcnow,
         nullable=False
     )
-
-    # -----------------------------------------------------
-    # RELATIONSHIPS
-    # -----------------------------------------------------
 
     likes = db.relationship(
         "ProfileClipLike",
@@ -678,41 +623,21 @@ class ProfileClip(db.Model):
         lazy="select"
     )
 
-    # -----------------------------------------------------
-    # SERIALIZATION
-    # -----------------------------------------------------
-
     def to_dict(self, media_url):
 
         return {
             "id": self.id,
-
             "title": self.title,
-
-            # Signed/public Supabase URL
             "url": media_url,
-
-            # Supabase storage path
             "filename": self.filename,
-
-            # File information
             "fileSize": self.file_size,
-
             "mimeType": self.mime_type,
-
-            # Video metadata
             "durationSeconds": self.duration_seconds,
-
             "width": self.width,
-
             "height": self.height,
-
-            # Engagement
             "likes": len(self.likes),
-
             "comments": len(self.comments),
 
-            # Timestamp
             "createdAt": (
                 self.created_at.isoformat()
                 if self.created_at
@@ -801,24 +726,15 @@ class ProfileClipComment(db.Model):
         nullable=False
     )
 
-    # -----------------------------------------------------
-    # USER RELATIONSHIP
-    # -----------------------------------------------------
-
     user = db.relationship(
         "User",
         lazy="joined"
     )
 
-    # -----------------------------------------------------
-    # SERIALIZATION
-    # -----------------------------------------------------
-
     def to_dict(self):
 
         return {
             "id": self.id,
-
             "content": self.content,
 
             "author": (
@@ -840,7 +756,7 @@ class ProfileClipComment(db.Model):
 
 
 # =========================================================
-# REWARDS
+# REWARD CHALLENGE
 # =========================================================
 
 class RewardChallenge(db.Model):
@@ -952,6 +868,10 @@ class RewardChallenge(db.Model):
         }
 
 
+# =========================================================
+# USER CHALLENGE
+# =========================================================
+
 class UserChallenge(db.Model):
 
     __tablename__ = "user_challenges"
@@ -1046,6 +966,10 @@ class UserChallenge(db.Model):
         }
 
 
+# =========================================================
+# REWARD ITEM
+# =========================================================
+
 class RewardItem(db.Model):
 
     __tablename__ = "reward_items"
@@ -1119,6 +1043,10 @@ class RewardItem(db.Model):
         }
 
 
+# =========================================================
+# USER INVENTORY
+# =========================================================
+
 class UserInventory(db.Model):
 
     __tablename__ = "user_inventory"
@@ -1177,10 +1105,20 @@ class UserInventory(db.Model):
         return {
             "id": self.id,
             "quantity": self.quantity,
-            "acquiredAt": self.acquired_at.isoformat(),
+
+            "acquiredAt": (
+                self.acquired_at.isoformat()
+                if self.acquired_at
+                else None
+            ),
+
             "item": self.reward_item.to_dict(),
         }
 
+
+# =========================================================
+# ACHIEVEMENT
+# =========================================================
 
 class Achievement(db.Model):
 
@@ -1257,6 +1195,10 @@ class Achievement(db.Model):
         }
 
 
+# =========================================================
+# USER ACHIEVEMENT
+# =========================================================
+
 class UserAchievement(db.Model):
 
     __tablename__ = "user_achievements"
@@ -1316,6 +1258,10 @@ class UserAchievement(db.Model):
 
         return data
 
+
+# =========================================================
+# REWARD TRANSACTION
+# =========================================================
 
 class RewardTransaction(db.Model):
 
@@ -1387,7 +1333,12 @@ class RewardTransaction(db.Model):
             "description": self.description,
             "referenceType": self.reference_type,
             "referenceId": self.reference_id,
-            "createdAt": self.created_at.isoformat(),
+
+            "createdAt": (
+                self.created_at.isoformat()
+                if self.created_at
+                else None
+            ),
         }
 
 
@@ -1442,13 +1393,38 @@ class Club(db.Model):
     )
 
     # =====================================================
-    # CLUB RANKING
+    # CLUB VISUALS
     # =====================================================
 
     avatar = db.Column(
         db.Text,
         nullable=True
     )
+
+    banner = db.Column(
+        db.Text,
+        nullable=True
+    )
+
+    # =====================================================
+    # CLUB SETTINGS
+    # =====================================================
+
+    allow_member_invites = db.Column(
+        db.Boolean,
+        nullable=False,
+        default=True
+    )
+
+    require_join_approval = db.Column(
+        db.Boolean,
+        nullable=False,
+        default=True
+    )
+
+    # =====================================================
+    # CLUB RANKING
+    # =====================================================
 
     region = db.Column(
         db.String(100),
@@ -1471,19 +1447,6 @@ class Club(db.Model):
     # =====================================================
     # COMPATIBILITY ALIAS
     # =====================================================
-    #
-    # The leaderboard endpoint uses:
-    #
-    #     club.level
-    #
-    # Your actual database field is:
-    #
-    #     club_level
-    #
-    # This property lets both work without creating
-    # another database column.
-    #
-    # =====================================================
 
     @property
     def level(self):
@@ -1493,9 +1456,9 @@ class Club(db.Model):
     def level(self, value):
         self.club_level = value
 
-    # -----------------------------------------------------
-    # Status
-    # -----------------------------------------------------
+    # =====================================================
+    # STATUS
+    # =====================================================
 
     is_active = db.Column(
         db.Boolean,
@@ -1503,9 +1466,9 @@ class Club(db.Model):
         default=True
     )
 
-    # -----------------------------------------------------
-    # Timestamps
-    # -----------------------------------------------------
+    # =====================================================
+    # TIMESTAMPS
+    # =====================================================
 
     created_at = db.Column(
         db.DateTime,
@@ -1520,9 +1483,9 @@ class Club(db.Model):
         nullable=False
     )
 
-    # -----------------------------------------------------
-    # Relationships
-    # -----------------------------------------------------
+    # =====================================================
+    # RELATIONSHIPS
+    # =====================================================
 
     game = db.relationship(
         "Game",
@@ -1555,15 +1518,28 @@ class Club(db.Model):
         lazy=True
     )
 
-    # -----------------------------------------------------
-    # Serialization
-    # -----------------------------------------------------
+    join_requests = db.relationship(
+        "ClubJoinRequest",
+        back_populates="club",
+        cascade="all, delete-orphan",
+        lazy=True
+    )
+
+    recruitment_posts = db.relationship(
+        "ClubRecruitmentPost",
+        back_populates="club",
+        cascade="all, delete-orphan",
+        lazy=True
+    )
+
+    # =====================================================
+    # SERIALIZATION
+    # =====================================================
 
     def to_dict(self):
 
         return {
             "id": self.id,
-
             "name": self.name,
             "tag": self.tag,
             "description": self.description,
@@ -1585,12 +1561,17 @@ class Club(db.Model):
                 else None
             ),
 
-            # Club ranking
             "avatar": self.avatar,
+            "banner": self.banner,
+
             "region": self.region,
+
             "clubLevel": self.club_level,
             "level": self.club_level,
             "syncoPoints": self.synco_points,
+
+            "allowMemberInvites": self.allow_member_invites,
+            "requireJoinApproval": self.require_join_approval,
 
             "isActive": self.is_active,
 
@@ -1813,6 +1794,291 @@ class ClubInvite(db.Model):
 
 
 # =========================================================
+# CLUB JOIN REQUEST
+# =========================================================
+
+class ClubJoinRequest(db.Model):
+
+    __tablename__ = "club_join_requests"
+
+    id = db.Column(
+        db.Integer,
+        primary_key=True
+    )
+
+    club_id = db.Column(
+        db.Integer,
+        db.ForeignKey("clubs.id"),
+        nullable=False,
+        index=True
+    )
+
+    user_id = db.Column(
+        db.Integer,
+        db.ForeignKey("users.id"),
+        nullable=False,
+        index=True
+    )
+
+    status = db.Column(
+        db.String(20),
+        nullable=False,
+        default="PENDING",
+        index=True
+    )
+
+    message = db.Column(
+        db.String(500),
+        nullable=True
+    )
+
+    created_at = db.Column(
+        db.DateTime,
+        default=datetime.utcnow,
+        nullable=False
+    )
+
+    responded_at = db.Column(
+        db.DateTime,
+        nullable=True
+    )
+
+    responded_by = db.Column(
+        db.Integer,
+        db.ForeignKey("users.id"),
+        nullable=True
+    )
+
+    club = db.relationship(
+        "Club",
+        back_populates="join_requests"
+    )
+
+    user = db.relationship(
+        "User",
+        foreign_keys=[user_id],
+        backref=db.backref(
+            "club_join_requests",
+            lazy=True
+        )
+    )
+
+    responder = db.relationship(
+        "User",
+        foreign_keys=[responded_by],
+        backref=db.backref(
+            "club_join_request_decisions",
+            lazy=True
+        )
+    )
+
+    __table_args__ = (
+        db.UniqueConstraint(
+            "club_id",
+            "user_id",
+            "status",
+            name="unique_club_join_request_status"
+        ),
+    )
+
+    def to_dict(self):
+
+        return {
+            "id": self.id,
+            "clubId": self.club_id,
+            "userId": self.user_id,
+
+            "status": self.status,
+            "message": self.message,
+
+            "createdAt": (
+                self.created_at.isoformat()
+                if self.created_at
+                else None
+            ),
+
+            "respondedAt": (
+                self.responded_at.isoformat()
+                if self.responded_at
+                else None
+            ),
+
+            "respondedBy": (
+                self.responded_by
+                if self.responded_by
+                else None
+            ),
+
+            "user": (
+                self.user.to_dict()
+                if self.user
+                else None
+            ),
+
+            "club": (
+                self.club.to_dict()
+                if self.club
+                else None
+            )
+        }
+
+
+# =========================================================
+# CLUB RECRUITMENT POST
+# =========================================================
+
+class ClubRecruitmentPost(db.Model):
+
+    __tablename__ = "club_recruitment_posts"
+
+    id = db.Column(
+        db.Integer,
+        primary_key=True
+    )
+
+    club_id = db.Column(
+        db.Integer,
+        db.ForeignKey("clubs.id"),
+        nullable=False,
+        index=True
+    )
+
+    created_by = db.Column(
+        db.Integer,
+        db.ForeignKey("users.id"),
+        nullable=False,
+        index=True
+    )
+
+    title = db.Column(
+        db.String(160),
+        nullable=False
+    )
+
+    description = db.Column(
+        db.String(2000),
+        nullable=False
+    )
+
+    game_id = db.Column(
+        db.String(50),
+        db.ForeignKey("games.id"),
+        nullable=False,
+        index=True
+    )
+
+    role = db.Column(
+        db.String(100),
+        nullable=True
+    )
+
+    rank_requirement = db.Column(
+        db.String(100),
+        nullable=True
+    )
+
+    region = db.Column(
+        db.String(100),
+        nullable=True
+    )
+
+    mic_required = db.Column(
+        db.Boolean,
+        nullable=False,
+        default=False
+    )
+
+    status = db.Column(
+        db.String(20),
+        nullable=False,
+        default="OPEN",
+        index=True
+    )
+
+    created_at = db.Column(
+        db.DateTime,
+        default=datetime.utcnow,
+        nullable=False
+    )
+
+    updated_at = db.Column(
+        db.DateTime,
+        default=datetime.utcnow,
+        onupdate=datetime.utcnow,
+        nullable=False
+    )
+
+    club = db.relationship(
+        "Club",
+        back_populates="recruitment_posts"
+    )
+
+    creator = db.relationship(
+        "User",
+        foreign_keys=[created_by],
+        backref=db.backref(
+            "created_recruitment_posts",
+            lazy=True
+        )
+    )
+
+    game = db.relationship(
+        "Game",
+        foreign_keys=[game_id]
+    )
+
+    def to_dict(self):
+
+        return {
+            "id": self.id,
+            "clubId": self.club_id,
+            "createdBy": self.created_by,
+
+            "title": self.title,
+            "description": self.description,
+
+            "gameId": self.game_id,
+
+            "game": (
+                self.game.to_dict()
+                if self.game
+                else None
+            ),
+
+            "role": self.role,
+            "rankRequirement": self.rank_requirement,
+            "region": self.region,
+            "micRequired": self.mic_required,
+
+            "status": self.status,
+
+            "createdAt": (
+                self.created_at.isoformat()
+                if self.created_at
+                else None
+            ),
+
+            "updatedAt": (
+                self.updated_at.isoformat()
+                if self.updated_at
+                else None
+            ),
+
+            "creator": (
+                {
+                    "id": self.creator.id,
+                    "uid": self.creator.uid,
+                    "username": self.creator.username,
+                    "name": self.creator.name,
+                    "avatar": self.creator.avatar,
+                }
+                if self.creator
+                else None
+            )
+        }
+
+
+# =========================================================
 # NOTIFICATION
 # =========================================================
 
@@ -1892,15 +2158,11 @@ class Notification(db.Model):
 
         return {
             "id": self.id,
-
             "type": self.notification_type,
-
             "title": self.title,
-
             "message": self.message,
 
             "referenceType": self.reference_type,
-
             "referenceId": self.reference_id,
 
             "data": self.data or {},
@@ -1991,7 +2253,6 @@ class FriendRequest(db.Model):
 
         return {
             "id": self.id,
-
             "status": self.status,
 
             "createdAt": (
