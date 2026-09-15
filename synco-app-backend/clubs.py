@@ -12,6 +12,12 @@ from models import (
     Notification,
 )
 
+# =========================================================
+# REWARDS
+# =========================================================
+
+from rewards import process_synco_event
+
 
 # =========================================================
 # BLUEPRINT
@@ -29,7 +35,7 @@ clubs_bp = Blueprint(
 # =========================================================
 
 def get_current_user():
-    
+
     session_user = session.get("user")
 
     if not session_user:
@@ -586,7 +592,6 @@ def send_invite(club_id):
 
     db.session.add(invite)
 
-    # Get invite.id before creating notification
     db.session.flush()
 
     # =====================================================
@@ -624,11 +629,8 @@ def send_invite(club_id):
             "clubId": club.id,
             "clubName": club.name,
             "clubTag": club.tag,
-
             "inviterId": current_user.id,
-
             "inviterName": inviter_name,
-
             "inviterAvatar": inviter_avatar,
         },
 
@@ -896,7 +898,40 @@ def accept_invite(invite_id):
         "is_read": True,
     })
 
+    # =====================================================
+    # SAVE MEMBERSHIP FIRST
+    # =====================================================
+
     db.session.commit()
+
+    # =====================================================
+    # REWARD: JOIN FIRST CLUB
+    #
+    # This is intentionally AFTER commit.
+    #
+    # If the reward system fails, the user still remains
+    # a member of the club.
+    # =====================================================
+
+    try:
+
+        process_synco_event(
+            current_user,
+            "CLUB_JOINED",
+            reference_id=member.id,
+            metadata={
+                "club_id": club.id,
+                "club_name": club.name,
+                "source": "club_invite",
+            },
+        )
+
+    except Exception as reward_error:
+
+        print(
+            "[REWARDS] Club invite join reward failed:",
+            reward_error,
+        )
 
     return jsonify({
         "success": True,
@@ -933,10 +968,6 @@ def decline_invite(invite_id):
             "success": False,
             "message": "Invite not found.",
         }), 404
-
-    # -----------------------------------------------------
-    # MAKE SURE INVITE BELONGS TO CURRENT USER
-    # -----------------------------------------------------
 
     if invite.invitee_id != current_user.id:
 
@@ -1065,10 +1096,6 @@ def join_club(club_id):
         pending_invite.status = "CANCELLED"
         pending_invite.responded_at = datetime.utcnow()
 
-        # -----------------------------------------------
-        # MARK RELATED NOTIFICATION AS READ
-        # -----------------------------------------------
-
         Notification.query.filter_by(
             user_id=current_user.id,
             notification_type="CLUB_INVITE",
@@ -1078,7 +1105,35 @@ def join_club(club_id):
             "is_read": True,
         })
 
+    # =====================================================
+    # SAVE MEMBERSHIP
+    # =====================================================
+
     db.session.commit()
+
+    # =====================================================
+    # REWARD: JOIN FIRST CLUB
+    # =====================================================
+
+    try:
+
+        process_synco_event(
+            current_user,
+            "CLUB_JOINED",
+            reference_id=member.id,
+            metadata={
+                "club_id": club.id,
+                "club_name": club.name,
+                "source": "public_join",
+            },
+        )
+
+    except Exception as reward_error:
+
+        print(
+            "[REWARDS] Public club join reward failed:",
+            reward_error,
+        )
 
     return jsonify({
         "success": True,

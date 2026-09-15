@@ -16,7 +16,7 @@ from rewards import rewards_bp
 from clubs import clubs_bp
 from friends import friends_bp
 from notifications import notifications_bp
-from leaderboards import leaderboards_bp
+from leaderboards import leaderboarads_bp
 
 
 # =========================================================

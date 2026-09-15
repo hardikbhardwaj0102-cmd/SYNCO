@@ -1,4 +1,3 @@
-
 import os
 import uuid
 from pathlib import Path
@@ -12,6 +11,8 @@ from flask import (
 )
 
 from supabase import create_client
+
+from rewards import process_synco_event
 
 from models import (
     db,
@@ -127,6 +128,53 @@ def _require_user():
 
 
 # =========================================================
+# REWARD EVENT HELPER
+# =========================================================
+#
+# IMPORTANT:
+# Reward failures must NEVER break the actual profile action.
+#
+# Example:
+# If a clip successfully uploads but the reward system has
+# an unexpected problem, the clip should still remain uploaded.
+#
+# process_synco_event() is responsible for:
+# - checking whether the event is valid
+# - preventing duplicate rewards
+# - updating missions
+# - updating achievements
+# - awarding XP
+# - awarding Credits
+#
+# =========================================================
+
+def _process_reward_event(
+    user,
+    event_type,
+    reference_id=None,
+    metadata=None,
+):
+
+    try:
+
+        process_synco_event(
+            user=user,
+            event_type=event_type,
+            reference_id=reference_id,
+            metadata=metadata or {},
+        )
+
+    except Exception:
+
+        current_app.logger.exception(
+            "SYNCO reward event failed: %s user_id=%s reference_id=%s",
+            event_type,
+            user.id if user else None,
+            reference_id,
+        )
+
+
+# =========================================================
 # GET / CREATE USER PROFILE
 # =========================================================
 
@@ -159,6 +207,65 @@ def _profile_for(user):
         db.session.commit()
 
     return profile
+
+
+# =========================================================
+# PROFILE COMPLETION CHECK
+# =========================================================
+#
+# This checks actual database-backed profile information.
+#
+# We do NOT reward simply because /update was called.
+#
+# =========================================================
+
+def _is_profile_complete(user, profile=None):
+
+    if profile is None:
+
+        profile = UserProfile.query.filter_by(
+            user_id=user.id
+        ).first()
+
+    if profile is None:
+        return False
+
+    basic_data = profile.basic_data or {}
+
+    name = str(
+        user.name
+        or basic_data.get("name", "")
+    ).strip()
+
+    username = str(
+        user.username
+        or basic_data.get("username", "")
+    ).strip()
+
+    region = str(
+        basic_data.get("region", "")
+    ).strip()
+
+    bio = str(
+        basic_data.get("bio", "")
+    ).strip()
+
+    avatar = str(
+        user.avatar
+        or basic_data.get("avatarUrl", "")
+    ).strip()
+
+    # -----------------------------------------------------
+    # Required profile information
+    # -----------------------------------------------------
+
+    return bool(
+        name
+        and username
+        and region
+        and bio
+        and avatar
+    )
 
 
 # =========================================================
@@ -211,7 +318,7 @@ def _clip_media_url(filename):
 
         return ""
 
-    except Exception as error:
+    except Exception:
 
         current_app.logger.exception(
             "Failed to create Supabase signed URL"
@@ -375,7 +482,6 @@ def get_profile():
 
     avatar_url = _avatar_url(user)
 
-
     basic_data = {
 
         **(profile.basic_data or {}),
@@ -399,7 +505,6 @@ def get_profile():
 
     }
 
-
     linked_status = {
 
         "discord": bool(
@@ -420,7 +525,6 @@ def get_profile():
 
     }
 
-
     clips = (
         ProfileClip.query
         .filter_by(
@@ -431,7 +535,6 @@ def get_profile():
         )
         .all()
     )
-
 
     return jsonify({
 
@@ -493,7 +596,6 @@ def get_public_profile(username):
         username=username
     ).first()
 
-
     if user is None:
 
         return jsonify({
@@ -504,12 +606,9 @@ def get_public_profile(username):
 
         }), 404
 
-
     response = _public_profile(user)
 
-
     session_user = session.get("user")
-
 
     response["isOwner"] = bool(
 
@@ -518,7 +617,6 @@ def get_public_profile(username):
         and session_user.get("id") == user.id
 
     )
-
 
     return jsonify(response)
 
@@ -538,26 +636,21 @@ def update_profile():
     if error:
         return error
 
-
     data = request.get_json(
         silent=True
     ) or {}
 
-
     profile = _profile_for(user)
-
 
     basic_data = (
         data.get("basicData")
         or {}
     )
 
-
     socials = (
         data.get("socials")
         or {}
     )
-
 
     allowed_basic_fields = {
 
@@ -579,7 +672,6 @@ def update_profile():
 
     }
 
-
     stored_basic = {
 
         **(profile.basic_data or {}),
@@ -595,7 +687,6 @@ def update_profile():
         },
 
     }
-
 
     profile.basic_data = stored_basic
 
@@ -677,6 +768,37 @@ def update_profile():
     db.session.commit()
 
 
+    # =====================================================
+    # PROFILE COMPLETION REWARD
+    # =====================================================
+    #
+    # Only fires when the profile is actually complete.
+    #
+    # The reward engine handles idempotency, so repeatedly
+    # updating the profile cannot farm the reward.
+    #
+    # =====================================================
+
+    if _is_profile_complete(
+        user,
+        profile,
+    ):
+
+        _process_reward_event(
+
+            user=user,
+
+            event_type="PROFILE_COMPLETED",
+
+            reference_id=user.id,
+
+            metadata={
+                "source": "profile_update",
+            },
+
+        )
+
+
     return jsonify({
 
         "success": True,
@@ -700,7 +822,6 @@ def delete_account():
 
     if error:
         return error
-
 
     clips = ProfileClip.query.filter_by(
         user_id=user.id
@@ -727,7 +848,6 @@ def delete_account():
 
             ]
 
-
             if storage_paths:
 
                 supabase.storage.from_(
@@ -736,8 +856,7 @@ def delete_account():
                     storage_paths
                 )
 
-
-        except Exception as error:
+        except Exception:
 
             current_app.logger.exception(
                 "Failed to delete Supabase clips"
@@ -752,11 +871,9 @@ def delete_account():
         user_id=user.id
     ).delete()
 
-
     ProfileGame.query.filter_by(
         user_id=user.id
     ).delete()
-
 
     UserProfile.query.filter_by(
         user_id=user.id
@@ -771,9 +888,7 @@ def delete_account():
 
     db.session.commit()
 
-
     session.clear()
-
 
     return jsonify({
 
@@ -799,11 +914,9 @@ def add_game():
     if error:
         return error
 
-
     data = request.get_json(
         silent=True
     ) or {}
-
 
     game_data = (
 
@@ -818,7 +931,6 @@ def add_game():
 
     )
 
-
     required_fields = (
 
         "gameName",
@@ -828,7 +940,6 @@ def add_game():
         "uid",
 
     )
-
 
     if any(
 
@@ -856,6 +967,10 @@ def add_game():
 
         }), 400
 
+
+    # =====================================================
+    # CREATE GAME
+    # =====================================================
 
     game = ProfileGame(
 
@@ -896,10 +1011,38 @@ def add_game():
 
     )
 
-
     db.session.add(game)
 
     db.session.commit()
+
+
+    # =====================================================
+    # FIRST GAME REWARD
+    # =====================================================
+    #
+    # This event is generated only after the ProfileGame
+    # has successfully been committed to the database.
+    #
+    # Reward engine decides whether this is the user's
+    # first game and prevents duplicate rewards.
+    #
+    # =====================================================
+
+    _process_reward_event(
+
+        user=user,
+
+        event_type="GAME_ADDED",
+
+        reference_id=game.id,
+
+        metadata={
+            "game_id": game.id,
+            "game_name": game.game_name,
+            "source": "profile_game",
+        },
+
+    )
 
 
     return jsonify(
@@ -922,7 +1065,6 @@ def delete_game(game_id):
     if error:
         return error
 
-
     game = ProfileGame.query.filter_by(
 
         id=game_id,
@@ -930,7 +1072,6 @@ def delete_game(game_id):
         user_id=user.id,
 
     ).first()
-
 
     if game is None:
 
@@ -942,11 +1083,9 @@ def delete_game(game_id):
 
         }), 404
 
-
     db.session.delete(game)
 
     db.session.commit()
-
 
     return jsonify({
 
@@ -1026,7 +1165,6 @@ def upload_clip():
     clip_file = request.files.get(
         "clip"
     )
-
 
     if clip_file is None:
 
@@ -1251,7 +1389,6 @@ def upload_clip():
 
     file_bytes = clip_file.read()
 
-
     if not file_bytes:
 
         return jsonify({
@@ -1273,7 +1410,6 @@ def upload_clip():
     max_file_size = (
         250 * 1024 * 1024
     )
-
 
     if file_size > max_file_size:
 
@@ -1344,7 +1480,6 @@ def upload_clip():
 
         supabase = _get_supabase()
 
-
         current_app.logger.info(
 
             "Uploading SYNCO profile clip: "
@@ -1360,12 +1495,6 @@ def upload_clip():
 
         )
 
-
-        # -------------------------------------------------
-        # IMPORTANT:
-        # Supabase Python SDK expects the file options
-        # dictionary as the third positional argument.
-        # -------------------------------------------------
 
         upload_result = (
 
@@ -1411,7 +1540,6 @@ def upload_clip():
 
         )
 
-
         return jsonify({
 
             "success": False,
@@ -1454,7 +1582,6 @@ def upload_clip():
             height=height,
 
         )
-
 
         db.session.add(clip)
 
@@ -1506,6 +1633,36 @@ def upload_clip():
         }), 500
 
 
+    # =====================================================
+    # FIRST CLIP REWARD
+    # =====================================================
+    #
+    # This is triggered only after:
+    #
+    # 1. Supabase upload succeeded
+    # 2. ProfileClip DB record succeeded
+    #
+    # The reward engine handles duplicate protection.
+    #
+    # =====================================================
+
+    _process_reward_event(
+
+        user=user,
+
+        event_type="CLIP_UPLOADED",
+
+        reference_id=clip.id,
+
+        metadata={
+            "clip_id": clip.id,
+            "title": clip.title,
+            "source": "profile_clip",
+        },
+
+    )
+
+
     # -----------------------------------------------------
     # CREATE SIGNED URL
     # -----------------------------------------------------
@@ -1547,7 +1704,6 @@ def delete_clip(clip_id):
     if error:
         return error
 
-
     clip = ProfileClip.query.filter_by(
 
         id=clip_id,
@@ -1555,7 +1711,6 @@ def delete_clip(clip_id):
         user_id=user.id,
 
     ).first()
-
 
     if clip is None:
 
@@ -1584,7 +1739,7 @@ def delete_clip(clip_id):
                 clip.filename
             ])
 
-        except Exception as storage_error:
+        except Exception:
 
             current_app.logger.exception(
 
@@ -1600,7 +1755,6 @@ def delete_clip(clip_id):
     db.session.delete(clip)
 
     db.session.commit()
-
 
     return jsonify({
 
@@ -1626,12 +1780,10 @@ def toggle_clip_like(clip_id):
     if error:
         return error
 
-
     clip = db.session.get(
         ProfileClip,
         clip_id,
     )
-
 
     if clip is None:
 
@@ -1643,7 +1795,6 @@ def toggle_clip_like(clip_id):
 
         }), 404
 
-
     existing_like = (
         ProfileClipLike.query
         .filter_by(
@@ -1652,7 +1803,6 @@ def toggle_clip_like(clip_id):
         )
         .first()
     )
-
 
     if existing_like:
 
@@ -1678,9 +1828,7 @@ def toggle_clip_like(clip_id):
 
         liked = True
 
-
     db.session.commit()
-
 
     likes_count = (
         ProfileClipLike.query
@@ -1689,7 +1837,6 @@ def toggle_clip_like(clip_id):
         )
         .count()
     )
-
 
     return jsonify({
 
@@ -1717,7 +1864,6 @@ def get_clip_comments(clip_id):
         clip_id,
     )
 
-
     if clip is None:
 
         return jsonify({
@@ -1727,7 +1873,6 @@ def get_clip_comments(clip_id):
             "message": "Clip not found.",
 
         }), 404
-
 
     comments = (
 
@@ -1744,7 +1889,6 @@ def get_clip_comments(clip_id):
         .all()
 
     )
-
 
     return jsonify({
 
@@ -1776,12 +1920,10 @@ def add_clip_comment(clip_id):
     if error:
         return error
 
-
     clip = db.session.get(
         ProfileClip,
         clip_id,
     )
-
 
     if clip is None:
 
@@ -1793,11 +1935,9 @@ def add_clip_comment(clip_id):
 
         }), 404
 
-
     data = request.get_json(
         silent=True
     ) or {}
-
 
     content = str(
 
@@ -1808,7 +1948,6 @@ def add_clip_comment(clip_id):
 
     ).strip()
 
-
     if not content:
 
         return jsonify({
@@ -1818,7 +1957,6 @@ def add_clip_comment(clip_id):
             "message": "Comment cannot be empty.",
 
         }), 400
-
 
     if len(content) > 1000:
 
@@ -1833,7 +1971,6 @@ def add_clip_comment(clip_id):
 
         }), 400
 
-
     comment = ProfileClipComment(
 
         clip_id=clip.id,
@@ -1844,11 +1981,9 @@ def add_clip_comment(clip_id):
 
     )
 
-
     db.session.add(comment)
 
     db.session.commit()
-
 
     return jsonify(
         comment.to_dict()

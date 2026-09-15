@@ -15,6 +15,8 @@ from models import (
     Notification
 )
 
+from rewards import process_synco_event
+
 
 # =========================================================
 # FRIENDS BLUEPRINT
@@ -135,16 +137,7 @@ def search_players():
             "players": []
         })
 
-    # -----------------------------------------------------
-    # UID SEARCH
-    # -----------------------------------------------------
-
     uid_query = query.upper()
-
-    # -----------------------------------------------------
-    # USERNAME SEARCH
-    # -----------------------------------------------------
-
     username_query = query
 
     users = User.query.filter(
@@ -166,10 +159,6 @@ def search_players():
 
         request_status = None
         request_direction = None
-
-        # -------------------------------------------------
-        # Existing friendship
-        # -------------------------------------------------
 
         if are_friends(
             current_user.id,
@@ -193,9 +182,11 @@ def search_players():
                     pending_request.sender_id
                     == current_user.id
                 ):
+
                     request_direction = "SENT"
 
                 else:
+
                     request_direction = "RECEIVED"
 
         player_data = player_to_dict(user)
@@ -249,10 +240,6 @@ def send_friend_request():
             "message": "UID or username is required"
         }), 400
 
-    # -----------------------------------------------------
-    # Find target user
-    # -----------------------------------------------------
-
     target_user = None
 
     if target_uid:
@@ -275,20 +262,12 @@ def send_friend_request():
             "message": "Player not found"
         }), 404
 
-    # -----------------------------------------------------
-    # Cannot add yourself
-    # -----------------------------------------------------
-
     if target_user.id == current_user.id:
 
         return jsonify({
             "success": False,
             "message": "You cannot add yourself"
         }), 400
-
-    # -----------------------------------------------------
-    # Already friends
-    # -----------------------------------------------------
 
     if are_friends(
         current_user.id,
@@ -299,10 +278,6 @@ def send_friend_request():
             "success": False,
             "message": "You are already friends"
         }), 409
-
-    # -----------------------------------------------------
-    # Existing pending request
-    # -----------------------------------------------------
 
     existing_request = get_pending_request(
         current_user.id,
@@ -318,20 +293,14 @@ def send_friend_request():
                 "message": "Friend request already sent"
             }), 409
 
-        else:
-
-            return jsonify({
-                "success": False,
-                "message": (
-                    "This player has already sent "
-                    "you a friend request"
-                ),
-                "requestId": existing_request.id
-            }), 409
-
-    # -----------------------------------------------------
-    # Create request
-    # -----------------------------------------------------
+        return jsonify({
+            "success": False,
+            "message": (
+                "This player has already sent "
+                "you a friend request"
+            ),
+            "requestId": existing_request.id
+        }), 409
 
     friend_request = FriendRequest(
         sender_id=current_user.id,
@@ -343,15 +312,7 @@ def send_friend_request():
         friend_request
     )
 
-    # -----------------------------------------------------
-    # Flush so the FriendRequest gets its ID
-    # -----------------------------------------------------
-
     db.session.flush()
-
-    # -----------------------------------------------------
-    # Create notification for receiver
-    # -----------------------------------------------------
 
     notification = Notification(
         user_id=target_user.id,
@@ -483,20 +444,12 @@ def accept_friend_request(request_id):
             "message": "Friend request not found"
         }), 404
 
-    # -----------------------------------------------------
-    # Only receiver can accept
-    # -----------------------------------------------------
-
     if friend_request.receiver_id != current_user.id:
 
         return jsonify({
             "success": False,
             "message": "You cannot accept this request"
         }), 403
-
-    # -----------------------------------------------------
-    # Request must be pending
-    # -----------------------------------------------------
 
     if friend_request.status != "PENDING":
 
@@ -509,20 +462,46 @@ def accept_friend_request(request_id):
     receiver_id = friend_request.receiver_id
 
     # -----------------------------------------------------
-    # Update request
+    # Check for existing friendship
+    # -----------------------------------------------------
+
+    if are_friends(
+        sender_id,
+        receiver_id
+    ):
+
+        friend_request.status = "ACCEPTED"
+        friend_request.responded_at = datetime.utcnow()
+
+        db.session.commit()
+
+        return jsonify({
+            "success": True,
+            "message": "You are already friends",
+            "friend": player_to_dict(
+                friend_request.sender
+            )
+        })
+
+    # -----------------------------------------------------
+    # Accept request
     # -----------------------------------------------------
 
     friend_request.status = "ACCEPTED"
     friend_request.responded_at = datetime.utcnow()
 
     # -----------------------------------------------------
-    # Create friendship in both directions
+    # Create friendship for sender
     # -----------------------------------------------------
 
     friendship_one = Friendship(
         user_id=sender_id,
         friend_id=receiver_id
     )
+
+    # -----------------------------------------------------
+    # Create friendship for receiver
+    # -----------------------------------------------------
 
     friendship_two = Friendship(
         user_id=receiver_id,
@@ -537,7 +516,42 @@ def accept_friend_request(request_id):
         friendship_two
     )
 
+    db.session.flush()
+
+    # -----------------------------------------------------
+    # Commit friendship
+    # -----------------------------------------------------
+
     db.session.commit()
+
+    # =====================================================
+    # REWARD
+    # =====================================================
+    #
+    # Sending a friend request:
+    #     NO REWARD
+    #
+    # Accepting the first friendship:
+    #     XP + CREDITS
+    #
+    # rewards.py verifies the actual friendship and
+    # prevents duplicate first-friend rewards.
+    # =====================================================
+
+    try:
+
+        process_synco_event(
+            current_user,
+            "FIRST_FRIENDSHIP",
+            reference_id=friendship_two.id
+        )
+
+    except Exception as reward_error:
+
+        print(
+            "[REWARDS] Friendship reward processing failed:",
+            reward_error
+        )
 
     return jsonify({
         "success": True,
@@ -577,10 +591,6 @@ def decline_friend_request(request_id):
             "success": False,
             "message": "Friend request not found"
         }), 404
-
-    # -----------------------------------------------------
-    # Only receiver can decline
-    # -----------------------------------------------------
 
     if friend_request.receiver_id != current_user.id:
 
@@ -636,10 +646,6 @@ def cancel_friend_request(request_id):
             "success": False,
             "message": "Friend request not found"
         }), 404
-
-    # -----------------------------------------------------
-    # Only sender can cancel
-    # -----------------------------------------------------
 
     if friend_request.sender_id != current_user.id:
 
@@ -742,11 +748,13 @@ def remove_friend(friend_id):
         }), 404
 
     if friendship_one:
+
         db.session.delete(
             friendship_one
         )
 
     if friendship_two:
+
         db.session.delete(
             friendship_two
         )
