@@ -3154,7 +3154,8 @@ class CompetitionMatch(db.Model):
     # Match metadata
     # -----------------------------------------------------
 
-    metadata = db.Column(
+    match_metadata = db.Column(
+        "metadata",
         db.JSON,
         nullable=False,
         default=dict
@@ -3245,7 +3246,7 @@ class CompetitionMatch(db.Model):
 
             "status": self.status,
 
-            "metadata": self.metadata or {},
+            "metadata": self.match_metadata or {},
 
             "sides": [
                 side.to_dict()
@@ -4546,12 +4547,12 @@ class CompetitionAuditLog(db.Model):
         nullable=True
     )
 
-    metadata = db.Column(
+    audit_metadata = db.Column(
+        "metadata",
         db.JSON,
         nullable=False,
         default=dict
     )
-
     created_at = db.Column(
         db.DateTime,
         default=datetime.utcnow,
@@ -4587,8 +4588,8 @@ class CompetitionAuditLog(db.Model):
             "action": self.action,
             "description": self.description,
 
-            "metadata": self.metadata or {},
-
+            "metadata": self.audit_metadata or {},
+            
             "createdAt": (
                 self.created_at.isoformat()
                 if self.created_at
