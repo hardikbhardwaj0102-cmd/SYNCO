@@ -33,7 +33,7 @@ const VideoClip = ({
   game,
   initialLikes = 0,
   initialComments = 0,
-  hideOverlay = false
+  hideOverlay = true
 }) => {
   const videoRef = useRef(null);
 
