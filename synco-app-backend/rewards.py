@@ -3,6 +3,7 @@
 # =========================================================
 
 from datetime import datetime, timedelta
+import hashlib
 
 from flask import Blueprint, jsonify, session
 
@@ -76,19 +77,83 @@ def today_key():
 
 
 # =========================================================
+# REWARD TRANSACTION REFERENCE HELPER
+# =========================================================
+#
+# IMPORTANT:
+#
+# RewardTransaction.reference_id is an INTEGER column
+# in the current SYNCO database.
+#
+# Older reward code was passing values such as:
+#
+#     "2026-09-15"
+#     "PROFILE_COMPLETED"
+#     "FIRST_GAME"
+#     "1-175792..."
+#
+# PostgreSQL rejects those values.
+#
+# This helper converts every reference into an integer.
+#
+# Numeric references remain unchanged.
+# String references are converted to a deterministic
+# positive integer using SHA-256.
+#
+# The same string always produces the same integer,
+# so duplicate protection continues to work.
+# =========================================================
+
+def normalize_reference_id(
+    reference_type,
+    reference_id,
+):
+    if reference_id is None:
+        return None
+
+    # Already integer
+    if isinstance(reference_id, int):
+        return reference_id
+
+    # Numeric string
+    try:
+        text_value = str(reference_id).strip()
+
+        if text_value.lstrip("-").isdigit():
+            return int(text_value)
+
+    except Exception:
+        pass
+
+    # Deterministic integer for non-numeric references
+    raw_value = (
+        f"{reference_type or ''}:"
+        f"{reference_id}"
+    )
+
+    digest = hashlib.sha256(
+        raw_value.encode("utf-8")
+    ).digest()
+
+    # Keep safely inside PostgreSQL INTEGER range
+    value = int.from_bytes(
+        digest[:8],
+        byteorder="big",
+        signed=False,
+    )
+
+    value = (
+        value % 2147483646
+    ) + 1
+
+    return value
+
+
+# =========================================================
 # LEVEL SYSTEM
 # =========================================================
 
 def xp_required_for_level(level):
-    """
-    XP required to move from the current level
-    to the next level.
-
-    Level 1 -> 100 XP
-    Level 2 -> 200 XP
-    Level 3 -> 300 XP
-    """
-
     return max(
         1,
         int(level or 1),
@@ -96,10 +161,6 @@ def xp_required_for_level(level):
 
 
 def update_level(user):
-    """
-    user.xp represents XP accumulated toward
-    the user's current level.
-    """
 
     if user.level is None or user.level < 1:
         user.level = 1
@@ -128,16 +189,16 @@ def transaction_exists(
     reference_type,
     reference_id,
 ):
-    """
-    Check whether a logical reward transaction
-    already exists.
-    """
-
     if (
         reference_type is None
         or reference_id is None
     ):
         return False
+
+    normalized_id = normalize_reference_id(
+        reference_type,
+        reference_id,
+    )
 
     existing = (
         RewardTransaction.query
@@ -146,9 +207,7 @@ def transaction_exists(
             reference_type=str(
                 reference_type
             ),
-            reference_id=str(
-                reference_id
-            ),
+            reference_id=normalized_id,
         )
         .first()
     )
@@ -165,6 +224,11 @@ def create_transaction(
     reference_type=None,
     reference_id=None,
 ):
+    normalized_id = normalize_reference_id(
+        reference_type,
+        reference_id,
+    )
+
     transaction = RewardTransaction(
         user_id=user_id,
         transaction_type=transaction_type,
@@ -180,11 +244,7 @@ def create_transaction(
             if reference_type is not None
             else None
         ),
-        reference_id=(
-            str(reference_id)
-            if reference_id is not None
-            else None
-        ),
+        reference_id=normalized_id,
     )
 
     db.session.add(transaction)
@@ -294,14 +354,6 @@ def award_rewards(
     reference_type=None,
     reference_id=None,
 ):
-    """
-    Central reward function.
-
-    One logical reference = one reward.
-
-    This makes rewards idempotent.
-    """
-
     if user is None:
         return False
 
@@ -404,13 +456,6 @@ def spend_credits(
 # =========================================================
 
 def update_streak(user):
-    """
-    Updates the user's activity streak once per day.
-
-    Returns:
-        True  -> streak changed today
-        False -> already processed today
-    """
 
     now = utc_now()
 
@@ -505,12 +550,6 @@ DAILY_LOGIN_REWARDS = {
 
 
 def sync_daily_login_challenge(user):
-    """
-    Marks today's DAILY_LOGIN challenge as completed
-    and claimed.
-
-    Daily login is automatically rewarded.
-    """
 
     now = utc_now()
 
@@ -573,18 +612,22 @@ def sync_daily_login_challenge(user):
 
 
 def process_daily_login(user):
-    """
-    Gives one daily login reward.
-    """
 
     if user is None:
         return False
 
-    reference_id = today_key()
+    # =====================================================
+    # INTEGER-SAFE DAILY REFERENCE
+    # =====================================================
 
-    # -----------------------------------------------------
-    # Strong duplicate protection
-    # -----------------------------------------------------
+    reference_id = normalize_reference_id(
+        "DAILY_LOGIN",
+        today_key(),
+    )
+
+    # =====================================================
+    # DUPLICATE PROTECTION
+    # =====================================================
 
     if transaction_exists(
         user.id,
@@ -598,9 +641,9 @@ def process_daily_login(user):
 
         return False
 
-    # -----------------------------------------------------
-    # Update streak
-    # -----------------------------------------------------
+    # =====================================================
+    # UPDATE STREAK
+    # =====================================================
 
     changed = update_streak(user)
 
@@ -612,9 +655,9 @@ def process_daily_login(user):
 
         return False
 
-    # -----------------------------------------------------
-    # Determine reward day
-    # -----------------------------------------------------
+    # =====================================================
+    # REWARD DAY
+    # =====================================================
 
     streak_day = min(
         max(
@@ -628,9 +671,9 @@ def process_daily_login(user):
         streak_day
     ]
 
-    # -----------------------------------------------------
-    # Award reward
-    # -----------------------------------------------------
+    # =====================================================
+    # AWARD
+    # =====================================================
 
     awarded = award_rewards(
         user=user,
@@ -643,15 +686,15 @@ def process_daily_login(user):
         reference_id=reference_id,
     )
 
-    # -----------------------------------------------------
-    # Sync challenge
-    # -----------------------------------------------------
+    # =====================================================
+    # CHALLENGE
+    # =====================================================
 
     sync_daily_login_challenge(user)
 
-    # -----------------------------------------------------
-    # Achievements
-    # -----------------------------------------------------
+    # =====================================================
+    # ACHIEVEMENTS
+    # =====================================================
 
     if awarded:
         check_all_achievements(user)
@@ -666,16 +709,6 @@ def process_daily_login(user):
 # =========================================================
 
 def is_profile_complete(user):
-    """
-    Checks actual database-backed profile information.
-
-    Required:
-        name
-        username
-        region
-        bio
-        avatar
-    """
 
     profile = (
         UserProfile.query
@@ -733,10 +766,6 @@ def is_profile_complete(user):
 
 SYNCO_EVENT_REWARDS = {
 
-    # -----------------------------------------------------
-    # PROFILE
-    # -----------------------------------------------------
-
     "PROFILE_COMPLETED": {
         "xp": 25,
         "credits": 10,
@@ -745,10 +774,6 @@ SYNCO_EVENT_REWARDS = {
         "reference_id": "PROFILE_COMPLETED",
         "challenge_type": "PROFILE_COMPLETED",
     },
-
-    # -----------------------------------------------------
-    # GAME
-    # -----------------------------------------------------
 
     "GAME_ADDED": {
         "xp": 30,
@@ -768,10 +793,6 @@ SYNCO_EVENT_REWARDS = {
         "challenge_type": "GAME_ADDED",
     },
 
-    # -----------------------------------------------------
-    # FRIENDSHIP
-    # -----------------------------------------------------
-
     "FRIENDSHIP_CREATED": {
         "xp": 20,
         "credits": 10,
@@ -790,10 +811,6 @@ SYNCO_EVENT_REWARDS = {
         "challenge_type": "FRIENDSHIP_CREATED",
     },
 
-    # -----------------------------------------------------
-    # CLUB
-    # -----------------------------------------------------
-
     "CLUB_JOINED": {
         "xp": 30,
         "credits": 15,
@@ -811,10 +828,6 @@ SYNCO_EVENT_REWARDS = {
         "reference_id": "FIRST_CLUB",
         "challenge_type": "CLUB_JOINED",
     },
-
-    # -----------------------------------------------------
-    # CLIP
-    # -----------------------------------------------------
 
     "CLIP_UPLOADED": {
         "xp": 30,
@@ -847,96 +860,67 @@ def validate_synco_event(
     reference_id=None,
     metadata=None,
 ):
-    """
-    Verifies that the requested SYNCO event actually
-    happened in the database.
-    """
 
     metadata = metadata or {}
 
-    # =====================================================
-    # PROFILE
-    # =====================================================
-
     if event == "PROFILE_COMPLETED":
-
         return is_profile_complete(user)
-
-    # =====================================================
-    # GAME
-    # =====================================================
 
     if event in (
         "GAME_ADDED",
         "FIRST_GAME",
     ):
 
-        game_count = (
+        return (
             ProfileGame.query
             .filter_by(
                 user_id=user.id
             )
             .count()
+            >= 1
         )
-
-        return game_count >= 1
-
-    # =====================================================
-    # CLIP
-    # =====================================================
 
     if event in (
         "CLIP_UPLOADED",
         "FIRST_CLIP",
     ):
 
-        clip_count = (
+        return (
             ProfileClip.query
             .filter_by(
                 user_id=user.id
             )
             .count()
+            >= 1
         )
-
-        return clip_count >= 1
-
-    # =====================================================
-    # FRIENDSHIP
-    # =====================================================
 
     if event in (
         "FRIENDSHIP_CREATED",
         "FIRST_FRIENDSHIP",
     ):
 
-        friendship_count = (
+        return (
             Friendship.query
             .filter_by(
                 user_id=user.id
             )
             .count()
+            >= 1
         )
-
-        return friendship_count >= 1
-
-    # =====================================================
-    # CLUB
-    # =====================================================
 
     if event in (
         "CLUB_JOINED",
         "FIRST_CLUB",
     ):
 
-        membership_count = (
+        return (
             ClubMember.query
             .filter_by(
                 user_id=user.id
             )
             .count()
+            >= 1
         )
-
-        return membership_count >= 1
 
     return False
 
@@ -951,30 +935,6 @@ def process_synco_event(
     reference_id=None,
     metadata=None,
 ):
-    """
-    Central SYNCO reward event gateway.
-
-    Compatible with:
-
-        profile.py
-        friends.py
-        clubs.py
-
-    Supported events:
-
-        PROFILE_COMPLETED
-        GAME_ADDED
-        FRIENDSHIP_CREATED
-        CLUB_JOINED
-        CLIP_UPLOADED
-
-    Aliases:
-
-        FIRST_GAME
-        FIRST_FRIENDSHIP
-        FIRST_CLUB
-        FIRST_CLIP
-    """
 
     if user is None:
         return False
@@ -993,7 +953,7 @@ def process_synco_event(
     ]
 
     # =====================================================
-    # VERIFY ACTUAL DATABASE EVENT
+    # VERIFY REAL DATABASE EVENT
     # =====================================================
 
     if not validate_synco_event(
@@ -1021,7 +981,7 @@ def process_synco_event(
         )
 
     # =====================================================
-    # AWARD FIRST-TIME REWARD
+    # AWARD
     # =====================================================
 
     awarded = award_rewards(
@@ -1032,10 +992,6 @@ def process_synco_event(
         reference_type=reward["reference_type"],
         reference_id=reward["reference_id"],
     )
-
-    # =====================================================
-    # IF ALREADY AWARDED
-    # =====================================================
 
     if not awarded:
 
@@ -1048,10 +1004,6 @@ def process_synco_event(
     # =====================================================
 
     check_all_achievements(user)
-
-    # =====================================================
-    # COMMIT
-    # =====================================================
 
     db.session.commit()
 
@@ -1066,6 +1018,7 @@ def serialize_challenge(
     challenge,
     user_challenge=None,
 ):
+
     progress = 0
     completed = False
     claimed = False
@@ -1149,6 +1102,7 @@ def serialize_store_item(
     item,
     inventory_quantity=0,
 ):
+
     return {
 
         "id": item.id,
@@ -1185,6 +1139,7 @@ def serialize_store_item(
 def serialize_inventory(
     inventory,
 ):
+
     item = inventory.reward_item
 
     return {
@@ -1256,14 +1211,11 @@ def get_achievement_progress(
     user,
     achievement,
 ):
+
     requirement = (
         achievement.requirement_type
         or ""
     ).upper()
-
-    # -----------------------------------------------------
-    # PROFILE
-    # -----------------------------------------------------
 
     if requirement == "PROFILE_COMPLETED":
 
@@ -1272,10 +1224,6 @@ def get_achievement_progress(
             if is_profile_complete(user)
             else 0
         )
-
-    # -----------------------------------------------------
-    # GAMES
-    # -----------------------------------------------------
 
     if requirement == "GAMES":
 
@@ -1287,10 +1235,6 @@ def get_achievement_progress(
             .count()
         )
 
-    # -----------------------------------------------------
-    # CLIPS
-    # -----------------------------------------------------
-
     if requirement == "CLIPS":
 
         return (
@@ -1300,10 +1244,6 @@ def get_achievement_progress(
             )
             .count()
         )
-
-    # -----------------------------------------------------
-    # FRIENDSHIPS
-    # -----------------------------------------------------
 
     if requirement == "FRIENDSHIPS":
 
@@ -1315,10 +1255,6 @@ def get_achievement_progress(
             .count()
         )
 
-    # -----------------------------------------------------
-    # CLUBS
-    # -----------------------------------------------------
-
     if requirement == "CLUBS":
 
         return (
@@ -1328,10 +1264,6 @@ def get_achievement_progress(
             )
             .count()
         )
-
-    # -----------------------------------------------------
-    # LEGACY MATCHES
-    # -----------------------------------------------------
 
     if requirement == "MATCHES_PLAYED":
 
@@ -1350,10 +1282,6 @@ def get_achievement_progress(
             .count()
         )
 
-    # -----------------------------------------------------
-    # LEGACY MATCH WINS
-    # -----------------------------------------------------
-
     if requirement == "MATCH_WINS":
 
         return (
@@ -1370,10 +1298,6 @@ def get_achievement_progress(
             )
             .count()
         )
-
-    # -----------------------------------------------------
-    # LEGACY TOURNAMENTS
-    # -----------------------------------------------------
 
     if requirement == "TOURNAMENTS_PLAYED":
 
@@ -1392,10 +1316,6 @@ def get_achievement_progress(
             .count()
         )
 
-    # -----------------------------------------------------
-    # LEGACY TOURNAMENT WINS
-    # -----------------------------------------------------
-
     if requirement == "TOURNAMENT_WINS":
 
         return (
@@ -1413,19 +1333,11 @@ def get_achievement_progress(
             .count()
         )
 
-    # -----------------------------------------------------
-    # STREAK
-    # -----------------------------------------------------
-
     if requirement == "STREAK":
 
         return (
             user.current_streak or 0
         )
-
-    # -----------------------------------------------------
-    # LEVEL
-    # -----------------------------------------------------
 
     if requirement == "LEVEL":
 
@@ -1433,19 +1345,11 @@ def get_achievement_progress(
             user.level or 1
         )
 
-    # -----------------------------------------------------
-    # XP
-    # -----------------------------------------------------
-
     if requirement == "XP":
 
         return (
             user.xp or 0
         )
-
-    # -----------------------------------------------------
-    # CREDITS
-    # -----------------------------------------------------
 
     if requirement == "CREDITS":
 
@@ -1765,10 +1669,12 @@ def seed_reward_challenges():
             )
 
             existing.active = True
+
             existing.starts_at = (
                 existing.starts_at
                 or now
             )
+
             existing.expires_at = None
 
     # =====================================================
@@ -2147,6 +2053,7 @@ def update_challenge_progress(
             user_challenge.completed = True
 
             if user_challenge.completed_at is None:
+
                 user_challenge.completed_at = now
 
 
@@ -2155,20 +2062,9 @@ def update_challenge_progress(
 # =========================================================
 
 def sync_completed_synco_missions(user):
-    """
-    Repairs/synchronizes one-time missions based on
-    actual database state.
-
-    This is useful if a user performed an action before
-    the reward system was initialized.
-    """
 
     if user is None:
         return
-
-    # -----------------------------------------------------
-    # Profile
-    # -----------------------------------------------------
 
     if is_profile_complete(user):
 
@@ -2177,10 +2073,6 @@ def sync_completed_synco_missions(user):
             "PROFILE_COMPLETED",
             1,
         )
-
-    # -----------------------------------------------------
-    # Game
-    # -----------------------------------------------------
 
     if (
         ProfileGame.query
@@ -2197,10 +2089,6 @@ def sync_completed_synco_missions(user):
             1,
         )
 
-    # -----------------------------------------------------
-    # Friendship
-    # -----------------------------------------------------
-
     if (
         Friendship.query
         .filter_by(
@@ -2216,10 +2104,6 @@ def sync_completed_synco_missions(user):
             1,
         )
 
-    # -----------------------------------------------------
-    # Club
-    # -----------------------------------------------------
-
     if (
         ClubMember.query
         .filter_by(
@@ -2234,10 +2118,6 @@ def sync_completed_synco_missions(user):
             "CLUB_JOINED",
             1,
         )
-
-    # -----------------------------------------------------
-    # Clip
-    # -----------------------------------------------------
 
     if (
         ProfileClip.query
@@ -2378,19 +2258,6 @@ def process_game_activity(
     amount=1,
     reference_id=None,
 ):
-    """
-    Legacy compatibility function.
-
-    These events are NOT part of the current
-    SYNCO onboarding missions.
-
-    Supported:
-
-        MATCH
-        MATCH_WIN
-        TOURNAMENT
-        TOURNAMENT_WIN
-    """
 
     if user is None:
         return False
@@ -2418,16 +2285,20 @@ def process_game_activity(
 
     for index in range(amount):
 
-        current_reference_id = (
-            reference_id
-            if reference_id is not None
-            else (
+        if reference_id is not None:
+
+            current_reference_id = (
+                reference_id
+            )
+
+        else:
+
+            current_reference_id = (
                 f"{action}_"
                 f"{user.id}_"
                 f"{utc_now().timestamp()}_"
                 f"{index}"
             )
-        )
 
         if action == "MATCH":
 
@@ -2526,7 +2397,9 @@ def get_rewards():
         # -------------------------------------------------
 
         seed_reward_challenges()
+
         seed_reward_store()
+
         seed_achievements()
 
         # -------------------------------------------------
@@ -2536,13 +2409,13 @@ def get_rewards():
         process_daily_login(user)
 
         # -------------------------------------------------
-        # INITIALIZE USER CHALLENGES
+        # USER CHALLENGES
         # -------------------------------------------------
 
         initialize_user_challenges(user)
 
         # -------------------------------------------------
-        # SYNC REAL SYNCO ACTIONS
+        # SYNCO ACTIONS
         # -------------------------------------------------
 
         sync_completed_synco_missions(
@@ -2550,7 +2423,7 @@ def get_rewards():
         )
 
         # -------------------------------------------------
-        # SYNC ACHIEVEMENTS
+        # ACHIEVEMENTS
         # -------------------------------------------------
 
         check_all_achievements(user)
@@ -2582,7 +2455,7 @@ def get_rewards():
         )
 
         # -------------------------------------------------
-        # CURRENT LEVEL XP
+        # CURRENT LEVEL
         # -------------------------------------------------
 
         current_level_xp = (
@@ -2622,7 +2495,9 @@ def get_rewards():
         )
 
         missions = []
+
         daily_challenges = []
+
         weekly_challenges = []
 
         # -------------------------------------------------
@@ -2665,7 +2540,7 @@ def get_rewards():
             )
 
             # =================================================
-            # ONE-TIME MISSIONS
+            # ONE-TIME
             # =================================================
 
             if challenge.period == "ONCE":
@@ -2724,7 +2599,7 @@ def get_rewards():
                 )
 
         # -------------------------------------------------
-        # STORE
+        # INVENTORY
         # -------------------------------------------------
 
         inventory = (
@@ -2740,6 +2615,10 @@ def get_rewards():
                 item.quantity
             for item in inventory
         }
+
+        # -------------------------------------------------
+        # STORE
+        # -------------------------------------------------
 
         store_items = (
             RewardItem.query
@@ -2908,7 +2787,7 @@ def get_rewards():
 
         print(
             "Rewards GET Error:",
-            str(e),
+            repr(e),
         )
 
         return jsonify({
@@ -2957,10 +2836,6 @@ def claim_challenge(
 
         now = utc_now()
 
-        # -------------------------------------------------
-        # Validate challenge
-        # -------------------------------------------------
-
         if not challenge.active:
 
             return jsonify({
@@ -2994,10 +2869,6 @@ def claim_challenge(
                 ),
             }), 400
 
-        # -------------------------------------------------
-        # Get user challenge
-        # -------------------------------------------------
-
         user_challenge = (
             UserChallenge.query
             .filter_by(
@@ -3025,7 +2896,7 @@ def claim_challenge(
             db.session.flush()
 
         # -------------------------------------------------
-        # Daily login is auto-claimed
+        # DAILY LOGIN
         # -------------------------------------------------
 
         if (
@@ -3044,7 +2915,7 @@ def claim_challenge(
             }), 400
 
         # -------------------------------------------------
-        # Already claimed
+        # ALREADY CLAIMED
         # -------------------------------------------------
 
         if user_challenge.claimed:
@@ -3060,7 +2931,7 @@ def claim_challenge(
             }), 400
 
         # -------------------------------------------------
-        # Repair one-time challenge progress
+        # REPAIR MISSION
         # -------------------------------------------------
 
         if challenge.period == "ONCE":
@@ -3071,10 +2942,6 @@ def claim_challenge(
 
             db.session.flush()
 
-        # -------------------------------------------------
-        # Re-fetch user challenge
-        # -------------------------------------------------
-
         user_challenge = (
             UserChallenge.query
             .filter_by(
@@ -3083,10 +2950,6 @@ def claim_challenge(
             )
             .first()
         )
-
-        # -------------------------------------------------
-        # Must be complete
-        # -------------------------------------------------
 
         if (
             user_challenge is None
@@ -3113,17 +2976,15 @@ def claim_challenge(
             }), 400
 
         # -------------------------------------------------
-        # Challenge reference
+        # CHALLENGE REFERENCE
         # -------------------------------------------------
 
         reference_type = "CHALLENGE"
 
-        reference_id = str(
-            challenge.id
-        )
+        reference_id = challenge.id
 
         # -------------------------------------------------
-        # Duplicate reward protection
+        # DUPLICATE PROTECTION
         # -------------------------------------------------
 
         if transaction_exists(
@@ -3163,7 +3024,7 @@ def claim_challenge(
             })
 
         # -------------------------------------------------
-        # Award XP
+        # XP
         # -------------------------------------------------
 
         if challenge.reward_xp:
@@ -3186,7 +3047,7 @@ def claim_challenge(
             )
 
         # -------------------------------------------------
-        # Award Credits
+        # CREDITS
         # -------------------------------------------------
 
         if challenge.reward_credits:
@@ -3268,7 +3129,7 @@ def claim_challenge(
 
         print(
             "Challenge Claim Error:",
-            str(e),
+            repr(e),
         )
 
         return jsonify({
@@ -3363,7 +3224,7 @@ def redeem_store_item(
             }), 400
 
         # -------------------------------------------------
-        # Inventory
+        # INVENTORY
         # -------------------------------------------------
 
         inventory_item = (
@@ -3391,7 +3252,7 @@ def redeem_store_item(
         inventory_item.quantity += 1
 
         # -------------------------------------------------
-        # Stock
+        # STOCK
         # -------------------------------------------------
 
         if (
@@ -3402,7 +3263,24 @@ def redeem_store_item(
             item.stock -= 1
 
         # -------------------------------------------------
-        # Spend
+        # UNIQUE STORE REFERENCE
+        # -------------------------------------------------
+
+        raw_store_reference = (
+            f"{item.id}-"
+            f"{user.id}-"
+            f"{utc_now().timestamp()}"
+        )
+
+        store_reference_id = (
+            normalize_reference_id(
+                "STORE",
+                raw_store_reference,
+            )
+        )
+
+        # -------------------------------------------------
+        # SPEND CREDITS
         # -------------------------------------------------
 
         spend_success = spend_credits(
@@ -3413,10 +3291,7 @@ def redeem_store_item(
                 f"{item.title}"
             ),
             reference_type="STORE",
-            reference_id=(
-                f"{item.id}-"
-                f"{utc_now().timestamp()}"
-            ),
+            reference_id=store_reference_id,
         )
 
         if not spend_success:
@@ -3469,7 +3344,7 @@ def redeem_store_item(
 
         print(
             "Store Redeem Error:",
-            str(e),
+            repr(e),
         )
 
         return jsonify({
@@ -3531,9 +3406,11 @@ def get_inventory():
 
     except Exception as e:
 
+        db.session.rollback()
+
         print(
             "Inventory Error:",
-            str(e),
+            repr(e),
         )
 
         return jsonify({
@@ -3597,9 +3474,11 @@ def get_reward_history():
 
     except Exception as e:
 
+        db.session.rollback()
+
         print(
             "Reward History Error:",
-            str(e),
+            repr(e),
         )
 
         return jsonify({
@@ -3670,7 +3549,7 @@ def get_achievements():
 
         print(
             "Achievements Error:",
-            str(e),
+            repr(e),
         )
 
         return jsonify({
@@ -3776,7 +3655,7 @@ def debug_game_activity(action):
 
         print(
             "Debug Activity Error:",
-            str(e),
+            repr(e),
         )
 
         return jsonify({
