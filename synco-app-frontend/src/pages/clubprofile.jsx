@@ -3,13 +3,11 @@ import { useNavigate, useParams } from "react-router-dom";
 
 import {
     ArrowLeft,
-    Check,
     ChevronDown,
     Clock3,
     Crown,
     Edit3,
     Globe2,
-    Image as ImageIcon,
     Lock,
     MoreHorizontal,
     Plus,
@@ -24,8 +22,18 @@ import {
 } from "lucide-react";
 
 
-const API = "/api";
+// =========================================================
+// API
+// =========================================================
 
+const API =
+    import.meta.env.VITE_API_URL ||
+    "https://synco-backend-vi7b.onrender.com/api";
+
+
+// =========================================================
+// HELPERS
+// =========================================================
 
 function firstDefined(...values) {
     return values.find(
@@ -47,13 +55,11 @@ function getErrorMessage(data, fallback) {
 
 
 function formatDate(value) {
-
     if (!value) {
         return "Unknown";
     }
 
     try {
-
         return new Date(value).toLocaleDateString(
             "en-IN",
             {
@@ -62,16 +68,13 @@ function formatDate(value) {
                 year: "numeric",
             }
         );
-
     } catch {
-
         return "Unknown";
     }
 }
 
 
 function getUserName(user) {
-
     if (!user) {
         return "Unknown Player";
     }
@@ -85,7 +88,6 @@ function getUserName(user) {
 
 
 function getUserInitials(user) {
-
     const name = getUserName(user);
 
     return name
@@ -101,7 +103,6 @@ function getUserInitials(user) {
 
 
 function getAvatar(user) {
-
     return firstDefined(
         user?.avatar,
         user?.avatarUrl,
@@ -111,7 +112,6 @@ function getAvatar(user) {
 
 
 function getGameName(game) {
-
     if (!game) {
         return "Unknown Game";
     }
@@ -126,7 +126,6 @@ function getGameName(game) {
 
 
 function formatRole(role) {
-
     const normalized =
         String(role || "MEMBER")
             .toUpperCase();
@@ -143,6 +142,10 @@ function formatRole(role) {
 }
 
 
+// =========================================================
+// MODAL
+// =========================================================
+
 function Modal({
     title,
     subtitle,
@@ -150,13 +153,13 @@ function Modal({
     children,
     width = "max-w-2xl",
 }) {
-
     return (
         <div
             className="fixed inset-0 z-[100] flex items-center justify-center bg-black/60 px-4 py-6 backdrop-blur-sm"
             onMouseDown={(event) => {
                 if (
-                    event.target === event.currentTarget
+                    event.target ===
+                    event.currentTarget
                 ) {
                     onClose();
                 }
@@ -196,6 +199,10 @@ function Modal({
 }
 
 
+// =========================================================
+// INPUT
+// =========================================================
+
 function Input({
     label,
     value,
@@ -204,7 +211,6 @@ function Input({
     type = "text",
     disabled = false,
 }) {
-
     return (
         <label className="block">
             <span className="mb-2 block text-[10px] font-black uppercase tracking-[0.18em] text-[#777a82]">
@@ -224,6 +230,10 @@ function Input({
 }
 
 
+// =========================================================
+// TEXTAREA
+// =========================================================
+
 function Textarea({
     label,
     value,
@@ -231,7 +241,6 @@ function Textarea({
     placeholder,
     rows = 4,
 }) {
-
     return (
         <label className="block">
             <span className="mb-2 block text-[10px] font-black uppercase tracking-[0.18em] text-[#777a82]">
@@ -250,13 +259,16 @@ function Textarea({
 }
 
 
+// =========================================================
+// SELECT
+// =========================================================
+
 function SelectField({
     label,
     value,
     onChange,
     children,
 }) {
-
     return (
         <label className="block">
             <span className="mb-2 block text-[10px] font-black uppercase tracking-[0.18em] text-[#777a82]">
@@ -282,13 +294,16 @@ function SelectField({
 }
 
 
+// =========================================================
+// TOGGLE
+// =========================================================
+
 function Toggle({
     label,
     description,
     checked,
     onChange,
 }) {
-
     return (
         <button
             type="button"
@@ -325,13 +340,24 @@ function Toggle({
 }
 
 
+// =========================================================
+// MAIN
+// =========================================================
+
 export default function ClubProfile() {
 
     const { clubId } = useParams();
     const navigate = useNavigate();
 
+
+    // =====================================================
+    // STATE
+    // =====================================================
+
     const [club, setClub] = useState(null);
-    const [members, setMembers] = useState([]);
+
+    const [members, setMembers] =
+        useState([]);
 
     const [joinRequests, setJoinRequests] =
         useState([]);
@@ -341,6 +367,7 @@ export default function ClubProfile() {
 
     const [incomingInvites, setIncomingInvites] =
         useState([]);
+
 
     const [loading, setLoading] =
         useState(true);
@@ -354,14 +381,17 @@ export default function ClubProfile() {
     const [recruitmentLoading, setRecruitmentLoading] =
         useState(false);
 
+
     const [error, setError] =
         useState("");
 
     const [success, setSuccess] =
         useState("");
 
+
     const [activeTab, setActiveTab] =
         useState("overview");
+
 
     const [inviteModal, setInviteModal] =
         useState(false);
@@ -375,14 +405,17 @@ export default function ClubProfile() {
     const [inviteSearching, setInviteSearching] =
         useState(false);
 
+
     const [actionLoading, setActionLoading] =
         useState(false);
 
     const [openMemberMenu, setOpenMemberMenu] =
         useState(null);
 
+
     const [showSettings, setShowSettings] =
         useState(false);
+
 
     const [showJoinRequestModal, setShowJoinRequestModal] =
         useState(false);
@@ -390,14 +423,17 @@ export default function ClubProfile() {
     const [joinMessage, setJoinMessage] =
         useState("");
 
+
     const [showRecruitmentForm, setShowRecruitmentForm] =
         useState(false);
 
     const [editingRecruitment, setEditingRecruitment] =
         useState(null);
 
+
     const [showIncomingInvites, setShowIncomingInvites] =
         useState(false);
+
 
     const [settingsForm, setSettingsForm] =
         useState({
@@ -413,6 +449,7 @@ export default function ClubProfile() {
             isActive: true,
         });
 
+
     const [recruitmentForm, setRecruitmentForm] =
         useState({
             title: "",
@@ -427,7 +464,7 @@ export default function ClubProfile() {
 
 
     // =====================================================
-    // HELPERS
+    // MESSAGES
     // =====================================================
 
     function clearMessages() {
@@ -456,6 +493,10 @@ export default function ClubProfile() {
     }
 
 
+    // =====================================================
+    // FETCH HELPER
+    // =====================================================
+
     async function fetchJson(
         url,
         options = {}
@@ -467,27 +508,68 @@ export default function ClubProfile() {
                 credentials: "include",
                 ...options,
                 headers: {
-                    "Content-Type": "application/json",
+                    "Content-Type":
+                        "application/json",
                     ...(options.headers || {}),
                 },
             }
         );
 
+
         const data =
-            await response.json()
+            await response
+                .json()
                 .catch(() => ({}));
 
-        if (!response.ok) {
 
+        if (!response.ok) {
             throw new Error(
                 getErrorMessage(
                     data,
-                    "Something went wrong."
+                    `Request failed with status ${response.status}.`
                 )
             );
         }
 
+
         return data;
+    }
+
+
+    // =====================================================
+    // NORMALIZE CLUB RESPONSE
+    // =====================================================
+
+    function normalizeClubResponse(data) {
+
+        if (!data?.club) {
+            return null;
+        }
+
+
+        return {
+            ...data.club,
+
+            // IMPORTANT:
+            // The backend sends these outside `club`.
+            currentUser:
+                data.currentUser ||
+                null,
+
+            canManage:
+                Boolean(
+                    data.canManage
+                ),
+
+            isOwner:
+                Boolean(
+                    data.isOwner
+                ),
+
+            pendingJoinRequest:
+                data.pendingJoinRequest ||
+                null,
+        };
     }
 
 
@@ -497,21 +579,48 @@ export default function ClubProfile() {
 
     async function loadClub() {
 
+        if (!clubId) {
+            throw new Error(
+                "Club ID is missing."
+            );
+        }
+
+
         try {
 
-            const data = await fetchJson(
-                `${API}/clubs/${clubId}`
-            );
+            const data =
+                await fetchJson(
+                    `${API}/clubs/${clubId}`
+                );
+
+
+            const normalizedClub =
+                normalizeClubResponse(
+                    data
+                );
+
+
+            if (!normalizedClub) {
+                throw new Error(
+                    "Club not found."
+                );
+            }
+
 
             setClub(
-                data.club
+                normalizedClub
             );
+
+
+            return normalizedClub;
 
         } catch (err) {
 
             showErrorMessage(
                 err.message
             );
+
+            throw err;
         }
     }
 
@@ -526,9 +635,12 @@ export default function ClubProfile() {
 
             setMembersLoading(true);
 
-            const data = await fetchJson(
-                `${API}/clubs/${clubId}/members`
-            );
+
+            const data =
+                await fetchJson(
+                    `${API}/clubs/${clubId}/members`
+                );
+
 
             setMembers(
                 data.members || []
@@ -548,24 +660,23 @@ export default function ClubProfile() {
 
 
     // =====================================================
-    // LOAD REQUESTS
+    // LOAD JOIN REQUESTS
     // =====================================================
 
     async function loadJoinRequests(
         showErrorOnFailure = false
     ) {
 
-        if (!club?.canManage && !club?.currentUser) {
-            // Permission is confirmed by the API anyway.
-        }
-
         try {
 
             setRequestsLoading(true);
 
-            const data = await fetchJson(
-                `${API}/clubs/${clubId}/join-requests`
-            );
+
+            const data =
+                await fetchJson(
+                    `${API}/clubs/${clubId}/join-requests`
+                );
+
 
             setJoinRequests(
                 data.requests || []
@@ -574,7 +685,6 @@ export default function ClubProfile() {
         } catch (err) {
 
             if (showErrorOnFailure) {
-
                 showErrorMessage(
                     err.message
                 );
@@ -599,14 +709,18 @@ export default function ClubProfile() {
 
             setRecruitmentLoading(true);
 
+
             const query =
                 includeClosed
                     ? "?includeClosed=true"
                     : "";
 
-            const data = await fetchJson(
-                `${API}/clubs/${clubId}/recruitment${query}`
-            );
+
+            const data =
+                await fetchJson(
+                    `${API}/clubs/${clubId}/recruitment${query}`
+                );
+
 
             setRecruitmentPosts(
                 data.posts || []
@@ -633,16 +747,18 @@ export default function ClubProfile() {
 
         try {
 
-            const data = await fetchJson(
-                `${API}/clubs/invites/mine`
-            );
+            const data =
+                await fetchJson(
+                    `${API}/clubs/invites/mine`
+                );
+
 
             setIncomingInvites(
                 data.invites || []
             );
 
         } catch {
-            // Invite loading is non-critical.
+            // Non-critical.
         }
     }
 
@@ -655,63 +771,99 @@ export default function ClubProfile() {
 
         let mounted = true;
 
+
         async function load() {
 
             try {
 
                 setLoading(true);
+                setError("");
+
 
                 const [
                     clubResponse,
                     membersResponse,
                     inviteResponse,
-                ] = await Promise.all([
-                    fetchJson(
-                        `${API}/clubs/${clubId}`
-                    ),
-                    fetchJson(
-                        `${API}/clubs/${clubId}/members`
-                    ),
-                    fetchJson(
-                        `${API}/clubs/invites/mine`
-                    ),
-                ]);
+                ] =
+                    await Promise.all([
+                        fetchJson(
+                            `${API}/clubs/${clubId}`
+                        ),
+
+                        fetchJson(
+                            `${API}/clubs/${clubId}/members`
+                        ),
+
+                        fetchJson(
+                            `${API}/clubs/invites/mine`
+                        ),
+                    ]);
+
 
                 if (!mounted) {
                     return;
                 }
 
+
+                const normalizedClub =
+                    normalizeClubResponse(
+                        clubResponse
+                    );
+
+
+                if (!normalizedClub) {
+                    throw new Error(
+                        "Club not found."
+                    );
+                }
+
+
                 setClub(
-                    clubResponse.club
+                    normalizedClub
                 );
+
 
                 setMembers(
-                    membersResponse.members || []
+                    membersResponse.members ||
+                    []
                 );
 
+
                 setIncomingInvites(
-                    inviteResponse.invites || []
+                    inviteResponse.invites ||
+                    []
                 );
 
             } catch (err) {
 
                 if (mounted) {
 
+                    setClub(null);
+
                     setError(
-                        err.message
+                        err.message ||
+                        "Unable to load club."
                     );
                 }
 
             } finally {
 
                 if (mounted) {
-
                     setLoading(false);
                 }
             }
         }
 
-        load();
+
+        if (clubId) {
+            load();
+        } else {
+            setLoading(false);
+            setError(
+                "Club ID is missing."
+            );
+        }
+
 
         return () => {
             mounted = false;
@@ -721,57 +873,47 @@ export default function ClubProfile() {
 
 
     // =====================================================
-    // LOAD RECRUITMENT WHEN TAB OPENS
-    // =====================================================
-
-    useEffect(() => {
-
-        if (
-            activeTab !== "recruitment"
-        ) {
-            return;
-        }
-
-        loadRecruitment(
-            canManage
-        );
-
-    }, [
-        activeTab,
-        clubId,
-    ]);
-
-
-    // =====================================================
-    // CURRENT USER
+    // CURRENT USER / PERMISSIONS
     // =====================================================
 
     const currentUser =
-        club?.currentUser || null;
+        club?.currentUser ||
+        null;
+
 
     const currentMembership =
         members.find(
             (member) =>
-                member.userId ===
-                currentUser?.id
+                String(
+                    member.userId
+                ) ===
+                String(
+                    currentUser?.id
+                )
         );
+
 
     const isMember =
         Boolean(
             currentMembership
         );
 
+
     const isOwner =
         Boolean(
             club?.isOwner ||
-            currentMembership?.role === "OWNER"
+            currentMembership?.role ===
+            "OWNER"
         );
+
 
     const isAdmin =
         String(
-            currentMembership?.role || ""
-        ).toUpperCase()
-        === "ADMIN";
+            currentMembership?.role ||
+            ""
+        ).toUpperCase() ===
+        "ADMIN";
+
 
     const canManage =
         Boolean(
@@ -780,13 +922,41 @@ export default function ClubProfile() {
             isAdmin
         );
 
+
     const pendingJoinRequest =
-        club?.pendingJoinRequest || null;
+        club?.pendingJoinRequest ||
+        null;
+
 
     const hasPendingRequest =
         Boolean(
             pendingJoinRequest
         );
+
+
+    // =====================================================
+    // RECRUITMENT TAB LOAD
+    // =====================================================
+
+    useEffect(() => {
+
+        if (
+            activeTab !==
+            "recruitment"
+        ) {
+            return;
+        }
+
+
+        loadRecruitment(
+            canManage
+        );
+
+    }, [
+        activeTab,
+        clubId,
+        canManage,
+    ]);
 
 
     // =====================================================
@@ -798,25 +968,27 @@ export default function ClubProfile() {
             (member) =>
                 String(
                     member.role
-                ).toUpperCase()
-                === "OWNER"
+                ).toUpperCase() ===
+                "OWNER"
         ).length;
+
 
     const adminCount =
         members.filter(
             (member) =>
                 String(
                     member.role
-                ).toUpperCase()
-                === "ADMIN"
+                ).toUpperCase() ===
+                "ADMIN"
         ).length;
+
 
     const memberCount =
         members.length;
 
 
     // =====================================================
-    // JOIN
+    // JOIN REQUEST
     // =====================================================
 
     function openJoinRequest() {
@@ -837,17 +1009,21 @@ export default function ClubProfile() {
 
             setActionLoading(true);
 
-            const data = await fetchJson(
-                `${API}/clubs/${clubId}/join`,
-                {
-                    method: "POST",
-                    body: JSON.stringify({
-                        message:
-                            joinMessage.trim()
-                            || null,
-                    }),
-                }
-            );
+
+            const data =
+                await fetchJson(
+                    `${API}/clubs/${clubId}/join`,
+                    {
+                        method: "POST",
+                        body:
+                            JSON.stringify({
+                                message:
+                                    joinMessage.trim() ||
+                                    null,
+                            }),
+                    }
+                );
+
 
             setShowJoinRequestModal(
                 false
@@ -855,7 +1031,9 @@ export default function ClubProfile() {
 
             setJoinMessage("");
 
+
             await loadClub();
+
 
             showSuccessMessage(
                 data.message ||
@@ -887,18 +1065,23 @@ export default function ClubProfile() {
             return;
         }
 
+
         try {
 
             setActionLoading(true);
 
-            const data = await fetchJson(
-                `${API}/clubs/join-requests/${pendingJoinRequest.id}/cancel`,
-                {
-                    method: "POST",
-                }
-            );
+
+            const data =
+                await fetchJson(
+                    `${API}/clubs/join-requests/${pendingJoinRequest.id}/cancel`,
+                    {
+                        method: "POST",
+                    }
+                );
+
 
             await loadClub();
+
 
             showSuccessMessage(
                 data.message ||
@@ -919,7 +1102,7 @@ export default function ClubProfile() {
 
 
     // =====================================================
-    // LOAD MANAGER REQUESTS
+    // OPEN JOIN REQUESTS
     // =====================================================
 
     async function openJoinRequests() {
@@ -930,6 +1113,7 @@ export default function ClubProfile() {
             "overview"
         );
 
+
         await loadJoinRequests(
             true
         );
@@ -937,7 +1121,7 @@ export default function ClubProfile() {
 
 
     // =====================================================
-    // APPROVE
+    // APPROVE JOIN REQUEST
     // =====================================================
 
     async function approveJoinRequest(
@@ -948,18 +1132,22 @@ export default function ClubProfile() {
 
             setActionLoading(true);
 
-            const data = await fetchJson(
-                `${API}/clubs/join-requests/${requestId}/approve`,
-                {
-                    method: "POST",
-                }
-            );
+
+            const data =
+                await fetchJson(
+                    `${API}/clubs/join-requests/${requestId}/approve`,
+                    {
+                        method: "POST",
+                    }
+                );
+
 
             await Promise.all([
                 loadClub(),
                 loadMembers(),
                 loadJoinRequests(),
             ]);
+
 
             showSuccessMessage(
                 data.message ||
@@ -980,7 +1168,7 @@ export default function ClubProfile() {
 
 
     // =====================================================
-    // REJECT
+    // REJECT JOIN REQUEST
     // =====================================================
 
     async function rejectJoinRequest(
@@ -991,14 +1179,18 @@ export default function ClubProfile() {
 
             setActionLoading(true);
 
-            const data = await fetchJson(
-                `${API}/clubs/join-requests/${requestId}/reject`,
-                {
-                    method: "POST",
-                }
-            );
+
+            const data =
+                await fetchJson(
+                    `${API}/clubs/join-requests/${requestId}/reject`,
+                    {
+                        method: "POST",
+                    }
+                );
+
 
             await loadJoinRequests();
+
 
             showSuccessMessage(
                 data.message ||
@@ -1019,7 +1211,7 @@ export default function ClubProfile() {
 
 
     // =====================================================
-    // LEAVE
+    // LEAVE CLUB
     // =====================================================
 
     async function leaveClub() {
@@ -1029,25 +1221,31 @@ export default function ClubProfile() {
                 "Are you sure you want to leave this club?"
             );
 
+
         if (!confirmed) {
             return;
         }
+
 
         try {
 
             setActionLoading(true);
 
-            const data = await fetchJson(
-                `${API}/clubs/${clubId}/leave`,
-                {
-                    method: "POST",
-                }
-            );
+
+            const data =
+                await fetchJson(
+                    `${API}/clubs/${clubId}/leave`,
+                    {
+                        method: "POST",
+                    }
+                );
+
 
             await Promise.all([
                 loadClub(),
                 loadMembers(),
             ]);
+
 
             showSuccessMessage(
                 data.message ||
@@ -1068,7 +1266,7 @@ export default function ClubProfile() {
 
 
     // =====================================================
-    // MEMBER REMOVE
+    // REMOVE MEMBER
     // =====================================================
 
     async function removeMember(
@@ -1079,18 +1277,26 @@ export default function ClubProfile() {
 
             setActionLoading(true);
 
-            const data = await fetchJson(
-                `${API}/clubs/${clubId}/members/${userId}`,
-                {
-                    method: "DELETE",
-                }
-            );
+
+            const data =
+                await fetchJson(
+                    `${API}/clubs/${clubId}/members/${userId}`,
+                    {
+                        method: "DELETE",
+                    }
+                );
+
 
             setOpenMemberMenu(
                 null
             );
 
-            await loadMembers();
+
+            await Promise.all([
+                loadMembers(),
+                loadClub(),
+            ]);
+
 
             showSuccessMessage(
                 data.message ||
@@ -1111,7 +1317,7 @@ export default function ClubProfile() {
 
 
     // =====================================================
-    // MEMBER ROLE
+    // CHANGE ROLE
     // =====================================================
 
     async function changeRole(
@@ -1123,21 +1329,27 @@ export default function ClubProfile() {
 
             setActionLoading(true);
 
-            const data = await fetchJson(
-                `${API}/clubs/${clubId}/members/${userId}/role`,
-                {
-                    method: "PATCH",
-                    body: JSON.stringify({
-                        role,
-                    }),
-                }
-            );
+
+            const data =
+                await fetchJson(
+                    `${API}/clubs/${clubId}/members/${userId}/role`,
+                    {
+                        method: "PATCH",
+                        body:
+                            JSON.stringify({
+                                role,
+                            }),
+                    }
+                );
+
 
             setOpenMemberMenu(
                 null
             );
 
+
             await loadMembers();
+
 
             showSuccessMessage(
                 data.message ||
@@ -1165,13 +1377,15 @@ export default function ClubProfile() {
 
         if (
             !inviteModal ||
-            inviteSearch.trim().length < 2
+            inviteSearch.trim().length <
+            2
         ) {
 
             setInviteResults([]);
 
             return;
         }
+
 
         const timer =
             window.setTimeout(
@@ -1183,6 +1397,7 @@ export default function ClubProfile() {
                             true
                         );
 
+
                         const data =
                             await fetchJson(
                                 `${API}/clubs/users/search?q=${encodeURIComponent(
@@ -1190,8 +1405,10 @@ export default function ClubProfile() {
                                 )}&clubId=${clubId}`
                             );
 
+
                         setInviteResults(
-                            data.users || []
+                            data.users ||
+                            []
                         );
 
                     } catch (err) {
@@ -1209,6 +1426,7 @@ export default function ClubProfile() {
                 },
                 300
             );
+
 
         return () => {
             window.clearTimeout(
@@ -1235,19 +1453,24 @@ export default function ClubProfile() {
 
             setActionLoading(true);
 
-            const data = await fetchJson(
-                `${API}/clubs/${clubId}/invites`,
-                {
-                    method: "POST",
-                    body: JSON.stringify({
-                        userId,
-                    }),
-                }
-            );
+
+            const data =
+                await fetchJson(
+                    `${API}/clubs/${clubId}/invites`,
+                    {
+                        method: "POST",
+                        body:
+                            JSON.stringify({
+                                userId,
+                            }),
+                    }
+                );
+
 
             setInviteSearch("");
 
             setInviteResults([]);
+
 
             showSuccessMessage(
                 data.message ||
@@ -1279,18 +1502,22 @@ export default function ClubProfile() {
 
             setActionLoading(true);
 
-            const data = await fetchJson(
-                `${API}/clubs/invites/${inviteId}/accept`,
-                {
-                    method: "POST",
-                }
-            );
+
+            const data =
+                await fetchJson(
+                    `${API}/clubs/invites/${inviteId}/accept`,
+                    {
+                        method: "POST",
+                    }
+                );
+
 
             await Promise.all([
                 loadInvites(),
                 loadClub(),
                 loadMembers(),
             ]);
+
 
             showSuccessMessage(
                 data.message ||
@@ -1322,14 +1549,18 @@ export default function ClubProfile() {
 
             setActionLoading(true);
 
-            const data = await fetchJson(
-                `${API}/clubs/invites/${inviteId}/decline`,
-                {
-                    method: "POST",
-                }
-            );
+
+            const data =
+                await fetchJson(
+                    `${API}/clubs/invites/${inviteId}/decline`,
+                    {
+                        method: "POST",
+                    }
+                );
+
 
             await loadInvites();
+
 
             showSuccessMessage(
                 data.message ||
@@ -1350,42 +1581,53 @@ export default function ClubProfile() {
 
 
     // =====================================================
-    // OPEN SETTINGS
+    // SETTINGS
     // =====================================================
 
     function openSettings() {
 
         setSettingsForm({
             name:
-                club?.name || "",
+                club?.name ||
+                "",
 
             tag:
-                club?.tag || "",
+                club?.tag ||
+                "",
 
             description:
-                club?.description || "",
+                club?.description ||
+                "",
 
             avatar:
-                club?.avatar || "",
+                club?.avatar ||
+                "",
 
             banner:
-                club?.banner || "",
+                club?.banner ||
+                "",
 
             region:
-                club?.region || "Global",
+                club?.region ||
+                "Global",
 
             gameId:
-                club?.gameId || "",
+                club?.gameId ||
+                "",
 
             privacy:
-                club?.privacy || "Public",
+                club?.privacy ||
+                "Public",
 
             allowMemberInvites:
-                club?.allowMemberInvites !== false,
+                club?.allowMemberInvites !==
+                false,
 
             isActive:
-                club?.isActive !== false,
+                club?.isActive !==
+                false,
         });
+
 
         setShowSettings(
             true
@@ -1393,33 +1635,70 @@ export default function ClubProfile() {
     }
 
 
-    // =====================================================
-    // SAVE SETTINGS
-    // =====================================================
-
     async function saveSettings() {
+
+        if (
+            !settingsForm.name.trim()
+        ) {
+            showErrorMessage(
+                "Club name is required."
+            );
+
+            return;
+        }
+
+
+        if (
+            !settingsForm.tag.trim()
+        ) {
+            showErrorMessage(
+                "Club tag is required."
+            );
+
+            return;
+        }
+
 
         try {
 
             setActionLoading(true);
 
-            const data = await fetchJson(
-                `${API}/clubs/${clubId}/settings`,
-                {
-                    method: "PATCH",
-                    body: JSON.stringify({
-                        ...settingsForm,
-                    }),
-                }
-            );
 
-            setClub(
-                data.club
-            );
+            const data =
+                await fetchJson(
+                    `${API}/clubs/${clubId}/settings`,
+                    {
+                        method: "PATCH",
+                        body:
+                            JSON.stringify({
+                                ...settingsForm,
+                            }),
+                    }
+                );
+
+
+            const normalized =
+                normalizeClubResponse(
+                    data
+                );
+
+
+            if (normalized) {
+                setClub(
+                    normalized
+                );
+            } else if (data.club) {
+                setClub({
+                    ...club,
+                    ...data.club,
+                });
+            }
+
 
             setShowSettings(
                 false
             );
+
 
             showSuccessMessage(
                 data.message ||
@@ -1440,7 +1719,7 @@ export default function ClubProfile() {
 
 
     // =====================================================
-    // OPEN RECRUITMENT FORM
+    // RECRUITMENT CREATE
     // =====================================================
 
     function openRecruitmentCreate() {
@@ -1449,18 +1728,22 @@ export default function ClubProfile() {
             null
         );
 
+
         setRecruitmentForm({
             title: "",
             description: "",
             gameId:
-                club?.gameId || "",
+                club?.gameId ||
+                "",
             role: "",
             rankRequirement: "",
             region:
-                club?.region || "",
+                club?.region ||
+                "",
             micRequired: false,
             status: "OPEN",
         });
+
 
         setShowRecruitmentForm(
             true
@@ -1469,7 +1752,7 @@ export default function ClubProfile() {
 
 
     // =====================================================
-    // OPEN RECRUITMENT EDIT
+    // RECRUITMENT EDIT
     // =====================================================
 
     function openRecruitmentEdit(
@@ -1480,12 +1763,15 @@ export default function ClubProfile() {
             post
         );
 
+
         setRecruitmentForm({
             title:
-                post.title || "",
+                post.title ||
+                "",
 
             description:
-                post.description || "",
+                post.description ||
+                "",
 
             gameId:
                 post.gameId ||
@@ -1493,10 +1779,12 @@ export default function ClubProfile() {
                 "",
 
             role:
-                post.role || "",
+                post.role ||
+                "",
 
             rankRequirement:
-                post.rankRequirement || "",
+                post.rankRequirement ||
+                "",
 
             region:
                 post.region ||
@@ -1513,6 +1801,7 @@ export default function ClubProfile() {
                 "OPEN",
         });
 
+
         setShowRecruitmentForm(
             true
         );
@@ -1525,33 +1814,72 @@ export default function ClubProfile() {
 
     async function saveRecruitment() {
 
+        if (
+            !recruitmentForm.title.trim()
+        ) {
+            showErrorMessage(
+                "Recruitment title is required."
+            );
+
+            return;
+        }
+
+
+        if (
+            !recruitmentForm.description.trim()
+        ) {
+            showErrorMessage(
+                "Recruitment description is required."
+            );
+
+            return;
+        }
+
+
+        if (
+            !recruitmentForm.gameId
+        ) {
+            showErrorMessage(
+                "Please select a game."
+            );
+
+            return;
+        }
+
+
         try {
 
             setActionLoading(true);
+
 
             const isEditing =
                 Boolean(
                     editingRecruitment
                 );
 
+
             const endpoint =
                 isEditing
                     ? `${API}/clubs/recruitment/${editingRecruitment.id}`
                     : `${API}/clubs/${clubId}/recruitment`;
 
-            const data = await fetchJson(
-                endpoint,
-                {
-                    method:
-                        isEditing
-                            ? "PATCH"
-                            : "POST",
 
-                    body: JSON.stringify(
-                        recruitmentForm
-                    ),
-                }
-            );
+            const data =
+                await fetchJson(
+                    endpoint,
+                    {
+                        method:
+                            isEditing
+                                ? "PATCH"
+                                : "POST",
+
+                        body:
+                            JSON.stringify(
+                                recruitmentForm
+                            ),
+                    }
+                );
+
 
             setShowRecruitmentForm(
                 false
@@ -1561,9 +1889,11 @@ export default function ClubProfile() {
                 null
             );
 
+
             await loadRecruitment(
                 canManage
             );
+
 
             showSuccessMessage(
                 data.message ||
@@ -1588,7 +1918,7 @@ export default function ClubProfile() {
 
 
     // =====================================================
-    // CLOSE / OPEN RECRUITMENT
+    // TOGGLE RECRUITMENT
     // =====================================================
 
     async function toggleRecruitment(
@@ -1599,21 +1929,27 @@ export default function ClubProfile() {
 
             setActionLoading(true);
 
+
             const action =
-                post.status === "OPEN"
+                post.status ===
+                    "OPEN"
                     ? "close"
                     : "open";
 
-            const data = await fetchJson(
-                `${API}/clubs/recruitment/${post.id}/${action}`,
-                {
-                    method: "POST",
-                }
-            );
+
+            const data =
+                await fetchJson(
+                    `${API}/clubs/recruitment/${post.id}/${action}`,
+                    {
+                        method: "POST",
+                    }
+                );
+
 
             await loadRecruitment(
                 canManage
             );
+
 
             showSuccessMessage(
                 data.message ||
@@ -1646,24 +1982,30 @@ export default function ClubProfile() {
                 "Delete this recruitment post?"
             );
 
+
         if (!confirmed) {
             return;
         }
+
 
         try {
 
             setActionLoading(true);
 
-            const data = await fetchJson(
-                `${API}/clubs/recruitment/${post.id}`,
-                {
-                    method: "DELETE",
-                }
-            );
+
+            const data =
+                await fetchJson(
+                    `${API}/clubs/recruitment/${post.id}`,
+                    {
+                        method: "DELETE",
+                    }
+                );
+
 
             await loadRecruitment(
                 canManage
             );
+
 
             showSuccessMessage(
                 data.message ||
@@ -1684,7 +2026,7 @@ export default function ClubProfile() {
 
 
     // =====================================================
-    // TAB DEFINITIONS
+    // TABS
     // =====================================================
 
     const tabs = [
@@ -1735,31 +2077,43 @@ export default function ClubProfile() {
         return (
             <div className="min-h-screen bg-[#f6f5f1] px-6 py-10">
                 <div className="mx-auto max-w-7xl animate-pulse">
+
                     <div className="h-72 rounded-3xl bg-[#e8e5dd]" />
 
                     <div className="mt-6 h-16 rounded-2xl bg-[#e8e5dd]" />
 
                     <div className="mt-6 grid gap-6 lg:grid-cols-3">
+
                         <div className="h-80 rounded-2xl bg-[#e8e5dd]" />
+
                         <div className="h-80 rounded-2xl bg-[#e8e5dd] lg:col-span-2" />
+
                     </div>
+
                 </div>
             </div>
         );
     }
 
 
+    // =====================================================
+    // ERROR / NOT FOUND
+    // =====================================================
+
     if (!club) {
 
         return (
             <div className="flex min-h-screen items-center justify-center bg-[#f6f5f1] px-6">
+
                 <div className="w-full max-w-md rounded-2xl border border-[#dedbd3] bg-white p-8 text-center shadow-sm">
+
                     <h1 className="text-xl font-black">
                         Club not found
                     </h1>
 
                     <p className="mt-2 text-sm text-[#85878e]">
-                        This club may have been removed or is no longer available.
+                        {error ||
+                            "This club may have been removed or is no longer available."}
                     </p>
 
                     <button
@@ -1771,7 +2125,9 @@ export default function ClubProfile() {
                     >
                         Back to Clubs
                     </button>
+
                 </div>
+
             </div>
         );
     }
@@ -1784,11 +2140,13 @@ export default function ClubProfile() {
     return (
         <div className="min-h-screen bg-[#f6f5f1] text-[#171717]">
 
+
             {/* =================================================
                 TOP NAV
             ================================================= */}
 
             <div className="border-b border-[#e1ded7] bg-white">
+
                 <div className="mx-auto flex max-w-7xl items-center justify-between px-4 py-4 sm:px-6 lg:px-8">
 
                     <button
@@ -1802,41 +2160,55 @@ export default function ClubProfile() {
                         Clubs
                     </button>
 
+
                     <div className="flex items-center gap-2">
 
-                        {incomingInvites.length > 0 && (
-                            <button
-                                type="button"
-                                onClick={() =>
-                                    setShowIncomingInvites(
-                                        true
-                                    )
-                                }
-                                className="relative flex items-center gap-2 rounded-xl border border-[#dedbd3] bg-white px-4 py-2.5 text-xs font-black uppercase tracking-wider transition hover:bg-[#f7f5f0]"
-                            >
-                                <UserPlus size={15} />
+                        {incomingInvites.length >
+                            0 && (
 
-                                Invitations
+                                <button
+                                    type="button"
+                                    onClick={() =>
+                                        setShowIncomingInvites(
+                                            true
+                                        )
+                                    }
+                                    className="relative flex items-center gap-2 rounded-xl border border-[#dedbd3] bg-white px-4 py-2.5 text-xs font-black uppercase tracking-wider transition hover:bg-[#f7f5f0]"
+                                >
+                                    <UserPlus
+                                        size={15}
+                                    />
 
-                                <span className="flex h-5 min-w-5 items-center justify-center rounded-full bg-[#9b8148] px-1 text-[9px] font-black text-white">
-                                    {incomingInvites.length}
-                                </span>
-                            </button>
-                        )}
+                                    Invitations
+
+                                    <span className="flex h-5 min-w-5 items-center justify-center rounded-full bg-[#9b8148] px-1 text-[9px] font-black text-white">
+                                        {
+                                            incomingInvites.length
+                                        }
+                                    </span>
+                                </button>
+                            )}
+
 
                         {canManage && (
                             <button
                                 type="button"
-                                onClick={openSettings}
+                                onClick={
+                                    openSettings
+                                }
                                 className="flex items-center gap-2 rounded-xl bg-[#171717] px-4 py-2.5 text-xs font-black uppercase tracking-wider text-white transition hover:bg-[#2b2b2b]"
                             >
-                                <Settings size={15} />
+                                <Settings
+                                    size={15}
+                                />
                                 Settings
                             </button>
                         )}
 
                     </div>
+
                 </div>
+
             </div>
 
 
@@ -1851,93 +2223,132 @@ export default function ClubProfile() {
                     <div className="relative overflow-hidden rounded-b-3xl border-x border-b border-[#e1ded7] bg-[#181818]">
 
                         {club.banner ? (
+
                             <img
                                 src={club.banner}
                                 alt=""
                                 className="absolute inset-0 h-full w-full object-cover opacity-45"
                             />
+
                         ) : (
+
                             <div className="absolute inset-0 bg-[linear-gradient(135deg,#191919_0%,#24231f_55%,#151515_100%)]" />
+
                         )}
 
+
                         <div className="absolute inset-0 bg-black/45" />
+
 
                         <div className="relative px-6 py-12 sm:px-10 lg:px-14 lg:py-16">
 
                             <div className="flex flex-col gap-8 lg:flex-row lg:items-end lg:justify-between">
 
+
                                 <div className="flex min-w-0 flex-col gap-6 sm:flex-row sm:items-center">
+
 
                                     <div className="flex h-28 w-28 shrink-0 items-center justify-center overflow-hidden rounded-3xl border border-white/15 bg-[#252525] shadow-2xl">
 
                                         {club.avatar ? (
+
                                             <img
                                                 src={club.avatar}
                                                 alt={club.name}
                                                 className="h-full w-full object-cover"
                                             />
+
                                         ) : (
+
                                             <Shield
                                                 size={46}
                                                 className="text-[#c7aa6a]"
                                             />
+
                                         )}
 
                                     </div>
+
 
                                     <div className="min-w-0">
 
                                         <div className="mb-3 flex flex-wrap items-center gap-2">
 
                                             <span className="rounded-full border border-white/15 bg-white/10 px-3 py-1 text-[9px] font-black uppercase tracking-[0.18em] text-white/80">
-                                                [{club.tag}]
+                                                [
+                                                {
+                                                    club.tag
+                                                }
+                                                ]
                                             </span>
 
+
                                             <span className="rounded-full border border-[#c7aa6a]/30 bg-[#c7aa6a]/10 px-3 py-1 text-[9px] font-black uppercase tracking-[0.18em] text-[#e0c78e]">
-                                                {club.privacy}
+                                                {
+                                                    club.privacy
+                                                }
                                             </span>
 
                                         </div>
 
+
                                         <h1 className="truncate text-3xl font-black tracking-tight text-white sm:text-5xl">
-                                            {club.name}
+                                            {
+                                                club.name
+                                            }
                                         </h1>
+
 
                                         <div className="mt-4 flex flex-wrap items-center gap-x-5 gap-y-2 text-xs font-bold text-white/65">
 
                                             <span>
-                                                {getGameName(
-                                                    club.game
-                                                )}
+                                                {
+                                                    getGameName(
+                                                        club.game
+                                                    )
+                                                }
                                             </span>
 
                                             <span className="h-1 w-1 rounded-full bg-white/30" />
 
                                             <span>
-                                                {club.region || "Global"}
+                                                {
+                                                    club.region ||
+                                                    "Global"
+                                                }
                                             </span>
 
                                             <span className="h-1 w-1 rounded-full bg-white/30" />
 
                                             <span>
-                                                {memberCount} members
+                                                {
+                                                    memberCount
+                                                }{" "}
+                                                members
                                             </span>
 
                                             <span className="h-1 w-1 rounded-full bg-white/30" />
 
                                             <span>
                                                 Since{" "}
-                                                {formatDate(
-                                                    club.createdAt
-                                                )}
+                                                {
+                                                    formatDate(
+                                                        club.createdAt
+                                                    )
+                                                }
                                             </span>
 
                                         </div>
 
+
                                         {club.description && (
+
                                             <p className="mt-5 max-w-2xl text-sm leading-6 text-white/65">
-                                                {club.description}
+                                                {
+                                                    club.description
+                                                }
                                             </p>
+
                                         )}
 
                                     </div>
@@ -1950,7 +2361,9 @@ export default function ClubProfile() {
                                     {!isMember &&
                                         !isOwner &&
                                         !hasPendingRequest &&
-                                        club.privacy !== "Private" && (
+                                        club.privacy !==
+                                        "Private" && (
+
                                             <button
                                                 type="button"
                                                 disabled={
@@ -1963,11 +2376,14 @@ export default function ClubProfile() {
                                             >
                                                 Request to Join
                                             </button>
+
                                         )}
+
 
                                     {!isMember &&
                                         !isOwner &&
                                         hasPendingRequest && (
+
                                             <>
                                                 <button
                                                     type="button"
@@ -1979,6 +2395,7 @@ export default function ClubProfile() {
                                                     />
                                                     Request Pending
                                                 </button>
+
 
                                                 <button
                                                     type="button"
@@ -1993,10 +2410,13 @@ export default function ClubProfile() {
                                                     Cancel
                                                 </button>
                                             </>
+
                                         )}
+
 
                                     {isMember &&
                                         !isOwner && (
+
                                             <button
                                                 type="button"
                                                 disabled={
@@ -2009,9 +2429,12 @@ export default function ClubProfile() {
                                             >
                                                 Leave Club
                                             </button>
+
                                         )}
 
+
                                     {canManage && (
+
                                         <button
                                             type="button"
                                             onClick={() =>
@@ -2026,6 +2449,7 @@ export default function ClubProfile() {
                                             />
                                             Invite Players
                                         </button>
+
                                     )}
 
                                 </div>
@@ -2046,21 +2470,28 @@ export default function ClubProfile() {
             ================================================= */}
 
             {(error || success) && (
+
                 <div className="mx-auto max-w-7xl px-4 pt-5 sm:px-6 lg:px-8">
 
                     {error && (
+
                         <div className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm font-semibold text-red-700">
                             {error}
                         </div>
+
                     )}
 
+
                     {success && (
+
                         <div className="rounded-xl border border-[#d9cfb7] bg-[#f8f4ea] px-4 py-3 text-sm font-semibold text-[#806a3c]">
                             {success}
                         </div>
+
                     )}
 
                 </div>
+
             )}
 
 
@@ -2072,25 +2503,30 @@ export default function ClubProfile() {
 
                 <div className="flex overflow-x-auto border-b border-[#dedbd3]">
 
-                    {tabs.map((tab) => (
+                    {tabs.map(
+                        (tab) => (
 
-                        <button
-                            key={tab.id}
-                            type="button"
-                            onClick={() =>
-                                setActiveTab(
-                                    tab.id
-                                )
-                            }
-                            className={`whitespace-nowrap border-b-2 px-5 py-3 text-[10px] font-black uppercase tracking-[0.16em] transition ${activeTab === tab.id
-                                    ? "border-[#9b8148] text-[#9b8148]"
-                                    : "border-transparent text-[#85878e] hover:text-[#222]"
-                                }`}
-                        >
-                            {tab.label}
-                        </button>
+                            <button
+                                key={tab.id}
+                                type="button"
+                                onClick={() =>
+                                    setActiveTab(
+                                        tab.id
+                                    )
+                                }
+                                className={`whitespace-nowrap border-b-2 px-5 py-3 text-[10px] font-black uppercase tracking-[0.16em] transition ${activeTab ===
+                                        tab.id
+                                        ? "border-[#9b8148] text-[#9b8148]"
+                                        : "border-transparent text-[#85878e] hover:text-[#222]"
+                                    }`}
+                            >
+                                {
+                                    tab.label
+                                }
+                            </button>
 
-                    ))}
+                        )
+                    )}
 
                 </div>
 
@@ -2098,7 +2534,7 @@ export default function ClubProfile() {
 
 
             {/* =================================================
-                CONTENT
+                MAIN
             ================================================= */}
 
             <main className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
@@ -2108,162 +2544,631 @@ export default function ClubProfile() {
                     OVERVIEW
                 ================================================= */}
 
-                {activeTab === "overview" && (
+                {activeTab ===
+                    "overview" && (
 
-                    <div className="grid gap-6 lg:grid-cols-3">
+                        <div className="grid gap-6 lg:grid-cols-3">
 
-                        <div className="space-y-6 lg:col-span-2">
-
-                            {/* ABOUT */}
-
-                            <section className="rounded-2xl border border-[#dedbd3] bg-white p-6 shadow-sm">
-
-                                <div className="flex items-center justify-between">
-
-                                    <div>
-                                        <p className="text-[10px] font-black uppercase tracking-[0.2em] text-[#9b8148]">
-                                            Club
-                                        </p>
-
-                                        <h2 className="mt-1 text-xl font-black">
-                                            About
-                                        </h2>
-                                    </div>
-
-                                    <Shield
-                                        size={19}
-                                        className="text-[#9b8148]"
-                                    />
-
-                                </div>
-
-                                <p className="mt-5 text-sm leading-7 text-[#66686e]">
-                                    {club.description ||
-                                        "This club has not added a description yet."}
-                                </p>
-
-                            </section>
+                            <div className="space-y-6 lg:col-span-2">
 
 
-                            {/* MEMBER PREVIEW */}
+                                {/* ABOUT */}
 
-                            <section className="rounded-2xl border border-[#dedbd3] bg-white p-6 shadow-sm">
-
-                                <div className="flex items-center justify-between">
-
-                                    <div>
-                                        <p className="text-[10px] font-black uppercase tracking-[0.2em] text-[#9b8148]">
-                                            Community
-                                        </p>
-
-                                        <h2 className="mt-1 text-xl font-black">
-                                            Members
-                                        </h2>
-                                    </div>
-
-                                    <button
-                                        type="button"
-                                        onClick={() =>
-                                            setActiveTab(
-                                                "members"
-                                            )
-                                        }
-                                        className="text-[10px] font-black uppercase tracking-wider text-[#9b8148]"
-                                    >
-                                        View All
-                                    </button>
-
-                                </div>
-
-
-                                <div className="mt-6 grid gap-3 sm:grid-cols-2">
-
-                                    {memberPreview.map(
-                                        (member) => {
-
-                                            const avatar =
-                                                getAvatar(
-                                                    member.user
-                                                );
-
-                                            return (
-                                                <div
-                                                    key={
-                                                        member.id
-                                                    }
-                                                    className="flex items-center gap-3 rounded-xl border border-[#ebe8e1] p-3"
-                                                >
-
-                                                    {avatar ? (
-                                                        <img
-                                                            src={
-                                                                avatar
-                                                            }
-                                                            alt=""
-                                                            className="h-11 w-11 rounded-xl object-cover"
-                                                        />
-                                                    ) : (
-                                                        <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-[#ece9e2] text-xs font-black">
-                                                            {
-                                                                getUserInitials(
-                                                                    member.user
-                                                                )
-                                                            }
-                                                        </div>
-                                                    )}
-
-                                                    <div className="min-w-0 flex-1">
-
-                                                        <p className="truncate text-sm font-black">
-                                                            {getUserName(
-                                                                member.user
-                                                            )}
-                                                        </p>
-
-                                                        <p className="mt-1 text-[10px] font-bold uppercase tracking-wider text-[#8a8b90]">
-                                                            {formatRole(
-                                                                member.role
-                                                            )}
-                                                        </p>
-
-                                                    </div>
-
-                                                </div>
-                                            );
-                                        }
-                                    )}
-
-                                    {memberPreview.length === 0 && (
-                                        <div className="col-span-full rounded-xl border border-dashed border-[#dedbd3] py-10 text-center text-xs font-bold text-[#999]">
-                                            No members yet.
-                                        </div>
-                                    )}
-
-                                </div>
-
-                            </section>
-
-
-                            {/* JOIN REQUESTS */}
-
-                            {canManage && (
                                 <section className="rounded-2xl border border-[#dedbd3] bg-white p-6 shadow-sm">
 
-                                    <div className="flex items-start justify-between">
+                                    <div className="flex items-center justify-between">
 
                                         <div>
+
                                             <p className="text-[10px] font-black uppercase tracking-[0.2em] text-[#9b8148]">
-                                                Management
+                                                Club
                                             </p>
 
                                             <h2 className="mt-1 text-xl font-black">
-                                                Join Requests
+                                                About
                                             </h2>
 
-                                            <p className="mt-1 text-xs text-[#85878e]">
-                                                Review players who want to join your club.
-                                            </p>
                                         </div>
+
+
+                                        <Shield
+                                            size={19}
+                                            className="text-[#9b8148]"
+                                        />
+
+                                    </div>
+
+
+                                    <p className="mt-5 text-sm leading-7 text-[#66686e]">
+                                        {
+                                            club.description ||
+                                            "This club has not added a description yet."
+                                        }
+                                    </p>
+
+                                </section>
+
+
+                                {/* MEMBERS PREVIEW */}
+
+                                <section className="rounded-2xl border border-[#dedbd3] bg-white p-6 shadow-sm">
+
+                                    <div className="flex items-center justify-between">
+
+                                        <div>
+
+                                            <p className="text-[10px] font-black uppercase tracking-[0.2em] text-[#9b8148]">
+                                                Community
+                                            </p>
+
+                                            <h2 className="mt-1 text-xl font-black">
+                                                Members
+                                            </h2>
+
+                                        </div>
+
+
+                                        <button
+                                            type="button"
+                                            onClick={() =>
+                                                setActiveTab(
+                                                    "members"
+                                                )
+                                            }
+                                            className="text-[10px] font-black uppercase tracking-wider text-[#9b8148]"
+                                        >
+                                            View All
+                                        </button>
+
+                                    </div>
+
+
+                                    <div className="mt-6 grid gap-3 sm:grid-cols-2">
+
+                                        {memberPreview.map(
+                                            (member) => {
+
+                                                const avatar =
+                                                    getAvatar(
+                                                        member.user
+                                                    );
+
+
+                                                return (
+
+                                                    <div
+                                                        key={
+                                                            member.id
+                                                        }
+                                                        className="flex items-center gap-3 rounded-xl border border-[#ebe8e1] p-3"
+                                                    >
+
+                                                        {avatar ? (
+
+                                                            <img
+                                                                src={
+                                                                    avatar
+                                                                }
+                                                                alt=""
+                                                                className="h-11 w-11 rounded-xl object-cover"
+                                                            />
+
+                                                        ) : (
+
+                                                            <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-[#ece9e2] text-xs font-black">
+                                                                {
+                                                                    getUserInitials(
+                                                                        member.user
+                                                                    )
+                                                                }
+                                                            </div>
+
+                                                        )}
+
+
+                                                        <div className="min-w-0 flex-1">
+
+                                                            <p className="truncate text-sm font-black">
+                                                                {
+                                                                    getUserName(
+                                                                        member.user
+                                                                    )
+                                                                }
+                                                            </p>
+
+                                                            <p className="mt-1 text-[10px] font-bold uppercase tracking-wider text-[#8a8b90]">
+                                                                {
+                                                                    formatRole(
+                                                                        member.role
+                                                                    )
+                                                                }
+                                                            </p>
+
+                                                        </div>
+
+                                                    </div>
+
+                                                );
+                                            }
+                                        )}
+
+
+                                        {memberPreview.length ===
+                                            0 && (
+
+                                                <div className="col-span-full rounded-xl border border-dashed border-[#dedbd3] py-10 text-center text-xs font-bold text-[#999]">
+                                                    No members yet.
+                                                </div>
+
+                                            )}
+
+                                    </div>
+
+                                </section>
+
+
+                                {/* JOIN REQUESTS */}
+
+                                {canManage && (
+
+                                    <section className="rounded-2xl border border-[#dedbd3] bg-white p-6 shadow-sm">
+
+                                        <div className="flex items-start justify-between">
+
+                                            <div>
+
+                                                <p className="text-[10px] font-black uppercase tracking-[0.2em] text-[#9b8148]">
+                                                    Management
+                                                </p>
+
+                                                <h2 className="mt-1 text-xl font-black">
+                                                    Join Requests
+                                                </h2>
+
+                                                <p className="mt-1 text-xs text-[#85878e]">
+                                                    Review players who want to join your club.
+                                                </p>
+
+                                            </div>
+
+
+                                            <button
+                                                type="button"
+                                                onClick={() =>
+                                                    loadJoinRequests(
+                                                        true
+                                                    )
+                                                }
+                                                className="rounded-lg border border-[#dedbd3] p-2 text-[#777] hover:bg-[#f5f3ee]"
+                                            >
+                                                <Search
+                                                    size={16}
+                                                />
+                                            </button>
+
+                                        </div>
+
+
+                                        <div className="mt-5">
+
+                                            {requestsLoading ? (
+
+                                                <div className="py-8 text-center text-xs font-bold text-[#888]">
+                                                    Loading requests...
+                                                </div>
+
+                                            ) : joinRequests.length ===
+                                                0 ? (
+
+                                                <div className="rounded-xl border border-dashed border-[#dedbd3] px-5 py-8 text-center">
+
+                                                    <UserCheck
+                                                        size={22}
+                                                        className="mx-auto text-[#aaa]"
+                                                    />
+
+                                                    <p className="mt-3 text-xs font-black uppercase tracking-wider text-[#777]">
+                                                        No pending requests
+                                                    </p>
+
+                                                </div>
+
+                                            ) : (
+
+                                                <div className="space-y-3">
+
+                                                    {joinRequests.map(
+                                                        (
+                                                            request
+                                                        ) => {
+
+                                                            const requester =
+                                                                request.user;
+
+
+                                                            return (
+
+                                                                <div
+                                                                    key={
+                                                                        request.id
+                                                                    }
+                                                                    className="rounded-xl border border-[#ebe8e1] p-4"
+                                                                >
+
+                                                                    <div className="flex items-start gap-3">
+
+                                                                        {getAvatar(
+                                                                            requester
+                                                                        ) ? (
+
+                                                                            <img
+                                                                                src={getAvatar(
+                                                                                    requester
+                                                                                )}
+                                                                                alt=""
+                                                                                className="h-11 w-11 rounded-xl object-cover"
+                                                                            />
+
+                                                                        ) : (
+
+                                                                            <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-[#ece9e2] text-xs font-black">
+                                                                                {
+                                                                                    getUserInitials(
+                                                                                        requester
+                                                                                    )
+                                                                                }
+                                                                            </div>
+
+                                                                        )}
+
+
+                                                                        <div className="min-w-0 flex-1">
+
+                                                                            <p className="text-sm font-black">
+                                                                                {
+                                                                                    getUserName(
+                                                                                        requester
+                                                                                    )
+                                                                                }
+                                                                            </p>
+
+                                                                            <p className="mt-1 text-[10px] font-bold uppercase tracking-wider text-[#929398]">
+                                                                                Requested{" "}
+                                                                                {
+                                                                                    formatDate(
+                                                                                        request.createdAt
+                                                                                    )
+                                                                                }
+                                                                            </p>
+
+
+                                                                            {request.message && (
+
+                                                                                <p className="mt-3 rounded-lg bg-[#f7f5f0] p-3 text-xs leading-5 text-[#67696f]">
+                                                                                    {
+                                                                                        request.message
+                                                                                    }
+                                                                                </p>
+
+                                                                            )}
+
+                                                                        </div>
+
+                                                                    </div>
+
+
+                                                                    <div className="mt-4 flex gap-2">
+
+                                                                        <button
+                                                                            type="button"
+                                                                            disabled={
+                                                                                actionLoading
+                                                                            }
+                                                                            onClick={() =>
+                                                                                approveJoinRequest(
+                                                                                    request.id
+                                                                                )
+                                                                            }
+                                                                            className="flex-1 rounded-lg bg-[#171717] px-4 py-2.5 text-[10px] font-black uppercase tracking-wider text-white hover:bg-[#2b2b2b] disabled:opacity-60"
+                                                                        >
+                                                                            Approve
+                                                                        </button>
+
+
+                                                                        <button
+                                                                            type="button"
+                                                                            disabled={
+                                                                                actionLoading
+                                                                            }
+                                                                            onClick={() =>
+                                                                                rejectJoinRequest(
+                                                                                    request.id
+                                                                                )
+                                                                            }
+                                                                            className="flex-1 rounded-lg border border-[#dedbd3] px-4 py-2.5 text-[10px] font-black uppercase tracking-wider text-[#555] hover:bg-[#f6f4ef] disabled:opacity-60"
+                                                                        >
+                                                                            Reject
+                                                                        </button>
+
+                                                                    </div>
+
+                                                                </div>
+
+                                                            );
+                                                        }
+                                                    )}
+
+                                                </div>
+
+                                            )}
+
+                                        </div>
+
+                                    </section>
+
+                                )}
+
+                            </div>
+
+
+                            {/* SIDEBAR */}
+
+                            <aside className="space-y-6">
+
+
+                                <section className="rounded-2xl border border-[#dedbd3] bg-white p-6 shadow-sm">
+
+                                    <p className="text-[10px] font-black uppercase tracking-[0.2em] text-[#9b8148]">
+                                        Club Info
+                                    </p>
+
+
+                                    <div className="mt-5 space-y-4">
+
+                                        <div className="flex items-center justify-between">
+                                            <span className="text-xs font-semibold text-[#85878e]">
+                                                Game
+                                            </span>
+
+                                            <span className="text-xs font-black">
+                                                {
+                                                    getGameName(
+                                                        club.game
+                                                    )
+                                                }
+                                            </span>
+                                        </div>
+
+
+                                        <div className="flex items-center justify-between">
+                                            <span className="text-xs font-semibold text-[#85878e]">
+                                                Region
+                                            </span>
+
+                                            <span className="text-xs font-black">
+                                                {
+                                                    club.region ||
+                                                    "Global"
+                                                }
+                                            </span>
+                                        </div>
+
+
+                                        <div className="flex items-center justify-between">
+                                            <span className="text-xs font-semibold text-[#85878e]">
+                                                Privacy
+                                            </span>
+
+                                            <span className="flex items-center gap-1.5 text-xs font-black">
+
+                                                {club.privacy ===
+                                                    "Private" ? (
+
+                                                    <Lock
+                                                        size={13}
+                                                    />
+
+                                                ) : (
+
+                                                    <Globe2
+                                                        size={13}
+                                                    />
+
+                                                )}
+
+                                                {
+                                                    club.privacy
+                                                }
+
+                                            </span>
+                                        </div>
+
+
+                                        <div className="flex items-center justify-between">
+                                            <span className="text-xs font-semibold text-[#85878e]">
+                                                Club Level
+                                            </span>
+
+                                            <span className="text-xs font-black">
+                                                {
+                                                    club.level ||
+                                                    club.clubLevel ||
+                                                    1
+                                                }
+                                            </span>
+                                        </div>
+
+
+                                        <div className="flex items-center justify-between">
+                                            <span className="text-xs font-semibold text-[#85878e]">
+                                                SYNCO Points
+                                            </span>
+
+                                            <span className="text-xs font-black">
+                                                {
+                                                    club.syncoPoints ||
+                                                    0
+                                                }
+                                            </span>
+                                        </div>
+
+                                    </div>
+
+                                </section>
+
+
+                                <section className="rounded-2xl border border-[#dedbd3] bg-white p-6 shadow-sm">
+
+                                    <p className="text-[10px] font-black uppercase tracking-[0.2em] text-[#9b8148]">
+                                        Statistics
+                                    </p>
+
+
+                                    <div className="mt-5 grid grid-cols-2 gap-3">
+
+
+                                        <div className="rounded-xl bg-[#f7f5f0] p-4">
+
+                                            <Users
+                                                size={16}
+                                                className="text-[#8a8a86]"
+                                            />
+
+                                            <p className="mt-3 text-2xl font-black">
+                                                {
+                                                    memberCount
+                                                }
+                                            </p>
+
+                                            <p className="mt-1 text-[9px] font-black uppercase tracking-wider text-[#898a8e]">
+                                                Members
+                                            </p>
+
+                                        </div>
+
+
+                                        <div className="rounded-xl bg-[#f7f5f0] p-4">
+
+                                            <Shield
+                                                size={16}
+                                                className="text-[#8a8a86]"
+                                            />
+
+                                            <p className="mt-3 text-2xl font-black">
+                                                {
+                                                    adminCount
+                                                }
+                                            </p>
+
+                                            <p className="mt-1 text-[9px] font-black uppercase tracking-wider text-[#898a8e]">
+                                                Admins
+                                            </p>
+
+                                        </div>
+
+
+                                        <div className="rounded-xl bg-[#f7f5f0] p-4">
+
+                                            <Crown
+                                                size={16}
+                                                className="text-[#8a8a86]"
+                                            />
+
+                                            <p className="mt-3 text-2xl font-black">
+                                                {
+                                                    ownerCount
+                                                }
+                                            </p>
+
+                                            <p className="mt-1 text-[9px] font-black uppercase tracking-wider text-[#898a8e]">
+                                                Owners
+                                            </p>
+
+                                        </div>
+
+
+                                        <div className="rounded-xl bg-[#f7f5f0] p-4">
+
+                                            <Clock3
+                                                size={16}
+                                                className="text-[#8a8a86]"
+                                            />
+
+                                            <p className="mt-3 text-sm font-black">
+                                                {
+                                                    formatDate(
+                                                        club.createdAt
+                                                    )
+                                                }
+                                            </p>
+
+                                            <p className="mt-1 text-[9px] font-black uppercase tracking-wider text-[#8a8a8e]">
+                                                Created
+                                            </p>
+
+                                        </div>
+
+                                    </div>
+
+                                </section>
+
+                            </aside>
+
+                        </div>
+
+                    )}
+
+
+                {/* =================================================
+                    MEMBERS
+                ================================================= */}
+
+                {activeTab ===
+                    "members" && (
+
+                        <section className="rounded-2xl border border-[#dedbd3] bg-white p-6 shadow-sm">
+
+                            <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+
+                                <div>
+
+                                    <p className="text-[10px] font-black uppercase tracking-[0.2em] text-[#9b8148]">
+                                        Community
+                                    </p>
+
+                                    <h2 className="mt-1 text-2xl font-black">
+                                        Club Members
+                                    </h2>
+
+                                    <p className="mt-1 text-xs text-[#85878e]">
+                                        {
+                                            memberCount
+                                        }{" "}
+                                        members in this club.
+                                    </p>
+
+                                </div>
+
+
+                                {canManage && (
+
+                                    <div className="flex gap-2">
+
+                                        <button
+                                            type="button"
+                                            onClick={() =>
+                                                setInviteModal(
+                                                    true
+                                                )
+                                            }
+                                            className="flex items-center gap-2 rounded-xl bg-[#171717] px-4 py-3 text-xs font-black uppercase tracking-wider text-white hover:bg-[#2b2b2b]"
+                                        >
+                                            <UserPlus
+                                                size={15}
+                                            />
+                                            Invite Player
+                                        </button>
+
 
                                         <button
                                             type="button"
@@ -2272,883 +3177,637 @@ export default function ClubProfile() {
                                                     true
                                                 )
                                             }
-                                            className="rounded-lg border border-[#dedbd3] p-2 text-[#777] hover:bg-[#f5f3ee]"
+                                            className="flex items-center gap-2 rounded-xl border border-[#dedbd3] px-4 py-3 text-xs font-black uppercase tracking-wider text-[#555] hover:bg-[#f7f5f0]"
                                         >
-                                            <Search
-                                                size={16}
+                                            <UserCheck
+                                                size={15}
                                             />
+                                            Requests
                                         </button>
 
                                     </div>
 
-
-                                    <div className="mt-5">
-
-                                        {requestsLoading ? (
-
-                                            <div className="py-8 text-center text-xs font-bold text-[#888]">
-                                                Loading requests...
-                                            </div>
-
-                                        ) : joinRequests.length === 0 ? (
-
-                                            <div className="rounded-xl border border-dashed border-[#dedbd3] px-5 py-8 text-center">
-
-                                                <UserCheck
-                                                    size={22}
-                                                    className="mx-auto text-[#aaa]"
-                                                />
-
-                                                <p className="mt-3 text-xs font-black uppercase tracking-wider text-[#777]">
-                                                    No pending requests
-                                                </p>
-
-                                            </div>
-
-                                        ) : (
-
-                                            <div className="space-y-3">
-
-                                                {joinRequests.map(
-                                                    (request) => {
-
-                                                        const requester =
-                                                            request.user;
-
-                                                        return (
-                                                            <div
-                                                                key={
-                                                                    request.id
-                                                                }
-                                                                className="rounded-xl border border-[#ebe8e1] p-4"
-                                                            >
-
-                                                                <div className="flex items-start gap-3">
-
-                                                                    {getAvatar(
-                                                                        requester
-                                                                    ) ? (
-                                                                        <img
-                                                                            src={getAvatar(
-                                                                                requester
-                                                                            )}
-                                                                            alt=""
-                                                                            className="h-11 w-11 rounded-xl object-cover"
-                                                                        />
-                                                                    ) : (
-                                                                        <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-[#ece9e2] text-xs font-black">
-                                                                            {getUserInitials(
-                                                                                requester
-                                                                            )}
-                                                                        </div>
-                                                                    )}
-
-                                                                    <div className="min-w-0 flex-1">
-
-                                                                        <p className="text-sm font-black">
-                                                                            {getUserName(
-                                                                                requester
-                                                                            )}
-                                                                        </p>
-
-                                                                        <p className="mt-1 text-[10px] font-bold uppercase tracking-wider text-[#929398]">
-                                                                            Requested{" "}
-                                                                            {formatDate(
-                                                                                request.createdAt
-                                                                            )}
-                                                                        </p>
-
-                                                                        {request.message && (
-                                                                            <p className="mt-3 rounded-lg bg-[#f7f5f0] p-3 text-xs leading-5 text-[#67696f]">
-                                                                                {request.message}
-                                                                            </p>
-                                                                        )}
-
-                                                                    </div>
-
-                                                                </div>
-
-
-                                                                <div className="mt-4 flex gap-2">
-
-                                                                    <button
-                                                                        type="button"
-                                                                        disabled={
-                                                                            actionLoading
-                                                                        }
-                                                                        onClick={() =>
-                                                                            approveJoinRequest(
-                                                                                request.id
-                                                                            )
-                                                                        }
-                                                                        className="flex-1 rounded-lg bg-[#171717] px-4 py-2.5 text-[10px] font-black uppercase tracking-wider text-white hover:bg-[#2b2b2b] disabled:opacity-60"
-                                                                    >
-                                                                        Approve
-                                                                    </button>
-
-                                                                    <button
-                                                                        type="button"
-                                                                        disabled={
-                                                                            actionLoading
-                                                                        }
-                                                                        onClick={() =>
-                                                                            rejectJoinRequest(
-                                                                                request.id
-                                                                            )
-                                                                        }
-                                                                        className="flex-1 rounded-lg border border-[#dedbd3] px-4 py-2.5 text-[10px] font-black uppercase tracking-wider text-[#555] hover:bg-[#f6f4ef] disabled:opacity-60"
-                                                                    >
-                                                                        Reject
-                                                                    </button>
-
-                                                                </div>
-
-                                                            </div>
-                                                        );
-                                                    }
-                                                )}
-
-                                            </div>
-                                        )}
-
-                                    </div>
-
-                                </section>
-                            )}
-
-                        </div>
-
-
-                        {/* SIDEBAR */}
-
-                        <aside className="space-y-6">
-
-                            <section className="rounded-2xl border border-[#dedbd3] bg-white p-6 shadow-sm">
-
-                                <p className="text-[10px] font-black uppercase tracking-[0.2em] text-[#9b8148]">
-                                    Club Info
-                                </p>
-
-                                <div className="mt-5 space-y-4">
-
-                                    <div className="flex items-center justify-between">
-                                        <span className="text-xs font-semibold text-[#85878e]">
-                                            Game
-                                        </span>
-
-                                        <span className="text-xs font-black">
-                                            {getGameName(
-                                                club.game
-                                            )}
-                                        </span>
-                                    </div>
-
-                                    <div className="flex items-center justify-between">
-                                        <span className="text-xs font-semibold text-[#85878e]">
-                                            Region
-                                        </span>
-
-                                        <span className="text-xs font-black">
-                                            {club.region ||
-                                                "Global"}
-                                        </span>
-                                    </div>
-
-                                    <div className="flex items-center justify-between">
-                                        <span className="text-xs font-semibold text-[#85878e]">
-                                            Privacy
-                                        </span>
-
-                                        <span className="flex items-center gap-1.5 text-xs font-black">
-                                            {club.privacy ===
-                                                "Private" ? (
-                                                <Lock
-                                                    size={13}
-                                                />
-                                            ) : (
-                                                <Globe2
-                                                    size={13}
-                                                />
-                                            )}
-
-                                            {club.privacy}
-                                        </span>
-                                    </div>
-
-                                    <div className="flex items-center justify-between">
-                                        <span className="text-xs font-semibold text-[#85878e]">
-                                            Club Level
-                                        </span>
-
-                                        <span className="text-xs font-black">
-                                            {club.level ||
-                                                club.clubLevel ||
-                                                1}
-                                        </span>
-                                    </div>
-
-                                    <div className="flex items-center justify-between">
-                                        <span className="text-xs font-semibold text-[#85878e]">
-                                            SYNCO Points
-                                        </span>
-
-                                        <span className="text-xs font-black">
-                                            {club.syncoPoints ||
-                                                0}
-                                        </span>
-                                    </div>
-
-                                </div>
-
-                            </section>
-
-
-                            <section className="rounded-2xl border border-[#dedbd3] bg-white p-6 shadow-sm">
-
-                                <p className="text-[10px] font-black uppercase tracking-[0.2em] text-[#9b8148]">
-                                    Statistics
-                                </p>
-
-                                <div className="mt-5 grid grid-cols-2 gap-3">
-
-                                    <div className="rounded-xl bg-[#f7f5f0] p-4">
-                                        <Users
-                                            size={16}
-                                            className="text-[#8a8a86]"
-                                        />
-
-                                        <p className="mt-3 text-2xl font-black">
-                                            {memberCount}
-                                        </p>
-
-                                        <p className="mt-1 text-[9px] font-black uppercase tracking-wider text-[#898a8e]">
-                                            Members
-                                        </p>
-                                    </div>
-
-                                    <div className="rounded-xl bg-[#f7f5f0] p-4">
-                                        <Shield
-                                            size={16}
-                                            className="text-[#8a8a86]"
-                                        />
-
-                                        <p className="mt-3 text-2xl font-black">
-                                            {adminCount}
-                                        </p>
-
-                                        <p className="mt-1 text-[9px] font-black uppercase tracking-wider text-[#898a8e]">
-                                            Admins
-                                        </p>
-                                    </div>
-
-                                    <div className="rounded-xl bg-[#f7f5f0] p-4">
-                                        <Crown
-                                            size={16}
-                                            className="text-[#8a8a86]"
-                                        />
-
-                                        <p className="mt-3 text-2xl font-black">
-                                            {ownerCount}
-                                        </p>
-
-                                        <p className="mt-1 text-[9px] font-black uppercase tracking-wider text-[#898a8e]">
-                                            Owners
-                                        </p>
-                                    </div>
-
-                                    <div className="rounded-xl bg-[#f7f5f0] p-4">
-                                        <Clock3
-                                            size={16}
-                                            className="text-[#8a8a86]"
-                                        />
-
-                                        <p className="mt-3 text-sm font-black">
-                                            {formatDate(
-                                                club.createdAt
-                                            )}
-                                        </p>
-
-                                        <p className="mt-1 text-[9px] font-black uppercase tracking-wider text-[#898a8a8e]">
-                                            Created
-                                        </p>
-                                    </div>
-
-                                </div>
-
-                            </section>
-
-                        </aside>
-
-                    </div>
-                )}
-
-
-                {/* =================================================
-                    MEMBERS
-                ================================================= */}
-
-                {activeTab === "members" && (
-
-                    <section className="rounded-2xl border border-[#dedbd3] bg-white p-6 shadow-sm">
-
-                        <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-
-                            <div>
-                                <p className="text-[10px] font-black uppercase tracking-[0.2em] text-[#9b8148]">
-                                    Community
-                                </p>
-
-                                <h2 className="mt-1 text-2xl font-black">
-                                    Club Members
-                                </h2>
-
-                                <p className="mt-1 text-xs text-[#85878e]">
-                                    {memberCount} members in this club.
-                                </p>
-                            </div>
-
-                            {canManage && (
-                                <div className="flex gap-2">
-
-                                    <button
-                                        type="button"
-                                        onClick={() =>
-                                            setInviteModal(
-                                                true
-                                            )
-                                        }
-                                        className="flex items-center gap-2 rounded-xl bg-[#171717] px-4 py-3 text-xs font-black uppercase tracking-wider text-white hover:bg-[#2b2b2b]"
-                                    >
-                                        <UserPlus
-                                            size={15}
-                                        />
-                                        Invite Player
-                                    </button>
-
-                                    <button
-                                        type="button"
-                                        onClick={() =>
-                                            loadJoinRequests(
-                                                true
-                                            )
-                                        }
-                                        className="flex items-center gap-2 rounded-xl border border-[#dedbd3] px-4 py-3 text-xs font-black uppercase tracking-wider text-[#555] hover:bg-[#f7f5f0]"
-                                    >
-                                        <UserCheck
-                                            size={15}
-                                        />
-                                        Requests
-                                    </button>
-
-                                </div>
-                            )}
-
-                        </div>
-
-
-                        {membersLoading ? (
-
-                            <div className="py-16 text-center text-xs font-bold text-[#888]">
-                                Loading members...
-                            </div>
-
-                        ) : (
-
-                            <div className="mt-8 grid gap-3 md:grid-cols-2 xl:grid-cols-3">
-
-                                {members.map(
-                                    (member) => {
-
-                                        const avatar =
-                                            getAvatar(
-                                                member.user
-                                            );
-
-                                        const memberIsOwner =
-                                            String(
-                                                member.role
-                                            ).toUpperCase()
-                                            === "OWNER";
-
-                                        return (
-                                            <div
-                                                key={
-                                                    member.id
-                                                }
-                                                className="relative rounded-2xl border border-[#ebe8e1] p-4"
-                                            >
-
-                                                <div className="flex items-center gap-3">
-
-                                                    {avatar ? (
-                                                        <img
-                                                            src={
-                                                                avatar
-                                                            }
-                                                            alt=""
-                                                            className="h-12 w-12 rounded-xl object-cover"
-                                                        />
-                                                    ) : (
-                                                        <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-[#ece9e2] text-xs font-black">
-                                                            {getUserInitials(
-                                                                member.user
-                                                            )}
-                                                        </div>
-                                                    )}
-
-                                                    <div className="min-w-0 flex-1">
-
-                                                        <p className="truncate text-sm font-black">
-                                                            {getUserName(
-                                                                member.user
-                                                            )}
-                                                        </p>
-
-                                                        <p className="mt-1 text-[10px] font-bold uppercase tracking-wider text-[#88898e]">
-                                                            {formatRole(
-                                                                member.role
-                                                            )}
-                                                        </p>
-
-                                                    </div>
-
-                                                    {memberIsOwner ? (
-                                                        <Crown
-                                                            size={16}
-                                                            className="text-[#9b8148]"
-                                                        />
-                                                    ) : (
-                                                        canManage &&
-                                                        member.userId !== currentUser?.id && (
-                                                            <button
-                                                                type="button"
-                                                                onClick={() =>
-                                                                    setOpenMemberMenu(
-                                                                        openMemberMenu === member.id
-                                                                            ? null
-                                                                            : member.id
-                                                                    )
-                                                                }
-                                                                className="flex h-8 w-8 items-center justify-center rounded-lg hover:bg-[#f4f2ed]"
-                                                            >
-                                                                <MoreHorizontal
-                                                                    size={17}
-                                                                />
-                                                            </button>
-                                                        )
-                                                    )}
-
-                                                </div>
-
-
-                                                {openMemberMenu ===
-                                                    member.id && (
-                                                        <div className="absolute right-4 top-14 z-20 w-44 rounded-xl border border-[#dedbd3] bg-white p-2 shadow-xl">
-
-                                                            <button
-                                                                type="button"
-                                                                onClick={() =>
-                                                                    changeRole(
-                                                                        member.userId,
-                                                                        member.role === "ADMIN"
-                                                                            ? "MEMBER"
-                                                                            : "ADMIN"
-                                                                    )
-                                                                }
-                                                                className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-[10px] font-black uppercase tracking-wider hover:bg-[#f6f4ef]"
-                                                            >
-                                                                <Shield
-                                                                    size={14}
-                                                                />
-
-                                                                {member.role ===
-                                                                    "ADMIN"
-                                                                    ? "Remove Admin"
-                                                                    : "Make Admin"}
-                                                            </button>
-
-                                                            <button
-                                                                type="button"
-                                                                onClick={() =>
-                                                                    removeMember(
-                                                                        member.userId
-                                                                    )
-                                                                }
-                                                                className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-[10px] font-black uppercase tracking-wider text-red-600 hover:bg-red-50"
-                                                            >
-                                                                <Trash2
-                                                                    size={14}
-                                                                />
-
-                                                                Remove
-                                                            </button>
-
-                                                        </div>
-                                                    )}
-
-                                            </div>
-                                        );
-                                    }
                                 )}
 
                             </div>
 
-                        )}
 
-                    </section>
-                )}
+                            {membersLoading ? (
+
+                                <div className="py-16 text-center text-xs font-bold text-[#888]">
+                                    Loading members...
+                                </div>
+
+                            ) : (
+
+                                <div className="mt-8 grid gap-3 md:grid-cols-2 xl:grid-cols-3">
+
+                                    {members.map(
+                                        (member) => {
+
+                                            const avatar =
+                                                getAvatar(
+                                                    member.user
+                                                );
+
+
+                                            const memberIsOwner =
+                                                String(
+                                                    member.role
+                                                ).toUpperCase() ===
+                                                "OWNER";
+
+
+                                            return (
+
+                                                <div
+                                                    key={
+                                                        member.id
+                                                    }
+                                                    className="relative rounded-2xl border border-[#ebe8e1] p-4"
+                                                >
+
+                                                    <div className="flex items-center gap-3">
+
+                                                        {avatar ? (
+
+                                                            <img
+                                                                src={
+                                                                    avatar
+                                                                }
+                                                                alt=""
+                                                                className="h-12 w-12 rounded-xl object-cover"
+                                                            />
+
+                                                        ) : (
+
+                                                            <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-[#ece9e2] text-xs font-black">
+                                                                {
+                                                                    getUserInitials(
+                                                                        member.user
+                                                                    )
+                                                                }
+                                                            </div>
+
+                                                        )}
+
+
+                                                        <div className="min-w-0 flex-1">
+
+                                                            <p className="truncate text-sm font-black">
+                                                                {
+                                                                    getUserName(
+                                                                        member.user
+                                                                    )
+                                                                }
+                                                            </p>
+
+                                                            <p className="mt-1 text-[10px] font-bold uppercase tracking-wider text-[#88898e]">
+                                                                {
+                                                                    formatRole(
+                                                                        member.role
+                                                                    )
+                                                                }
+                                                            </p>
+
+                                                        </div>
+
+
+                                                        {memberIsOwner ? (
+
+                                                            <Crown
+                                                                size={16}
+                                                                className="text-[#9b8148]"
+                                                            />
+
+                                                        ) : (
+
+                                                            canManage &&
+                                                            String(
+                                                                member.userId
+                                                            ) !==
+                                                            String(
+                                                                currentUser?.id
+                                                            ) && (
+
+                                                                <button
+                                                                    type="button"
+                                                                    onClick={() =>
+                                                                        setOpenMemberMenu(
+                                                                            openMemberMenu ===
+                                                                                member.id
+                                                                                ? null
+                                                                                : member.id
+                                                                        )
+                                                                    }
+                                                                    className="flex h-8 w-8 items-center justify-center rounded-lg hover:bg-[#f4f2ed]"
+                                                                >
+                                                                    <MoreHorizontal
+                                                                        size={17}
+                                                                    />
+                                                                </button>
+
+                                                            )
+
+                                                        )}
+
+                                                    </div>
+
+
+                                                    {openMemberMenu ===
+                                                        member.id && (
+
+                                                            <div className="absolute right-4 top-14 z-20 w-44 rounded-xl border border-[#dedbd3] bg-white p-2 shadow-xl">
+
+                                                                <button
+                                                                    type="button"
+                                                                    onClick={() =>
+                                                                        changeRole(
+                                                                            member.userId,
+                                                                            String(
+                                                                                member.role
+                                                                            ).toUpperCase() ===
+                                                                                "ADMIN"
+                                                                                ? "MEMBER"
+                                                                                : "ADMIN"
+                                                                        )
+                                                                    }
+                                                                    className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-[10px] font-black uppercase tracking-wider hover:bg-[#f6f4ef]"
+                                                                >
+
+                                                                    <Shield
+                                                                        size={14}
+                                                                    />
+
+                                                                    {String(
+                                                                        member.role
+                                                                    ).toUpperCase() ===
+                                                                        "ADMIN"
+                                                                        ? "Remove Admin"
+                                                                        : "Make Admin"}
+
+                                                                </button>
+
+
+                                                                <button
+                                                                    type="button"
+                                                                    onClick={() =>
+                                                                        removeMember(
+                                                                            member.userId
+                                                                        )
+                                                                    }
+                                                                    className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-[10px] font-black uppercase tracking-wider text-red-600 hover:bg-red-50"
+                                                                >
+
+                                                                    <Trash2
+                                                                        size={14}
+                                                                    />
+
+                                                                    Remove
+
+                                                                </button>
+
+                                                            </div>
+
+                                                        )}
+
+                                                </div>
+
+                                            );
+                                        }
+                                    )}
+
+                                </div>
+
+                            )}
+
+                        </section>
+
+                    )}
 
 
                 {/* =================================================
                     RECRUITMENT
                 ================================================= */}
 
-                {activeTab === "recruitment" && (
+                {activeTab ===
+                    "recruitment" && (
 
-                    <section className="rounded-2xl border border-[#dedbd3] bg-white p-6 shadow-sm">
+                        <section className="rounded-2xl border border-[#dedbd3] bg-white p-6 shadow-sm">
 
-                        <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+                            <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
 
-                            <div>
-                                <p className="text-[10px] font-black uppercase tracking-[0.2em] text-[#9b8148]">
-                                    Team Building
-                                </p>
+                                <div>
 
-                                <h2 className="mt-1 text-2xl font-black">
-                                    Recruitment
-                                </h2>
+                                    <p className="text-[10px] font-black uppercase tracking-[0.2em] text-[#9b8148]">
+                                        Team Building
+                                    </p>
 
-                                <p className="mt-1 text-xs text-[#85878e]">
-                                    Find players for your club.
-                                </p>
-                            </div>
+                                    <h2 className="mt-1 text-2xl font-black">
+                                        Recruitment
+                                    </h2>
 
-                            {canManage && (
-                                <button
-                                    type="button"
-                                    onClick={
-                                        openRecruitmentCreate
-                                    }
-                                    className="flex items-center gap-2 rounded-xl bg-[#171717] px-4 py-3 text-xs font-black uppercase tracking-wider text-white hover:bg-[#2b2b2b]"
-                                >
-                                    <Plus
-                                        size={15}
-                                    />
-                                    Create Recruitment Post
-                                </button>
-                            )}
+                                    <p className="mt-1 text-xs text-[#85878e]">
+                                        Find players for your club.
+                                    </p>
 
-                        </div>
+                                </div>
 
-
-                        {recruitmentLoading ? (
-
-                            <div className="py-16 text-center text-xs font-bold text-[#888]">
-                                Loading recruitment...
-                            </div>
-
-                        ) : recruitmentPosts.length === 0 ? (
-
-                            <div className="mt-8 rounded-2xl border border-dashed border-[#dedbd3] px-6 py-16 text-center">
-
-                                <UserPlus
-                                    size={28}
-                                    className="mx-auto text-[#aaa39a]"
-                                />
-
-                                <h3 className="mt-4 text-sm font-black uppercase tracking-wider">
-                                    No recruitment posts
-                                </h3>
-
-                                <p className="mx-auto mt-2 max-w-md text-xs leading-5 text-[#8b8c91]">
-                                    {canManage
-                                        ? "Create a recruitment post to tell players exactly who your club is looking for."
-                                        : "This club is not currently recruiting."}
-                                </p>
 
                                 {canManage && (
+
                                     <button
                                         type="button"
                                         onClick={
                                             openRecruitmentCreate
                                         }
-                                        className="mt-5 rounded-xl bg-[#171717] px-5 py-3 text-[10px] font-black uppercase tracking-wider text-white"
+                                        className="flex items-center gap-2 rounded-xl bg-[#171717] px-4 py-3 text-xs font-black uppercase tracking-wider text-white hover:bg-[#2b2b2b]"
                                     >
-                                        Create Post
+                                        <Plus
+                                            size={15}
+                                        />
+                                        Create Recruitment Post
                                     </button>
+
                                 )}
 
                             </div>
 
-                        ) : (
 
-                            <div className="mt-8 grid gap-4 lg:grid-cols-2">
+                            {recruitmentLoading ? (
 
-                                {recruitmentPosts.map(
-                                    (post) => (
+                                <div className="py-16 text-center text-xs font-bold text-[#888]">
+                                    Loading recruitment...
+                                </div>
 
-                                        <article
-                                            key={
-                                                post.id
+                            ) : recruitmentPosts.length ===
+                                0 ? (
+
+                                <div className="mt-8 rounded-2xl border border-dashed border-[#dedbd3] px-6 py-16 text-center">
+
+                                    <UserPlus
+                                        size={28}
+                                        className="mx-auto text-[#aaa39a]"
+                                    />
+
+                                    <h3 className="mt-4 text-sm font-black uppercase tracking-wider">
+                                        No recruitment posts
+                                    </h3>
+
+                                    <p className="mx-auto mt-2 max-w-md text-xs leading-5 text-[#8b8c91]">
+                                        {canManage
+                                            ? "Create a recruitment post to tell players exactly who your club is looking for."
+                                            : "This club is not currently recruiting."}
+                                    </p>
+
+
+                                    {canManage && (
+
+                                        <button
+                                            type="button"
+                                            onClick={
+                                                openRecruitmentCreate
                                             }
-                                            className="rounded-2xl border border-[#ebe8e1] p-5"
+                                            className="mt-5 rounded-xl bg-[#171717] px-5 py-3 text-[10px] font-black uppercase tracking-wider text-white"
                                         >
+                                            Create Post
+                                        </button>
 
-                                            <div className="flex items-start justify-between gap-4">
+                                    )}
 
-                                                <div className="min-w-0">
+                                </div>
 
-                                                    <div className="flex flex-wrap items-center gap-2">
+                            ) : (
 
-                                                        <span
-                                                            className={`rounded-full px-2.5 py-1 text-[8px] font-black uppercase tracking-wider ${post.status ===
-                                                                    "OPEN"
-                                                                    ? "bg-[#edf5ee] text-[#47704e]"
-                                                                    : "bg-[#f0eeea] text-[#777]"
-                                                                }`}
-                                                        >
-                                                            {post.status}
-                                                        </span>
+                                <div className="mt-8 grid gap-4 lg:grid-cols-2">
 
-                                                        {post.role && (
-                                                            <span className="rounded-full bg-[#f7f5f0] px-2.5 py-1 text-[8px] font-black uppercase tracking-wider text-[#777]">
-                                                                {post.role}
+                                    {recruitmentPosts.map(
+                                        (post) => (
+
+                                            <article
+                                                key={
+                                                    post.id
+                                                }
+                                                className="rounded-2xl border border-[#ebe8e1] p-5"
+                                            >
+
+                                                <div className="flex items-start justify-between gap-4">
+
+                                                    <div className="min-w-0">
+
+                                                        <div className="flex flex-wrap items-center gap-2">
+
+                                                            <span
+                                                                className={`rounded-full px-2.5 py-1 text-[8px] font-black uppercase tracking-wider ${post.status ===
+                                                                        "OPEN"
+                                                                        ? "bg-[#edf5ee] text-[#47704e]"
+                                                                        : "bg-[#f0eeea] text-[#777]"
+                                                                    }`}
+                                                            >
+                                                                {
+                                                                    post.status
+                                                                }
                                                             </span>
-                                                        )}
+
+
+                                                            {post.role && (
+
+                                                                <span className="rounded-full bg-[#f7f5f0] px-2.5 py-1 text-[8px] font-black uppercase tracking-wider text-[#777]">
+                                                                    {
+                                                                        post.role
+                                                                    }
+                                                                </span>
+
+                                                            )}
+
+                                                        </div>
+
+
+                                                        <h3 className="mt-3 text-lg font-black">
+                                                            {
+                                                                post.title
+                                                            }
+                                                        </h3>
 
                                                     </div>
 
-                                                    <h3 className="mt-3 text-lg font-black">
-                                                        {post.title}
-                                                    </h3>
+
+                                                    {canManage && (
+
+                                                        <div className="flex shrink-0 gap-1">
+
+                                                            <button
+                                                                type="button"
+                                                                onClick={() =>
+                                                                    openRecruitmentEdit(
+                                                                        post
+                                                                    )
+                                                                }
+                                                                className="flex h-8 w-8 items-center justify-center rounded-lg border border-[#dedbd3] hover:bg-[#f6f4ef]"
+                                                            >
+                                                                <Edit3
+                                                                    size={14}
+                                                                />
+                                                            </button>
+
+
+                                                            <button
+                                                                type="button"
+                                                                onClick={() =>
+                                                                    deleteRecruitment(
+                                                                        post
+                                                                    )
+                                                                }
+                                                                className="flex h-8 w-8 items-center justify-center rounded-lg border border-red-200 text-red-600 hover:bg-red-50"
+                                                            >
+                                                                <Trash2
+                                                                    size={14}
+                                                                />
+                                                            </button>
+
+                                                        </div>
+
+                                                    )}
 
                                                 </div>
+
+
+                                                <p className="mt-4 text-sm leading-6 text-[#66686e]">
+                                                    {
+                                                        post.description
+                                                    }
+                                                </p>
+
+
+                                                <div className="mt-5 grid grid-cols-2 gap-2">
+
+                                                    <div className="rounded-xl bg-[#f7f5f0] p-3">
+
+                                                        <p className="text-[8px] font-black uppercase tracking-wider text-[#999]">
+                                                            Game
+                                                        </p>
+
+                                                        <p className="mt-1 text-xs font-black">
+                                                            {
+                                                                getGameName(
+                                                                    post.game
+                                                                )
+                                                            }
+                                                        </p>
+
+                                                    </div>
+
+
+                                                    <div className="rounded-xl bg-[#f7f5f0] p-3">
+
+                                                        <p className="text-[8px] font-black uppercase tracking-wider text-[#999]">
+                                                            Rank
+                                                        </p>
+
+                                                        <p className="mt-1 text-xs font-black">
+                                                            {
+                                                                post.rankRequirement ||
+                                                                "Any"
+                                                            }
+                                                        </p>
+
+                                                    </div>
+
+
+                                                    <div className="rounded-xl bg-[#f7f5f0] p-3">
+
+                                                        <p className="text-[8px] font-black uppercase tracking-wider text-[#999]">
+                                                            Region
+                                                        </p>
+
+                                                        <p className="mt-1 text-xs font-black">
+                                                            {
+                                                                post.region ||
+                                                                "Any"
+                                                            }
+                                                        </p>
+
+                                                    </div>
+
+
+                                                    <div className="rounded-xl bg-[#f7f5f0] p-3">
+
+                                                        <p className="text-[8px] font-black uppercase tracking-wider text-[#999]">
+                                                            Mic
+                                                        </p>
+
+                                                        <p className="mt-1 text-xs font-black">
+                                                            {post.micRequired
+                                                                ? "Required"
+                                                                : "Optional"}
+                                                        </p>
+
+                                                    </div>
+
+                                                </div>
+
 
                                                 {canManage && (
-                                                    <div className="flex shrink-0 gap-1">
 
-                                                        <button
-                                                            type="button"
-                                                            onClick={() =>
-                                                                openRecruitmentEdit(
-                                                                    post
-                                                                )
-                                                            }
-                                                            className="flex h-8 w-8 items-center justify-center rounded-lg border border-[#dedbd3] hover:bg-[#f6f4ef]"
-                                                        >
-                                                            <Edit3
-                                                                size={14}
-                                                            />
-                                                        </button>
+                                                    <button
+                                                        type="button"
+                                                        onClick={() =>
+                                                            toggleRecruitment(
+                                                                post
+                                                            )
+                                                        }
+                                                        disabled={
+                                                            actionLoading
+                                                        }
+                                                        className="mt-4 flex w-full items-center justify-center gap-2 rounded-xl border border-[#dedbd3] px-4 py-2.5 text-[10px] font-black uppercase tracking-wider text-[#555] hover:bg-[#f6f4ef] disabled:opacity-60"
+                                                    >
+                                                        {post.status ===
+                                                            "OPEN"
+                                                            ? "Close Recruitment"
+                                                            : "Reopen Recruitment"}
+                                                    </button>
 
-                                                        <button
-                                                            type="button"
-                                                            onClick={() =>
-                                                                deleteRecruitment(
-                                                                    post
-                                                                )
-                                                            }
-                                                            className="flex h-8 w-8 items-center justify-center rounded-lg border border-red-200 text-red-600 hover:bg-red-50"
-                                                        >
-                                                            <Trash2
-                                                                size={14}
-                                                            />
-                                                        </button>
-
-                                                    </div>
                                                 )}
 
-                                            </div>
+                                            </article>
 
+                                        )
+                                    )}
 
-                                            <p className="mt-4 text-sm leading-6 text-[#66686e]">
-                                                {post.description}
-                                            </p>
+                                </div>
 
+                            )}
 
-                                            <div className="mt-5 grid grid-cols-2 gap-2">
+                        </section>
 
-                                                <div className="rounded-xl bg-[#f7f5f0] p-3">
-
-                                                    <p className="text-[8px] font-black uppercase tracking-wider text-[#999]">
-                                                        Game
-                                                    </p>
-
-                                                    <p className="mt-1 text-xs font-black">
-                                                        {getGameName(
-                                                            post.game
-                                                        )}
-                                                    </p>
-
-                                                </div>
-
-                                                <div className="rounded-xl bg-[#f7f5f0] p-3">
-
-                                                    <p className="text-[8px] font-black uppercase tracking-wider text-[#999]">
-                                                        Rank
-                                                    </p>
-
-                                                    <p className="mt-1 text-xs font-black">
-                                                        {post.rankRequirement ||
-                                                            "Any"}
-                                                    </p>
-
-                                                </div>
-
-                                                <div className="rounded-xl bg-[#f7f5f0] p-3">
-
-                                                    <p className="text-[8px] font-black uppercase tracking-wider text-[#999]">
-                                                        Region
-                                                    </p>
-
-                                                    <p className="mt-1 text-xs font-black">
-                                                        {post.region ||
-                                                            "Any"}
-                                                    </p>
-
-                                                </div>
-
-                                                <div className="rounded-xl bg-[#f7f5f0] p-3">
-
-                                                    <p className="text-[8px] font-black uppercase tracking-wider text-[#999]">
-                                                        Mic
-                                                    </p>
-
-                                                    <p className="mt-1 text-xs font-black">
-                                                        {post.micRequired
-                                                            ? "Required"
-                                                            : "Optional"}
-                                                    </p>
-
-                                                </div>
-
-                                            </div>
-
-
-                                            {canManage && (
-                                                <button
-                                                    type="button"
-                                                    onClick={() =>
-                                                        toggleRecruitment(
-                                                            post
-                                                        )
-                                                    }
-                                                    className="mt-4 flex w-full items-center justify-center gap-2 rounded-xl border border-[#dedbd3] px-4 py-2.5 text-[10px] font-black uppercase tracking-wider text-[#555] hover:bg-[#f6f4ef]"
-                                                >
-                                                    {post.status ===
-                                                        "OPEN"
-                                                        ? "Close Recruitment"
-                                                        : "Reopen Recruitment"}
-                                                </button>
-                                            )}
-
-                                        </article>
-
-                                    )
-                                )}
-
-                            </div>
-
-                        )}
-
-                    </section>
-                )}
+                    )}
 
 
                 {/* =================================================
                     TOURNAMENTS
                 ================================================= */}
 
-                {activeTab === "tournaments" && (
+                {activeTab ===
+                    "tournaments" && (
 
-                    <section className="rounded-2xl border border-[#dedbd3] bg-white p-10 text-center shadow-sm">
+                        <section className="rounded-2xl border border-[#dedbd3] bg-white p-10 text-center shadow-sm">
 
-                        <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl bg-[#f2ede1]">
-                            <Crown
-                                size={24}
-                                className="text-[#9b8148]"
-                            />
-                        </div>
+                            <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl bg-[#f2ede1]">
 
-                        <h2 className="mt-5 text-xl font-black">
-                            Club Tournaments
-                        </h2>
+                                <Crown
+                                    size={24}
+                                    className="text-[#9b8148]"
+                                />
 
-                        <p className="mx-auto mt-2 max-w-md text-sm leading-6 text-[#85878e]">
-                            Tournament management for clubs will be connected here.
-                        </p>
+                            </div>
 
-                    </section>
-                )}
+
+                            <h2 className="mt-5 text-xl font-black">
+                                Club Tournaments
+                            </h2>
+
+
+                            <p className="mx-auto mt-2 max-w-md text-sm leading-6 text-[#85878e]">
+                                Tournament management for clubs will be connected here.
+                            </p>
+
+                        </section>
+
+                    )}
 
 
                 {/* =================================================
                     STATS
                 ================================================= */}
 
-                {activeTab === "stats" && (
+                {activeTab ===
+                    "stats" && (
 
-                    <section className="rounded-2xl border border-[#dedbd3] bg-white p-6 shadow-sm">
+                        <section className="rounded-2xl border border-[#dedbd3] bg-white p-6 shadow-sm">
 
-                        <div>
-                            <p className="text-[10px] font-black uppercase tracking-[0.2em] text-[#9b8148]">
-                                Performance
-                            </p>
+                            <div>
 
-                            <h2 className="mt-1 text-2xl font-black">
-                                Club Stats
-                            </h2>
-                        </div>
-
-                        <div className="mt-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-
-                            <div className="rounded-2xl bg-[#f7f5f0] p-5">
-                                <p className="text-[9px] font-black uppercase tracking-wider text-[#999]">
-                                    Members
+                                <p className="text-[10px] font-black uppercase tracking-[0.2em] text-[#9b8148]">
+                                    Performance
                                 </p>
 
-                                <p className="mt-3 text-3xl font-black">
-                                    {memberCount}
-                                </p>
+                                <h2 className="mt-1 text-2xl font-black">
+                                    Club Stats
+                                </h2>
+
                             </div>
 
-                            <div className="rounded-2xl bg-[#f7f5f0] p-5">
-                                <p className="text-[9px] font-black uppercase tracking-wider text-[#999]">
-                                    Admins
-                                </p>
 
-                                <p className="mt-3 text-3xl font-black">
-                                    {adminCount}
-                                </p>
+                            <div className="mt-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+
+
+                                <div className="rounded-2xl bg-[#f7f5f0] p-5">
+
+                                    <p className="text-[9px] font-black uppercase tracking-wider text-[#999]">
+                                        Members
+                                    </p>
+
+                                    <p className="mt-3 text-3xl font-black">
+                                        {
+                                            memberCount
+                                        }
+                                    </p>
+
+                                </div>
+
+
+                                <div className="rounded-2xl bg-[#f7f5f0] p-5">
+
+                                    <p className="text-[9px] font-black uppercase tracking-wider text-[#999]">
+                                        Admins
+                                    </p>
+
+                                    <p className="mt-3 text-3xl font-black">
+                                        {
+                                            adminCount
+                                        }
+                                    </p>
+
+                                </div>
+
+
+                                <div className="rounded-2xl bg-[#f7f5f0] p-5">
+
+                                    <p className="text-[9px] font-black uppercase tracking-wider text-[#999]">
+                                        Club Level
+                                    </p>
+
+                                    <p className="mt-3 text-3xl font-black">
+                                        {
+                                            club.level ||
+                                            club.clubLevel ||
+                                            1
+                                        }
+                                    </p>
+
+                                </div>
+
+
+                                <div className="rounded-2xl bg-[#f7f5f0] p-5">
+
+                                    <p className="text-[9px] font-black uppercase tracking-wider text-[#999]">
+                                        SYNCO Points
+                                    </p>
+
+                                    <p className="mt-3 text-3xl font-black">
+                                        {
+                                            club.syncoPoints ||
+                                            0
+                                        }
+                                    </p>
+
+                                </div>
+
                             </div>
 
-                            <div className="rounded-2xl bg-[#f7f5f0] p-5">
-                                <p className="text-[9px] font-black uppercase tracking-wider text-[#999]">
-                                    Club Level
-                                </p>
+                        </section>
 
-                                <p className="mt-3 text-3xl font-black">
-                                    {club.level ||
-                                        club.clubLevel ||
-                                        1}
-                                </p>
-                            </div>
-
-                            <div className="rounded-2xl bg-[#f7f5f0] p-5">
-                                <p className="text-[9px] font-black uppercase tracking-wider text-[#999]">
-                                    SYNCO Points
-                                </p>
-
-                                <p className="mt-3 text-3xl font-black">
-                                    {club.syncoPoints ||
-                                        0}
-                                </p>
-                            </div>
-
-                        </div>
-
-                    </section>
-                )}
+                    )}
 
             </main>
 
@@ -3172,25 +3831,37 @@ export default function ClubProfile() {
 
                     <Textarea
                         label="Message (Optional)"
-                        value={joinMessage}
+                        value={
+                            joinMessage
+                        }
                         onChange={(event) =>
                             setJoinMessage(
-                                event.target.value
+                                event.target.value.slice(
+                                    0,
+                                    500
+                                )
                             )
                         }
                         placeholder="Tell the club why you want to join..."
                         rows={5}
                     />
 
+
                     <div className="mt-2 flex justify-between text-[9px] font-bold text-[#999]">
+
                         <span>
                             Optional
                         </span>
 
                         <span>
-                            {joinMessage.length}/500
+                            {
+                                joinMessage.length
+                            }
+                            /500
                         </span>
+
                     </div>
+
 
                     <div className="mt-6 flex justify-end gap-3">
 
@@ -3205,6 +3876,7 @@ export default function ClubProfile() {
                         >
                             Cancel
                         </button>
+
 
                         <button
                             type="button"
@@ -3224,6 +3896,7 @@ export default function ClubProfile() {
                     </div>
 
                 </Modal>
+
             )}
 
 
@@ -3245,6 +3918,7 @@ export default function ClubProfile() {
 
                     <div className="space-y-6">
 
+
                         <div className="grid gap-4 sm:grid-cols-2">
 
                             <Input
@@ -3254,7 +3928,9 @@ export default function ClubProfile() {
                                 }
                                 onChange={(event) =>
                                     setSettingsForm(
-                                        (previous) => ({
+                                        (
+                                            previous
+                                        ) => ({
                                             ...previous,
                                             name:
                                                 event.target.value,
@@ -3263,6 +3939,7 @@ export default function ClubProfile() {
                                 }
                             />
 
+
                             <Input
                                 label="Tag"
                                 value={
@@ -3270,7 +3947,9 @@ export default function ClubProfile() {
                                 }
                                 onChange={(event) =>
                                     setSettingsForm(
-                                        (previous) => ({
+                                        (
+                                            previous
+                                        ) => ({
                                             ...previous,
                                             tag:
                                                 event.target.value
@@ -3294,7 +3973,9 @@ export default function ClubProfile() {
                             }
                             onChange={(event) =>
                                 setSettingsForm(
-                                    (previous) => ({
+                                    (
+                                        previous
+                                    ) => ({
                                         ...previous,
                                         description:
                                             event.target.value,
@@ -3315,7 +3996,9 @@ export default function ClubProfile() {
                                 }
                                 onChange={(event) =>
                                     setSettingsForm(
-                                        (previous) => ({
+                                        (
+                                            previous
+                                        ) => ({
                                             ...previous,
                                             avatar:
                                                 event.target.value,
@@ -3325,6 +4008,7 @@ export default function ClubProfile() {
                                 placeholder="https://..."
                             />
 
+
                             <Input
                                 label="Banner URL"
                                 value={
@@ -3332,7 +4016,9 @@ export default function ClubProfile() {
                                 }
                                 onChange={(event) =>
                                     setSettingsForm(
-                                        (previous) => ({
+                                        (
+                                            previous
+                                        ) => ({
                                             ...previous,
                                             banner:
                                                 event.target.value,
@@ -3354,7 +4040,9 @@ export default function ClubProfile() {
                                 }
                                 onChange={(event) =>
                                     setSettingsForm(
-                                        (previous) => ({
+                                        (
+                                            previous
+                                        ) => ({
                                             ...previous,
                                             region:
                                                 event.target.value,
@@ -3364,6 +4052,7 @@ export default function ClubProfile() {
                                 placeholder="India"
                             />
 
+
                             <SelectField
                                 label="Game"
                                 value={
@@ -3371,7 +4060,9 @@ export default function ClubProfile() {
                                 }
                                 onChange={(event) =>
                                     setSettingsForm(
-                                        (previous) => ({
+                                        (
+                                            previous
+                                        ) => ({
                                             ...previous,
                                             gameId:
                                                 event.target.value,
@@ -3379,21 +4070,27 @@ export default function ClubProfile() {
                                     )
                                 }
                             >
+
                                 <option value="">
                                     Select game
                                 </option>
 
                                 {club.game && (
+
                                     <option
                                         value={
                                             club.game.id
                                         }
                                     >
-                                        {getGameName(
-                                            club.game
-                                        )}
+                                        {
+                                            getGameName(
+                                                club.game
+                                            )
+                                        }
                                     </option>
+
                                 )}
+
                             </SelectField>
 
                         </div>
@@ -3406,7 +4103,9 @@ export default function ClubProfile() {
                             }
                             onChange={(event) =>
                                 setSettingsForm(
-                                    (previous) => ({
+                                    (
+                                        previous
+                                    ) => ({
                                         ...previous,
                                         privacy:
                                             event.target.value,
@@ -3414,6 +4113,7 @@ export default function ClubProfile() {
                                 )
                             }
                         >
+
                             <option value="Public">
                                 Public
                             </option>
@@ -3421,10 +4121,12 @@ export default function ClubProfile() {
                             <option value="Private">
                                 Private
                             </option>
+
                         </SelectField>
 
 
                         <div className="space-y-3">
+
 
                             <Toggle
                                 label="Allow member invitations"
@@ -3434,7 +4136,9 @@ export default function ClubProfile() {
                                 }
                                 onChange={(value) =>
                                     setSettingsForm(
-                                        (previous) => ({
+                                        (
+                                            previous
+                                        ) => ({
                                             ...previous,
                                             allowMemberInvites:
                                                 value,
@@ -3443,18 +4147,23 @@ export default function ClubProfile() {
                                 }
                             />
 
+
                             <div className="rounded-xl border border-[#e1ded7] bg-[#faf9f6] p-4">
 
                                 <div className="flex items-start gap-3">
 
                                     <div className="mt-0.5 flex h-8 w-8 items-center justify-center rounded-lg bg-[#f0e9da]">
+
                                         <UserCheck
                                             size={15}
                                             className="text-[#9b8148]"
                                         />
+
                                     </div>
 
+
                                     <div>
+
                                         <p className="text-sm font-black">
                                             Join approval
                                         </p>
@@ -3462,13 +4171,16 @@ export default function ClubProfile() {
                                         <p className="mt-1 text-xs leading-5 text-[#85878e]">
                                             Public club members always require approval before entering the club.
                                         </p>
+
                                     </div>
 
                                 </div>
 
                             </div>
 
+
                             {isOwner && (
+
                                 <Toggle
                                     label="Club active"
                                     description="Deactivate the club if you want to temporarily close it."
@@ -3477,7 +4189,9 @@ export default function ClubProfile() {
                                     }
                                     onChange={(value) =>
                                         setSettingsForm(
-                                            (previous) => ({
+                                            (
+                                                previous
+                                            ) => ({
                                                 ...previous,
                                                 isActive:
                                                     value,
@@ -3485,6 +4199,7 @@ export default function ClubProfile() {
                                         )
                                     }
                                 />
+
                             )}
 
                         </div>
@@ -3503,6 +4218,7 @@ export default function ClubProfile() {
                             >
                                 Cancel
                             </button>
+
 
                             <button
                                 type="button"
@@ -3524,6 +4240,7 @@ export default function ClubProfile() {
                     </div>
 
                 </Modal>
+
             )}
 
 
@@ -3553,6 +4270,7 @@ export default function ClubProfile() {
 
                     <div className="space-y-5">
 
+
                         <Input
                             label="Title"
                             value={
@@ -3560,7 +4278,9 @@ export default function ClubProfile() {
                             }
                             onChange={(event) =>
                                 setRecruitmentForm(
-                                    (previous) => ({
+                                    (
+                                        previous
+                                    ) => ({
                                         ...previous,
                                         title:
                                             event.target.value,
@@ -3578,7 +4298,9 @@ export default function ClubProfile() {
                             }
                             onChange={(event) =>
                                 setRecruitmentForm(
-                                    (previous) => ({
+                                    (
+                                        previous
+                                    ) => ({
                                         ...previous,
                                         description:
                                             event.target.value,
@@ -3592,6 +4314,7 @@ export default function ClubProfile() {
 
                         <div className="grid gap-4 sm:grid-cols-2">
 
+
                             <SelectField
                                 label="Game"
                                 value={
@@ -3599,7 +4322,9 @@ export default function ClubProfile() {
                                 }
                                 onChange={(event) =>
                                     setRecruitmentForm(
-                                        (previous) => ({
+                                        (
+                                            previous
+                                        ) => ({
                                             ...previous,
                                             gameId:
                                                 event.target.value,
@@ -3613,15 +4338,19 @@ export default function ClubProfile() {
                                 </option>
 
                                 {club.game && (
+
                                     <option
                                         value={
                                             club.game.id
                                         }
                                     >
-                                        {getGameName(
-                                            club.game
-                                        )}
+                                        {
+                                            getGameName(
+                                                club.game
+                                            )
+                                        }
                                     </option>
+
                                 )}
 
                             </SelectField>
@@ -3634,7 +4363,9 @@ export default function ClubProfile() {
                                 }
                                 onChange={(event) =>
                                     setRecruitmentForm(
-                                        (previous) => ({
+                                        (
+                                            previous
+                                        ) => ({
                                             ...previous,
                                             role:
                                                 event.target.value,
@@ -3649,6 +4380,7 @@ export default function ClubProfile() {
 
                         <div className="grid gap-4 sm:grid-cols-2">
 
+
                             <Input
                                 label="Rank Requirement"
                                 value={
@@ -3656,7 +4388,9 @@ export default function ClubProfile() {
                                 }
                                 onChange={(event) =>
                                     setRecruitmentForm(
-                                        (previous) => ({
+                                        (
+                                            previous
+                                        ) => ({
                                             ...previous,
                                             rankRequirement:
                                                 event.target.value,
@@ -3666,6 +4400,7 @@ export default function ClubProfile() {
                                 placeholder="Ascendant+"
                             />
 
+
                             <Input
                                 label="Region"
                                 value={
@@ -3673,7 +4408,9 @@ export default function ClubProfile() {
                                 }
                                 onChange={(event) =>
                                     setRecruitmentForm(
-                                        (previous) => ({
+                                        (
+                                            previous
+                                        ) => ({
                                             ...previous,
                                             region:
                                                 event.target.value,
@@ -3694,7 +4431,9 @@ export default function ClubProfile() {
                             }
                             onChange={(value) =>
                                 setRecruitmentForm(
-                                    (previous) => ({
+                                    (
+                                        previous
+                                    ) => ({
                                         ...previous,
                                         micRequired:
                                             value,
@@ -3711,7 +4450,9 @@ export default function ClubProfile() {
                             }
                             onChange={(event) =>
                                 setRecruitmentForm(
-                                    (previous) => ({
+                                    (
+                                        previous
+                                    ) => ({
                                         ...previous,
                                         status:
                                             event.target.value,
@@ -3749,6 +4490,7 @@ export default function ClubProfile() {
                                 Cancel
                             </button>
 
+
                             <button
                                 type="button"
                                 disabled={
@@ -3771,6 +4513,7 @@ export default function ClubProfile() {
                     </div>
 
                 </Modal>
+
             )}
 
 
@@ -3802,6 +4545,7 @@ export default function ClubProfile() {
                             className="absolute left-4 top-1/2 -translate-y-1/2 text-[#999]"
                         />
 
+
                         <input
                             value={
                                 inviteSearch
@@ -3820,36 +4564,48 @@ export default function ClubProfile() {
 
                     <div className="mt-5">
 
+
                         {inviteSearching && (
+
                             <div className="py-8 text-center text-xs font-bold text-[#888]">
                                 Searching...
                             </div>
+
                         )}
 
 
                         {!inviteSearching &&
-                            inviteSearch.trim().length >= 2 &&
-                            inviteResults.length === 0 && (
+                            inviteSearch.trim().length >=
+                            2 &&
+                            inviteResults.length ===
+                            0 && (
+
                                 <div className="rounded-xl border border-dashed border-[#dedbd3] py-10 text-center text-xs font-bold text-[#888]">
                                     No players found.
                                 </div>
+
                             )}
 
 
                         {!inviteSearching &&
-                            inviteResults.length > 0 && (
+                            inviteResults.length >
+                            0 && (
 
                                 <div className="space-y-2">
 
                                     {inviteResults.map(
-                                        (player) => {
+                                        (
+                                            player
+                                        ) => {
 
                                             const avatar =
                                                 getAvatar(
                                                     player
                                                 );
 
+
                                             return (
+
                                                 <div
                                                     key={
                                                         player.id
@@ -3858,6 +4614,7 @@ export default function ClubProfile() {
                                                 >
 
                                                     {avatar ? (
+
                                                         <img
                                                             src={
                                                                 avatar
@@ -3865,29 +4622,40 @@ export default function ClubProfile() {
                                                             alt=""
                                                             className="h-11 w-11 rounded-xl object-cover"
                                                         />
+
                                                     ) : (
+
                                                         <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-[#ece9e2] text-xs font-black">
-                                                            {getUserInitials(
-                                                                player
-                                                            )}
+                                                            {
+                                                                getUserInitials(
+                                                                    player
+                                                                )
+                                                            }
                                                         </div>
+
                                                     )}
+
 
                                                     <div className="min-w-0 flex-1">
 
                                                         <p className="truncate text-sm font-black">
-                                                            {getUserName(
-                                                                player
-                                                            )}
+                                                            {
+                                                                getUserName(
+                                                                    player
+                                                                )
+                                                            }
                                                         </p>
 
                                                         <p className="mt-1 text-[10px] font-bold uppercase tracking-wider text-[#929398]">
                                                             UID:{" "}
-                                                            {player.uid ||
-                                                                "—"}
+                                                            {
+                                                                player.uid ||
+                                                                "—"
+                                                            }
                                                         </p>
 
                                                     </div>
+
 
                                                     <button
                                                         type="button"
@@ -3905,16 +4673,19 @@ export default function ClubProfile() {
                                                     </button>
 
                                                 </div>
+
                                             );
                                         }
                                     )}
 
                                 </div>
+
                             )}
 
                     </div>
 
                 </Modal>
+
             )}
 
 
@@ -3937,7 +4708,9 @@ export default function ClubProfile() {
 
                     <div className="space-y-3">
 
-                        {incomingInvites.length === 0 ? (
+
+                        {incomingInvites.length ===
+                            0 ? (
 
                             <div className="py-10 text-center text-xs font-bold text-[#888]">
                                 No pending invitations.
@@ -3946,12 +4719,16 @@ export default function ClubProfile() {
                         ) : (
 
                             incomingInvites.map(
-                                (invite) => {
+                                (
+                                    invite
+                                ) => {
 
                                     const invitedClub =
                                         invite.club;
 
+
                                     return (
+
                                         <div
                                             key={
                                                 invite.id
@@ -3964,6 +4741,7 @@ export default function ClubProfile() {
                                                 <div className="flex h-11 w-11 items-center justify-center overflow-hidden rounded-xl bg-[#ece9e2]">
 
                                                     {invitedClub?.avatar ? (
+
                                                         <img
                                                             src={
                                                                 invitedClub.avatar
@@ -3971,27 +4749,35 @@ export default function ClubProfile() {
                                                             alt=""
                                                             className="h-full w-full object-cover"
                                                         />
+
                                                     ) : (
+
                                                         <Shield
                                                             size={18}
                                                             className="text-[#9b8148]"
                                                         />
+
                                                     )}
 
                                                 </div>
 
+
                                                 <div className="min-w-0 flex-1">
 
                                                     <p className="truncate text-sm font-black">
-                                                        {invitedClub?.name ||
-                                                            "Club"}
+                                                        {
+                                                            invitedClub?.name ||
+                                                            "Club"
+                                                        }
                                                     </p>
 
                                                     <p className="mt-1 text-[10px] font-bold text-[#898a8e]">
                                                         Invited by{" "}
-                                                        {getUserName(
-                                                            invite.inviter
-                                                        )}
+                                                        {
+                                                            getUserName(
+                                                                invite.inviter
+                                                            )
+                                                        }
                                                     </p>
 
                                                 </div>
@@ -4016,6 +4802,7 @@ export default function ClubProfile() {
                                                     Accept
                                                 </button>
 
+
                                                 <button
                                                     type="button"
                                                     disabled={
@@ -4034,6 +4821,7 @@ export default function ClubProfile() {
                                             </div>
 
                                         </div>
+
                                     );
                                 }
                             )
@@ -4043,6 +4831,7 @@ export default function ClubProfile() {
                     </div>
 
                 </Modal>
+
             )}
 
         </div>
