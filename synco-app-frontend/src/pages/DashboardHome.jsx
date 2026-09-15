@@ -33,6 +33,11 @@ const DashboardHome = () => {
   const [selectedGame, setSelectedGame] = useState('');
   const [clips, setClips] = useState([]);
   const [statsViewState, setStatsViewState] = useState('banner');
+  const [commentsClip, setCommentsClip] = useState(null);
+  const [comments, setComments] = useState([]);
+  const [commentText, setCommentText] = useState('');
+  const [commentsLoading, setCommentsLoading] = useState(false);
+  const [commentError, setCommentError] = useState('');
 
 
   // =========================================================
@@ -168,33 +173,96 @@ const DashboardHome = () => {
   // LIKE CLIP
   // =========================================================
 
-  const handleLikeClip = (clipId) => {
-
-    setClips(prevClips =>
-
-      prevClips.map(clip => {
-
-        if (clip.id === clipId) {
-
-          const isLiked =
-            !clip.isLiked;
-
-          return {
-            ...clip,
-            isLiked,
-            likes: isLiked
-              ? (clip.likes || 0) + 1
-              : (clip.likes || 0) - 1
-          };
-
+  const handleLikeClip = async (clipId) => {
+    try {
+      const response = await fetch(
+        `${API_URL}/api/profile/clips/${clipId}/like`,
+        {
+          method: 'POST',
+          credentials: 'include',
+          headers: { Accept: 'application/json' },
         }
+      );
+      const data = await response.json();
 
-        return clip;
+      if (!response.ok) {
+        throw new Error(data.message || 'Unable to like this clip.');
+      }
 
-      })
+      setClips((prevClips) =>
+        prevClips.map((clip) =>
+          clip.id === clipId
+            ? { ...clip, isLiked: Boolean(data.liked), likes: data.likes }
+            : clip
+        )
+      );
+    } catch (error) {
+      console.error('Like failed:', error);
+    }
+  };
 
-    );
+  const openComments = async (clip) => {
+    setCommentsClip(clip);
+    setComments([]);
+    setCommentText('');
+    setCommentError('');
+    setCommentsLoading(true);
 
+    try {
+      const response = await fetch(
+        `${API_URL}/api/profile/clips/${clip.id}/comments`,
+        { credentials: 'include', headers: { Accept: 'application/json' } }
+      );
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.message || 'Unable to load comments.');
+      }
+
+      setComments(data.comments || []);
+    } catch (error) {
+      setCommentError(error.message || 'Unable to load comments.');
+    } finally {
+      setCommentsLoading(false);
+    }
+  };
+
+  const submitComment = async (event) => {
+    event.preventDefault();
+
+    if (!commentsClip || !commentText.trim()) return;
+
+    try {
+      const response = await fetch(
+        `${API_URL}/api/profile/clips/${commentsClip.id}/comments`,
+        {
+          method: 'POST',
+          credentials: 'include',
+          headers: {
+            'Content-Type': 'application/json',
+            Accept: 'application/json',
+          },
+          body: JSON.stringify({ content: commentText.trim() }),
+        }
+      );
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.message || 'Unable to post comment.');
+      }
+
+      setComments((currentComments) => [...currentComments, data]);
+      setCommentText('');
+      setClips((prevClips) =>
+        prevClips.map((clip) =>
+          clip.id === commentsClip.id
+            ? { ...clip, comments: (clip.comments || 0) + 1 }
+            : clip
+        )
+      );
+    } catch (error) {
+      setCommentError(error.message || 'Unable to post comment.');
+    }
   };
 
 
@@ -781,12 +849,7 @@ const DashboardHome = () => {
                       {/* COMMENTS */}
 
                       <button
-                        onClick={() =>
-                          console.log(
-                            'Open comments for',
-                            clip.id
-                          )
-                        }
+                        onClick={() => openComments(clip)}
                         className="flex items-center gap-2 group outline-none ml-4"
                       >
 
@@ -844,6 +907,68 @@ const DashboardHome = () => {
           </div>
 
         </div>
+
+        {commentsClip && (
+          <div
+            className="comments-modal-overlay"
+            onClick={(event) => {
+              if (event.target === event.currentTarget) {
+                setCommentsClip(null);
+              }
+            }}
+          >
+            <div className="comments-modal">
+              <div className="comments-modal-header">
+                <div>
+                  <span className="comments-modal-eyebrow">Community</span>
+                  <h3>Comments</h3>
+                </div>
+                <button
+                  type="button"
+                  className="comments-close-btn"
+                  onClick={() => setCommentsClip(null)}
+                  aria-label="Close comments"
+                >
+                  <X size={18} />
+                </button>
+              </div>
+
+              <div className="comments-list">
+                {commentsLoading && (
+                  <p className="comments-empty">Loading comments...</p>
+                )}
+                {!commentsLoading && comments.length === 0 && (
+                  <p className="comments-empty">Be the first to share a thought.</p>
+                )}
+                {comments.map((comment) => (
+                  <div className="comment-row" key={comment.id}>
+                    <div className="comment-avatar">
+                      {comment.author?.slice(0, 1).toUpperCase()}
+                    </div>
+                    <div>
+                      <strong>{comment.author}</strong>
+                      <p>{comment.content}</p>
+                    </div>
+                  </div>
+                ))}
+              </div>
+
+              {commentError && <p className="comment-error">{commentError}</p>}
+
+              <form className="comment-form" onSubmit={submitComment}>
+                <input
+                  value={commentText}
+                  onChange={(event) => setCommentText(event.target.value)}
+                  placeholder="Add a comment..."
+                  maxLength={1000}
+                />
+                <button type="submit" disabled={!commentText.trim()}>
+                  Post
+                </button>
+              </form>
+            </div>
+          </div>
+        )}
 
       </div>
 
