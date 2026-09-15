@@ -1,20 +1,19 @@
-import React, { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 
 import {
     ArrowLeft,
-    Bell,
-    Check,
     ChevronDown,
-    ChevronLeft,
+    ChevronRight,
+    Clock3,
     Crown,
     Edit3,
-    Globe,
-    Image,
+    Globe2,
     Lock,
     MoreHorizontal,
     Plus,
     Search,
+    Settings,
     Shield,
     Trash2,
     UserCheck,
@@ -23,130 +22,163 @@ import {
     X,
 } from "lucide-react";
 
-/* =========================================================
-   API
-========================================================= */
+// =========================================================
+// API
+// =========================================================
 
-const API_BASE = (
+const RAW_API_URL =
     import.meta.env.VITE_API_URL ||
-    "https://synco-backend-vi7b.onrender.com"
-).replace(/\/$/, "");
+    "https://synco-backend-vi7b.onrender.com";
 
-const API = `${API_BASE}/api`;
+const API = RAW_API_URL
+    .replace(/\/+$/, "")
+    .replace(/\/api$/, "") + "/api";
 
-/* =========================================================
-   HELPERS
-========================================================= */
+// =========================================================
+// HELPERS
+// =========================================================
 
-const firstDefined = (...values) =>
-    values.find(
+function firstDefined(...values) {
+    return values.find(
         (value) =>
             value !== undefined &&
             value !== null &&
             value !== ""
     );
+}
 
-const getErrorMessage = (data, fallback = "Something went wrong.") =>
-    data?.message ||
-    data?.error ||
-    data?.detail ||
-    fallback;
 
-const formatDate = (value) => {
-    if (!value) return "Recently";
+function getErrorMessage(data, fallback) {
+    return firstDefined(
+        data?.message,
+        data?.error,
+        fallback
+    );
+}
 
-    const date = new Date(value);
 
-    if (Number.isNaN(date.getTime())) {
-        return String(value);
+function formatDate(value) {
+    if (!value) {
+        return "Unknown";
     }
 
-    return date.toLocaleDateString([], {
-        day: "numeric",
-        month: "short",
-        year: "numeric",
-    });
-};
+    try {
+        return new Date(value).toLocaleDateString(
+            "en-IN",
+            {
+                day: "numeric",
+                month: "short",
+                year: "numeric",
+            }
+        );
+    } catch {
+        return "Unknown";
+    }
+}
 
-const getUserName = (user) =>
-    firstDefined(
-        user?.username,
-        user?.name,
-        user?.displayName,
-        user?.fullName,
-        "Player"
-    );
 
-const getUserInitials = (user) => {
-    const name = getUserName(user);
-
-    const parts = String(name)
-        .trim()
-        .split(/\s+/)
-        .filter(Boolean);
-
-    if (!parts.length) return "P";
-
-    if (parts.length === 1) {
-        return parts[0].slice(0, 2).toUpperCase();
+function getUserName(user) {
+    if (!user) {
+        return "Unknown Player";
     }
 
     return (
-        parts[0][0] +
-        parts[parts.length - 1][0]
-    ).toUpperCase();
-};
+        user.username ||
+        user.name ||
+        "Unknown Player"
+    );
+}
 
-const getAvatar = (user) =>
-    firstDefined(
+
+function getUserInitials(user) {
+    const name = getUserName(user);
+
+    return name
+        .split(" ")
+        .filter(Boolean)
+        .slice(0, 2)
+        .map(
+            (part) =>
+                part.charAt(0).toUpperCase()
+        )
+        .join("");
+}
+
+
+function getAvatar(user) {
+    return firstDefined(
         user?.avatar,
         user?.avatarUrl,
-        user?.avatar_url,
-        user?.profilePicture,
-        user?.profile_picture
+        ""
     );
+}
 
-const getGameName = (game) =>
-    firstDefined(
-        game?.name,
-        game?.title,
-        game?.displayName,
-        game?.display_name,
+
+function getGameName(game) {
+    if (!game) {
+        return "Unknown Game";
+    }
+
+    return firstDefined(
+        game.name,
+        game.shortName,
+        game.id,
         "Unknown Game"
     );
+}
 
-const formatRole = (role) => {
-    if (!role) return "MEMBER";
 
-    return String(role)
-        .replaceAll("_", " ")
-        .toUpperCase();
-};
+function formatRole(role) {
+    const normalized =
+        String(role || "MEMBER")
+            .toUpperCase();
 
-/* =========================================================
-   UI COMPONENTS
-========================================================= */
+    if (normalized === "OWNER") {
+        return "Owner";
+    }
 
-const Modal = ({
+    if (normalized === "ADMIN") {
+        return "Admin";
+    }
+
+    return "Member";
+}
+
+
+// =========================================================
+// MODAL
+// =========================================================
+
+function Modal({
     title,
     subtitle,
     onClose,
     children,
     width = "max-w-2xl",
-}) => {
+}) {
     return (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/50 p-4">
+        <div
+            className="fixed inset-0 z-[100] flex items-center justify-center bg-black/60 px-4 py-6 backdrop-blur-sm"
+            onMouseDown={(event) => {
+                if (
+                    event.target ===
+                    event.currentTarget
+                ) {
+                    onClose();
+                }
+            }}
+        >
             <div
-                className={`max-h-[90vh] w-full ${width} overflow-y-auto rounded-2xl border border-[#dedbd3] bg-white shadow-2xl`}
+                className={`w-full ${width} max-h-[92vh] overflow-hidden rounded-2xl border border-[#dedbd3] bg-white shadow-2xl`}
             >
-                <div className="sticky top-0 z-10 flex items-start justify-between gap-4 border-b border-[#ebe8e1] bg-white px-6 py-5">
+                <div className="flex items-start justify-between border-b border-[#ebe8e1] px-6 py-5">
                     <div>
-                        <h2 className="text-xl font-black tracking-tight">
+                        <h2 className="text-lg font-black tracking-tight text-[#151515]">
                             {title}
                         </h2>
 
                         {subtitle && (
-                            <p className="mt-1 text-xs leading-5 text-[#85878e]">
+                            <p className="mt-1 text-xs font-medium text-[#85878e]">
                                 {subtitle}
                             </p>
                         )}
@@ -155,105 +187,134 @@ const Modal = ({
                     <button
                         type="button"
                         onClick={onClose}
-                        className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl border border-[#dedbd3] text-[#666] hover:bg-[#f6f4ef]"
+                        className="flex h-9 w-9 items-center justify-center rounded-lg border border-[#e3e0d9] text-[#777] transition hover:bg-[#f6f4ef] hover:text-black"
                     >
                         <X size={17} />
                     </button>
                 </div>
 
-                <div className="p-6">
+                <div className="max-h-[calc(92vh-82px)] overflow-y-auto p-6">
                     {children}
                 </div>
             </div>
         </div>
     );
-};
+}
 
-const Input = ({
+
+// =========================================================
+// INPUT
+// =========================================================
+
+function Input({
     label,
     value,
     onChange,
     placeholder,
     type = "text",
-}) => {
+    disabled = false,
+}) {
     return (
         <label className="block">
-            <span className="mb-2 block text-[9px] font-black uppercase tracking-[0.16em] text-[#777]">
+            <span className="mb-2 block text-[10px] font-black uppercase tracking-[0.18em] text-[#777a82]">
                 {label}
             </span>
 
             <input
                 type={type}
-                value={value ?? ""}
+                value={value}
+                disabled={disabled}
                 onChange={onChange}
                 placeholder={placeholder}
-                className="w-full rounded-xl border border-[#dedbd3] bg-white px-4 py-3 text-sm outline-none transition focus:border-[#9b8148]"
+                className="w-full rounded-xl border border-[#dedbd3] bg-white px-4 py-3 text-sm font-medium text-[#171717] outline-none transition placeholder:text-[#aaa9a4] focus:border-[#9b8148] focus:ring-2 focus:ring-[#9b8148]/10 disabled:bg-[#f4f2ed]"
             />
         </label>
     );
-};
+}
 
-const Textarea = ({
+
+// =========================================================
+// TEXTAREA
+// =========================================================
+
+function Textarea({
     label,
     value,
     onChange,
     placeholder,
-    rows = 5,
-}) => {
+    rows = 4,
+}) {
     return (
         <label className="block">
-            <span className="mb-2 block text-[9px] font-black uppercase tracking-[0.16em] text-[#777]">
+            <span className="mb-2 block text-[10px] font-black uppercase tracking-[0.18em] text-[#777a82]">
                 {label}
             </span>
 
             <textarea
-                value={value ?? ""}
+                rows={rows}
+                value={value}
                 onChange={onChange}
                 placeholder={placeholder}
-                rows={rows}
-                className="w-full resize-none rounded-xl border border-[#dedbd3] bg-white px-4 py-3 text-sm outline-none transition focus:border-[#9b8148]"
+                className="w-full resize-none rounded-xl border border-[#dedbd3] bg-white px-4 py-3 text-sm font-medium text-[#171717] outline-none transition placeholder:text-[#aaa9a4] focus:border-[#9b8148] focus:ring-2 focus:ring-[#9b8148]/10"
             />
         </label>
     );
-};
+}
 
-const SelectField = ({
+
+// =========================================================
+// SELECT
+// =========================================================
+
+function SelectField({
     label,
     value,
     onChange,
     children,
-}) => {
+}) {
     return (
         <label className="block">
-            <span className="mb-2 block text-[9px] font-black uppercase tracking-[0.16em] text-[#777]">
+            <span className="mb-2 block text-[10px] font-black uppercase tracking-[0.18em] text-[#777a82]">
                 {label}
             </span>
 
-            <select
-                value={value ?? ""}
-                onChange={onChange}
-                className="w-full rounded-xl border border-[#dedbd3] bg-white px-4 py-3 text-sm outline-none focus:border-[#9b8148]"
-            >
-                {children}
-            </select>
+            <div className="relative">
+                <select
+                    value={value}
+                    onChange={onChange}
+                    className="w-full appearance-none rounded-xl border border-[#dedbd3] bg-white px-4 py-3 pr-10 text-sm font-medium text-[#171717] outline-none transition focus:border-[#9b8148] focus:ring-2 focus:ring-[#9b8148]/10"
+                >
+                    {children}
+                </select>
+
+                <ChevronDown
+                    size={16}
+                    className="pointer-events-none absolute right-4 top-1/2 -translate-y-1/2 text-[#85878e]"
+                />
+            </div>
         </label>
     );
-};
+}
 
-const Toggle = ({
+
+// =========================================================
+// TOGGLE
+// =========================================================
+
+function Toggle({
     label,
     description,
     checked,
     onChange,
-}) => {
+}) {
     return (
         <button
             type="button"
             onClick={() => onChange(!checked)}
-            className="flex w-full items-center justify-between rounded-xl border border-[#e1ded7] bg-[#faf9f6] p-4 text-left"
+            className="flex w-full items-center justify-between rounded-xl border border-[#e1ded7] bg-[#faf9f6] p-4 text-left transition hover:border-[#cfc9bb]"
         >
-            <div className="pr-4">
-                <p className="text-sm font-black">
+            <div className="pr-5">
+                <p className="text-sm font-black text-[#191919]">
                     {label}
                 </p>
 
@@ -264,128 +325,80 @@ const Toggle = ({
                 )}
             </div>
 
-            <div
+            <span
                 className={`relative h-6 w-11 shrink-0 rounded-full transition ${checked
-                        ? "bg-[#171717]"
-                        : "bg-[#d7d4cc]"
+                    ? "bg-[#9b8148]"
+                    : "bg-[#d5d2cb]"
                     }`}
             >
-                <div
-                    className={`absolute top-1 h-4 w-4 rounded-full bg-white transition ${checked
-                            ? "left-6"
-                            : "left-1"
+                <span
+                    className={`absolute top-1 h-4 w-4 rounded-full bg-white shadow transition ${checked
+                        ? "left-6"
+                        : "left-1"
                         }`}
                 />
-            </div>
+            </span>
         </button>
     );
-};
+}
 
-/* =========================================================
-   COMPONENT
-========================================================= */
 
-const ClubProfile = () => {
-    const { clubId } = useParams();
+// =========================================================
+// MAIN
+// =========================================================
+
+export default function ClubProfile() {
+
+    const params = useParams();
+
+    const clubId =
+        params.clubId ||
+        params.id;
     const navigate = useNavigate();
 
-    /* -----------------------------------------------------
-       DATA
-    ----------------------------------------------------- */
+
+    // =====================================================
+    // STATE
+    // =====================================================
 
     const [club, setClub] = useState(null);
-    const [members, setMembers] = useState([]);
-    const [joinRequests, setJoinRequests] = useState([]);
-    const [recruitmentPosts, setRecruitmentPosts] = useState([]);
-    const [incomingInvites, setIncomingInvites] = useState([]);
 
-    /* -----------------------------------------------------
-       LOADING
-    ----------------------------------------------------- */
+    const [members, setMembers] =
+        useState([]);
 
-    const [loading, setLoading] = useState(true);
+    const [joinRequests, setJoinRequests] =
+        useState([]);
+
+    const [recruitmentPosts, setRecruitmentPosts] =
+        useState([]);
+
+    const [incomingInvites, setIncomingInvites] =
+        useState([]);
+
+
+    const [loading, setLoading] =
+        useState(true);
+
     const [membersLoading, setMembersLoading] =
         useState(false);
-    const [joinRequestsLoading, setJoinRequestsLoading] =
+
+    const [requestsLoading, setRequestsLoading] =
         useState(false);
+
     const [recruitmentLoading, setRecruitmentLoading] =
         useState(false);
-    const [actionLoading, setActionLoading] =
-        useState(false);
 
-    /* -----------------------------------------------------
-       UI
-    ----------------------------------------------------- */
 
-    const [error, setError] = useState("");
-    const [success, setSuccess] = useState("");
+    const [error, setError] =
+        useState("");
+
+    const [success, setSuccess] =
+        useState("");
+
+
     const [activeTab, setActiveTab] =
         useState("overview");
 
-    const [openMemberMenu, setOpenMemberMenu] =
-        useState(null);
-
-    /* -----------------------------------------------------
-       JOIN REQUEST
-    ----------------------------------------------------- */
-
-    const [
-        showJoinRequestModal,
-        setShowJoinRequestModal,
-    ] = useState(false);
-
-    const [joinMessage, setJoinMessage] =
-        useState("");
-
-    /* -----------------------------------------------------
-       SETTINGS
-    ----------------------------------------------------- */
-
-    const [showSettings, setShowSettings] =
-        useState(false);
-
-    const [settingsForm, setSettingsForm] = useState({
-        name: "",
-        tag: "",
-        description: "",
-        avatar: "",
-        banner: "",
-        region: "Global",
-        gameId: "",
-        privacy: "Public",
-        allowMemberInvites: true,
-        isActive: true,
-    });
-
-    /* -----------------------------------------------------
-       RECRUITMENT
-    ----------------------------------------------------- */
-
-    const [
-        showRecruitmentForm,
-        setShowRecruitmentForm,
-    ] = useState(false);
-
-    const [
-        editingRecruitment,
-        setEditingRecruitment,
-    ] = useState(null);
-
-    const [recruitmentForm, setRecruitmentForm] =
-        useState({
-            title: "",
-            description: "",
-            gameId: "",
-            role: "",
-            rankRequirement: "",
-            region: "",
-            micRequired: false,
-            status: "OPEN",
-        });
-
-    /* -----------------------------------------------------
-       INVITES
-    ----------------------------------------------------- */
 
     const [inviteModal, setInviteModal] =
         useState(false);
@@ -399,46 +412,144 @@ const ClubProfile = () => {
     const [inviteSearching, setInviteSearching] =
         useState(false);
 
-    const [
-        showIncomingInvites,
-        setShowIncomingInvites,
-    ] = useState(false);
 
-    /* =====================================================
-       FETCH HELPER
-    ===================================================== */
+    const [actionLoading, setActionLoading] =
+        useState(false);
 
-    const fetchJson = async (
+    const [openMemberMenu, setOpenMemberMenu] =
+        useState(null);
+
+
+    const [showSettings, setShowSettings] =
+        useState(false);
+
+
+    const [showJoinRequestModal, setShowJoinRequestModal] =
+        useState(false);
+
+    const [joinMessage, setJoinMessage] =
+        useState("");
+
+
+    const [showRecruitmentForm, setShowRecruitmentForm] =
+        useState(false);
+
+    const [editingRecruitment, setEditingRecruitment] =
+        useState(null);
+
+
+    const [showIncomingInvites, setShowIncomingInvites] =
+        useState(false);
+
+
+    const [settingsForm, setSettingsForm] =
+        useState({
+            name: "",
+            tag: "",
+            description: "",
+            avatar: "",
+            banner: "",
+            region: "Global",
+            gameId: "",
+            privacy: "Public",
+            allowMemberInvites: true,
+            isActive: true,
+        });
+
+
+    const [recruitmentForm, setRecruitmentForm] =
+        useState({
+            title: "",
+            description: "",
+            gameId: "",
+            role: "",
+            rankRequirement: "",
+            region: "",
+            micRequired: false,
+            status: "OPEN",
+        });
+
+
+    // =====================================================
+    // MESSAGES
+    // =====================================================
+
+    function clearMessages() {
+        setError("");
+        setSuccess("");
+    }
+
+
+    function showSuccessMessage(message) {
+        setError("");
+        setSuccess(message);
+
+        window.setTimeout(() => {
+            setSuccess("");
+        }, 3500);
+    }
+
+
+    function showErrorMessage(message) {
+        setSuccess("");
+        setError(message);
+
+        window.setTimeout(() => {
+            setError("");
+        }, 5000);
+    }
+    // =========================================================
+    // FETCH HELPER
+    // =========================================================
+
+    async function fetchJson(
         url,
         options = {}
-    ) => {
+    ) {
         let response;
 
         try {
-            response = await fetch(url, {
-                credentials: "include",
-                ...options,
-                headers: {
-                    Accept: "application/json",
-                    ...(options.body
-                        ? {
-                            "Content-Type":
-                                "application/json",
-                        }
-                        : {}),
-                    ...(options.headers || {}),
-                },
-            });
-        } catch (networkError) {
+            response = await fetch(
+                url,
+                {
+                    credentials: "include",
+                    ...options,
+                    headers: {
+                        "Content-Type":
+                            "application/json",
+                        ...(options.headers || {}),
+                    },
+                }
+            );
+        } catch (error) {
+            console.error(
+                "SYNCO API NETWORK ERROR:",
+                {
+                    url,
+                    error,
+                }
+            );
+
             throw new Error(
-                "Unable to connect to the SYNCO backend."
+                `Unable to connect to SYNCO backend. Check backend URL, CORS and Render status.`
             );
         }
 
         const data =
-            await response.json().catch(() => ({}));
+            await response
+                .json()
+                .catch(() => ({}));
 
         if (!response.ok) {
+            console.error(
+                "SYNCO API ERROR:",
+                {
+                    url,
+                    status: response.status,
+                    data,
+                }
+            );
+
             throw new Error(
                 getErrorMessage(
                     data,
@@ -448,1142 +559,1633 @@ const ClubProfile = () => {
         }
 
         return data;
-    };
+    }
+    // =====================================================
+    // NORMALIZE CLUB RESPONSE
+    // =====================================================
 
-    /* =====================================================
-       LOAD CLUB
-    ===================================================== */
-
-    const loadClub = async () => {
-        const data = await fetchJson(
-            `${API}/clubs/${clubId}`
-        );
-
+    function normalizeClubResponse(data) {
         if (!data?.club) {
-            throw new Error("Club not found.");
+            return null;
         }
 
-        /*
-         * IMPORTANT FIX:
-         *
-         * Backend returns:
-         *
-         * {
-         *   club: {...},
-         *   currentUser: {...},
-         *   canManage: true,
-         *   isOwner: true,
-         *   pendingJoinRequest: null
-         * }
-         *
-         * Previously only data.club was stored.
-         */
-
-        const normalizedClub = {
+        return {
             ...data.club,
 
             currentUser:
-                data.currentUser || null,
+                data.currentUser ||
+                null,
 
             canManage:
-                Boolean(data.canManage),
+                Boolean(
+                    data.canManage
+                ),
 
             isOwner:
-                Boolean(data.isOwner),
+                Boolean(
+                    data.isOwner
+                ),
 
             pendingJoinRequest:
-                data.pendingJoinRequest || null,
+                data.pendingJoinRequest ||
+                null,
         };
+    }
 
-        setClub(normalizedClub);
 
-        return normalizedClub;
-    };
+    // =====================================================
+    // LOAD CLUB
+    // =====================================================
 
-    /* =====================================================
-       LOAD MEMBERS
-    ===================================================== */
+    async function loadClub() {
 
-    const loadMembers = async () => {
-        setMembersLoading(true);
+        if (!clubId) {
+            throw new Error(
+                "Club ID is missing."
+            );
+        }
+
 
         try {
-            const data = await fetchJson(
-                `${API}/clubs/${clubId}/members`
+
+            const data =
+                await fetchJson(
+                    `${API}/clubs/${clubId}`
+                );
+
+
+            const normalizedClub =
+                normalizeClubResponse(
+                    data
+                );
+
+
+            if (!normalizedClub) {
+                throw new Error(
+                    "Club not found."
+                );
+            }
+
+
+            setClub(
+                normalizedClub
             );
+
+
+            return normalizedClub;
+
+        } catch (err) {
+
+            showErrorMessage(
+                err.message
+            );
+
+            throw err;
+        }
+    }
+
+
+    // =====================================================
+    // LOAD MEMBERS
+    // =====================================================
+
+    async function loadMembers() {
+
+        try {
+
+            setMembersLoading(true);
+
+
+            const data =
+                await fetchJson(
+                    `${API}/clubs/${clubId}/members`
+                );
+
 
             setMembers(
-                Array.isArray(data?.members)
-                    ? data.members
-                    : []
+                data.members || []
             );
+
+        } catch (err) {
+
+            showErrorMessage(
+                err.message
+            );
+
         } finally {
+
             setMembersLoading(false);
         }
-    };
+    }
 
-    /* =====================================================
-       LOAD JOIN REQUESTS
-    ===================================================== */
 
-    const loadJoinRequests = async () => {
-        if (!club?.canManage) {
-            return;
-        }
+    // =====================================================
+    // LOAD JOIN REQUESTS
+    // =====================================================
 
-        setJoinRequestsLoading(true);
+    async function loadJoinRequests(
+        showErrorOnFailure = false
+    ) {
 
         try {
-            const data = await fetchJson(
-                `${API}/clubs/${clubId}/join-requests`
-            );
+
+            setRequestsLoading(true);
+
+
+            const data =
+                await fetchJson(
+                    `${API}/clubs/${clubId}/join-requests`
+                );
+
 
             setJoinRequests(
-                Array.isArray(data?.requests)
-                    ? data.requests
-                    : Array.isArray(
-                        data?.joinRequests
-                    )
-                        ? data.joinRequests
-                        : []
+                data.requests || []
             );
+
+        } catch (err) {
+
+            if (showErrorOnFailure) {
+                showErrorMessage(
+                    err.message
+                );
+            }
+
         } finally {
-            setJoinRequestsLoading(false);
+
+            setRequestsLoading(false);
         }
-    };
+    }
 
-    /* =====================================================
-       LOAD RECRUITMENT
-    ===================================================== */
 
-    const loadRecruitment = async (
+    // =====================================================
+    // LOAD RECRUITMENT
+    // =====================================================
+
+    async function loadRecruitment(
         includeClosed = false
-    ) => {
-        setRecruitmentLoading(true);
+    ) {
 
         try {
-            const query = includeClosed
-                ? "?includeClosed=true"
-                : "";
 
-            const data = await fetchJson(
-                `${API}/clubs/${clubId}/recruitment${query}`
-            );
+            setRecruitmentLoading(true);
+
+
+            const query =
+                includeClosed
+                    ? "?includeClosed=true"
+                    : "";
+
+
+            const data =
+                await fetchJson(
+                    `${API}/clubs/${clubId}/recruitment${query}`
+                );
+
 
             setRecruitmentPosts(
-                Array.isArray(data?.posts)
-                    ? data.posts
-                    : Array.isArray(
-                        data?.recruitment
-                    )
-                        ? data.recruitment
-                        : []
+                data.posts || []
             );
+
+        } catch (err) {
+
+            showErrorMessage(
+                err.message
+            );
+
         } finally {
+
             setRecruitmentLoading(false);
         }
-    };
+    }
 
-    /* =====================================================
-       LOAD INVITES
-    ===================================================== */
 
-    const loadInvites = async () => {
+    // =====================================================
+    // LOAD INVITES
+    // =====================================================
+
+    async function loadInvites() {
+
         try {
-            const data = await fetchJson(
-                `${API}/clubs/invites/mine`
-            );
+
+            const data =
+                await fetchJson(
+                    `${API}/clubs/invites/mine`
+                );
+
 
             setIncomingInvites(
-                Array.isArray(data?.invites)
-                    ? data.invites
-                    : []
+                data.invites || []
             );
-        } catch (err) {
-            console.error(
-                "Invite loading error:",
-                err
-            );
-        }
-    };
 
-    /* =====================================================
-       INITIAL LOAD
-    ===================================================== */
+        } catch {
+            // Non-critical.
+        }
+    }
+
+
+    // =====================================================
+    // INITIAL LOAD
+    // =====================================================
 
     useEffect(() => {
-        if (!clubId) {
-            setError("Invalid club ID.");
-            setLoading(false);
-            return;
-        }
 
         let mounted = true;
 
-        const run = async () => {
+
+        async function load() {
+
             try {
+
                 setLoading(true);
                 setError("");
 
-                await Promise.all([
-                    loadClub(),
-                    loadMembers(),
-                    loadInvites(),
-                ]);
-            } catch (err) {
-                console.error(
-                    "Club loading error:",
-                    err
-                );
 
-                if (mounted) {
-                    setError(
-                        err?.message ||
-                        "Failed to fetch club."
+                const [
+                    clubResponse,
+                    membersResponse,
+                    inviteResponse,
+                ] =
+                    await Promise.all([
+                        fetchJson(
+                            `${API}/clubs/${clubId}`
+                        ),
+
+                        fetchJson(
+                            `${API}/clubs/${clubId}/members`
+                        ),
+
+                        fetchJson(
+                            `${API}/clubs/invites/mine`
+                        ),
+                    ]);
+
+
+                if (!mounted) {
+                    return;
+                }
+
+
+                const normalizedClub =
+                    normalizeClubResponse(
+                        clubResponse
+                    );
+
+
+                if (!normalizedClub) {
+                    throw new Error(
+                        "Club not found."
                     );
                 }
+
+
+                setClub(
+                    normalizedClub
+                );
+
+
+                setMembers(
+                    membersResponse.members ||
+                    []
+                );
+
+
+                setIncomingInvites(
+                    inviteResponse.invites ||
+                    []
+                );
+
+            } catch (err) {
+
+                if (mounted) {
+
+                    setClub(null);
+
+                    setError(
+                        err.message ||
+                        "Unable to load club."
+                    );
+                }
+
             } finally {
+
                 if (mounted) {
                     setLoading(false);
                 }
             }
-        };
+        }
 
-        run();
+
+        if (clubId) {
+            load();
+        } else {
+            setLoading(false);
+            setError(
+                "Club ID is missing."
+            );
+        }
+
 
         return () => {
             mounted = false;
         };
+
     }, [clubId]);
 
-    /* =====================================================
-       TAB LOADERS
-    ===================================================== */
 
-    useEffect(() => {
-        if (!club) return;
-
-        if (activeTab === "members") {
-            loadMembers().catch((err) =>
-                setError(err.message)
-            );
-        }
-
-        if (activeTab === "recruitment") {
-            loadRecruitment(
-                Boolean(club.canManage)
-            ).catch((err) =>
-                setError(err.message)
-            );
-        }
-
-        if (
-            activeTab === "overview" &&
-            club.canManage
-        ) {
-            loadJoinRequests().catch((err) =>
-                setError(err.message)
-            );
-        }
-    }, [
-        activeTab,
-        club?.canManage,
-        clubId,
-    ]);
-
-    /* =====================================================
-       PERMISSIONS
-    ===================================================== */
+    // =====================================================
+    // CURRENT USER / PERMISSIONS
+    // =====================================================
 
     const currentUser =
-        club?.currentUser || null;
+        club?.currentUser ||
+        null;
 
-    const isOwner =
-        Boolean(club?.isOwner) ||
-        Number(club?.ownerId) ===
-        Number(currentUser?.id);
 
-    const canManage =
-        Boolean(club?.canManage) ||
-        isOwner;
-
-    const membership = useMemo(() => {
-        if (!currentUser?.id) return null;
-
-        return members.find(
+    const currentMembership =
+        members.find(
             (member) =>
-                Number(member.userId) ===
-                Number(currentUser.id)
+                String(
+                    member.userId
+                ) ===
+                String(
+                    currentUser?.id
+                )
         );
-    }, [members, currentUser]);
+
 
     const isMember =
-        Boolean(membership) ||
-        Boolean(currentUser?.role);
+        Boolean(
+            currentMembership
+        );
+
+
+    const isOwner =
+        Boolean(
+            club?.isOwner ||
+            currentMembership?.role ===
+            "OWNER"
+        );
+
+
+    const isAdmin =
+        String(
+            currentMembership?.role ||
+            ""
+        ).toUpperCase() ===
+        "ADMIN";
+
+
+    const canManage =
+        Boolean(
+            club?.canManage ||
+            isOwner ||
+            isAdmin
+        );
+
 
     const pendingJoinRequest =
-        club?.pendingJoinRequest || null;
+        club?.pendingJoinRequest ||
+        null;
 
-    const memberCount =
-        Number(
-            firstDefined(
-                club?.memberCount,
-                members.length
-            )
-        ) || 0;
 
-    const adminCount = members.filter(
-        (member) =>
-            String(member.role).toUpperCase() ===
-            "ADMIN"
-    ).length;
+    const hasPendingRequest =
+        Boolean(
+            pendingJoinRequest
+        );
 
-    /* =====================================================
-       OPEN SETTINGS
-    ===================================================== */
 
-    const openSettings = () => {
-        setSettingsForm({
-            name: club?.name || "",
-            tag: club?.tag || "",
-            description:
-                club?.description || "",
-            avatar: club?.avatar || "",
-            banner: club?.banner || "",
-            region:
-                club?.region || "Global",
-            gameId:
-                club?.gameId ||
-                club?.game?.id ||
-                "",
-            privacy:
-                club?.privacy || "Public",
-            allowMemberInvites:
-                club?.allowMemberInvites !==
-                false,
-            isActive:
-                club?.isActive !== false,
-        });
+    // =====================================================
+    // RECRUITMENT TAB LOAD
+    // =====================================================
 
-        setShowSettings(true);
-    };
+    useEffect(() => {
 
-    /* =====================================================
-       JOIN CLUB
-    ===================================================== */
-
-    const sendJoinRequest = async () => {
-        if (!clubId) return;
-
-        try {
-            setActionLoading(true);
-            setError("");
-            setSuccess("");
-
-            await fetchJson(
-                `${API}/clubs/${clubId}/join`,
-                {
-                    method: "POST",
-                    body: JSON.stringify({
-                        message:
-                            joinMessage.trim(),
-                    }),
-                }
-            );
-
-            setShowJoinRequestModal(false);
-            setJoinMessage("");
-
-            await loadClub();
-
-            setSuccess(
-                "Join request sent successfully."
-            );
-        } catch (err) {
-            setError(err.message);
-        } finally {
-            setActionLoading(false);
-        }
-    };
-
-    /* =====================================================
-       CANCEL JOIN REQUEST
-    ===================================================== */
-
-    const cancelJoinRequest = async () => {
-        if (!pendingJoinRequest?.id) {
+        if (
+            activeTab !==
+            "recruitment"
+        ) {
             return;
         }
 
-        try {
-            setActionLoading(true);
-            setError("");
 
-            await fetchJson(
-                `${API}/clubs/join-requests/${pendingJoinRequest.id}/cancel`,
-                {
-                    method: "POST",
-                }
+        loadRecruitment(
+            canManage
+        );
+
+    }, [
+        activeTab,
+        clubId,
+        canManage,
+    ]);
+
+
+    // =====================================================
+    // STATS
+    // =====================================================
+
+    const ownerCount =
+        members.filter(
+            (member) =>
+                String(
+                    member.role
+                ).toUpperCase() ===
+                "OWNER"
+        ).length;
+
+
+    const adminCount =
+        members.filter(
+            (member) =>
+                String(
+                    member.role
+                ).toUpperCase() ===
+                "ADMIN"
+        ).length;
+
+
+    const memberCount =
+        members.length;
+
+
+    // =====================================================
+    // JOIN REQUEST
+    // =====================================================
+
+    function openJoinRequest() {
+
+        clearMessages();
+
+        setJoinMessage("");
+
+        setShowJoinRequestModal(
+            true
+        );
+    }
+
+
+    async function sendJoinRequest() {
+
+        try {
+
+            setActionLoading(true);
+
+
+            const data =
+                await fetchJson(
+                    `${API}/clubs/${clubId}/join`,
+                    {
+                        method: "POST",
+                        body:
+                            JSON.stringify({
+                                message:
+                                    joinMessage.trim() ||
+                                    null,
+                            }),
+                    }
+                );
+
+
+            setShowJoinRequestModal(
+                false
             );
+
+            setJoinMessage("");
+
 
             await loadClub();
 
-            setSuccess(
+
+            showSuccessMessage(
+                data.message ||
+                "Join request sent."
+            );
+
+        } catch (err) {
+
+            showErrorMessage(
+                err.message
+            );
+
+        } finally {
+
+            setActionLoading(false);
+        }
+    }
+
+
+    // =====================================================
+    // CANCEL JOIN REQUEST
+    // =====================================================
+
+    async function cancelJoinRequest() {
+
+        if (
+            !pendingJoinRequest?.id
+        ) {
+            return;
+        }
+
+
+        try {
+
+            setActionLoading(true);
+
+
+            const data =
+                await fetchJson(
+                    `${API}/clubs/join-requests/${pendingJoinRequest.id}/cancel`,
+                    {
+                        method: "POST",
+                    }
+                );
+
+
+            await loadClub();
+
+
+            showSuccessMessage(
+                data.message ||
                 "Join request cancelled."
             );
+
         } catch (err) {
-            setError(err.message);
+
+            showErrorMessage(
+                err.message
+            );
+
         } finally {
+
             setActionLoading(false);
         }
-    };
+    }
 
-    /* =====================================================
-       APPROVE JOIN REQUEST
-    ===================================================== */
 
-    const approveJoinRequest = async (
+    // =====================================================
+    // OPEN JOIN REQUESTS
+    // =====================================================
+
+    async function openJoinRequests() {
+
+        clearMessages();
+
+        setActiveTab(
+            "overview"
+        );
+
+
+        await loadJoinRequests(
+            true
+        );
+    }
+
+
+    // =====================================================
+    // APPROVE JOIN REQUEST
+    // =====================================================
+
+    async function approveJoinRequest(
         requestId
-    ) => {
-        try {
-            setActionLoading(true);
-            setError("");
+    ) {
 
-            await fetchJson(
-                `${API}/clubs/join-requests/${requestId}/approve`,
-                {
-                    method: "POST",
-                }
-            );
+        try {
+
+            setActionLoading(true);
+
+
+            const data =
+                await fetchJson(
+                    `${API}/clubs/join-requests/${requestId}/approve`,
+                    {
+                        method: "POST",
+                    }
+                );
+
 
             await Promise.all([
-                loadJoinRequests(),
-                loadMembers(),
                 loadClub(),
+                loadMembers(),
+                loadJoinRequests(),
             ]);
 
-            setSuccess(
-                "Join request approved."
+
+            showSuccessMessage(
+                data.message ||
+                "Player approved."
             );
+
         } catch (err) {
-            setError(err.message);
+
+            showErrorMessage(
+                err.message
+            );
+
         } finally {
+
             setActionLoading(false);
         }
-    };
+    }
 
-    /* =====================================================
-       REJECT JOIN REQUEST
-    ===================================================== */
 
-    const rejectJoinRequest = async (
+    // =====================================================
+    // REJECT JOIN REQUEST
+    // =====================================================
+
+    async function rejectJoinRequest(
         requestId
-    ) => {
-        try {
-            setActionLoading(true);
-            setError("");
+    ) {
 
-            await fetchJson(
-                `${API}/clubs/join-requests/${requestId}/reject`,
-                {
-                    method: "POST",
-                }
-            );
+        try {
+
+            setActionLoading(true);
+
+
+            const data =
+                await fetchJson(
+                    `${API}/clubs/join-requests/${requestId}/reject`,
+                    {
+                        method: "POST",
+                    }
+                );
+
 
             await loadJoinRequests();
 
-            setSuccess(
+
+            showSuccessMessage(
+                data.message ||
                 "Join request rejected."
             );
+
         } catch (err) {
-            setError(err.message);
+
+            showErrorMessage(
+                err.message
+            );
+
         } finally {
+
             setActionLoading(false);
         }
-    };
+    }
 
-    /* =====================================================
-       REMOVE MEMBER
-    ===================================================== */
 
-    const removeMember = async (userId) => {
-        if (
-            !window.confirm(
-                "Remove this player from the club?"
-            )
-        ) {
+    // =====================================================
+    // LEAVE CLUB
+    // =====================================================
+
+    async function leaveClub() {
+
+        const confirmed =
+            window.confirm(
+                "Are you sure you want to leave this club?"
+            );
+
+
+        if (!confirmed) {
             return;
         }
 
-        try {
-            setActionLoading(true);
-            setError("");
 
-            await fetchJson(
-                `${API}/clubs/${clubId}/members/${userId}`,
-                {
-                    method: "DELETE",
-                }
+        try {
+
+            setActionLoading(true);
+
+
+            const data =
+                await fetchJson(
+                    `${API}/clubs/${clubId}/leave`,
+                    {
+                        method: "POST",
+                    }
+                );
+
+
+            await Promise.all([
+                loadClub(),
+                loadMembers(),
+            ]);
+
+
+            showSuccessMessage(
+                data.message ||
+                "You left the club."
             );
 
-            setOpenMemberMenu(null);
+        } catch (err) {
+
+            showErrorMessage(
+                err.message
+            );
+
+        } finally {
+
+            setActionLoading(false);
+        }
+    }
+
+
+    // =====================================================
+    // REMOVE MEMBER
+    // =====================================================
+
+    async function removeMember(
+        userId
+    ) {
+
+        try {
+
+            setActionLoading(true);
+
+
+            const data =
+                await fetchJson(
+                    `${API}/clubs/${clubId}/members/${userId}`,
+                    {
+                        method: "DELETE",
+                    }
+                );
+
+
+            setOpenMemberMenu(
+                null
+            );
+
 
             await Promise.all([
                 loadMembers(),
                 loadClub(),
             ]);
 
-            setSuccess(
-                "Member removed from the club."
+
+            showSuccessMessage(
+                data.message ||
+                "Member removed."
             );
+
         } catch (err) {
-            setError(err.message);
+
+            showErrorMessage(
+                err.message
+            );
+
         } finally {
+
             setActionLoading(false);
         }
-    };
+    }
 
-    /* =====================================================
-       CHANGE ROLE
-    ===================================================== */
 
-    const changeRole = async (
+    // =====================================================
+    // CHANGE ROLE
+    // =====================================================
+
+    async function changeRole(
         userId,
         role
-    ) => {
-        try {
-            setActionLoading(true);
-            setError("");
+    ) {
 
-            await fetchJson(
-                `${API}/clubs/${clubId}/members/${userId}/role`,
-                {
-                    method: "PATCH",
-                    body: JSON.stringify({
-                        role,
-                    }),
-                }
+        try {
+
+            setActionLoading(true);
+
+
+            const data =
+                await fetchJson(
+                    `${API}/clubs/${clubId}/members/${userId}/role`,
+                    {
+                        method: "PATCH",
+                        body:
+                            JSON.stringify({
+                                role,
+                            }),
+                    }
+                );
+
+
+            setOpenMemberMenu(
+                null
             );
 
-            setOpenMemberMenu(null);
 
             await loadMembers();
 
-            setSuccess(
-                role === "ADMIN"
-                    ? "Player promoted to admin."
-                    : "Admin role removed."
+
+            showSuccessMessage(
+                data.message ||
+                "Member role updated."
             );
+
         } catch (err) {
-            setError(err.message);
+
+            showErrorMessage(
+                err.message
+            );
+
         } finally {
+
             setActionLoading(false);
         }
-    };
+    }
 
-    /* =====================================================
-       LEAVE CLUB
-    ===================================================== */
 
-    const leaveClub = async () => {
-        if (isOwner) {
-            setError(
-                "The club owner cannot leave the club."
-            );
-            return;
-        }
+    // =====================================================
+    // INVITE SEARCH
+    // =====================================================
+
+    useEffect(() => {
 
         if (
-            !window.confirm(
-                "Are you sure you want to leave this club?"
-            )
+            !inviteModal ||
+            inviteSearch.trim().length <
+            2
         ) {
+
+            setInviteResults([]);
+
             return;
         }
 
-        try {
-            setActionLoading(true);
 
-            await fetchJson(
-                `${API}/clubs/${clubId}/leave`,
-                {
-                    method: "POST",
-                }
+        const timer =
+            window.setTimeout(
+                async () => {
+
+                    try {
+
+                        setInviteSearching(
+                            true
+                        );
+
+
+                        const data =
+                            await fetchJson(
+                                `${API}/clubs/users/search?q=${encodeURIComponent(
+                                    inviteSearch.trim()
+                                )}&clubId=${clubId}`
+                            );
+
+
+                        setInviteResults(
+                            data.users ||
+                            []
+                        );
+
+                    } catch (err) {
+
+                        showErrorMessage(
+                            err.message
+                        );
+
+                    } finally {
+
+                        setInviteSearching(
+                            false
+                        );
+                    }
+                },
+                300
             );
 
+
+        return () => {
+            window.clearTimeout(
+                timer
+            );
+        };
+
+    }, [
+        inviteSearch,
+        inviteModal,
+        clubId,
+    ]);
+
+
+    // =====================================================
+    // SEND INVITE
+    // =====================================================
+
+    async function sendInvite(
+        userId
+    ) {
+
+        try {
+
+            setActionLoading(true);
+
+
+            const data =
+                await fetchJson(
+                    `${API}/clubs/${clubId}/invites`,
+                    {
+                        method: "POST",
+                        body:
+                            JSON.stringify({
+                                userId,
+                            }),
+                    }
+                );
+
+
+            setInviteSearch("");
+
+            setInviteResults([]);
+
+
+            showSuccessMessage(
+                data.message ||
+                "Invitation sent."
+            );
+
+        } catch (err) {
+
+            showErrorMessage(
+                err.message
+            );
+
+        } finally {
+
+            setActionLoading(false);
+        }
+    }
+
+
+    // =====================================================
+    // ACCEPT INVITE
+    // =====================================================
+
+    async function acceptInvite(
+        inviteId
+    ) {
+
+        try {
+
+            setActionLoading(true);
+
+
+            const data =
+                await fetchJson(
+                    `${API}/clubs/invites/${inviteId}/accept`,
+                    {
+                        method: "POST",
+                    }
+                );
+
+
             await Promise.all([
+                loadInvites(),
                 loadClub(),
                 loadMembers(),
             ]);
 
-            setSuccess(
-                "You have left the club."
+
+            showSuccessMessage(
+                data.message ||
+                "You joined the club."
             );
+
         } catch (err) {
-            setError(err.message);
+
+            showErrorMessage(
+                err.message
+            );
+
         } finally {
+
             setActionLoading(false);
         }
-    };
+    }
 
-    /* =====================================================
-       SAVE SETTINGS
-    ===================================================== */
 
-    const saveSettings = async () => {
-        if (!settingsForm.name.trim()) {
-            setError(
-                "Club name is required."
-            );
-            return;
-        }
+    // =====================================================
+    // DECLINE INVITE
+    // =====================================================
 
-        if (!settingsForm.tag.trim()) {
-            setError(
-                "Club tag is required."
-            );
-            return;
-        }
+    async function declineInvite(
+        inviteId
+    ) {
 
         try {
+
             setActionLoading(true);
-            setError("");
-            setSuccess("");
 
-            await fetchJson(
-                `${API}/clubs/${clubId}/settings`,
-                {
-                    method: "PATCH",
-                    body: JSON.stringify({
-                        name:
-                            settingsForm.name.trim(),
-                        tag:
-                            settingsForm.tag
-                                .trim()
-                                .toUpperCase()
-                                .slice(0, 5),
-                        description:
-                            settingsForm.description.trim(),
-                        avatar:
-                            settingsForm.avatar.trim() ||
-                            null,
-                        banner:
-                            settingsForm.banner.trim() ||
-                            null,
-                        region:
-                            settingsForm.region.trim() ||
-                            "Global",
-                        gameId:
-                            settingsForm.gameId ||
-                            club.gameId,
-                        privacy:
-                            settingsForm.privacy,
-                        allowMemberInvites:
-                            settingsForm.allowMemberInvites,
-                        isActive:
-                            settingsForm.isActive,
-                    }),
-                }
+
+            const data =
+                await fetchJson(
+                    `${API}/clubs/invites/${inviteId}/decline`,
+                    {
+                        method: "POST",
+                    }
+                );
+
+
+            await loadInvites();
+
+
+            showSuccessMessage(
+                data.message ||
+                "Invitation declined."
             );
 
-            await loadClub();
-
-            setShowSettings(false);
-
-            setSuccess(
-                "Club settings updated."
-            );
         } catch (err) {
-            setError(err.message);
+
+            showErrorMessage(
+                err.message
+            );
+
         } finally {
+
             setActionLoading(false);
         }
-    };
+    }
 
-    /* =====================================================
-       CREATE RECRUITMENT
-    ===================================================== */
 
-    const openRecruitmentCreate = () => {
-        setEditingRecruitment(null);
+    // =====================================================
+    // SETTINGS
+    // =====================================================
+
+    function openSettings() {
+
+        setSettingsForm({
+            name:
+                club?.name ||
+                "",
+
+            tag:
+                club?.tag ||
+                "",
+
+            description:
+                club?.description ||
+                "",
+
+            avatar:
+                club?.avatar ||
+                "",
+
+            banner:
+                club?.banner ||
+                "",
+
+            region:
+                club?.region ||
+                "Global",
+
+            gameId:
+                club?.gameId ||
+                "",
+
+            privacy:
+                club?.privacy ||
+                "Public",
+
+            allowMemberInvites:
+                club?.allowMemberInvites !==
+                false,
+
+            isActive:
+                club?.isActive !==
+                false,
+        });
+
+
+        setShowSettings(
+            true
+        );
+    }
+
+
+    async function saveSettings() {
+
+        if (
+            !settingsForm.name.trim()
+        ) {
+            showErrorMessage(
+                "Club name is required."
+            );
+
+            return;
+        }
+
+
+        if (
+            !settingsForm.tag.trim()
+        ) {
+            showErrorMessage(
+                "Club tag is required."
+            );
+
+            return;
+        }
+
+
+        try {
+
+            setActionLoading(true);
+
+
+            const data =
+                await fetchJson(
+                    `${API}/clubs/${clubId}/settings`,
+                    {
+                        method: "PATCH",
+                        body:
+                            JSON.stringify({
+                                ...settingsForm,
+                            }),
+                    }
+                );
+
+
+            const normalized =
+                normalizeClubResponse(
+                    data
+                );
+
+
+            if (normalized) {
+                setClub(
+                    normalized
+                );
+            } else if (data.club) {
+                setClub({
+                    ...club,
+                    ...data.club,
+                });
+            }
+
+
+            setShowSettings(
+                false
+            );
+
+
+            showSuccessMessage(
+                data.message ||
+                "Club settings updated."
+            );
+
+        } catch (err) {
+
+            showErrorMessage(
+                err.message
+            );
+
+        } finally {
+
+            setActionLoading(false);
+        }
+    }
+
+
+    // =====================================================
+    // RECRUITMENT CREATE
+    // =====================================================
+
+    function openRecruitmentCreate() {
+
+        setEditingRecruitment(
+            null
+        );
+
 
         setRecruitmentForm({
             title: "",
             description: "",
             gameId:
                 club?.gameId ||
-                club?.game?.id ||
                 "",
             role: "",
             rankRequirement: "",
             region:
-                club?.region || "",
+                club?.region ||
+                "",
             micRequired: false,
             status: "OPEN",
         });
 
-        setShowRecruitmentForm(true);
-    };
 
-    /* =====================================================
-       EDIT RECRUITMENT
-    ===================================================== */
+        setShowRecruitmentForm(
+            true
+        );
+    }
 
-    const openRecruitmentEdit = (
+
+    // =====================================================
+    // RECRUITMENT EDIT
+    // =====================================================
+
+    function openRecruitmentEdit(
         post
-    ) => {
-        setEditingRecruitment(post);
+    ) {
+
+        setEditingRecruitment(
+            post
+        );
+
 
         setRecruitmentForm({
             title:
-                post?.title || "",
+                post.title ||
+                "",
+
             description:
-                post?.description || "",
+                post.description ||
+                "",
+
             gameId:
-                post?.gameId ||
-                post?.game?.id ||
+                post.gameId ||
                 club?.gameId ||
                 "",
+
             role:
-                post?.role || "",
-            rankRequirement:
-                post?.rankRequirement ||
+                post.role ||
                 "",
+
+            rankRequirement:
+                post.rankRequirement ||
+                "",
+
             region:
-                post?.region ||
+                post.region ||
                 club?.region ||
                 "",
+
             micRequired:
-                Boolean(post?.micRequired),
+                Boolean(
+                    post.micRequired
+                ),
+
             status:
-                post?.status || "OPEN",
+                post.status ||
+                "OPEN",
         });
 
-        setShowRecruitmentForm(true);
-    };
 
-    /* =====================================================
-       SAVE RECRUITMENT
-    ===================================================== */
+        setShowRecruitmentForm(
+            true
+        );
+    }
 
-    const saveRecruitment = async () => {
+
+    // =====================================================
+    // SAVE RECRUITMENT
+    // =====================================================
+
+    async function saveRecruitment() {
+
         if (
             !recruitmentForm.title.trim()
         ) {
-            setError(
+            showErrorMessage(
                 "Recruitment title is required."
             );
+
             return;
         }
+
 
         if (
             !recruitmentForm.description.trim()
         ) {
-            setError(
+            showErrorMessage(
                 "Recruitment description is required."
             );
+
             return;
         }
 
-        if (!recruitmentForm.gameId) {
-            setError(
-                "Select a game."
+
+        if (
+            !recruitmentForm.gameId
+        ) {
+            showErrorMessage(
+                "Please select a game."
             );
+
             return;
         }
+
 
         try {
+
             setActionLoading(true);
-            setError("");
-            setSuccess("");
 
-            const body = {
-                title:
-                    recruitmentForm.title.trim(),
-                description:
-                    recruitmentForm.description.trim(),
-                gameId:
-                    recruitmentForm.gameId,
-                role:
-                    recruitmentForm.role.trim(),
-                rankRequirement:
-                    recruitmentForm.rankRequirement.trim(),
-                region:
-                    recruitmentForm.region.trim(),
-                micRequired:
-                    recruitmentForm.micRequired,
-                status:
-                    recruitmentForm.status,
-            };
 
-            if (editingRecruitment?.id) {
+            const isEditing =
+                Boolean(
+                    editingRecruitment
+                );
+
+
+            const endpoint =
+                isEditing
+                    ? `${API}/clubs/recruitment/${editingRecruitment.id}`
+                    : `${API}/clubs/${clubId}/recruitment`;
+
+
+            const data =
                 await fetchJson(
-                    `${API}/clubs/${clubId}/recruitment/${editingRecruitment.id}`,
+                    endpoint,
                     {
-                        method: "PATCH",
-                        body: JSON.stringify(
-                            body
-                        ),
+                        method:
+                            isEditing
+                                ? "PATCH"
+                                : "POST",
+
+                        body:
+                            JSON.stringify(
+                                recruitmentForm
+                            ),
                     }
                 );
-            } else {
+
+
+            setShowRecruitmentForm(
+                false
+            );
+
+            setEditingRecruitment(
+                null
+            );
+
+
+            await loadRecruitment(
+                canManage
+            );
+
+
+            showSuccessMessage(
+                data.message ||
+                (
+                    isEditing
+                        ? "Recruitment post updated."
+                        : "Recruitment post created."
+                )
+            );
+
+        } catch (err) {
+
+            showErrorMessage(
+                err.message
+            );
+
+        } finally {
+
+            setActionLoading(false);
+        }
+    }
+
+
+    // =====================================================
+    // TOGGLE RECRUITMENT
+    // =====================================================
+
+    async function toggleRecruitment(
+        post
+    ) {
+
+        try {
+
+            setActionLoading(true);
+
+
+            const action =
+                post.status ===
+                    "OPEN"
+                    ? "close"
+                    : "open";
+
+
+            const data =
                 await fetchJson(
-                    `${API}/clubs/${clubId}/recruitment`,
+                    `${API}/clubs/recruitment/${post.id}/${action}`,
                     {
                         method: "POST",
-                        body: JSON.stringify(
-                            body
-                        ),
                     }
                 );
-            }
 
-            await loadRecruitment(true);
 
-            setShowRecruitmentForm(false);
-            setEditingRecruitment(null);
-
-            setSuccess(
-                editingRecruitment
-                    ? "Recruitment post updated."
-                    : "Recruitment post created."
+            await loadRecruitment(
+                canManage
             );
+
+
+            showSuccessMessage(
+                data.message ||
+                "Recruitment updated."
+            );
+
         } catch (err) {
-            setError(err.message);
+
+            showErrorMessage(
+                err.message
+            );
+
         } finally {
+
             setActionLoading(false);
         }
-    };
+    }
 
-    /* =====================================================
-       DELETE RECRUITMENT
-    ===================================================== */
 
-    const deleteRecruitment = async (
+    // =====================================================
+    // DELETE RECRUITMENT
+    // =====================================================
+
+    async function deleteRecruitment(
         post
-    ) => {
-        if (
-            !window.confirm(
+    ) {
+
+        const confirmed =
+            window.confirm(
                 "Delete this recruitment post?"
-            )
-        ) {
+            );
+
+
+        if (!confirmed) {
             return;
         }
 
-        try {
-            setActionLoading(true);
-            setError("");
 
-            await fetchJson(
-                `${API}/clubs/${clubId}/recruitment/${post.id}`,
-                {
-                    method: "DELETE",
-                }
+        try {
+
+            setActionLoading(true);
+
+
+            const data =
+                await fetchJson(
+                    `${API}/clubs/recruitment/${post.id}`,
+                    {
+                        method: "DELETE",
+                    }
+                );
+
+
+            await loadRecruitment(
+                canManage
             );
 
-            await loadRecruitment(true);
 
-            setSuccess(
+            showSuccessMessage(
+                data.message ||
                 "Recruitment post deleted."
             );
+
         } catch (err) {
-            setError(err.message);
+
+            showErrorMessage(
+                err.message
+            );
+
         } finally {
+
             setActionLoading(false);
         }
-    };
+    }
 
-    /* =====================================================
-       TOGGLE RECRUITMENT
-    ===================================================== */
 
-    const toggleRecruitment = async (
-        post
-    ) => {
-        try {
-            setActionLoading(true);
-            setError("");
+    // =====================================================
+    // TABS
+    // =====================================================
 
-            const nextStatus =
-                post.status === "OPEN"
-                    ? "CLOSED"
-                    : "OPEN";
+    const tabs = [
+        {
+            id: "overview",
+            label: "Overview",
+        },
+        {
+            id: "members",
+            label: "Members",
+        },
+        {
+            id: "recruitment",
+            label: "Recruitment",
+        },
+        {
+            id: "tournaments",
+            label: "Tournaments",
+        },
+        {
+            id: "stats",
+            label: "Stats",
+        },
+    ];
 
-            await fetchJson(
-                `${API}/clubs/${clubId}/recruitment/${post.id}`,
-                {
-                    method: "PATCH",
-                    body: JSON.stringify({
-                        status: nextStatus,
-                    }),
-                }
-            );
 
-            await loadRecruitment(true);
+    // =====================================================
+    // MEMBER PREVIEW
+    // =====================================================
 
-            setSuccess(
-                nextStatus === "OPEN"
-                    ? "Recruitment reopened."
-                    : "Recruitment closed."
-            );
-        } catch (err) {
-            setError(err.message);
-        } finally {
-            setActionLoading(false);
-        }
-    };
+    const memberPreview =
+        useMemo(
+            () =>
+                members.slice(
+                    0,
+                    6
+                ),
+            [members]
+        );
 
-    /* =====================================================
-       SEND INVITE
-    ===================================================== */
 
-    const sendInvite = async (
-        userId
-    ) => {
-        try {
-            setActionLoading(true);
-            setError("");
-
-            await fetchJson(
-                `${API}/clubs/${clubId}/invite`,
-                {
-                    method: "POST",
-                    body: JSON.stringify({
-                        inviteeId: userId,
-                    }),
-                }
-            );
-
-            setSuccess(
-                "Invitation sent successfully."
-            );
-        } catch (err) {
-            setError(err.message);
-        } finally {
-            setActionLoading(false);
-        }
-    };
-
-    /* =====================================================
-       SEARCH PLAYERS
-    ===================================================== */
-
-    useEffect(() => {
-        const search = async () => {
-            const query =
-                inviteSearch.trim();
-
-            if (query.length < 2) {
-                setInviteResults([]);
-                return;
-            }
-
-            try {
-                setInviteSearching(true);
-
-                const data =
-                    await fetchJson(
-                        `${API}/clubs/users/search?q=${encodeURIComponent(
-                            query
-                        )}`
-                    );
-
-                setInviteResults(
-                    Array.isArray(
-                        data?.users
-                    )
-                        ? data.users
-                        : []
-                );
-            } catch (err) {
-                console.error(
-                    "Player search error:",
-                    err
-                );
-
-                setInviteResults([]);
-            } finally {
-                setInviteSearching(false);
-            }
-        };
-
-        const timer =
-            setTimeout(search, 350);
-
-        return () =>
-            clearTimeout(timer);
-    }, [inviteSearch]);
-
-    /* =====================================================
-       ACCEPT INVITE
-    ===================================================== */
-
-    const acceptInvite = async (
-        inviteId
-    ) => {
-        try {
-            setActionLoading(true);
-            setError("");
-
-            await fetchJson(
-                `${API}/clubs/invites/${inviteId}/accept`,
-                {
-                    method: "POST",
-                }
-            );
-
-            await loadInvites();
-
-            setSuccess(
-                "Club invitation accepted."
-            );
-        } catch (err) {
-            setError(err.message);
-        } finally {
-            setActionLoading(false);
-        }
-    };
-
-    /* =====================================================
-       DECLINE INVITE
-    ===================================================== */
-
-    const declineInvite = async (
-        inviteId
-    ) => {
-        try {
-            setActionLoading(true);
-            setError("");
-
-            await fetchJson(
-                `${API}/clubs/invites/${inviteId}/decline`,
-                {
-                    method: "POST",
-                }
-            );
-
-            await loadInvites();
-
-            setSuccess(
-                "Club invitation declined."
-            );
-        } catch (err) {
-            setError(err.message);
-        } finally {
-            setActionLoading(false);
-        }
-    };
-
-    /* =====================================================
-       OPEN JOIN REQUESTS
-    ===================================================== */
-
-    const openJoinRequests = async () => {
-        setActiveTab("overview");
-
-        try {
-            await loadJoinRequests();
-        } catch (err) {
-            setError(err.message);
-        }
-    };
-
-    /* =====================================================
-       LOADING
-    ===================================================== */
+    // =====================================================
+    // LOADING
+    // =====================================================
 
     if (loading) {
-        return (
-            <div className="min-h-screen bg-[#f7f7f5] text-[#171717]">
-                <div className="flex min-h-screen items-center justify-center">
-                    <div className="rounded-2xl border border-[#dedbd3] bg-white px-8 py-6 text-center shadow-sm">
-                        <div className="mx-auto h-8 w-8 animate-spin rounded-full border-2 border-[#dedbd3] border-t-[#9b8148]" />
 
-                        <p className="mt-4 text-xs font-black uppercase tracking-wider text-[#777]">
-                            Loading club
-                        </p>
+        return (
+            <div className="min-h-screen bg-[#f6f5f1] px-6 py-10">
+                <div className="mx-auto max-w-7xl animate-pulse">
+
+                    <div className="h-72 rounded-3xl bg-[#e8e5dd]" />
+
+                    <div className="mt-6 h-16 rounded-2xl bg-[#e8e5dd]" />
+
+                    <div className="mt-6 grid gap-6 lg:grid-cols-3">
+
+                        <div className="h-80 rounded-2xl bg-[#e8e5dd]" />
+
+                        <div className="h-80 rounded-2xl bg-[#e8e5dd] lg:col-span-2" />
+
                     </div>
+
                 </div>
             </div>
         );
     }
 
-    /* =====================================================
-       ERROR
-    ===================================================== */
+
+    // =====================================================
+    // ERROR / NOT FOUND
+    // =====================================================
 
     if (!club) {
+
         return (
-            <div className="min-h-screen bg-[#f7f7f5] text-[#171717]">
-                <div className="flex min-h-screen items-center justify-center p-6">
-                    <div className="w-full max-w-md rounded-2xl border border-[#dedbd3] bg-white p-8 text-center shadow-sm">
-                        <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl bg-[#f2ede1]">
-                            <Shield
-                                size={24}
-                                className="text-[#9b8148]"
-                            />
-                        </div>
+            <div className="flex min-h-screen items-center justify-center bg-[#f6f5f1] px-6">
 
-                        <h1 className="mt-5 text-2xl font-black">
-                            Club not found
-                        </h1>
+                <div className="w-full max-w-md rounded-2xl border border-[#dedbd3] bg-white p-8 text-center shadow-sm">
 
-                        <p className="mt-2 text-sm leading-6 text-[#85878e]">
-                            {error ||
-                                "We could not load this club."}
-                        </p>
+                    <h1 className="text-xl font-black">
+                        Club not found
+                    </h1>
 
-                        <p className="mt-4 break-all text-[10px] font-bold text-[#aaa]">
-                            API: {API}/clubs/{clubId}
-                        </p>
+                    <p className="mt-2 text-sm text-[#85878e]">
+                        {error ||
+                            "This club may have been removed or is no longer available."}
+                    </p>
 
-                        <button
-                            type="button"
-                            onClick={() =>
-                                navigate(
-                                    "/clubs"
-                                )
-                            }
-                            className="mt-6 rounded-xl bg-[#171717] px-5 py-3 text-xs font-black uppercase tracking-wider text-white"
-                        >
-                            Back to Clubs
-                        </button>
-                    </div>
-                </div>
-            </div>
-        );
-    }
-
-    /* =====================================================
-       MAIN
-    ===================================================== */
-
-    return (
-        <div className="min-h-screen bg-[#f7f7f5] text-[#171717]">
-            {/* =================================================
-                TOP BAR
-            ================================================= */}
-
-            <header className="border-b border-[#dedbd3] bg-white">
-                <div className="mx-auto flex max-w-7xl items-center justify-between px-4 py-4 sm:px-6 lg:px-8">
                     <button
                         type="button"
                         onClick={() =>
-                            navigate(
-                                "/clubs"
-                            )
+                            navigate("/clubs")
                         }
-                        className="flex items-center gap-2 text-xs font-black uppercase tracking-wider text-[#666] hover:text-[#171717]"
+                        className="mt-6 rounded-xl bg-[#171717] px-5 py-3 text-xs font-black uppercase tracking-wider text-white transition hover:bg-[#2b2b2b]"
                     >
-                        <ArrowLeft
-                            size={16}
-                        />
+                        Back to Clubs
+                    </button>
+
+                </div>
+
+            </div>
+        );
+    }
+
+
+    // =====================================================
+    // RENDER
+    // =====================================================
+
+    return (
+        <div className="min-h-screen bg-[#f6f5f1] text-[#171717]">
+
+
+            {/* =================================================
+                TOP NAV
+            ================================================= */}
+
+            <div className="border-b border-[#e1ded7] bg-white">
+
+                <div className="mx-auto flex max-w-7xl items-center justify-between px-4 py-4 sm:px-6 lg:px-8">
+
+                    <button
+                        type="button"
+                        onClick={() =>
+                            navigate("/clubs")
+                        }
+                        className="flex items-center gap-2 text-xs font-black uppercase tracking-wider text-[#777a82] transition hover:text-black"
+                    >
+                        <ArrowLeft size={16} />
                         Clubs
                     </button>
 
+
                     <div className="flex items-center gap-2">
+
                         {incomingInvites.length >
                             0 && (
+
                                 <button
                                     type="button"
                                     onClick={() =>
@@ -1591,13 +2193,15 @@ const ClubProfile = () => {
                                             true
                                         )
                                     }
-                                    className="relative flex h-10 w-10 items-center justify-center rounded-xl border border-[#dedbd3] hover:bg-[#f6f4ef]"
+                                    className="relative flex items-center gap-2 rounded-xl border border-[#dedbd3] bg-white px-4 py-2.5 text-xs font-black uppercase tracking-wider transition hover:bg-[#f7f5f0]"
                                 >
-                                    <Bell
-                                        size={17}
+                                    <UserPlus
+                                        size={15}
                                     />
 
-                                    <span className="absolute -right-1 -top-1 flex h-5 min-w-5 items-center justify-center rounded-full bg-[#171717] px-1 text-[8px] font-black text-white">
+                                    Invitations
+
+                                    <span className="flex h-5 min-w-5 items-center justify-center rounded-full bg-[#9b8148] px-1 text-[9px] font-black text-white">
                                         {
                                             incomingInvites.length
                                         }
@@ -1605,99 +2209,136 @@ const ClubProfile = () => {
                                 </button>
                             )}
 
+
                         {canManage && (
                             <button
                                 type="button"
                                 onClick={
                                     openSettings
                                 }
-                                className="flex items-center gap-2 rounded-xl border border-[#dedbd3] px-4 py-2.5 text-[10px] font-black uppercase tracking-wider hover:bg-[#f6f4ef]"
+                                className="flex items-center gap-2 rounded-xl bg-[#171717] px-4 py-2.5 text-xs font-black uppercase tracking-wider text-white transition hover:bg-[#2b2b2b]"
                             >
-                                <Edit3
-                                    size={14}
+                                <Settings
+                                    size={15}
                                 />
-                                Manage Club
+                                Settings
                             </button>
                         )}
+
                     </div>
+
                 </div>
-            </header>
+
+            </div>
+
 
             {/* =================================================
                 HERO
             ================================================= */}
 
-            <section className="border-b border-[#dedbd3] bg-white">
-                <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
-                    <div
-                        className="relative overflow-hidden rounded-3xl border border-[#dedbd3] bg-[#171717]"
-                    >
-                        {club.banner && (
+            <section className="border-b border-[#e1ded7] bg-white">
+
+                <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+
+                    <div className="relative overflow-hidden rounded-b-3xl border-x border-b border-[#e1ded7] bg-[#181818]">
+
+                        {club.banner ? (
+
                             <img
-                                src={
-                                    club.banner
-                                }
+                                src={club.banner}
                                 alt=""
-                                className="absolute inset-0 h-full w-full object-cover opacity-30"
+                                className="absolute inset-0 h-full w-full object-cover opacity-45"
                             />
+
+                        ) : (
+
+                            <div className="absolute inset-0 bg-[linear-gradient(135deg,#191919_0%,#24231f_55%,#151515_100%)]" />
+
                         )}
 
-                        <div className="absolute inset-0 bg-black/40" />
 
-                        <div className="relative p-6 sm:p-8 lg:p-10">
-                            <div className="flex flex-col gap-6 lg:flex-row lg:items-end lg:justify-between">
-                                <div className="flex min-w-0 items-center gap-5">
-                                    <div className="flex h-24 w-24 shrink-0 items-center justify-center overflow-hidden rounded-3xl border border-white/20 bg-white/10">
+                        <div className="absolute inset-0 bg-black/45" />
+
+
+                        <div className="relative px-6 py-12 sm:px-10 lg:px-14 lg:py-16">
+
+                            <div className="flex flex-col gap-8 lg:flex-row lg:items-end lg:justify-between">
+
+
+                                <div className="flex min-w-0 flex-col gap-6 sm:flex-row sm:items-center">
+
+
+                                    <div className="flex h-28 w-28 shrink-0 items-center justify-center overflow-hidden rounded-3xl border border-white/15 bg-[#252525] shadow-2xl">
+
                                         {club.avatar ? (
+
                                             <img
-                                                src={
-                                                    club.avatar
-                                                }
-                                                alt=""
+                                                src={club.avatar}
+                                                alt={club.name}
                                                 className="h-full w-full object-cover"
                                             />
+
                                         ) : (
+
                                             <Shield
-                                                size={36}
-                                                className="text-[#c6ad76]"
+                                                size={46}
+                                                className="text-[#c7aa6a]"
                                             />
+
                                         )}
+
                                     </div>
 
-                                    <div className="min-w-0 text-white">
-                                        <div className="flex flex-wrap items-center gap-2">
-                                            <span className="rounded-full border border-white/20 bg-white/10 px-2.5 py-1 text-[8px] font-black uppercase tracking-wider">
-                                                {club.tag}
+
+                                    <div className="min-w-0">
+
+                                        <div className="mb-3 flex flex-wrap items-center gap-2">
+
+                                            <span className="rounded-full border border-white/15 bg-white/10 px-3 py-1 text-[9px] font-black uppercase tracking-[0.18em] text-white/80">
+                                                [
+                                                {
+                                                    club.tag
+                                                }
+                                                ]
                                             </span>
 
-                                            <span className="rounded-full border border-white/20 bg-white/10 px-2.5 py-1 text-[8px] font-black uppercase tracking-wider">
-                                                {club.privacy}
+
+                                            <span className="rounded-full border border-[#c7aa6a]/30 bg-[#c7aa6a]/10 px-3 py-1 text-[9px] font-black uppercase tracking-[0.18em] text-[#e0c78e]">
+                                                {
+                                                    club.privacy
+                                                }
                                             </span>
 
-                                            {!club.isActive && (
-                                                <span className="rounded-full bg-red-500/20 px-2.5 py-1 text-[8px] font-black uppercase tracking-wider text-red-200">
-                                                    Inactive
-                                                </span>
-                                            )}
                                         </div>
 
-                                        <h1 className="mt-3 truncate text-3xl font-black tracking-tight sm:text-4xl">
+
+                                        <h1 className="truncate text-3xl font-black tracking-tight text-white sm:text-5xl">
                                             {
                                                 club.name
                                             }
                                         </h1>
 
-                                        <div className="mt-2 flex flex-wrap items-center gap-4 text-xs text-white/65">
-                                            <span>
-                                                {getGameName(
-                                                    club.game
-                                                )}
-                                            </span>
+
+                                        <div className="mt-4 flex flex-wrap items-center gap-x-5 gap-y-2 text-xs font-bold text-white/65">
 
                                             <span>
-                                                {club.region ||
-                                                    "Global"}
+                                                {
+                                                    getGameName(
+                                                        club.game
+                                                    )
+                                                }
                                             </span>
+
+                                            <span className="h-1 w-1 rounded-full bg-white/30" />
+
+                                            <span>
+                                                {
+                                                    club.region ||
+                                                    "Global"
+                                                }
+                                            </span>
+
+                                            <span className="h-1 w-1 rounded-full bg-white/30" />
 
                                             <span>
                                                 {
@@ -1705,48 +2346,76 @@ const ClubProfile = () => {
                                                 }{" "}
                                                 members
                                             </span>
-                                        </div>
-                                    </div>
-                                </div>
 
-                                <div className="flex flex-wrap gap-2">
-                                    {!isMember &&
-                                        club.privacy ===
-                                        "Public" &&
-                                        !pendingJoinRequest && (
-                                            <button
-                                                type="button"
-                                                onClick={() =>
-                                                    setShowJoinRequestModal(
-                                                        true
+                                            <span className="h-1 w-1 rounded-full bg-white/30" />
+
+                                            <span>
+                                                Since{" "}
+                                                {
+                                                    formatDate(
+                                                        club.createdAt
                                                     )
                                                 }
-                                                className="flex items-center gap-2 rounded-xl bg-white px-5 py-3 text-xs font-black uppercase tracking-wider text-[#171717] hover:bg-[#f2efe8]"
-                                            >
-                                                <UserPlus
-                                                    size={
-                                                        15
-                                                    }
-                                                />
-                                                Request to Join
-                                            </button>
+                                            </span>
+
+                                        </div>
+
+
+                                        {club.description && (
+
+                                            <p className="mt-5 max-w-2xl text-sm leading-6 text-white/65">
+                                                {
+                                                    club.description
+                                                }
+                                            </p>
+
                                         )}
 
+                                    </div>
+
+                                </div>
+
+
+                                <div className="flex flex-wrap gap-3">
+
                                     {!isMember &&
-                                        pendingJoinRequest && (
+                                        !isOwner &&
+                                        !hasPendingRequest &&
+                                        club.privacy !==
+                                        "Private" && (
+
+                                            <button
+                                                type="button"
+                                                disabled={
+                                                    actionLoading
+                                                }
+                                                onClick={
+                                                    openJoinRequest
+                                                }
+                                                className="rounded-xl bg-white px-5 py-3 text-xs font-black uppercase tracking-wider text-[#171717] transition hover:bg-[#f0ede6] disabled:cursor-not-allowed disabled:opacity-60"
+                                            >
+                                                Request to Join
+                                            </button>
+
+                                        )}
+
+
+                                    {!isMember &&
+                                        !isOwner &&
+                                        hasPendingRequest && (
+
                                             <>
                                                 <button
                                                     type="button"
                                                     disabled
-                                                    className="flex items-center gap-2 rounded-xl bg-white/10 px-5 py-3 text-xs font-black uppercase tracking-wider text-white/60"
+                                                    className="flex items-center gap-2 rounded-xl border border-white/15 bg-white/10 px-5 py-3 text-xs font-black uppercase tracking-wider text-white/70"
                                                 >
-                                                    <Check
-                                                        size={
-                                                            15
-                                                        }
+                                                    <Clock3
+                                                        size={15}
                                                     />
                                                     Request Pending
                                                 </button>
+
 
                                                 <button
                                                     type="button"
@@ -1756,15 +2425,18 @@ const ClubProfile = () => {
                                                     onClick={
                                                         cancelJoinRequest
                                                     }
-                                                    className="rounded-xl border border-white/20 px-5 py-3 text-xs font-black uppercase tracking-wider text-white hover:bg-white/10"
+                                                    className="rounded-xl border border-white/15 bg-transparent px-5 py-3 text-xs font-black uppercase tracking-wider text-white transition hover:bg-white/10 disabled:opacity-60"
                                                 >
                                                     Cancel
                                                 </button>
                                             </>
+
                                         )}
+
 
                                     {isMember &&
                                         !isOwner && (
+
                                             <button
                                                 type="button"
                                                 disabled={
@@ -1773,13 +2445,16 @@ const ClubProfile = () => {
                                                 onClick={
                                                     leaveClub
                                                 }
-                                                className="rounded-xl border border-white/20 px-5 py-3 text-xs font-black uppercase tracking-wider text-white hover:bg-white/10"
+                                                className="rounded-xl border border-white/15 bg-white/10 px-5 py-3 text-xs font-black uppercase tracking-wider text-white transition hover:bg-white/15 disabled:opacity-60"
                                             >
                                                 Leave Club
                                             </button>
+
                                         )}
 
+
                                     {canManage && (
+
                                         <button
                                             type="button"
                                             onClick={() =>
@@ -1787,211 +2462,281 @@ const ClubProfile = () => {
                                                     true
                                                 )
                                             }
-                                            className="flex items-center gap-2 rounded-xl border border-white/20 px-5 py-3 text-xs font-black uppercase tracking-wider text-white hover:bg-white/10"
+                                            className="flex items-center gap-2 rounded-xl border border-[#c7aa6a]/30 bg-[#c7aa6a]/10 px-5 py-3 text-xs font-black uppercase tracking-wider text-[#e0c78e] transition hover:bg-[#c7aa6a]/20"
                                         >
                                             <UserPlus
-                                                size={
-                                                    15
-                                                }
+                                                size={15}
                                             />
-                                            Invite
+                                            Invite Players
                                         </button>
+
                                     )}
+
                                 </div>
+
                             </div>
+
                         </div>
+
                     </div>
+
                 </div>
+
             </section>
 
+
             {/* =================================================
-                ALERTS
+                MESSAGES
             ================================================= */}
 
-            <div className="mx-auto max-w-7xl px-4 pt-5 sm:px-6 lg:px-8">
-                {error && (
-                    <div className="mb-4 flex items-start justify-between gap-4 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-xs font-bold text-red-700">
-                        <span>
+            {(error || success) && (
+
+                <div className="mx-auto max-w-7xl px-4 pt-5 sm:px-6 lg:px-8">
+
+                    {error && (
+
+                        <div className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm font-semibold text-red-700">
                             {error}
-                        </span>
+                        </div>
 
-                        <button
-                            type="button"
-                            onClick={() =>
-                                setError("")
-                            }
-                        >
-                            <X
-                                size={15}
-                            />
-                        </button>
-                    </div>
-                )}
+                    )}
 
-                {success && (
-                    <div className="mb-4 flex items-start justify-between gap-4 rounded-xl border border-[#d7dfd5] bg-[#f0f5ef] px-4 py-3 text-xs font-bold text-[#47704e]">
-                        <span>
+
+                    {success && (
+
+                        <div className="rounded-xl border border-[#d9cfb7] bg-[#f8f4ea] px-4 py-3 text-sm font-semibold text-[#806a3c]">
                             {success}
-                        </span>
+                        </div>
 
-                        <button
-                            type="button"
-                            onClick={() =>
-                                setSuccess("")
-                            }
-                        >
-                            <X
-                                size={15}
-                            />
-                        </button>
-                    </div>
-                )}
-            </div>
+                    )}
+
+                </div>
+
+            )}
+
 
             {/* =================================================
                 TABS
             ================================================= */}
 
-            <div className="mx-auto max-w-7xl px-4 pt-2 sm:px-6 lg:px-8">
+            <div className="mx-auto max-w-7xl px-4 pt-6 sm:px-6 lg:px-8">
+
                 <div className="flex overflow-x-auto border-b border-[#dedbd3]">
-                    {[
-                        [
-                            "overview",
-                            "Overview",
-                        ],
-                        [
-                            "members",
-                            "Members",
-                        ],
-                        [
-                            "recruitment",
-                            "Recruitment",
-                        ],
-                        [
-                            "tournaments",
-                            "Tournaments",
-                        ],
-                        [
-                            "stats",
-                            "Stats",
-                        ],
-                    ].map(
-                        ([id, label]) => (
+
+                    {tabs.map(
+                        (tab) => (
+
                             <button
-                                key={id}
+                                key={tab.id}
                                 type="button"
                                 onClick={() =>
                                     setActiveTab(
-                                        id
+                                        tab.id
                                     )
                                 }
-                                className={`whitespace-nowrap border-b-2 px-5 py-4 text-[10px] font-black uppercase tracking-wider transition ${activeTab ===
-                                        id
-                                        ? "border-[#9b8148] text-[#171717]"
-                                        : "border-transparent text-[#85878e] hover:text-[#171717]"
+                                className={`whitespace-nowrap border-b-2 px-5 py-3 text-[10px] font-black uppercase tracking-[0.16em] transition ${activeTab ===
+                                    tab.id
+                                    ? "border-[#9b8148] text-[#9b8148]"
+                                    : "border-transparent text-[#85878e] hover:text-[#222]"
                                     }`}
                             >
-                                {label}
+                                {
+                                    tab.label
+                                }
                             </button>
+
                         )
                     )}
+
                 </div>
+
             </div>
 
+
             {/* =================================================
-                CONTENT
+                MAIN
             ================================================= */}
 
             <main className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
+
+
                 {/* =================================================
                     OVERVIEW
                 ================================================= */}
 
                 {activeTab ===
                     "overview" && (
-                        <div className="grid gap-6 lg:grid-cols-[1fr_340px]">
-                            <div className="space-y-6">
+
+                        <div className="grid gap-6 lg:grid-cols-3">
+
+                            <div className="space-y-6 lg:col-span-2">
+
+
+                                {/* ABOUT */}
+
                                 <section className="rounded-2xl border border-[#dedbd3] bg-white p-6 shadow-sm">
-                                    <p className="text-[10px] font-black uppercase tracking-[0.2em] text-[#9b8148]">
-                                        About
-                                    </p>
 
-                                    <h2 className="mt-1 text-2xl font-black">
-                                        {
-                                            club.name
-                                        }
-                                    </h2>
+                                    <div className="flex items-center justify-between">
 
-                                    <p className="mt-4 text-sm leading-7 text-[#66686e]">
-                                        {club.description ||
-                                            "This club has not added a description yet."}
-                                    </p>
+                                        <div>
 
-                                    <div className="mt-6 grid gap-3 sm:grid-cols-3">
-                                        <div className="rounded-xl bg-[#f7f5f0] p-4">
-                                            <Users
-                                                size={
-                                                    17
-                                                }
-                                                className="text-[#9b8148]"
-                                            />
-
-                                            <p className="mt-3 text-2xl font-black">
-                                                {
-                                                    memberCount
-                                                }
+                                            <p className="text-[10px] font-black uppercase tracking-[0.2em] text-[#9b8148]">
+                                                Club
                                             </p>
 
-                                            <p className="mt-1 text-[9px] font-black uppercase tracking-wider text-[#999]">
-                                                Members
-                                            </p>
+                                            <h2 className="mt-1 text-xl font-black">
+                                                About
+                                            </h2>
+
                                         </div>
 
-                                        <div className="rounded-xl bg-[#f7f5f0] p-4">
-                                            <Shield
-                                                size={
-                                                    17
-                                                }
-                                                className="text-[#9b8148]"
-                                            />
 
-                                            <p className="mt-3 text-2xl font-black">
-                                                {club.level ||
-                                                    club.clubLevel ||
-                                                    1}
-                                            </p>
+                                        <Shield
+                                            size={19}
+                                            className="text-[#9b8148]"
+                                        />
 
-                                            <p className="mt-1 text-[9px] font-black uppercase tracking-wider text-[#999]">
-                                                Club Level
-                                            </p>
-                                        </div>
-
-                                        <div className="rounded-xl bg-[#f7f5f0] p-4">
-                                            <Globe
-                                                size={
-                                                    17
-                                                }
-                                                className="text-[#9b8148]"
-                                            />
-
-                                            <p className="mt-3 truncate text-lg font-black">
-                                                {club.region ||
-                                                    "Global"}
-                                            </p>
-
-                                            <p className="mt-1 text-[9px] font-black uppercase tracking-wider text-[#999]">
-                                                Region
-                                            </p>
-                                        </div>
                                     </div>
+
+
+                                    <p className="mt-5 text-sm leading-7 text-[#66686e]">
+                                        {
+                                            club.description ||
+                                            "This club has not added a description yet."
+                                        }
+                                    </p>
+
                                 </section>
+
+
+                                {/* MEMBERS PREVIEW */}
+
+                                <section className="rounded-2xl border border-[#dedbd3] bg-white p-6 shadow-sm">
+
+                                    <div className="flex items-center justify-between">
+
+                                        <div>
+
+                                            <p className="text-[10px] font-black uppercase tracking-[0.2em] text-[#9b8148]">
+                                                Community
+                                            </p>
+
+                                            <h2 className="mt-1 text-xl font-black">
+                                                Members
+                                            </h2>
+
+                                        </div>
+
+
+                                        <button
+                                            type="button"
+                                            onClick={() =>
+                                                setActiveTab(
+                                                    "members"
+                                                )
+                                            }
+                                            className="text-[10px] font-black uppercase tracking-wider text-[#9b8148]"
+                                        >
+                                            View All
+                                        </button>
+
+                                    </div>
+
+
+                                    <div className="mt-6 grid gap-3 sm:grid-cols-2">
+
+                                        {memberPreview.map(
+                                            (member) => {
+
+                                                const avatar =
+                                                    getAvatar(
+                                                        member.user
+                                                    );
+
+
+                                                return (
+
+                                                    <div
+                                                        key={
+                                                            member.id
+                                                        }
+                                                        className="flex items-center gap-3 rounded-xl border border-[#ebe8e1] p-3"
+                                                    >
+
+                                                        {avatar ? (
+
+                                                            <img
+                                                                src={
+                                                                    avatar
+                                                                }
+                                                                alt=""
+                                                                className="h-11 w-11 rounded-xl object-cover"
+                                                            />
+
+                                                        ) : (
+
+                                                            <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-[#ece9e2] text-xs font-black">
+                                                                {
+                                                                    getUserInitials(
+                                                                        member.user
+                                                                    )
+                                                                }
+                                                            </div>
+
+                                                        )}
+
+
+                                                        <div className="min-w-0 flex-1">
+
+                                                            <p className="truncate text-sm font-black">
+                                                                {
+                                                                    getUserName(
+                                                                        member.user
+                                                                    )
+                                                                }
+                                                            </p>
+
+                                                            <p className="mt-1 text-[10px] font-bold uppercase tracking-wider text-[#8a8b90]">
+                                                                {
+                                                                    formatRole(
+                                                                        member.role
+                                                                    )
+                                                                }
+                                                            </p>
+
+                                                        </div>
+
+                                                    </div>
+
+                                                );
+                                            }
+                                        )}
+
+
+                                        {memberPreview.length ===
+                                            0 && (
+
+                                                <div className="col-span-full rounded-xl border border-dashed border-[#dedbd3] py-10 text-center text-xs font-bold text-[#999]">
+                                                    No members yet.
+                                                </div>
+
+                                            )}
+
+                                    </div>
+
+                                </section>
+
 
                                 {/* JOIN REQUESTS */}
 
                                 {canManage && (
+
                                     <section className="rounded-2xl border border-[#dedbd3] bg-white p-6 shadow-sm">
-                                        <div className="flex items-start justify-between gap-4">
+
+                                        <div className="flex items-start justify-between">
+
                                             <div>
+
                                                 <p className="text-[10px] font-black uppercase tracking-[0.2em] text-[#9b8148]">
                                                     Management
                                                 </p>
@@ -2003,260 +2748,396 @@ const ClubProfile = () => {
                                                 <p className="mt-1 text-xs text-[#85878e]">
                                                     Review players who want to join your club.
                                                 </p>
+
                                             </div>
+
 
                                             <button
                                                 type="button"
-                                                onClick={
-                                                    loadJoinRequests
+                                                onClick={() =>
+                                                    loadJoinRequests(
+                                                        true
+                                                    )
                                                 }
-                                                className="rounded-lg border border-[#dedbd3] px-3 py-2 text-[9px] font-black uppercase tracking-wider hover:bg-[#f6f4ef]"
+                                                className="rounded-lg border border-[#dedbd3] p-2 text-[#777] hover:bg-[#f5f3ee]"
                                             >
-                                                Refresh
+                                                <Search
+                                                    size={16}
+                                                />
                                             </button>
+
                                         </div>
 
-                                        {joinRequestsLoading ? (
-                                            <div className="py-10 text-center text-xs font-bold text-[#888]">
-                                                Loading requests...
-                                            </div>
-                                        ) : joinRequests.length ===
-                                            0 ? (
-                                            <div className="mt-5 rounded-xl border border-dashed border-[#dedbd3] px-5 py-10 text-center">
-                                                <UserCheck
-                                                    size={
-                                                        24
-                                                    }
-                                                    className="mx-auto text-[#aaa39a]"
-                                                />
 
-                                                <p className="mt-3 text-xs font-black uppercase tracking-wider">
-                                                    No pending requests
-                                                </p>
-                                            </div>
-                                        ) : (
-                                            <div className="mt-5 space-y-3">
-                                                {joinRequests.map(
-                                                    (
-                                                        request
-                                                    ) => {
-                                                        const user =
-                                                            request.user ||
-                                                            request.applicant;
+                                        <div className="mt-5">
 
-                                                        const avatar =
-                                                            getAvatar(
-                                                                user
-                                                            );
+                                            {requestsLoading ? (
 
-                                                        return (
-                                                            <div
-                                                                key={
-                                                                    request.id
-                                                                }
-                                                                className="rounded-xl border border-[#ebe8e1] p-4"
-                                                            >
-                                                                <div className="flex items-center gap-3">
-                                                                    {avatar ? (
-                                                                        <img
-                                                                            src={
-                                                                                avatar
-                                                                            }
-                                                                            alt=""
-                                                                            className="h-11 w-11 rounded-xl object-cover"
-                                                                        />
-                                                                    ) : (
-                                                                        <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-[#ece9e2] text-xs font-black">
-                                                                            {getUserInitials(
-                                                                                user
+                                                <div className="py-8 text-center text-xs font-bold text-[#888]">
+                                                    Loading requests...
+                                                </div>
+
+                                            ) : joinRequests.length ===
+                                                0 ? (
+
+                                                <div className="rounded-xl border border-dashed border-[#dedbd3] px-5 py-8 text-center">
+
+                                                    <UserCheck
+                                                        size={22}
+                                                        className="mx-auto text-[#aaa]"
+                                                    />
+
+                                                    <p className="mt-3 text-xs font-black uppercase tracking-wider text-[#777]">
+                                                        No pending requests
+                                                    </p>
+
+                                                </div>
+
+                                            ) : (
+
+                                                <div className="space-y-3">
+
+                                                    {joinRequests.map(
+                                                        (
+                                                            request
+                                                        ) => {
+
+                                                            const requester =
+                                                                request.user;
+
+
+                                                            return (
+
+                                                                <div
+                                                                    key={
+                                                                        request.id
+                                                                    }
+                                                                    className="rounded-xl border border-[#ebe8e1] p-4"
+                                                                >
+
+                                                                    <div className="flex items-start gap-3">
+
+                                                                        {getAvatar(
+                                                                            requester
+                                                                        ) ? (
+
+                                                                            <img
+                                                                                src={getAvatar(
+                                                                                    requester
+                                                                                )}
+                                                                                alt=""
+                                                                                className="h-11 w-11 rounded-xl object-cover"
+                                                                            />
+
+                                                                        ) : (
+
+                                                                            <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-[#ece9e2] text-xs font-black">
+                                                                                {
+                                                                                    getUserInitials(
+                                                                                        requester
+                                                                                    )
+                                                                                }
+                                                                            </div>
+
+                                                                        )}
+
+
+                                                                        <div className="min-w-0 flex-1">
+
+                                                                            <p className="text-sm font-black">
+                                                                                {
+                                                                                    getUserName(
+                                                                                        requester
+                                                                                    )
+                                                                                }
+                                                                            </p>
+
+                                                                            <p className="mt-1 text-[10px] font-bold uppercase tracking-wider text-[#929398]">
+                                                                                Requested{" "}
+                                                                                {
+                                                                                    formatDate(
+                                                                                        request.createdAt
+                                                                                    )
+                                                                                }
+                                                                            </p>
+
+
+                                                                            {request.message && (
+
+                                                                                <p className="mt-3 rounded-lg bg-[#f7f5f0] p-3 text-xs leading-5 text-[#67696f]">
+                                                                                    {
+                                                                                        request.message
+                                                                                    }
+                                                                                </p>
+
                                                                             )}
+
                                                                         </div>
-                                                                    )}
 
-                                                                    <div className="min-w-0 flex-1">
-                                                                        <p className="truncate text-sm font-black">
-                                                                            {getUserName(
-                                                                                user
-                                                                            )}
-                                                                        </p>
-
-                                                                        <p className="mt-1 text-[9px] font-bold uppercase tracking-wider text-[#929398]">
-                                                                            {formatDate(
-                                                                                request.createdAt
-                                                                            )}
-                                                                        </p>
                                                                     </div>
+
+
+                                                                    <div className="mt-4 flex gap-2">
+
+                                                                        <button
+                                                                            type="button"
+                                                                            disabled={
+                                                                                actionLoading
+                                                                            }
+                                                                            onClick={() =>
+                                                                                approveJoinRequest(
+                                                                                    request.id
+                                                                                )
+                                                                            }
+                                                                            className="flex-1 rounded-lg bg-[#171717] px-4 py-2.5 text-[10px] font-black uppercase tracking-wider text-white hover:bg-[#2b2b2b] disabled:opacity-60"
+                                                                        >
+                                                                            Approve
+                                                                        </button>
+
+
+                                                                        <button
+                                                                            type="button"
+                                                                            disabled={
+                                                                                actionLoading
+                                                                            }
+                                                                            onClick={() =>
+                                                                                rejectJoinRequest(
+                                                                                    request.id
+                                                                                )
+                                                                            }
+                                                                            className="flex-1 rounded-lg border border-[#dedbd3] px-4 py-2.5 text-[10px] font-black uppercase tracking-wider text-[#555] hover:bg-[#f6f4ef] disabled:opacity-60"
+                                                                        >
+                                                                            Reject
+                                                                        </button>
+
+                                                                    </div>
+
                                                                 </div>
 
-                                                                {request.message && (
-                                                                    <div className="mt-4 rounded-xl bg-[#f7f5f0] p-3 text-xs leading-5 text-[#66686e]">
-                                                                        {
-                                                                            request.message
-                                                                        }
-                                                                    </div>
-                                                                )}
+                                                            );
+                                                        }
+                                                    )}
 
-                                                                <div className="mt-4 flex gap-2">
-                                                                    <button
-                                                                        type="button"
-                                                                        disabled={
-                                                                            actionLoading
-                                                                        }
-                                                                        onClick={() =>
-                                                                            approveJoinRequest(
-                                                                                request.id
-                                                                            )
-                                                                        }
-                                                                        className="flex-1 rounded-lg bg-[#171717] px-4 py-2.5 text-[9px] font-black uppercase tracking-wider text-white disabled:opacity-60"
-                                                                    >
-                                                                        Approve
-                                                                    </button>
+                                                </div>
 
-                                                                    <button
-                                                                        type="button"
-                                                                        disabled={
-                                                                            actionLoading
-                                                                        }
-                                                                        onClick={() =>
-                                                                            rejectJoinRequest(
-                                                                                request.id
-                                                                            )
-                                                                        }
-                                                                        className="flex-1 rounded-lg border border-[#dedbd3] px-4 py-2.5 text-[9px] font-black uppercase tracking-wider text-[#555] disabled:opacity-60"
-                                                                    >
-                                                                        Reject
-                                                                    </button>
-                                                                </div>
-                                                            </div>
-                                                        );
-                                                    }
-                                                )}
-                                            </div>
-                                        )}
+                                            )}
+
+                                        </div>
+
                                     </section>
+
                                 )}
+
                             </div>
+
 
                             {/* SIDEBAR */}
 
                             <aside className="space-y-6">
+
+
                                 <section className="rounded-2xl border border-[#dedbd3] bg-white p-6 shadow-sm">
+
                                     <p className="text-[10px] font-black uppercase tracking-[0.2em] text-[#9b8148]">
-                                        Club Details
+                                        Club Info
                                     </p>
 
+
                                     <div className="mt-5 space-y-4">
+
                                         <div className="flex items-center justify-between">
-                                            <span className="text-xs text-[#85878e]">
+                                            <span className="text-xs font-semibold text-[#85878e]">
+                                                Game
+                                            </span>
+
+                                            <span className="text-xs font-black">
+                                                {
+                                                    getGameName(
+                                                        club.game
+                                                    )
+                                                }
+                                            </span>
+                                        </div>
+
+
+                                        <div className="flex items-center justify-between">
+                                            <span className="text-xs font-semibold text-[#85878e]">
+                                                Region
+                                            </span>
+
+                                            <span className="text-xs font-black">
+                                                {
+                                                    club.region ||
+                                                    "Global"
+                                                }
+                                            </span>
+                                        </div>
+
+
+                                        <div className="flex items-center justify-between">
+                                            <span className="text-xs font-semibold text-[#85878e]">
                                                 Privacy
                                             </span>
 
                                             <span className="flex items-center gap-1.5 text-xs font-black">
+
                                                 {club.privacy ===
                                                     "Private" ? (
+
                                                     <Lock
-                                                        size={
-                                                            13
-                                                        }
+                                                        size={13}
                                                     />
+
                                                 ) : (
-                                                    <Globe
-                                                        size={
-                                                            13
-                                                        }
+
+                                                    <Globe2
+                                                        size={13}
                                                     />
+
                                                 )}
 
                                                 {
                                                     club.privacy
                                                 }
+
                                             </span>
                                         </div>
 
+
                                         <div className="flex items-center justify-between">
-                                            <span className="text-xs text-[#85878e]">
-                                                Game
+                                            <span className="text-xs font-semibold text-[#85878e]">
+                                                Club Level
                                             </span>
 
                                             <span className="text-xs font-black">
-                                                {getGameName(
-                                                    club.game
-                                                )}
+                                                {
+                                                    club.level ||
+                                                    club.clubLevel ||
+                                                    1
+                                                }
                                             </span>
                                         </div>
 
-                                        <div className="flex items-center justify-between">
-                                            <span className="text-xs text-[#85878e]">
-                                                Owner
-                                            </span>
-
-                                            <span className="max-w-[150px] truncate text-xs font-black">
-                                                {getUserName(
-                                                    club.owner
-                                                )}
-                                            </span>
-                                        </div>
 
                                         <div className="flex items-center justify-between">
-                                            <span className="text-xs text-[#85878e]">
-                                                Created
+                                            <span className="text-xs font-semibold text-[#85878e]">
+                                                SYNCO Points
                                             </span>
 
                                             <span className="text-xs font-black">
-                                                {formatDate(
-                                                    club.createdAt
-                                                )}
+                                                {
+                                                    club.syncoPoints ||
+                                                    0
+                                                }
                                             </span>
                                         </div>
+
                                     </div>
+
                                 </section>
 
-                                {canManage && (
-                                    <section className="rounded-2xl border border-[#dedbd3] bg-white p-6 shadow-sm">
-                                        <p className="text-[10px] font-black uppercase tracking-[0.2em] text-[#9b8148]">
-                                            Administration
-                                        </p>
 
-                                        <button
-                                            type="button"
-                                            onClick={
-                                                openJoinRequests
-                                            }
-                                            className="mt-4 flex w-full items-center justify-between rounded-xl bg-[#f7f5f0] px-4 py-3 text-xs font-black hover:bg-[#f0ede5]"
-                                        >
-                                            <span>
-                                                Review Join Requests
-                                            </span>
+                                <section className="rounded-2xl border border-[#dedbd3] bg-white p-6 shadow-sm">
 
-                                            <ChevronRight
-                                                size={
-                                                    15
-                                                }
+                                    <p className="text-[10px] font-black uppercase tracking-[0.2em] text-[#9b8148]">
+                                        Statistics
+                                    </p>
+
+
+                                    <div className="mt-5 grid grid-cols-2 gap-3">
+
+
+                                        <div className="rounded-xl bg-[#f7f5f0] p-4">
+
+                                            <Users
+                                                size={16}
+                                                className="text-[#8a8a86]"
                                             />
-                                        </button>
 
-                                        <button
-                                            type="button"
-                                            onClick={
-                                                openSettings
-                                            }
-                                            className="mt-2 flex w-full items-center justify-between rounded-xl bg-[#f7f5f0] px-4 py-3 text-xs font-black hover:bg-[#f0ede5]"
-                                        >
-                                            <span>
-                                                Manage Club Settings
-                                            </span>
-
-                                            <ChevronRight
-                                                size={
-                                                    15
+                                            <p className="mt-3 text-2xl font-black">
+                                                {
+                                                    memberCount
                                                 }
+                                            </p>
+
+                                            <p className="mt-1 text-[9px] font-black uppercase tracking-wider text-[#898a8e]">
+                                                Members
+                                            </p>
+
+                                        </div>
+
+
+                                        <div className="rounded-xl bg-[#f7f5f0] p-4">
+
+                                            <Shield
+                                                size={16}
+                                                className="text-[#8a8a86]"
                                             />
-                                        </button>
-                                    </section>
-                                )}
+
+                                            <p className="mt-3 text-2xl font-black">
+                                                {
+                                                    adminCount
+                                                }
+                                            </p>
+
+                                            <p className="mt-1 text-[9px] font-black uppercase tracking-wider text-[#898a8e]">
+                                                Admins
+                                            </p>
+
+                                        </div>
+
+
+                                        <div className="rounded-xl bg-[#f7f5f0] p-4">
+
+                                            <Crown
+                                                size={16}
+                                                className="text-[#8a8a86]"
+                                            />
+
+                                            <p className="mt-3 text-2xl font-black">
+                                                {
+                                                    ownerCount
+                                                }
+                                            </p>
+
+                                            <p className="mt-1 text-[9px] font-black uppercase tracking-wider text-[#898a8e]">
+                                                Owners
+                                            </p>
+
+                                        </div>
+
+
+                                        <div className="rounded-xl bg-[#f7f5f0] p-4">
+
+                                            <Clock3
+                                                size={16}
+                                                className="text-[#8a8a86]"
+                                            />
+
+                                            <p className="mt-3 text-sm font-black">
+                                                {
+                                                    formatDate(
+                                                        club.createdAt
+                                                    )
+                                                }
+                                            </p>
+
+                                            <p className="mt-1 text-[9px] font-black uppercase tracking-wider text-[#8a8a8e]">
+                                                Created
+                                            </p>
+
+                                        </div>
+
+                                    </div>
+
+                                </section>
+
                             </aside>
+
                         </div>
+
                     )}
+
 
                 {/* =================================================
                     MEMBERS
@@ -2264,79 +3145,112 @@ const ClubProfile = () => {
 
                 {activeTab ===
                     "members" && (
+
                         <section className="rounded-2xl border border-[#dedbd3] bg-white p-6 shadow-sm">
+
                             <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+
                                 <div>
+
                                     <p className="text-[10px] font-black uppercase tracking-[0.2em] text-[#9b8148]">
-                                        Club
+                                        Community
                                     </p>
 
                                     <h2 className="mt-1 text-2xl font-black">
-                                        Members
+                                        Club Members
                                     </h2>
 
                                     <p className="mt-1 text-xs text-[#85878e]">
-                                        Everyone currently inside the club.
+                                        {
+                                            memberCount
+                                        }{" "}
+                                        members in this club.
                                     </p>
+
                                 </div>
 
+
                                 {canManage && (
-                                    <button
-                                        type="button"
-                                        onClick={() =>
-                                            setInviteModal(
-                                                true
-                                            )
-                                        }
-                                        className="flex items-center gap-2 rounded-xl bg-[#171717] px-4 py-3 text-xs font-black uppercase tracking-wider text-white"
-                                    >
-                                        <UserPlus
-                                            size={
-                                                15
+
+                                    <div className="flex gap-2">
+
+                                        <button
+                                            type="button"
+                                            onClick={() =>
+                                                setInviteModal(
+                                                    true
+                                                )
                                             }
-                                        />
-                                        Invite Player
-                                    </button>
+                                            className="flex items-center gap-2 rounded-xl bg-[#171717] px-4 py-3 text-xs font-black uppercase tracking-wider text-white hover:bg-[#2b2b2b]"
+                                        >
+                                            <UserPlus
+                                                size={15}
+                                            />
+                                            Invite Player
+                                        </button>
+
+
+                                        <button
+                                            type="button"
+                                            onClick={() =>
+                                                loadJoinRequests(
+                                                    true
+                                                )
+                                            }
+                                            className="flex items-center gap-2 rounded-xl border border-[#dedbd3] px-4 py-3 text-xs font-black uppercase tracking-wider text-[#555] hover:bg-[#f7f5f0]"
+                                        >
+                                            <UserCheck
+                                                size={15}
+                                            />
+                                            Requests
+                                        </button>
+
+                                    </div>
+
                                 )}
+
                             </div>
 
+
                             {membersLoading ? (
+
                                 <div className="py-16 text-center text-xs font-bold text-[#888]">
                                     Loading members...
                                 </div>
-                            ) : members.length ===
-                                0 ? (
-                                <div className="py-16 text-center text-xs font-bold text-[#888]">
-                                    No members found.
-                                </div>
+
                             ) : (
-                                <div className="mt-8 grid gap-3 md:grid-cols-2">
+
+                                <div className="mt-8 grid gap-3 md:grid-cols-2 xl:grid-cols-3">
+
                                     {members.map(
-                                        (
-                                            member
-                                        ) => {
+                                        (member) => {
+
                                             const avatar =
                                                 getAvatar(
                                                     member.user
                                                 );
 
+
                                             const memberIsOwner =
-                                                Number(
-                                                    member.userId
-                                                ) ===
-                                                Number(
-                                                    club.ownerId
-                                                );
+                                                String(
+                                                    member.role
+                                                ).toUpperCase() ===
+                                                "OWNER";
+
 
                                             return (
+
                                                 <div
                                                     key={
                                                         member.id
                                                     }
                                                     className="relative rounded-2xl border border-[#ebe8e1] p-4"
                                                 >
+
                                                     <div className="flex items-center gap-3">
+
                                                         {avatar ? (
+
                                                             <img
                                                                 src={
                                                                     avatar
@@ -2344,43 +3258,58 @@ const ClubProfile = () => {
                                                                 alt=""
                                                                 className="h-12 w-12 rounded-xl object-cover"
                                                             />
+
                                                         ) : (
+
                                                             <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-[#ece9e2] text-xs font-black">
-                                                                {getUserInitials(
-                                                                    member.user
-                                                                )}
+                                                                {
+                                                                    getUserInitials(
+                                                                        member.user
+                                                                    )
+                                                                }
                                                             </div>
+
                                                         )}
 
+
                                                         <div className="min-w-0 flex-1">
+
                                                             <p className="truncate text-sm font-black">
-                                                                {getUserName(
-                                                                    member.user
-                                                                )}
+                                                                {
+                                                                    getUserName(
+                                                                        member.user
+                                                                    )
+                                                                }
                                                             </p>
 
                                                             <p className="mt-1 text-[10px] font-bold uppercase tracking-wider text-[#88898e]">
-                                                                {formatRole(
-                                                                    member.role
-                                                                )}
+                                                                {
+                                                                    formatRole(
+                                                                        member.role
+                                                                    )
+                                                                }
                                                             </p>
+
                                                         </div>
 
+
                                                         {memberIsOwner ? (
+
                                                             <Crown
-                                                                size={
-                                                                    16
-                                                                }
+                                                                size={16}
                                                                 className="text-[#9b8148]"
                                                             />
+
                                                         ) : (
+
                                                             canManage &&
-                                                            Number(
+                                                            String(
                                                                 member.userId
                                                             ) !==
-                                                            Number(
+                                                            String(
                                                                 currentUser?.id
                                                             ) && (
+
                                                                 <button
                                                                     type="button"
                                                                     onClick={() =>
@@ -2394,24 +3323,30 @@ const ClubProfile = () => {
                                                                     className="flex h-8 w-8 items-center justify-center rounded-lg hover:bg-[#f4f2ed]"
                                                                 >
                                                                     <MoreHorizontal
-                                                                        size={
-                                                                            17
-                                                                        }
+                                                                        size={17}
                                                                     />
                                                                 </button>
+
                                                             )
+
                                                         )}
+
                                                     </div>
+
 
                                                     {openMemberMenu ===
                                                         member.id && (
+
                                                             <div className="absolute right-4 top-14 z-20 w-44 rounded-xl border border-[#dedbd3] bg-white p-2 shadow-xl">
+
                                                                 <button
                                                                     type="button"
                                                                     onClick={() =>
                                                                         changeRole(
                                                                             member.userId,
-                                                                            member.role ===
+                                                                            String(
+                                                                                member.role
+                                                                            ).toUpperCase() ===
                                                                                 "ADMIN"
                                                                                 ? "MEMBER"
                                                                                 : "ADMIN"
@@ -2419,17 +3354,20 @@ const ClubProfile = () => {
                                                                     }
                                                                     className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-[10px] font-black uppercase tracking-wider hover:bg-[#f6f4ef]"
                                                                 >
+
                                                                     <Shield
-                                                                        size={
-                                                                            14
-                                                                        }
+                                                                        size={14}
                                                                     />
 
-                                                                    {member.role ===
+                                                                    {String(
+                                                                        member.role
+                                                                    ).toUpperCase() ===
                                                                         "ADMIN"
                                                                         ? "Remove Admin"
                                                                         : "Make Admin"}
+
                                                                 </button>
+
 
                                                                 <button
                                                                     type="button"
@@ -2440,24 +3378,33 @@ const ClubProfile = () => {
                                                                     }
                                                                     className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-[10px] font-black uppercase tracking-wider text-red-600 hover:bg-red-50"
                                                                 >
+
                                                                     <Trash2
-                                                                        size={
-                                                                            14
-                                                                        }
+                                                                        size={14}
                                                                     />
 
                                                                     Remove
+
                                                                 </button>
+
                                                             </div>
+
                                                         )}
+
                                                 </div>
+
                                             );
                                         }
                                     )}
+
                                 </div>
+
                             )}
+
                         </section>
+
                     )}
+
 
                 {/* =================================================
                     RECRUITMENT
@@ -2465,9 +3412,13 @@ const ClubProfile = () => {
 
                 {activeTab ===
                     "recruitment" && (
+
                         <section className="rounded-2xl border border-[#dedbd3] bg-white p-6 shadow-sm">
+
                             <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+
                                 <div>
+
                                     <p className="text-[10px] font-black uppercase tracking-[0.2em] text-[#9b8148]">
                                         Team Building
                                     </p>
@@ -2479,9 +3430,12 @@ const ClubProfile = () => {
                                     <p className="mt-1 text-xs text-[#85878e]">
                                         Find players for your club.
                                     </p>
+
                                 </div>
 
+
                                 {canManage && (
+
                                     <button
                                         type="button"
                                         onClick={
@@ -2490,26 +3444,29 @@ const ClubProfile = () => {
                                         className="flex items-center gap-2 rounded-xl bg-[#171717] px-4 py-3 text-xs font-black uppercase tracking-wider text-white hover:bg-[#2b2b2b]"
                                     >
                                         <Plus
-                                            size={
-                                                15
-                                            }
+                                            size={15}
                                         />
                                         Create Recruitment Post
                                     </button>
+
                                 )}
+
                             </div>
 
+
                             {recruitmentLoading ? (
+
                                 <div className="py-16 text-center text-xs font-bold text-[#888]">
                                     Loading recruitment...
                                 </div>
+
                             ) : recruitmentPosts.length ===
                                 0 ? (
+
                                 <div className="mt-8 rounded-2xl border border-dashed border-[#dedbd3] px-6 py-16 text-center">
+
                                     <UserPlus
-                                        size={
-                                            28
-                                        }
+                                        size={28}
                                         className="mx-auto text-[#aaa39a]"
                                     />
 
@@ -2523,7 +3480,9 @@ const ClubProfile = () => {
                                             : "This club is not currently recruiting."}
                                     </p>
 
+
                                     {canManage && (
+
                                         <button
                                             type="button"
                                             onClick={
@@ -2533,28 +3492,36 @@ const ClubProfile = () => {
                                         >
                                             Create Post
                                         </button>
+
                                     )}
+
                                 </div>
+
                             ) : (
+
                                 <div className="mt-8 grid gap-4 lg:grid-cols-2">
+
                                     {recruitmentPosts.map(
-                                        (
-                                            post
-                                        ) => (
+                                        (post) => (
+
                                             <article
                                                 key={
                                                     post.id
                                                 }
                                                 className="rounded-2xl border border-[#ebe8e1] p-5"
                                             >
+
                                                 <div className="flex items-start justify-between gap-4">
+
                                                     <div className="min-w-0">
+
                                                         <div className="flex flex-wrap items-center gap-2">
+
                                                             <span
                                                                 className={`rounded-full px-2.5 py-1 text-[8px] font-black uppercase tracking-wider ${post.status ===
-                                                                        "OPEN"
-                                                                        ? "bg-[#edf5ee] text-[#47704e]"
-                                                                        : "bg-[#f0eeea] text-[#777]"
+                                                                    "OPEN"
+                                                                    ? "bg-[#edf5ee] text-[#47704e]"
+                                                                    : "bg-[#f0eeea] text-[#777]"
                                                                     }`}
                                                             >
                                                                 {
@@ -2562,24 +3529,33 @@ const ClubProfile = () => {
                                                                 }
                                                             </span>
 
+
                                                             {post.role && (
+
                                                                 <span className="rounded-full bg-[#f7f5f0] px-2.5 py-1 text-[8px] font-black uppercase tracking-wider text-[#777]">
                                                                     {
                                                                         post.role
                                                                     }
                                                                 </span>
+
                                                             )}
+
                                                         </div>
+
 
                                                         <h3 className="mt-3 text-lg font-black">
                                                             {
                                                                 post.title
                                                             }
                                                         </h3>
+
                                                     </div>
 
+
                                                     {canManage && (
+
                                                         <div className="flex shrink-0 gap-1">
+
                                                             <button
                                                                 type="button"
                                                                 onClick={() =>
@@ -2590,11 +3566,10 @@ const ClubProfile = () => {
                                                                 className="flex h-8 w-8 items-center justify-center rounded-lg border border-[#dedbd3] hover:bg-[#f6f4ef]"
                                                             >
                                                                 <Edit3
-                                                                    size={
-                                                                        14
-                                                                    }
+                                                                    size={14}
                                                                 />
                                                             </button>
+
 
                                                             <button
                                                                 type="button"
@@ -2606,14 +3581,16 @@ const ClubProfile = () => {
                                                                 className="flex h-8 w-8 items-center justify-center rounded-lg border border-red-200 text-red-600 hover:bg-red-50"
                                                             >
                                                                 <Trash2
-                                                                    size={
-                                                                        14
-                                                                    }
+                                                                    size={14}
                                                                 />
                                                             </button>
+
                                                         </div>
+
                                                     )}
+
                                                 </div>
+
 
                                                 <p className="mt-4 text-sm leading-6 text-[#66686e]">
                                                     {
@@ -2621,42 +3598,60 @@ const ClubProfile = () => {
                                                     }
                                                 </p>
 
+
                                                 <div className="mt-5 grid grid-cols-2 gap-2">
+
                                                     <div className="rounded-xl bg-[#f7f5f0] p-3">
+
                                                         <p className="text-[8px] font-black uppercase tracking-wider text-[#999]">
                                                             Game
                                                         </p>
 
                                                         <p className="mt-1 text-xs font-black">
-                                                            {getGameName(
-                                                                post.game
-                                                            )}
+                                                            {
+                                                                getGameName(
+                                                                    post.game
+                                                                )
+                                                            }
                                                         </p>
+
                                                     </div>
 
+
                                                     <div className="rounded-xl bg-[#f7f5f0] p-3">
+
                                                         <p className="text-[8px] font-black uppercase tracking-wider text-[#999]">
                                                             Rank
                                                         </p>
 
                                                         <p className="mt-1 text-xs font-black">
-                                                            {post.rankRequirement ||
-                                                                "Any"}
+                                                            {
+                                                                post.rankRequirement ||
+                                                                "Any"
+                                                            }
                                                         </p>
+
                                                     </div>
 
+
                                                     <div className="rounded-xl bg-[#f7f5f0] p-3">
+
                                                         <p className="text-[8px] font-black uppercase tracking-wider text-[#999]">
                                                             Region
                                                         </p>
 
                                                         <p className="mt-1 text-xs font-black">
-                                                            {post.region ||
-                                                                "Any"}
+                                                            {
+                                                                post.region ||
+                                                                "Any"
+                                                            }
                                                         </p>
+
                                                     </div>
 
+
                                                     <div className="rounded-xl bg-[#f7f5f0] p-3">
+
                                                         <p className="text-[8px] font-black uppercase tracking-wider text-[#999]">
                                                             Mic
                                                         </p>
@@ -2666,10 +3661,14 @@ const ClubProfile = () => {
                                                                 ? "Required"
                                                                 : "Optional"}
                                                         </p>
+
                                                     </div>
+
                                                 </div>
 
+
                                                 {canManage && (
+
                                                     <button
                                                         type="button"
                                                         onClick={() =>
@@ -2677,21 +3676,32 @@ const ClubProfile = () => {
                                                                 post
                                                             )
                                                         }
-                                                        className="mt-4 flex w-full items-center justify-center rounded-xl border border-[#dedbd3] px-4 py-2.5 text-[10px] font-black uppercase tracking-wider text-[#555] hover:bg-[#f6f4ef]"
+                                                        disabled={
+                                                            actionLoading
+                                                        }
+                                                        className="mt-4 flex w-full items-center justify-center gap-2 rounded-xl border border-[#dedbd3] px-4 py-2.5 text-[10px] font-black uppercase tracking-wider text-[#555] hover:bg-[#f6f4ef] disabled:opacity-60"
                                                     >
                                                         {post.status ===
                                                             "OPEN"
                                                             ? "Close Recruitment"
                                                             : "Reopen Recruitment"}
                                                     </button>
+
                                                 )}
+
                                             </article>
+
                                         )
                                     )}
+
                                 </div>
+
                             )}
+
                         </section>
+
                     )}
+
 
                 {/* =================================================
                     TOURNAMENTS
@@ -2699,25 +3709,32 @@ const ClubProfile = () => {
 
                 {activeTab ===
                     "tournaments" && (
+
                         <section className="rounded-2xl border border-[#dedbd3] bg-white p-10 text-center shadow-sm">
+
                             <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl bg-[#f2ede1]">
+
                                 <Crown
-                                    size={
-                                        24
-                                    }
+                                    size={24}
                                     className="text-[#9b8148]"
                                 />
+
                             </div>
+
 
                             <h2 className="mt-5 text-xl font-black">
                                 Club Tournaments
                             </h2>
 
+
                             <p className="mx-auto mt-2 max-w-md text-sm leading-6 text-[#85878e]">
                                 Tournament management for clubs will be connected here.
                             </p>
+
                         </section>
+
                     )}
+
 
                 {/* =================================================
                     STATS
@@ -2725,8 +3742,11 @@ const ClubProfile = () => {
 
                 {activeTab ===
                     "stats" && (
+
                         <section className="rounded-2xl border border-[#dedbd3] bg-white p-6 shadow-sm">
+
                             <div>
+
                                 <p className="text-[10px] font-black uppercase tracking-[0.2em] text-[#9b8148]">
                                     Performance
                                 </p>
@@ -2734,10 +3754,15 @@ const ClubProfile = () => {
                                 <h2 className="mt-1 text-2xl font-black">
                                     Club Stats
                                 </h2>
+
                             </div>
 
+
                             <div className="mt-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+
+
                                 <div className="rounded-2xl bg-[#f7f5f0] p-5">
+
                                     <p className="text-[9px] font-black uppercase tracking-wider text-[#999]">
                                         Members
                                     </p>
@@ -2747,9 +3772,12 @@ const ClubProfile = () => {
                                             memberCount
                                         }
                                     </p>
+
                                 </div>
 
+
                                 <div className="rounded-2xl bg-[#f7f5f0] p-5">
+
                                     <p className="text-[9px] font-black uppercase tracking-wider text-[#999]">
                                         Admins
                                     </p>
@@ -2759,40 +3787,57 @@ const ClubProfile = () => {
                                             adminCount
                                         }
                                     </p>
+
                                 </div>
 
+
                                 <div className="rounded-2xl bg-[#f7f5f0] p-5">
+
                                     <p className="text-[9px] font-black uppercase tracking-wider text-[#999]">
                                         Club Level
                                     </p>
 
                                     <p className="mt-3 text-3xl font-black">
-                                        {club.level ||
+                                        {
+                                            club.level ||
                                             club.clubLevel ||
-                                            1}
+                                            1
+                                        }
                                     </p>
+
                                 </div>
 
+
                                 <div className="rounded-2xl bg-[#f7f5f0] p-5">
+
                                     <p className="text-[9px] font-black uppercase tracking-wider text-[#999]">
                                         SYNCO Points
                                     </p>
 
                                     <p className="mt-3 text-3xl font-black">
-                                        {club.syncoPoints ||
-                                            0}
+                                        {
+                                            club.syncoPoints ||
+                                            0
+                                        }
                                     </p>
+
                                 </div>
+
                             </div>
+
                         </section>
+
                     )}
+
             </main>
+
 
             {/* =================================================
                 JOIN REQUEST MODAL
             ================================================= */}
 
             {showJoinRequestModal && (
+
                 <Modal
                     title="Request to Join"
                     subtitle={`Send a request to join ${club.name}.`}
@@ -2803,27 +3848,27 @@ const ClubProfile = () => {
                     }
                     width="max-w-lg"
                 >
+
                     <Textarea
                         label="Message (Optional)"
                         value={
                             joinMessage
                         }
-                        onChange={(
-                            event
-                        ) =>
+                        onChange={(event) =>
                             setJoinMessage(
-                                event.target
-                                    .value.slice(
-                                        0,
-                                        500
-                                    )
+                                event.target.value.slice(
+                                    0,
+                                    500
+                                )
                             )
                         }
                         placeholder="Tell the club why you want to join..."
                         rows={5}
                     />
 
+
                     <div className="mt-2 flex justify-between text-[9px] font-bold text-[#999]">
+
                         <span>
                             Optional
                         </span>
@@ -2834,9 +3879,12 @@ const ClubProfile = () => {
                             }
                             /500
                         </span>
+
                     </div>
 
+
                     <div className="mt-6 flex justify-end gap-3">
+
                         <button
                             type="button"
                             onClick={() =>
@@ -2848,6 +3896,7 @@ const ClubProfile = () => {
                         >
                             Cancel
                         </button>
+
 
                         <button
                             type="button"
@@ -2863,15 +3912,20 @@ const ClubProfile = () => {
                                 ? "Sending..."
                                 : "Send Request"}
                         </button>
+
                     </div>
+
                 </Modal>
+
             )}
+
 
             {/* =================================================
                 SETTINGS MODAL
             ================================================= */}
 
             {showSettings && (
+
                 <Modal
                     title="Club Settings"
                     subtitle="Manage the identity, visibility and access settings of your club."
@@ -2881,73 +3935,70 @@ const ClubProfile = () => {
                         )
                     }
                 >
+
                     <div className="space-y-6">
+
+
                         <div className="grid gap-4 sm:grid-cols-2">
+
                             <Input
                                 label="Club Name"
                                 value={
                                     settingsForm.name
                                 }
-                                onChange={(
-                                    event
-                                ) =>
+                                onChange={(event) =>
                                     setSettingsForm(
                                         (
                                             previous
                                         ) => ({
                                             ...previous,
-                                            name: event
-                                                .target
-                                                .value,
+                                            name:
+                                                event.target.value,
                                         })
                                     )
                                 }
                             />
+
 
                             <Input
                                 label="Tag"
                                 value={
                                     settingsForm.tag
                                 }
-                                onChange={(
-                                    event
-                                ) =>
+                                onChange={(event) =>
                                     setSettingsForm(
                                         (
                                             previous
                                         ) => ({
                                             ...previous,
-                                            tag: event
-                                                .target
-                                                .value
-                                                .toUpperCase()
-                                                .slice(
-                                                    0,
-                                                    5
-                                                ),
+                                            tag:
+                                                event.target.value
+                                                    .toUpperCase()
+                                                    .slice(
+                                                        0,
+                                                        5
+                                                    ),
                                         })
                                     )
                                 }
                             />
+
                         </div>
+
 
                         <Textarea
                             label="Description"
                             value={
                                 settingsForm.description
                             }
-                            onChange={(
-                                event
-                            ) =>
+                            onChange={(event) =>
                                 setSettingsForm(
                                     (
                                         previous
                                     ) => ({
                                         ...previous,
                                         description:
-                                            event
-                                                .target
-                                                .value,
+                                            event.target.value,
                                     })
                                 )
                             }
@@ -2955,137 +4006,134 @@ const ClubProfile = () => {
                             rows={5}
                         />
 
+
                         <div className="grid gap-4 sm:grid-cols-2">
+
                             <Input
                                 label="Avatar URL"
                                 value={
                                     settingsForm.avatar
                                 }
-                                onChange={(
-                                    event
-                                ) =>
+                                onChange={(event) =>
                                     setSettingsForm(
                                         (
                                             previous
                                         ) => ({
                                             ...previous,
-                                            avatar: event
-                                                .target
-                                                .value,
+                                            avatar:
+                                                event.target.value,
                                         })
                                     )
                                 }
                                 placeholder="https://..."
                             />
+
 
                             <Input
                                 label="Banner URL"
                                 value={
                                     settingsForm.banner
                                 }
-                                onChange={(
-                                    event
-                                ) =>
+                                onChange={(event) =>
                                     setSettingsForm(
                                         (
                                             previous
                                         ) => ({
                                             ...previous,
-                                            banner: event
-                                                .target
-                                                .value,
+                                            banner:
+                                                event.target.value,
                                         })
                                     )
                                 }
                                 placeholder="https://..."
                             />
+
                         </div>
 
+
                         <div className="grid gap-4 sm:grid-cols-2">
+
                             <Input
                                 label="Region"
                                 value={
                                     settingsForm.region
                                 }
-                                onChange={(
-                                    event
-                                ) =>
+                                onChange={(event) =>
                                     setSettingsForm(
                                         (
                                             previous
                                         ) => ({
                                             ...previous,
-                                            region: event
-                                                .target
-                                                .value,
+                                            region:
+                                                event.target.value,
                                         })
                                     )
                                 }
                                 placeholder="India"
                             />
 
+
                             <SelectField
                                 label="Game"
                                 value={
                                     settingsForm.gameId
                                 }
-                                onChange={(
-                                    event
-                                ) =>
+                                onChange={(event) =>
                                     setSettingsForm(
                                         (
                                             previous
                                         ) => ({
                                             ...previous,
                                             gameId:
-                                                event
-                                                    .target
-                                                    .value,
+                                                event.target.value,
                                         })
                                     )
                                 }
                             >
+
                                 <option value="">
                                     Select game
                                 </option>
 
                                 {club.game && (
+
                                     <option
                                         value={
-                                            club
-                                                .game
-                                                .id
+                                            club.game.id
                                         }
                                     >
-                                        {getGameName(
-                                            club.game
-                                        )}
+                                        {
+                                            getGameName(
+                                                club.game
+                                            )
+                                        }
                                     </option>
+
                                 )}
+
                             </SelectField>
+
                         </div>
+
 
                         <SelectField
                             label="Privacy"
                             value={
                                 settingsForm.privacy
                             }
-                            onChange={(
-                                event
-                            ) =>
+                            onChange={(event) =>
                                 setSettingsForm(
                                     (
                                         previous
                                     ) => ({
                                         ...previous,
                                         privacy:
-                                            event
-                                                .target
-                                                .value,
+                                            event.target.value,
                                     })
                                 )
                             }
                         >
+
                             <option value="Public">
                                 Public
                             </option>
@@ -3093,18 +4141,20 @@ const ClubProfile = () => {
                             <option value="Private">
                                 Private
                             </option>
+
                         </SelectField>
 
+
                         <div className="space-y-3">
+
+
                             <Toggle
                                 label="Allow member invitations"
                                 description="Allow club managers to invite players into the club."
                                 checked={
                                     settingsForm.allowMemberInvites
                                 }
-                                onChange={(
-                                    value
-                                ) =>
+                                onChange={(value) =>
                                     setSettingsForm(
                                         (
                                             previous
@@ -3117,39 +4167,47 @@ const ClubProfile = () => {
                                 }
                             />
 
+
                             <div className="rounded-xl border border-[#e1ded7] bg-[#faf9f6] p-4">
+
                                 <div className="flex items-start gap-3">
+
                                     <div className="mt-0.5 flex h-8 w-8 items-center justify-center rounded-lg bg-[#f0e9da]">
+
                                         <UserCheck
-                                            size={
-                                                15
-                                            }
+                                            size={15}
                                             className="text-[#9b8148]"
                                         />
+
                                     </div>
 
+
                                     <div>
+
                                         <p className="text-sm font-black">
                                             Join approval
                                         </p>
 
                                         <p className="mt-1 text-xs leading-5 text-[#85878e]">
-                                            Players requesting to join must be approved by a club manager.
+                                            Public club members always require approval before entering the club.
                                         </p>
+
                                     </div>
+
                                 </div>
+
                             </div>
 
+
                             {isOwner && (
+
                                 <Toggle
                                     label="Club active"
                                     description="Deactivate the club if you want to temporarily close it."
                                     checked={
                                         settingsForm.isActive
                                     }
-                                    onChange={(
-                                        value
-                                    ) =>
+                                    onChange={(value) =>
                                         setSettingsForm(
                                             (
                                                 previous
@@ -3161,10 +4219,14 @@ const ClubProfile = () => {
                                         )
                                     }
                                 />
+
                             )}
+
                         </div>
 
+
                         <div className="flex justify-end gap-3 border-t border-[#ebe8e1] pt-5">
+
                             <button
                                 type="button"
                                 onClick={() =>
@@ -3176,6 +4238,7 @@ const ClubProfile = () => {
                             >
                                 Cancel
                             </button>
+
 
                             <button
                                 type="button"
@@ -3191,16 +4254,22 @@ const ClubProfile = () => {
                                     ? "Saving..."
                                     : "Save Changes"}
                             </button>
+
                         </div>
+
                     </div>
+
                 </Modal>
+
             )}
+
 
             {/* =================================================
                 RECRUITMENT FORM
             ================================================= */}
 
             {showRecruitmentForm && (
+
                 <Modal
                     title={
                         editingRecruitment
@@ -3218,46 +4287,43 @@ const ClubProfile = () => {
                         );
                     }}
                 >
+
                     <div className="space-y-5">
+
+
                         <Input
                             label="Title"
                             value={
                                 recruitmentForm.title
                             }
-                            onChange={(
-                                event
-                            ) =>
+                            onChange={(event) =>
                                 setRecruitmentForm(
                                     (
                                         previous
                                     ) => ({
                                         ...previous,
-                                        title: event
-                                            .target
-                                            .value,
+                                        title:
+                                            event.target.value,
                                     })
                                 )
                             }
                             placeholder="Looking for active players"
                         />
 
+
                         <Textarea
                             label="Description"
                             value={
                                 recruitmentForm.description
                             }
-                            onChange={(
-                                event
-                            ) =>
+                            onChange={(event) =>
                                 setRecruitmentForm(
                                     (
                                         previous
                                     ) => ({
                                         ...previous,
                                         description:
-                                            event
-                                                .target
-                                                .value,
+                                            event.target.value,
                                     })
                                 )
                             }
@@ -3265,116 +4331,117 @@ const ClubProfile = () => {
                             rows={6}
                         />
 
+
                         <div className="grid gap-4 sm:grid-cols-2">
+
+
                             <SelectField
                                 label="Game"
                                 value={
                                     recruitmentForm.gameId
                                 }
-                                onChange={(
-                                    event
-                                ) =>
+                                onChange={(event) =>
                                     setRecruitmentForm(
                                         (
                                             previous
                                         ) => ({
                                             ...previous,
                                             gameId:
-                                                event
-                                                    .target
-                                                    .value,
+                                                event.target.value,
                                         })
                                     )
                                 }
                             >
+
                                 <option value="">
                                     Select game
                                 </option>
 
                                 {club.game && (
+
                                     <option
                                         value={
-                                            club
-                                                .game
-                                                .id
+                                            club.game.id
                                         }
                                     >
-                                        {getGameName(
-                                            club.game
-                                        )}
+                                        {
+                                            getGameName(
+                                                club.game
+                                            )
+                                        }
                                     </option>
+
                                 )}
+
                             </SelectField>
+
 
                             <Input
                                 label="Role"
                                 value={
                                     recruitmentForm.role
                                 }
-                                onChange={(
-                                    event
-                                ) =>
+                                onChange={(event) =>
                                     setRecruitmentForm(
                                         (
                                             previous
                                         ) => ({
                                             ...previous,
-                                            role: event
-                                                .target
-                                                .value,
+                                            role:
+                                                event.target.value,
                                         })
                                     )
                                 }
                                 placeholder="Duelist / IGL / Support"
                             />
+
                         </div>
 
+
                         <div className="grid gap-4 sm:grid-cols-2">
+
+
                             <Input
                                 label="Rank Requirement"
                                 value={
                                     recruitmentForm.rankRequirement
                                 }
-                                onChange={(
-                                    event
-                                ) =>
+                                onChange={(event) =>
                                     setRecruitmentForm(
                                         (
                                             previous
                                         ) => ({
                                             ...previous,
                                             rankRequirement:
-                                                event
-                                                    .target
-                                                    .value,
+                                                event.target.value,
                                         })
                                     )
                                 }
                                 placeholder="Ascendant+"
                             />
 
+
                             <Input
                                 label="Region"
                                 value={
                                     recruitmentForm.region
                                 }
-                                onChange={(
-                                    event
-                                ) =>
+                                onChange={(event) =>
                                     setRecruitmentForm(
                                         (
                                             previous
                                         ) => ({
                                             ...previous,
-                                            region: event
-                                                .target
-                                                .value,
+                                            region:
+                                                event.target.value,
                                         })
                                     )
                                 }
                                 placeholder="India"
                             />
+
                         </div>
+
 
                         <Toggle
                             label="Microphone required"
@@ -3382,9 +4449,7 @@ const ClubProfile = () => {
                             checked={
                                 recruitmentForm.micRequired
                             }
-                            onChange={(
-                                value
-                            ) =>
+                            onChange={(value) =>
                                 setRecruitmentForm(
                                     (
                                         previous
@@ -3397,27 +4462,25 @@ const ClubProfile = () => {
                             }
                         />
 
+
                         <SelectField
                             label="Status"
                             value={
                                 recruitmentForm.status
                             }
-                            onChange={(
-                                event
-                            ) =>
+                            onChange={(event) =>
                                 setRecruitmentForm(
                                     (
                                         previous
                                     ) => ({
                                         ...previous,
                                         status:
-                                            event
-                                                .target
-                                                .value,
+                                            event.target.value,
                                     })
                                 )
                             }
                         >
+
                             <option value="OPEN">
                                 Open
                             </option>
@@ -3425,9 +4488,12 @@ const ClubProfile = () => {
                             <option value="CLOSED">
                                 Closed
                             </option>
+
                         </SelectField>
 
+
                         <div className="flex justify-end gap-3 border-t border-[#ebe8e1] pt-5">
+
                             <button
                                 type="button"
                                 onClick={() => {
@@ -3443,6 +4509,7 @@ const ClubProfile = () => {
                             >
                                 Cancel
                             </button>
+
 
                             <button
                                 type="button"
@@ -3460,16 +4527,22 @@ const ClubProfile = () => {
                                         ? "Update Post"
                                         : "Create Post"}
                             </button>
+
                         </div>
+
                     </div>
+
                 </Modal>
+
             )}
+
 
             {/* =================================================
                 INVITE MODAL
             ================================================= */}
 
             {inviteModal && (
+
                 <Modal
                     title="Invite Players"
                     subtitle="Search for SYNCO players and invite them to this club."
@@ -3478,81 +4551,90 @@ const ClubProfile = () => {
                             false
                         );
 
-                        setInviteSearch(
-                            ""
-                        );
+                        setInviteSearch("");
 
-                        setInviteResults(
-                            []
-                        );
+                        setInviteResults([]);
                     }}
                     width="max-w-xl"
                 >
+
                     <div className="relative">
+
                         <Search
-                            size={
-                                17
-                            }
+                            size={17}
                             className="absolute left-4 top-1/2 -translate-y-1/2 text-[#999]"
                         />
+
 
                         <input
                             value={
                                 inviteSearch
                             }
-                            onChange={(
-                                event
-                            ) =>
+                            onChange={(event) =>
                                 setInviteSearch(
-                                    event
-                                        .target
-                                        .value
+                                    event.target.value
                                 )
                             }
                             placeholder="Search by username, name or SYNCO UID"
                             className="w-full rounded-xl border border-[#dedbd3] bg-white py-3 pl-11 pr-4 text-sm outline-none focus:border-[#9b8148]"
                         />
+
                     </div>
 
+
                     <div className="mt-5">
+
+
                         {inviteSearching && (
+
                             <div className="py-8 text-center text-xs font-bold text-[#888]">
                                 Searching...
                             </div>
+
                         )}
 
+
                         {!inviteSearching &&
-                            inviteSearch.trim()
-                                .length >=
+                            inviteSearch.trim().length >=
                             2 &&
                             inviteResults.length ===
                             0 && (
+
                                 <div className="rounded-xl border border-dashed border-[#dedbd3] py-10 text-center text-xs font-bold text-[#888]">
                                     No players found.
                                 </div>
+
                             )}
+
 
                         {!inviteSearching &&
                             inviteResults.length >
                             0 && (
+
                                 <div className="space-y-2">
+
                                     {inviteResults.map(
                                         (
                                             player
                                         ) => {
+
                                             const avatar =
                                                 getAvatar(
                                                     player
                                                 );
 
+
                                             return (
+
                                                 <div
                                                     key={
                                                         player.id
                                                     }
                                                     className="flex items-center gap-3 rounded-xl border border-[#ebe8e1] p-3"
                                                 >
+
                                                     {avatar ? (
+
                                                         <img
                                                             src={
                                                                 avatar
@@ -3560,28 +4642,40 @@ const ClubProfile = () => {
                                                             alt=""
                                                             className="h-11 w-11 rounded-xl object-cover"
                                                         />
+
                                                     ) : (
+
                                                         <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-[#ece9e2] text-xs font-black">
-                                                            {getUserInitials(
-                                                                player
-                                                            )}
+                                                            {
+                                                                getUserInitials(
+                                                                    player
+                                                                )
+                                                            }
                                                         </div>
+
                                                     )}
 
+
                                                     <div className="min-w-0 flex-1">
+
                                                         <p className="truncate text-sm font-black">
-                                                            {getUserName(
-                                                                player
-                                                            )}
+                                                            {
+                                                                getUserName(
+                                                                    player
+                                                                )
+                                                            }
                                                         </p>
 
                                                         <p className="mt-1 text-[10px] font-bold uppercase tracking-wider text-[#929398]">
                                                             UID:{" "}
-                                                            {player.uid ||
-                                                                player.syncoUid ||
-                                                                "—"}
+                                                            {
+                                                                player.uid ||
+                                                                "—"
+                                                            }
                                                         </p>
+
                                                     </div>
+
 
                                                     <button
                                                         type="button"
@@ -3597,21 +4691,30 @@ const ClubProfile = () => {
                                                     >
                                                         Invite
                                                     </button>
+
                                                 </div>
+
                                             );
                                         }
                                     )}
+
                                 </div>
+
                             )}
+
                     </div>
+
                 </Modal>
+
             )}
+
 
             {/* =================================================
                 INCOMING INVITES
             ================================================= */}
 
             {showIncomingInvites && (
+
                 <Modal
                     title="Club Invitations"
                     subtitle="Clubs that have invited you to join."
@@ -3622,30 +4725,43 @@ const ClubProfile = () => {
                     }
                     width="max-w-xl"
                 >
+
                     <div className="space-y-3">
+
+
                         {incomingInvites.length ===
                             0 ? (
+
                             <div className="py-10 text-center text-xs font-bold text-[#888]">
                                 No pending invitations.
                             </div>
+
                         ) : (
+
                             incomingInvites.map(
                                 (
                                     invite
                                 ) => {
+
                                     const invitedClub =
                                         invite.club;
 
+
                                     return (
+
                                         <div
                                             key={
                                                 invite.id
                                             }
                                             className="rounded-xl border border-[#ebe8e1] p-4"
                                         >
+
                                             <div className="flex items-center gap-3">
+
                                                 <div className="flex h-11 w-11 items-center justify-center overflow-hidden rounded-xl bg-[#ece9e2]">
+
                                                     {invitedClub?.avatar ? (
+
                                                         <img
                                                             src={
                                                                 invitedClub.avatar
@@ -3653,32 +4769,44 @@ const ClubProfile = () => {
                                                             alt=""
                                                             className="h-full w-full object-cover"
                                                         />
+
                                                     ) : (
+
                                                         <Shield
-                                                            size={
-                                                                18
-                                                            }
+                                                            size={18}
                                                             className="text-[#9b8148]"
                                                         />
+
                                                     )}
+
                                                 </div>
 
+
                                                 <div className="min-w-0 flex-1">
+
                                                     <p className="truncate text-sm font-black">
-                                                        {invitedClub?.name ||
-                                                            "Club"}
+                                                        {
+                                                            invitedClub?.name ||
+                                                            "Club"
+                                                        }
                                                     </p>
 
                                                     <p className="mt-1 text-[10px] font-bold text-[#898a8e]">
                                                         Invited by{" "}
-                                                        {getUserName(
-                                                            invite.inviter
-                                                        )}
+                                                        {
+                                                            getUserName(
+                                                                invite.inviter
+                                                            )
+                                                        }
                                                     </p>
+
                                                 </div>
+
                                             </div>
 
+
                                             <div className="mt-4 flex gap-2">
+
                                                 <button
                                                     type="button"
                                                     disabled={
@@ -3694,6 +4822,7 @@ const ClubProfile = () => {
                                                     Accept
                                                 </button>
 
+
                                                 <button
                                                     type="button"
                                                     disabled={
@@ -3708,17 +4837,23 @@ const ClubProfile = () => {
                                                 >
                                                     Decline
                                                 </button>
+
                                             </div>
+
                                         </div>
+
                                     );
                                 }
                             )
+
                         )}
+
                     </div>
+
                 </Modal>
+
             )}
+
         </div>
     );
-};
-
-export default ClubProfile;
+}
