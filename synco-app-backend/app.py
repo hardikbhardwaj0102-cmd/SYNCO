@@ -6,7 +6,7 @@ from dotenv import load_dotenv
 
 from models import db
 from seed_games import seed_initial_games
-
+from competition import competition_bp
 from search import search_bp
 from auth import auth_bp, init_oauth
 from profile import profile_bp
@@ -178,7 +178,7 @@ app.register_blueprint(search_bp)
 
 app.register_blueprint(leaderboards_bp)
 
-
+app.register_blueprint(competition_bp)
 # =========================================================
 # HEALTH CHECK
 # =========================================================

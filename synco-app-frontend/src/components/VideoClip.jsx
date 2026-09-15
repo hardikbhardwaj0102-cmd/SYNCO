@@ -374,8 +374,8 @@ const VideoClip = ({
         ref={videoRef}
         src={url}
         className={`custom-video-element ${isPlaying
-            ? 'opacity-100'
-            : 'opacity-80'
+          ? 'opacity-100'
+          : 'opacity-80'
           }`}
         playsInline
         loop
@@ -457,8 +457,8 @@ const VideoClip = ({
           type="button"
           onClick={handleLike}
           className={`reaction-btn ${liked
-              ? 'text-red-500 hover:text-red-400'
-              : ''
+            ? 'text-red-500 hover:text-red-400'
+            : ''
             }`}
         >
           <Heart

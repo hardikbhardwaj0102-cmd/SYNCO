@@ -2372,3 +2372,2226 @@ class Friendship(db.Model):
                 else None
             )
         }
+# =========================================================
+# SYNCO COMPETITION ENGINE
+# =========================================================
+#
+# Competition architecture:
+#
+# Game
+#   ↓
+# Competition
+#   ↓
+# CompetitionStage
+#   ↓
+# CompetitionMatch
+#   ↓
+# MatchSide / MatchParticipant
+#   ↓
+# MatchResult
+#   ↓
+# Verification
+#   ↓
+# Standing / Bracket
+#
+# Supports:
+#   CLASSIC
+#   VERSUS
+#
+# Participant types:
+#   PLAYER
+#   TEAM
+#
+# =========================================================
+
+
+# =========================================================
+# COMPETITION
+# =========================================================
+
+class Competition(db.Model):
+
+    __tablename__ = "competitions"
+
+    id = db.Column(
+        db.Integer,
+        primary_key=True
+    )
+
+    # -----------------------------------------------------
+    # Basic information
+    # -----------------------------------------------------
+
+    title = db.Column(
+        db.String(200),
+        nullable=False
+    )
+
+    slug = db.Column(
+        db.String(220),
+        unique=True,
+        nullable=False,
+        index=True
+    )
+
+    description = db.Column(
+        db.Text,
+        nullable=True
+    )
+
+    # -----------------------------------------------------
+    # Organizer
+    # -----------------------------------------------------
+
+    organizer_id = db.Column(
+        db.Integer,
+        db.ForeignKey("users.id"),
+        nullable=False,
+        index=True
+    )
+
+    # -----------------------------------------------------
+    # Game
+    # -----------------------------------------------------
+
+    game_id = db.Column(
+        db.String(50),
+        db.ForeignKey("games.id"),
+        nullable=False,
+        index=True
+    )
+
+    # -----------------------------------------------------
+    # Competition configuration
+    # -----------------------------------------------------
+
+    competition_type = db.Column(
+        db.String(30),
+        nullable=False
+    )
+    # CLASSIC
+    # VERSUS
+
+    game_mode = db.Column(
+        db.String(50),
+        nullable=False
+    )
+
+    participant_type = db.Column(
+        db.String(20),
+        nullable=False
+    )
+    # PLAYER
+    # TEAM
+
+    team_size = db.Column(
+        db.Integer,
+        nullable=False,
+        default=1
+    )
+
+    max_participants = db.Column(
+        db.Integer,
+        nullable=False
+    )
+
+    # -----------------------------------------------------
+    # Competition structure
+    # -----------------------------------------------------
+
+    number_of_matches = db.Column(
+        db.Integer,
+        nullable=False,
+        default=1
+    )
+
+    structure = db.Column(
+        db.String(50),
+        nullable=False
+    )
+    # POINTS
+    # KNOCKOUT
+
+    # -----------------------------------------------------
+    # Configuration JSON
+    # -----------------------------------------------------
+
+    configuration = db.Column(
+        db.JSON,
+        nullable=False,
+        default=dict
+    )
+
+    # Example:
+    #
+    # {
+    #     "seeding": "RANDOM",
+    #     "allowByes": true,
+    #     "scoring": {
+    #         "placementPoints": {
+    #             "1": 15,
+    #             "2": 12,
+    #             "3": 10
+    #         },
+    #         "killPoints": 1
+    #     }
+    # }
+
+    # -----------------------------------------------------
+    # Lifecycle
+    # -----------------------------------------------------
+
+    status = db.Column(
+        db.String(30),
+        nullable=False,
+        default="DRAFT",
+        index=True
+    )
+
+    # DRAFT
+    # REGISTRATION_OPEN
+    # REGISTRATION_CLOSED
+    # READY
+    # LIVE
+    # RESULTS_PENDING
+    # COMPLETED
+    # DISPUTED
+    # CANCELLED
+
+    # -----------------------------------------------------
+    # Schedule
+    # -----------------------------------------------------
+
+    registration_start = db.Column(
+        db.DateTime,
+        nullable=True
+    )
+
+    registration_end = db.Column(
+        db.DateTime,
+        nullable=True
+    )
+
+    competition_start = db.Column(
+        db.DateTime,
+        nullable=True
+    )
+
+    competition_end = db.Column(
+        db.DateTime,
+        nullable=True
+    )
+
+    # -----------------------------------------------------
+    # Rules
+    # -----------------------------------------------------
+
+    competition_rules = db.Column(
+        db.Text,
+        nullable=True
+    )
+
+    match_rules = db.Column(
+        db.Text,
+        nullable=True
+    )
+
+    eligibility_rules = db.Column(
+        db.Text,
+        nullable=True
+    )
+
+    # -----------------------------------------------------
+    # Publish
+    # -----------------------------------------------------
+
+    is_published = db.Column(
+        db.Boolean,
+        nullable=False,
+        default=False,
+        index=True
+    )
+
+    # -----------------------------------------------------
+    # Timestamps
+    # -----------------------------------------------------
+
+    created_at = db.Column(
+        db.DateTime,
+        default=datetime.utcnow,
+        nullable=False
+    )
+
+    updated_at = db.Column(
+        db.DateTime,
+        default=datetime.utcnow,
+        onupdate=datetime.utcnow,
+        nullable=False
+    )
+
+    # =====================================================
+    # RELATIONSHIPS
+    # =====================================================
+
+    organizer = db.relationship(
+        "User",
+        foreign_keys=[organizer_id],
+        backref=db.backref(
+            "organized_competitions",
+            lazy=True
+        )
+    )
+
+    game = db.relationship(
+        "Game",
+        foreign_keys=[game_id],
+        backref=db.backref(
+            "competitions",
+            lazy=True
+        )
+    )
+
+    stages = db.relationship(
+        "CompetitionStage",
+        back_populates="competition",
+        cascade="all, delete-orphan",
+        lazy=True,
+        order_by="CompetitionStage.stage_order"
+    )
+
+    participants = db.relationship(
+        "CompetitionParticipant",
+        back_populates="competition",
+        cascade="all, delete-orphan",
+        lazy=True
+    )
+
+    matches = db.relationship(
+        "CompetitionMatch",
+        back_populates="competition",
+        cascade="all, delete-orphan",
+        lazy=True
+    )
+
+    standings = db.relationship(
+        "CompetitionStanding",
+        back_populates="competition",
+        cascade="all, delete-orphan",
+        lazy=True
+    )
+
+    bracket = db.relationship(
+        "Bracket",
+        back_populates="competition",
+        uselist=False,
+        cascade="all, delete-orphan"
+    )
+
+    disputes = db.relationship(
+        "CompetitionDispute",
+        back_populates="competition",
+        cascade="all, delete-orphan",
+        lazy=True
+    )
+
+    audit_logs = db.relationship(
+        "CompetitionAuditLog",
+        back_populates="competition",
+        cascade="all, delete-orphan",
+        lazy=True
+    )
+
+    # =====================================================
+    # SERIALIZATION
+    # =====================================================
+
+    def to_dict(self):
+
+        return {
+            "id": self.id,
+            "title": self.title,
+            "slug": self.slug,
+            "description": self.description,
+
+            "organizerId": self.organizer_id,
+
+            "gameId": self.game_id,
+
+            "game": (
+                self.game.to_dict()
+                if self.game
+                else None
+            ),
+
+            "competitionType": self.competition_type,
+            "gameMode": self.game_mode,
+
+            "participantType": self.participant_type,
+            "teamSize": self.team_size,
+
+            "maxParticipants": self.max_participants,
+
+            "numberOfMatches": self.number_of_matches,
+            "structure": self.structure,
+
+            "configuration": self.configuration or {},
+
+            "status": self.status,
+
+            "registrationStart": (
+                self.registration_start.isoformat()
+                if self.registration_start
+                else None
+            ),
+
+            "registrationEnd": (
+                self.registration_end.isoformat()
+                if self.registration_end
+                else None
+            ),
+
+            "competitionStart": (
+                self.competition_start.isoformat()
+                if self.competition_start
+                else None
+            ),
+
+            "competitionEnd": (
+                self.competition_end.isoformat()
+                if self.competition_end
+                else None
+            ),
+
+            "competitionRules": self.competition_rules,
+            "matchRules": self.match_rules,
+            "eligibilityRules": self.eligibility_rules,
+
+            "isPublished": self.is_published,
+
+            "createdAt": (
+                self.created_at.isoformat()
+                if self.created_at
+                else None
+            ),
+
+            "updatedAt": (
+                self.updated_at.isoformat()
+                if self.updated_at
+                else None
+            )
+        }
+
+
+# =========================================================
+# COMPETITION STAGE
+# =========================================================
+
+class CompetitionStage(db.Model):
+
+    __tablename__ = "competition_stages"
+
+    id = db.Column(
+        db.Integer,
+        primary_key=True
+    )
+
+    competition_id = db.Column(
+        db.Integer,
+        db.ForeignKey("competitions.id", ondelete="CASCADE"),
+        nullable=False,
+        index=True
+    )
+
+    name = db.Column(
+        db.String(150),
+        nullable=False
+    )
+
+    stage_type = db.Column(
+        db.String(30),
+        nullable=False
+    )
+    # MAIN
+    # GROUP
+    # PLAYOFF
+    # FINAL
+
+    stage_order = db.Column(
+        db.Integer,
+        nullable=False,
+        default=1
+    )
+
+    status = db.Column(
+        db.String(30),
+        nullable=False,
+        default="PENDING"
+    )
+
+    configuration = db.Column(
+        db.JSON,
+        nullable=False,
+        default=dict
+    )
+
+    created_at = db.Column(
+        db.DateTime,
+        default=datetime.utcnow,
+        nullable=False
+    )
+
+    competition = db.relationship(
+        "Competition",
+        back_populates="stages"
+    )
+
+    matches = db.relationship(
+        "CompetitionMatch",
+        back_populates="stage",
+        cascade="all, delete-orphan",
+        lazy=True,
+        order_by="CompetitionMatch.match_number"
+    )
+
+    standings = db.relationship(
+        "CompetitionStanding",
+        back_populates="stage",
+        cascade="all, delete-orphan",
+        lazy=True
+    )
+
+    def to_dict(self):
+
+        return {
+            "id": self.id,
+            "competitionId": self.competition_id,
+            "name": self.name,
+            "stageType": self.stage_type,
+            "stageOrder": self.stage_order,
+            "status": self.status,
+            "configuration": self.configuration or {}
+        }
+
+
+# =========================================================
+# COMPETITION PARTICIPANT
+# =========================================================
+
+class CompetitionParticipant(db.Model):
+
+    __tablename__ = "competition_participants"
+
+    id = db.Column(
+        db.Integer,
+        primary_key=True
+    )
+
+    competition_id = db.Column(
+        db.Integer,
+        db.ForeignKey("competitions.id", ondelete="CASCADE"),
+        nullable=False,
+        index=True
+    )
+
+    participant_type = db.Column(
+        db.String(20),
+        nullable=False
+    )
+    # PLAYER
+    # TEAM
+
+    # -----------------------------------------------------
+    # PLAYER PARTICIPANT
+    # -----------------------------------------------------
+
+    user_id = db.Column(
+        db.Integer,
+        db.ForeignKey("users.id"),
+        nullable=True,
+        index=True
+    )
+
+    # -----------------------------------------------------
+    # TEAM PARTICIPANT
+    # -----------------------------------------------------
+
+    club_id = db.Column(
+        db.Integer,
+        db.ForeignKey("clubs.id"),
+        nullable=True,
+        index=True
+    )
+
+    # -----------------------------------------------------
+    # Registration
+    # -----------------------------------------------------
+
+    seed = db.Column(
+        db.Integer,
+        nullable=True
+    )
+
+    registration_status = db.Column(
+        db.String(30),
+        nullable=False,
+        default="PENDING"
+    )
+    # PENDING
+    # ACCEPTED
+    # REJECTED
+    # LOCKED
+    # DISQUALIFIED
+    # ELIMINATED
+
+    registered_at = db.Column(
+        db.DateTime,
+        default=datetime.utcnow,
+        nullable=False
+    )
+
+    accepted_at = db.Column(
+        db.DateTime,
+        nullable=True
+    )
+
+    eliminated_at = db.Column(
+        db.DateTime,
+        nullable=True
+    )
+
+    competition = db.relationship(
+        "Competition",
+        back_populates="participants"
+    )
+
+    user = db.relationship(
+        "User",
+        foreign_keys=[user_id],
+        backref=db.backref(
+            "competition_participations",
+            lazy=True
+        )
+    )
+
+    club = db.relationship(
+        "Club",
+        foreign_keys=[club_id],
+        backref=db.backref(
+            "competition_participations",
+            lazy=True
+        )
+    )
+
+    match_participations = db.relationship(
+        "MatchParticipant",
+        back_populates="competition_participant",
+        cascade="all, delete-orphan",
+        lazy=True
+    )
+
+    standings = db.relationship(
+        "CompetitionStanding",
+        back_populates="participant",
+        cascade="all, delete-orphan",
+        lazy=True
+    )
+
+    __table_args__ = (
+        db.UniqueConstraint(
+            "competition_id",
+            "user_id",
+            name="uq_competition_player_participant"
+        ),
+    )
+
+    def display_name(self):
+
+        if self.participant_type == "TEAM" and self.club:
+            return self.club.name
+
+        if self.user:
+            return self.user.username or self.user.name
+
+        return "Unknown Participant"
+
+    def to_dict(self):
+
+        return {
+            "id": self.id,
+
+            "competitionId": self.competition_id,
+
+            "participantType": self.participant_type,
+
+            "userId": self.user_id,
+            "clubId": self.club_id,
+
+            "seed": self.seed,
+
+            "registrationStatus": self.registration_status,
+
+            "registeredAt": (
+                self.registered_at.isoformat()
+                if self.registered_at
+                else None
+            ),
+
+            "acceptedAt": (
+                self.accepted_at.isoformat()
+                if self.accepted_at
+                else None
+            ),
+
+            "eliminatedAt": (
+                self.eliminated_at.isoformat()
+                if self.eliminated_at
+                else None
+            ),
+
+            "displayName": self.display_name(),
+
+            "user": (
+                self.user.to_dict()
+                if self.user
+                else None
+            ),
+
+            "club": (
+                self.club.to_dict()
+                if self.club
+                else None
+            )
+        }
+
+
+# =========================================================
+# COMPETITION MATCH
+# =========================================================
+
+class CompetitionMatch(db.Model):
+
+    __tablename__ = "competition_matches"
+
+    id = db.Column(
+        db.Integer,
+        primary_key=True
+    )
+
+    competition_id = db.Column(
+        db.Integer,
+        db.ForeignKey("competitions.id", ondelete="CASCADE"),
+        nullable=False,
+        index=True
+    )
+
+    stage_id = db.Column(
+        db.Integer,
+        db.ForeignKey("competition_stages.id", ondelete="CASCADE"),
+        nullable=False,
+        index=True
+    )
+
+    # -----------------------------------------------------
+    # Match identification
+    # -----------------------------------------------------
+
+    match_number = db.Column(
+        db.Integer,
+        nullable=False
+    )
+
+    round_name = db.Column(
+        db.String(50),
+        nullable=True
+    )
+
+    round_number = db.Column(
+        db.Integer,
+        nullable=True
+    )
+
+    # -----------------------------------------------------
+    # Scheduling
+    # -----------------------------------------------------
+
+    scheduled_at = db.Column(
+        db.DateTime,
+        nullable=True,
+        index=True
+    )
+
+    started_at = db.Column(
+        db.DateTime,
+        nullable=True
+    )
+
+    completed_at = db.Column(
+        db.DateTime,
+        nullable=True
+    )
+
+    # -----------------------------------------------------
+    # Status
+    # -----------------------------------------------------
+
+    status = db.Column(
+        db.String(30),
+        nullable=False,
+        default="SCHEDULED",
+        index=True
+    )
+
+    # SCHEDULED
+    # READY
+    # LIVE
+    # RESULT_PENDING
+    # VERIFICATION
+    # VERIFIED
+    # DISPUTED
+    # CANCELLED
+
+    # -----------------------------------------------------
+    # Match metadata
+    # -----------------------------------------------------
+
+    metadata = db.Column(
+        db.JSON,
+        nullable=False,
+        default=dict
+    )
+
+    created_at = db.Column(
+        db.DateTime,
+        default=datetime.utcnow,
+        nullable=False
+    )
+
+    competition = db.relationship(
+        "Competition",
+        back_populates="matches"
+    )
+
+    stage = db.relationship(
+        "CompetitionStage",
+        back_populates="matches"
+    )
+
+    sides = db.relationship(
+        "MatchSide",
+        back_populates="match",
+        cascade="all, delete-orphan",
+        lazy=True,
+        order_by="MatchSide.side_number"
+    )
+
+    participants = db.relationship(
+        "MatchParticipant",
+        back_populates="match",
+        cascade="all, delete-orphan",
+        lazy=True
+    )
+
+    result = db.relationship(
+        "MatchResult",
+        back_populates="match",
+        uselist=False,
+        cascade="all, delete-orphan"
+    )
+
+    verification_records = db.relationship(
+        "VerificationRecord",
+        back_populates="match",
+        cascade="all, delete-orphan",
+        lazy=True
+    )
+
+    disputes = db.relationship(
+        "CompetitionDispute",
+        back_populates="match",
+        cascade="all, delete-orphan",
+        lazy=True
+    )
+
+    def to_dict(self):
+
+        return {
+            "id": self.id,
+
+            "competitionId": self.competition_id,
+            "stageId": self.stage_id,
+
+            "matchNumber": self.match_number,
+
+            "roundName": self.round_name,
+            "roundNumber": self.round_number,
+
+            "scheduledAt": (
+                self.scheduled_at.isoformat()
+                if self.scheduled_at
+                else None
+            ),
+
+            "startedAt": (
+                self.started_at.isoformat()
+                if self.started_at
+                else None
+            ),
+
+            "completedAt": (
+                self.completed_at.isoformat()
+                if self.completed_at
+                else None
+            ),
+
+            "status": self.status,
+
+            "metadata": self.metadata or {},
+
+            "sides": [
+                side.to_dict()
+                for side in self.sides
+            ],
+
+            "result": (
+                self.result.to_dict()
+                if self.result
+                else None
+            )
+        }
+
+
+# =========================================================
+# MATCH SIDE
+# =========================================================
+
+class MatchSide(db.Model):
+
+    __tablename__ = "match_sides"
+
+    id = db.Column(
+        db.Integer,
+        primary_key=True
+    )
+
+    match_id = db.Column(
+        db.Integer,
+        db.ForeignKey("competition_matches.id", ondelete="CASCADE"),
+        nullable=False,
+        index=True
+    )
+
+    side_number = db.Column(
+        db.Integer,
+        nullable=False
+    )
+    # 1 = Side A
+    # 2 = Side B
+
+    label = db.Column(
+        db.String(50),
+        nullable=True
+    )
+
+    # Used by knockout brackets
+    source_node_id = db.Column(
+        db.Integer,
+        nullable=True
+    )
+
+    source_result = db.Column(
+        db.String(30),
+        nullable=True
+    )
+    # WINNER
+    # LOSER
+
+    status = db.Column(
+        db.String(30),
+        nullable=False,
+        default="PENDING"
+    )
+
+    match = db.relationship(
+        "CompetitionMatch",
+        back_populates="sides"
+    )
+
+    participants = db.relationship(
+        "MatchParticipant",
+        back_populates="side",
+        cascade="all, delete-orphan",
+        lazy=True
+    )
+
+    __table_args__ = (
+        db.UniqueConstraint(
+            "match_id",
+            "side_number",
+            name="uq_match_side_number"
+        ),
+    )
+
+    def to_dict(self):
+
+        return {
+            "id": self.id,
+            "matchId": self.match_id,
+            "sideNumber": self.side_number,
+            "label": self.label,
+
+            "sourceNodeId": self.source_node_id,
+            "sourceResult": self.source_result,
+
+            "status": self.status,
+
+            "participants": [
+                participant.to_dict()
+                for participant in self.participants
+            ]
+        }
+
+
+# =========================================================
+# MATCH PARTICIPANT
+# =========================================================
+
+class MatchParticipant(db.Model):
+
+    __tablename__ = "match_participants"
+
+    id = db.Column(
+        db.Integer,
+        primary_key=True
+    )
+
+    match_id = db.Column(
+        db.Integer,
+        db.ForeignKey("competition_matches.id", ondelete="CASCADE"),
+        nullable=False,
+        index=True
+    )
+
+    side_id = db.Column(
+        db.Integer,
+        db.ForeignKey("match_sides.id", ondelete="CASCADE"),
+        nullable=False,
+        index=True
+    )
+
+    competition_participant_id = db.Column(
+        db.Integer,
+        db.ForeignKey(
+            "competition_participants.id",
+            ondelete="CASCADE"
+        ),
+        nullable=False,
+        index=True
+    )
+
+    match = db.relationship(
+        "CompetitionMatch",
+        back_populates="participants"
+    )
+
+    side = db.relationship(
+        "MatchSide",
+        back_populates="participants"
+    )
+
+    competition_participant = db.relationship(
+        "CompetitionParticipant",
+        back_populates="match_participations"
+    )
+
+    def to_dict(self):
+
+        return {
+            "id": self.id,
+
+            "matchId": self.match_id,
+            "sideId": self.side_id,
+
+            "competitionParticipantId":
+                self.competition_participant_id,
+
+            "participant": (
+                self.competition_participant.to_dict()
+                if self.competition_participant
+                else None
+            )
+        }
+
+
+# =========================================================
+# SCORING RULE
+# =========================================================
+
+class ScoringRule(db.Model):
+
+    __tablename__ = "competition_scoring_rules"
+
+    id = db.Column(
+        db.Integer,
+        primary_key=True
+    )
+
+    competition_id = db.Column(
+        db.Integer,
+        db.ForeignKey("competitions.id", ondelete="CASCADE"),
+        nullable=False,
+        index=True
+    )
+
+    rule_type = db.Column(
+        db.String(50),
+        nullable=False
+    )
+    # PLACEMENT
+    # KILL
+    # BONUS
+    # CUSTOM
+
+    name = db.Column(
+        db.String(100),
+        nullable=False
+    )
+
+    points = db.Column(
+        db.Integer,
+        nullable=False,
+        default=0
+    )
+
+    configuration = db.Column(
+        db.JSON,
+        nullable=False,
+        default=dict
+    )
+
+    created_at = db.Column(
+        db.DateTime,
+        default=datetime.utcnow,
+        nullable=False
+    )
+
+    competition = db.relationship(
+        "Competition",
+        backref=db.backref(
+            "scoring_rules",
+            lazy=True,
+            cascade="all, delete-orphan"
+        )
+    )
+
+    def to_dict(self):
+
+        return {
+            "id": self.id,
+            "competitionId": self.competition_id,
+            "ruleType": self.rule_type,
+            "name": self.name,
+            "points": self.points,
+            "configuration": self.configuration or {}
+        }
+
+
+# =========================================================
+# MATCH RESULT
+# =========================================================
+
+class MatchResult(db.Model):
+
+    __tablename__ = "match_results"
+
+    id = db.Column(
+        db.Integer,
+        primary_key=True
+    )
+
+    match_id = db.Column(
+        db.Integer,
+        db.ForeignKey("competition_matches.id", ondelete="CASCADE"),
+        unique=True,
+        nullable=False,
+        index=True
+    )
+
+    submitted_by = db.Column(
+        db.Integer,
+        db.ForeignKey("users.id"),
+        nullable=False
+    )
+
+    # -----------------------------------------------------
+    # Versus
+    # -----------------------------------------------------
+
+    winning_side_id = db.Column(
+        db.Integer,
+        db.ForeignKey("match_sides.id"),
+        nullable=True
+    )
+
+    # -----------------------------------------------------
+    # Result status
+    # -----------------------------------------------------
+
+    status = db.Column(
+        db.String(30),
+        nullable=False,
+        default="SUBMITTED"
+    )
+    # SUBMITTED
+    # VERIFIED
+    # REJECTED
+    # DISPUTED
+    # INVALIDATED
+
+    # -----------------------------------------------------
+    # Raw result data
+    # -----------------------------------------------------
+
+    raw_result = db.Column(
+        db.JSON,
+        nullable=False,
+        default=dict
+    )
+
+    submitted_at = db.Column(
+        db.DateTime,
+        default=datetime.utcnow,
+        nullable=False
+    )
+
+    verified_at = db.Column(
+        db.DateTime,
+        nullable=True
+    )
+
+    verified_by = db.Column(
+        db.Integer,
+        db.ForeignKey("users.id"),
+        nullable=True
+    )
+
+    notes = db.Column(
+        db.Text,
+        nullable=True
+    )
+
+    match = db.relationship(
+        "CompetitionMatch",
+        back_populates="result"
+    )
+
+    submitter = db.relationship(
+        "User",
+        foreign_keys=[submitted_by]
+    )
+
+    verifier = db.relationship(
+        "User",
+        foreign_keys=[verified_by]
+    )
+
+    winning_side = db.relationship(
+        "MatchSide",
+        foreign_keys=[winning_side_id]
+    )
+
+    def to_dict(self):
+
+        return {
+            "id": self.id,
+
+            "matchId": self.match_id,
+
+            "submittedBy": self.submitted_by,
+
+            "winningSideId": self.winning_side_id,
+
+            "status": self.status,
+
+            "rawResult": self.raw_result or {},
+
+            "submittedAt": (
+                self.submitted_at.isoformat()
+                if self.submitted_at
+                else None
+            ),
+
+            "verifiedAt": (
+                self.verified_at.isoformat()
+                if self.verified_at
+                else None
+            ),
+
+            "verifiedBy": self.verified_by,
+
+            "notes": self.notes
+        }
+
+
+# =========================================================
+# TEAM MATCH STATS
+# =========================================================
+
+class TeamMatchStats(db.Model):
+
+    __tablename__ = "team_match_stats"
+
+    id = db.Column(
+        db.Integer,
+        primary_key=True
+    )
+
+    match_id = db.Column(
+        db.Integer,
+        db.ForeignKey("competition_matches.id", ondelete="CASCADE"),
+        nullable=False,
+        index=True
+    )
+
+    competition_participant_id = db.Column(
+        db.Integer,
+        db.ForeignKey(
+            "competition_participants.id",
+            ondelete="CASCADE"
+        ),
+        nullable=False,
+        index=True
+    )
+
+    placement = db.Column(
+        db.Integer,
+        nullable=True
+    )
+
+    kills = db.Column(
+        db.Integer,
+        nullable=False,
+        default=0
+    )
+
+    placement_points = db.Column(
+        db.Integer,
+        nullable=False,
+        default=0
+    )
+
+    kill_points = db.Column(
+        db.Integer,
+        nullable=False,
+        default=0
+    )
+
+    bonus_points = db.Column(
+        db.Integer,
+        nullable=False,
+        default=0
+    )
+
+    total_points = db.Column(
+        db.Integer,
+        nullable=False,
+        default=0
+    )
+
+    match = db.relationship(
+        "CompetitionMatch",
+        backref=db.backref(
+            "team_stats",
+            lazy=True,
+            cascade="all, delete-orphan"
+        )
+    )
+
+    participant = db.relationship(
+        "CompetitionParticipant",
+        backref=db.backref(
+            "team_match_stats",
+            lazy=True,
+            cascade="all, delete-orphan"
+        )
+    )
+
+    __table_args__ = (
+        db.UniqueConstraint(
+            "match_id",
+            "competition_participant_id",
+            name="uq_team_match_stats"
+        ),
+    )
+
+    def to_dict(self):
+
+        return {
+            "id": self.id,
+            "matchId": self.match_id,
+            "competitionParticipantId":
+                self.competition_participant_id,
+
+            "placement": self.placement,
+            "kills": self.kills,
+
+            "placementPoints": self.placement_points,
+            "killPoints": self.kill_points,
+            "bonusPoints": self.bonus_points,
+
+            "totalPoints": self.total_points
+        }
+
+
+# =========================================================
+# PLAYER MATCH STATS
+# =========================================================
+
+class PlayerMatchStats(db.Model):
+
+    __tablename__ = "player_match_stats"
+
+    id = db.Column(
+        db.Integer,
+        primary_key=True
+    )
+
+    match_id = db.Column(
+        db.Integer,
+        db.ForeignKey("competition_matches.id", ondelete="CASCADE"),
+        nullable=False,
+        index=True
+    )
+
+    competition_participant_id = db.Column(
+        db.Integer,
+        db.ForeignKey(
+            "competition_participants.id",
+            ondelete="CASCADE"
+        ),
+        nullable=False,
+        index=True
+    )
+
+    user_id = db.Column(
+        db.Integer,
+        db.ForeignKey("users.id"),
+        nullable=False,
+        index=True
+    )
+
+    kills = db.Column(
+        db.Integer,
+        nullable=False,
+        default=0
+    )
+
+    assists = db.Column(
+        db.Integer,
+        nullable=False,
+        default=0
+    )
+
+    deaths = db.Column(
+        db.Integer,
+        nullable=False,
+        default=0
+    )
+
+    score = db.Column(
+        db.Integer,
+        nullable=False,
+        default=0
+    )
+
+    extra_stats = db.Column(
+        db.JSON,
+        nullable=False,
+        default=dict
+    )
+
+    match = db.relationship(
+        "CompetitionMatch",
+        backref=db.backref(
+            "player_stats",
+            lazy=True,
+            cascade="all, delete-orphan"
+        )
+    )
+
+    competition_participant = db.relationship(
+        "CompetitionParticipant",
+        backref=db.backref(
+            "player_match_stats",
+            lazy=True,
+            cascade="all, delete-orphan"
+        )
+    )
+
+    user = db.relationship(
+        "User",
+        foreign_keys=[user_id],
+        backref=db.backref(
+            "competition_match_stats",
+            lazy=True
+        )
+    )
+
+    __table_args__ = (
+        db.UniqueConstraint(
+            "match_id",
+            "user_id",
+            name="uq_player_match_stats"
+        ),
+    )
+
+    def to_dict(self):
+
+        return {
+            "id": self.id,
+
+            "matchId": self.match_id,
+
+            "competitionParticipantId":
+                self.competition_participant_id,
+
+            "userId": self.user_id,
+
+            "kills": self.kills,
+            "assists": self.assists,
+            "deaths": self.deaths,
+
+            "score": self.score,
+
+            "extraStats": self.extra_stats or {}
+        }
+
+
+# =========================================================
+# COMPETITION STANDING
+# =========================================================
+
+class CompetitionStanding(db.Model):
+
+    __tablename__ = "competition_standings"
+
+    id = db.Column(
+        db.Integer,
+        primary_key=True
+    )
+
+    competition_id = db.Column(
+        db.Integer,
+        db.ForeignKey("competitions.id", ondelete="CASCADE"),
+        nullable=False,
+        index=True
+    )
+
+    stage_id = db.Column(
+        db.Integer,
+        db.ForeignKey("competition_stages.id", ondelete="CASCADE"),
+        nullable=False,
+        index=True
+    )
+
+    competition_participant_id = db.Column(
+        db.Integer,
+        db.ForeignKey(
+            "competition_participants.id",
+            ondelete="CASCADE"
+        ),
+        nullable=False,
+        index=True
+    )
+
+    rank = db.Column(
+        db.Integer,
+        nullable=True
+    )
+
+    matches_played = db.Column(
+        db.Integer,
+        nullable=False,
+        default=0
+    )
+
+    wins = db.Column(
+        db.Integer,
+        nullable=False,
+        default=0
+    )
+
+    losses = db.Column(
+        db.Integer,
+        nullable=False,
+        default=0
+    )
+
+    placement_points = db.Column(
+        db.Integer,
+        nullable=False,
+        default=0
+    )
+
+    kill_points = db.Column(
+        db.Integer,
+        nullable=False,
+        default=0
+    )
+
+    bonus_points = db.Column(
+        db.Integer,
+        nullable=False,
+        default=0
+    )
+
+    total_points = db.Column(
+        db.Integer,
+        nullable=False,
+        default=0
+    )
+
+    best_match_score = db.Column(
+        db.Integer,
+        nullable=False,
+        default=0
+    )
+
+    total_kills = db.Column(
+        db.Integer,
+        nullable=False,
+        default=0
+    )
+
+    updated_at = db.Column(
+        db.DateTime,
+        default=datetime.utcnow,
+        onupdate=datetime.utcnow,
+        nullable=False
+    )
+
+    competition = db.relationship(
+        "Competition",
+        back_populates="standings"
+    )
+
+    stage = db.relationship(
+        "CompetitionStage",
+        back_populates="standings"
+    )
+
+    participant = db.relationship(
+        "CompetitionParticipant",
+        back_populates="standings"
+    )
+
+    __table_args__ = (
+        db.UniqueConstraint(
+            "competition_id",
+            "stage_id",
+            "competition_participant_id",
+            name="uq_competition_standing"
+        ),
+    )
+
+    def to_dict(self):
+
+        return {
+            "id": self.id,
+
+            "competitionId": self.competition_id,
+            "stageId": self.stage_id,
+
+            "competitionParticipantId":
+                self.competition_participant_id,
+
+            "rank": self.rank,
+
+            "matchesPlayed": self.matches_played,
+
+            "wins": self.wins,
+            "losses": self.losses,
+
+            "placementPoints": self.placement_points,
+            "killPoints": self.kill_points,
+            "bonusPoints": self.bonus_points,
+
+            "totalPoints": self.total_points,
+
+            "bestMatchScore": self.best_match_score,
+            "totalKills": self.total_kills,
+
+            "updatedAt": (
+                self.updated_at.isoformat()
+                if self.updated_at
+                else None
+            ),
+
+            "participant": (
+                self.participant.to_dict()
+                if self.participant
+                else None
+            )
+        }
+
+
+# =========================================================
+# BRACKET
+# =========================================================
+
+class Bracket(db.Model):
+
+    __tablename__ = "competition_brackets"
+
+    id = db.Column(
+        db.Integer,
+        primary_key=True
+    )
+
+    competition_id = db.Column(
+        db.Integer,
+        db.ForeignKey("competitions.id", ondelete="CASCADE"),
+        unique=True,
+        nullable=False,
+        index=True
+    )
+
+    bracket_type = db.Column(
+        db.String(30),
+        nullable=False,
+        default="SINGLE_ELIMINATION"
+    )
+
+    participant_count = db.Column(
+        db.Integer,
+        nullable=False
+    )
+
+    created_at = db.Column(
+        db.DateTime,
+        default=datetime.utcnow,
+        nullable=False
+    )
+
+    competition = db.relationship(
+        "Competition",
+        back_populates="bracket"
+    )
+
+    nodes = db.relationship(
+        "BracketNode",
+        back_populates="bracket",
+        cascade="all, delete-orphan",
+        lazy=True,
+        order_by="BracketNode.node_order"
+    )
+
+    def to_dict(self):
+
+        return {
+            "id": self.id,
+
+            "competitionId": self.competition_id,
+
+            "bracketType": self.bracket_type,
+
+            "participantCount": self.participant_count,
+
+            "nodes": [
+                node.to_dict()
+                for node in self.nodes
+            ],
+
+            "createdAt": (
+                self.created_at.isoformat()
+                if self.created_at
+                else None
+            )
+        }
+
+
+# =========================================================
+# BRACKET NODE
+# =========================================================
+
+class BracketNode(db.Model):
+
+    __tablename__ = "bracket_nodes"
+
+    id = db.Column(
+        db.Integer,
+        primary_key=True
+    )
+
+    bracket_id = db.Column(
+        db.Integer,
+        db.ForeignKey("competition_brackets.id", ondelete="CASCADE"),
+        nullable=False,
+        index=True
+    )
+
+    stage_id = db.Column(
+        db.Integer,
+        db.ForeignKey("competition_stages.id"),
+        nullable=True,
+        index=True
+    )
+
+    match_id = db.Column(
+        db.Integer,
+        db.ForeignKey("competition_matches.id"),
+        nullable=True,
+        unique=True
+    )
+
+    # -----------------------------------------------------
+    # Node identity
+    # -----------------------------------------------------
+
+    node_order = db.Column(
+        db.Integer,
+        nullable=False
+    )
+
+    round_number = db.Column(
+        db.Integer,
+        nullable=False
+    )
+
+    round_name = db.Column(
+        db.String(50),
+        nullable=False
+    )
+
+    match_number = db.Column(
+        db.Integer,
+        nullable=False
+    )
+
+    # -----------------------------------------------------
+    # Participants
+    # -----------------------------------------------------
+
+    side_a_participant_id = db.Column(
+        db.Integer,
+        db.ForeignKey("competition_participants.id"),
+        nullable=True
+    )
+
+    side_b_participant_id = db.Column(
+        db.Integer,
+        db.ForeignKey("competition_participants.id"),
+        nullable=True
+    )
+
+    winner_participant_id = db.Column(
+        db.Integer,
+        db.ForeignKey("competition_participants.id"),
+        nullable=True
+    )
+
+    # -----------------------------------------------------
+    # Advancement
+    # -----------------------------------------------------
+
+    winner_destination_node_id = db.Column(
+        db.Integer,
+        nullable=True
+    )
+
+    # -----------------------------------------------------
+    # BYE
+    # -----------------------------------------------------
+
+    is_bye = db.Column(
+        db.Boolean,
+        nullable=False,
+        default=False
+    )
+
+    bye_participant_id = db.Column(
+        db.Integer,
+        db.ForeignKey("competition_participants.id"),
+        nullable=True
+    )
+
+    status = db.Column(
+        db.String(30),
+        nullable=False,
+        default="PENDING"
+    )
+
+    bracket = db.relationship(
+        "Bracket",
+        back_populates="nodes"
+    )
+
+    match = db.relationship(
+        "CompetitionMatch",
+        foreign_keys=[match_id]
+    )
+
+    side_a_participant = db.relationship(
+        "CompetitionParticipant",
+        foreign_keys=[side_a_participant_id]
+    )
+
+    side_b_participant = db.relationship(
+        "CompetitionParticipant",
+        foreign_keys=[side_b_participant_id]
+    )
+
+    winner_participant = db.relationship(
+        "CompetitionParticipant",
+        foreign_keys=[winner_participant_id]
+    )
+
+    bye_participant = db.relationship(
+        "CompetitionParticipant",
+        foreign_keys=[bye_participant_id]
+    )
+
+    def to_dict(self):
+
+        return {
+            "id": self.id,
+
+            "bracketId": self.bracket_id,
+
+            "stageId": self.stage_id,
+
+            "matchId": self.match_id,
+
+            "nodeOrder": self.node_order,
+
+            "roundNumber": self.round_number,
+            "roundName": self.round_name,
+            "matchNumber": self.match_number,
+
+            "sideA": (
+                self.side_a_participant.to_dict()
+                if self.side_a_participant
+                else None
+            ),
+
+            "sideB": (
+                self.side_b_participant.to_dict()
+                if self.side_b_participant
+                else None
+            ),
+
+            "winner": (
+                self.winner_participant.to_dict()
+                if self.winner_participant
+                else None
+            ),
+
+            "winnerDestinationNodeId":
+                self.winner_destination_node_id,
+
+            "isBye": self.is_bye,
+
+            "byeParticipant": (
+                self.bye_participant.to_dict()
+                if self.bye_participant
+                else None
+            ),
+
+            "status": self.status
+        }
+
+
+# =========================================================
+# VERIFICATION RECORD
+# =========================================================
+
+class VerificationRecord(db.Model):
+
+    __tablename__ = "competition_verification_records"
+
+    id = db.Column(
+        db.Integer,
+        primary_key=True
+    )
+
+    match_id = db.Column(
+        db.Integer,
+        db.ForeignKey("competition_matches.id", ondelete="CASCADE"),
+        nullable=False,
+        index=True
+    )
+
+    verifier_id = db.Column(
+        db.Integer,
+        db.ForeignKey("users.id"),
+        nullable=False
+    )
+
+    action = db.Column(
+        db.String(30),
+        nullable=False
+    )
+    # VERIFIED
+    # REJECTED
+    # INVALIDATED
+    # REOPENED
+
+    reason = db.Column(
+        db.Text,
+        nullable=True
+    )
+
+    created_at = db.Column(
+        db.DateTime,
+        default=datetime.utcnow,
+        nullable=False
+    )
+
+    match = db.relationship(
+        "CompetitionMatch",
+        back_populates="verification_records"
+    )
+
+    verifier = db.relationship(
+        "User",
+        foreign_keys=[verifier_id]
+    )
+
+    def to_dict(self):
+
+        return {
+            "id": self.id,
+
+            "matchId": self.match_id,
+
+            "verifierId": self.verifier_id,
+
+            "action": self.action,
+
+            "reason": self.reason,
+
+            "createdAt": (
+                self.created_at.isoformat()
+                if self.created_at
+                else None
+            )
+        }
+
+
+# =========================================================
+# COMPETITION DISPUTE
+# =========================================================
+
+class CompetitionDispute(db.Model):
+
+    __tablename__ = "competition_disputes"
+
+    id = db.Column(
+        db.Integer,
+        primary_key=True
+    )
+
+    competition_id = db.Column(
+        db.Integer,
+        db.ForeignKey("competitions.id", ondelete="CASCADE"),
+        nullable=False,
+        index=True
+    )
+
+    match_id = db.Column(
+        db.Integer,
+        db.ForeignKey("competition_matches.id", ondelete="CASCADE"),
+        nullable=False,
+        index=True
+    )
+
+    raised_by = db.Column(
+        db.Integer,
+        db.ForeignKey("users.id"),
+        nullable=False
+    )
+
+    reason = db.Column(
+        db.Text,
+        nullable=False
+    )
+
+    status = db.Column(
+        db.String(30),
+        nullable=False,
+        default="OPEN",
+        index=True
+    )
+    # OPEN
+    # CONFIRMED
+    # CORRECTED
+    # REPLAY
+    # CANCELLED
+    # RESOLVED
+
+    resolution = db.Column(
+        db.Text,
+        nullable=True
+    )
+
+    resolved_by = db.Column(
+        db.Integer,
+        db.ForeignKey("users.id"),
+        nullable=True
+    )
+
+    created_at = db.Column(
+        db.DateTime,
+        default=datetime.utcnow,
+        nullable=False
+    )
+
+    resolved_at = db.Column(
+        db.DateTime,
+        nullable=True
+    )
+
+    competition = db.relationship(
+        "Competition",
+        back_populates="disputes"
+    )
+
+    match = db.relationship(
+        "CompetitionMatch",
+        back_populates="disputes"
+    )
+
+    raiser = db.relationship(
+        "User",
+        foreign_keys=[raised_by]
+    )
+
+    resolver = db.relationship(
+        "User",
+        foreign_keys=[resolved_by]
+    )
+
+    def to_dict(self):
+
+        return {
+            "id": self.id,
+
+            "competitionId": self.competition_id,
+            "matchId": self.match_id,
+
+            "raisedBy": self.raised_by,
+
+            "reason": self.reason,
+
+            "status": self.status,
+
+            "resolution": self.resolution,
+
+            "resolvedBy": self.resolved_by,
+
+            "createdAt": (
+                self.created_at.isoformat()
+                if self.created_at
+                else None
+            ),
+
+            "resolvedAt": (
+                self.resolved_at.isoformat()
+                if self.resolved_at
+                else None
+            )
+        }
+
+
+# =========================================================
+# COMPETITION AUDIT LOG
+# =========================================================
+
+class CompetitionAuditLog(db.Model):
+
+    __tablename__ = "competition_audit_logs"
+
+    id = db.Column(
+        db.Integer,
+        primary_key=True
+    )
+
+    competition_id = db.Column(
+        db.Integer,
+        db.ForeignKey("competitions.id", ondelete="CASCADE"),
+        nullable=False,
+        index=True
+    )
+
+    match_id = db.Column(
+        db.Integer,
+        db.ForeignKey("competition_matches.id"),
+        nullable=True,
+        index=True
+    )
+
+    actor_id = db.Column(
+        db.Integer,
+        db.ForeignKey("users.id"),
+        nullable=True,
+        index=True
+    )
+
+    action = db.Column(
+        db.String(100),
+        nullable=False
+    )
+
+    description = db.Column(
+        db.String(1000),
+        nullable=True
+    )
+
+    metadata = db.Column(
+        db.JSON,
+        nullable=False,
+        default=dict
+    )
+
+    created_at = db.Column(
+        db.DateTime,
+        default=datetime.utcnow,
+        nullable=False,
+        index=True
+    )
+
+    competition = db.relationship(
+        "Competition",
+        back_populates="audit_logs"
+    )
+
+    actor = db.relationship(
+        "User",
+        foreign_keys=[actor_id]
+    )
+
+    match = db.relationship(
+        "CompetitionMatch",
+        foreign_keys=[match_id]
+    )
+
+    def to_dict(self):
+
+        return {
+            "id": self.id,
+
+            "competitionId": self.competition_id,
+            "matchId": self.match_id,
+
+            "actorId": self.actor_id,
+
+            "action": self.action,
+            "description": self.description,
+
+            "metadata": self.metadata or {},
+
+            "createdAt": (
+                self.created_at.isoformat()
+                if self.created_at
+                else None
+            )
+        }
