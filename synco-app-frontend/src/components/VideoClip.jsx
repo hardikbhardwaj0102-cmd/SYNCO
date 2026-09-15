@@ -33,6 +33,7 @@ const VideoClip = ({
   game,
   initialLikes = 0,
   initialComments = 0,
+  hideOverlay = false
 }) => {
   const videoRef = useRef(null);
 
@@ -382,6 +383,30 @@ const VideoClip = ({
         muted={isMuted}
         preload="metadata"
       />
+
+      {/* Hide the internal sidebar and info if hideOverlay is passed (like on the Dashboard) */}
+      {!hideOverlay && (
+        <>
+          {/* Interactive Sidebar */}
+          <div className="video-reactions-sidebar">
+            <button onClick={handleLike} className={`reaction-btn ${liked ? 'text-red-500 hover:text-red-400' : ''}`}>
+              <Heart fill={liked ? "currentColor" : "none"} size={22} />
+              <span className="reaction-count">{likes}</span>
+            </button>
+            <button className="reaction-btn" onClick={() => setIsCommentsOpen(true)}>
+              <MessageCircle size={22} />
+              <span className="reaction-count">{commentsLoaded ? comments.length : initialComments}</span>
+            </button>
+          </div>
+
+          {/* Info Overlay */}
+          <div className="video-info-overlay">
+            {game && <span className="text-[10px] font-bold text-[#D6C98A] uppercase tracking-widest">{game}</span>}
+            <h3 className="text-white text-sm font-bold truncate mt-1">{title || 'Gameplay Clip'}</h3>
+            {description && <p className="text-white/70 text-xs truncate mt-0.5">{description}</p>}
+          </div>
+        </>
+      )}
 
 
       {/* =====================================================
