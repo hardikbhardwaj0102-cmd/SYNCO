@@ -447,7 +447,7 @@ def create_audit_log(
 
         description=action,
 
-        metadata=metadata or {},
+        audit_metadata=metadata or {},
     )
 
     db.session.add(log)
@@ -732,7 +732,7 @@ def serialize_match(match):
 
         "status": match.status,
 
-        "metadata": match.metadata or {},
+        "metadata": match.match_metadata or {},
 
         "sides": [
             serialize_side(side)
@@ -2540,7 +2540,7 @@ def generate_classic_matches(
 
             status="SCHEDULED",
 
-            metadata={
+            match_metadata={
                 "format": "CLASSIC"
             },
         )
@@ -2705,7 +2705,7 @@ def generate_versus_bracket(
 
                 status="SCHEDULED",
 
-                metadata={
+                match_metadata={
                     "format": "VERSUS"
                 },
             )
