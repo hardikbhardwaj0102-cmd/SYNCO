@@ -447,7 +447,7 @@ def create_audit_log(
 
         description=action,
 
-        audit_metadata=metadata or {},
+        metadata=metadata or {},
     )
 
     db.session.add(log)
@@ -732,7 +732,7 @@ def serialize_match(match):
 
         "status": match.status,
 
-        "metadata": match.match_metadata or {},
+        "metadata": match.metadata or {},
 
         "sides": [
             serialize_side(side)
@@ -941,6 +941,12 @@ def serialize_competition(
             competition.max_participants
         ),
 
+        # UI-friendly team terminology. The database column remains
+        # max_participants for backward compatibility.
+        "maxTeams": (
+            competition.max_participants
+        ),
+
         "numberOfMatches": (
             competition.number_of_matches
         ),
@@ -1146,28 +1152,16 @@ def validate_competition_configuration(
             "At least 2 participants are required."
         )
 
-    if max_participants > 16:
+    if max_participants > 25:
 
         return (
             False,
-            "V1 supports a maximum of "
-            "16 participants."
+            "V1 supports a maximum of 25 teams."
         )
 
-    if expected_type == "VERSUS":
-
-        if max_participants not in (
-            2,
-            4,
-            8,
-            16
-        ):
-
-            return (
-                False,
-                "Versus competitions support "
-                "2, 4, 8 or 16 participants."
-            )
+    # Knockout brackets can use any team count from 2 to 25.
+    # The bracket generator expands the field to the next power of two
+    # and handles the difference as byes.
 
     return True, mode_config
 
@@ -1340,8 +1334,11 @@ def create_competition():
 
         max_participants = int(
             data.get(
-                "maxParticipants",
-                16
+                "maxTeams",
+                data.get(
+                    "maxParticipants",
+                    16
+                )
             )
         )
 
@@ -2540,7 +2537,7 @@ def generate_classic_matches(
 
             status="SCHEDULED",
 
-            match_metadata={
+            metadata={
                 "format": "CLASSIC"
             },
         )
@@ -2625,7 +2622,27 @@ def generate_versus_bracket(
     # Shuffle before seeding
     # -----------------------------------------------------
 
-    random.shuffle(participants)
+    bracket_config = (competition.configuration or {}).get(
+        "bracket",
+        {}
+    )
+
+    seeding_method = str(
+        bracket_config.get("seeding", "RANDOM")
+    ).upper()
+
+    # RANDOM keeps the current behaviour.
+    # RANKING / ORGANIZER preserve the locked seed order already assigned
+    # by the registration/organizer flow.
+    if seeding_method == "RANDOM":
+        random.shuffle(participants)
+    else:
+        participants.sort(
+            key=lambda item: (
+                item.seed is None,
+                item.seed if item.seed is not None else item.id
+            )
+        )
 
     for index, participant in enumerate(
         participants,
@@ -2705,7 +2722,7 @@ def generate_versus_bracket(
 
                 status="SCHEDULED",
 
-                match_metadata={
+                metadata={
                     "format": "VERSUS"
                 },
             )
