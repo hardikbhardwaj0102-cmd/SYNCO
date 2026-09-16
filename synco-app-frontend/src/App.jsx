@@ -7,7 +7,7 @@ import {
 } from 'react-router-dom';
 
 import { AuthProvider, useAuth } from './context/AuthContext';
-
+import OrganizerRegister from "./pages/OrganizerRegister";
 import HybridLayout from './components/HybridLayout';
 import CreateCompetition from './pages/CreateCompetition';
 import LandingPage from './pages/LandingPage';
@@ -274,6 +274,10 @@ function App() {
                 path="/settings"
                 element={<ProfileSettings />}
               />
+              <Route
+                path="/organizer/register"
+                element={<OrganizerRegister />}
+              />
 
 
               {/* -------------------------------------------------
@@ -292,6 +296,7 @@ function App() {
             />
 
           </Route>
+
 
 
           {/* =================================================
