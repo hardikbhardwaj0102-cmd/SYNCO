@@ -240,16 +240,16 @@ const SectionHeader = ({
             </div>
 
             <div>
-                <p className="text-[10px] font-black uppercase tracking-[0.2em] text-[#8a8b90]">
+                <p className="text-[10px] font-black uppercase tracking-[0.2em] text-[#858C98]">
                     {eyebrow}
                 </p>
 
-                <h2 className="mt-1 text-xl font-black tracking-tight text-[#111114]">
+                <h2 className="mt-1 text-xl font-black tracking-tight text-[#000000]">
                     {title}
                 </h2>
 
                 {description && (
-                    <p className="mt-1 max-w-2xl text-sm font-medium leading-6 text-[#77787e]">
+                    <p className="mt-1 max-w-2xl text-sm font-medium leading-6 text-[#707784]">
                         {description}
                     </p>
                 )}
@@ -265,18 +265,18 @@ const FieldLabel = ({
 }) => {
     return (
         <div className="mb-2 flex items-center justify-between gap-4">
-            <label className="text-[11px] font-black uppercase tracking-[0.12em] text-[#37383d]">
+            <label className="text-[11px] font-black uppercase tracking-[0.12em] text-[#111111]">
                 {children}
 
                 {required && (
-                    <span className="ml-1 text-[#E5FE00]">
+                    <span className="ml-1 text-[#D6C98A]">
                         *
                     </span>
                 )}
             </label>
 
             {hint && (
-                <span className="text-[10px] font-semibold text-[#9a9ba0]">
+                <span className="text-[10px] font-semibold text-[#8E96A3]">
                     {hint}
                 </span>
             )}
@@ -285,13 +285,13 @@ const FieldLabel = ({
 };
 
 const inputClass =
-    'h-12 w-full rounded-xl border border-[#e4e4e7] bg-[#fafafa] px-4 text-sm font-semibold text-[#111114] outline-none transition placeholder:text-[#aaaab0] focus:border-[#111114] focus:bg-white';
+    'h-12 w-full rounded-xl border border-[#E0E3E8] bg-[#FFFFFF] px-4 text-sm font-semibold text-[#000000] outline-none transition placeholder:text-[#9EA5B0] focus:border-[#000000] focus:bg-white';
 
 const textareaClass =
-    'min-h-[120px] w-full resize-none rounded-xl border border-[#e4e4e7] bg-[#fafafa] px-4 py-3 text-sm font-semibold leading-6 text-[#111114] outline-none transition placeholder:text-[#aaaab0] focus:border-[#111114] focus:bg-white';
+    'min-h-[120px] w-full resize-none rounded-xl border border-[#E0E3E8] bg-[#FFFFFF] px-4 py-3 text-sm font-semibold leading-6 text-[#000000] outline-none transition placeholder:text-[#9EA5B0] focus:border-[#000000] focus:bg-white';
 
 const selectClass =
-    'h-12 w-full appearance-none rounded-xl border border-[#e4e4e7] bg-[#fafafa] px-4 pr-10 text-sm font-semibold text-[#111114] outline-none transition focus:border-[#111114] focus:bg-white';
+    'h-12 w-full appearance-none rounded-xl border border-[#E0E3E8] bg-[#FFFFFF] px-4 pr-10 text-sm font-semibold text-[#000000] outline-none transition focus:border-[#000000] focus:bg-white';
 
 const StepPill = ({
     number,
@@ -302,16 +302,16 @@ const StepPill = ({
     return (
         <div
             className={`flex items-center gap-3 ${active
-                ? 'text-[#111114]'
-                : 'text-[#a0a1a6]'
+                ? 'text-[#000000]'
+                : 'text-[#9AA2AE]'
                 }`}
         >
             <div
                 className={`flex h-8 w-8 items-center justify-center rounded-full border text-xs font-black ${complete
-                    ? 'border-[#111114] bg-[#111114] text-white'
+                    ? 'border-[#000000] bg-[#000000] text-white'
                     : active
-                        ? 'border-[#111114] bg-white text-[#111114]'
-                        : 'border-[#dedee1] bg-white text-[#a0a1a6]'
+                        ? 'border-[#000000] bg-white text-[#000000]'
+                        : 'border-[#D9DDE3] bg-white text-[#9AA2AE]'
                     }`}
             >
                 {complete ? (
@@ -1295,7 +1295,7 @@ const CreateCompetition = () => {
     ===================================================== */
 
     return (
-        <div className="min-h-screen bg-[#f5f5f4] text-[#111114]">
+        <div className="min-h-screen bg-[#F4F5F7] text-[#000000]">
 
             {/* =================================================
           TOP BAR
@@ -1315,14 +1315,14 @@ const CreateCompetition = () => {
                         className="group flex items-center gap-3"
                     >
 
-                        <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-[#111114] text-white transition group-hover:bg-[#2a2a2e]">
+                        <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-[#000000] text-white transition group-hover:bg-[#0B0B0B]">
                             <ArrowLeft
                                 size={16}
                             />
                         </div>
 
                         <div className="text-left">
-                            <p className="text-[10px] font-black uppercase tracking-[0.18em] text-[#999a9f]">
+                            <p className="text-[10px] font-black uppercase tracking-[0.18em] text-[#8E96A3]">
                                 SYNCO
                             </p>
 
@@ -1344,7 +1344,7 @@ const CreateCompetition = () => {
                             complete={step > 1}
                         />
 
-                        <div className="h-px w-8 bg-[#dedee1]" />
+                        <div className="h-px w-8 bg-[#D9DDE3]" />
 
                         <StepPill
                             number="2"
@@ -1353,7 +1353,7 @@ const CreateCompetition = () => {
                             complete={step > 2}
                         />
 
-                        <div className="h-px w-8 bg-[#dedee1]" />
+                        <div className="h-px w-8 bg-[#D9DDE3]" />
 
                         <StepPill
                             number="3"
@@ -1362,7 +1362,7 @@ const CreateCompetition = () => {
                             complete={step > 3}
                         />
 
-                        <div className="h-px w-8 bg-[#dedee1]" />
+                        <div className="h-px w-8 bg-[#D9DDE3]" />
 
                         <StepPill
                             number="4"
@@ -1371,7 +1371,7 @@ const CreateCompetition = () => {
                             complete={step > 4}
                         />
 
-                        <div className="h-px w-8 bg-[#dedee1]" />
+                        <div className="h-px w-8 bg-[#D9DDE3]" />
 
                         <StepPill
                             number="5"
@@ -1382,7 +1382,7 @@ const CreateCompetition = () => {
 
                     </div>
 
-                    <div className="hidden rounded-full border border-[#e5e5e7] bg-[#fafafa] px-4 py-2 text-[10px] font-black uppercase tracking-[0.15em] text-[#77787e] sm:block">
+                    <div className="hidden rounded-full border border-[#E1E4E8] bg-[#FFFFFF] px-4 py-2 text-[10px] font-black uppercase tracking-[0.15em] text-[#707784] sm:block">
                         Organizer
                     </div>
 
@@ -1400,7 +1400,7 @@ const CreateCompetition = () => {
 
                 <div className="mb-8">
 
-                    <div className="flex items-center gap-2 text-[10px] font-black uppercase tracking-[0.18em] text-[#E5FE00]">
+                    <div className="flex items-center gap-2 text-[10px] font-black uppercase tracking-[0.18em] text-[#D6C98A]">
                         <Swords
                             size={13}
                         />
@@ -1415,15 +1415,15 @@ const CreateCompetition = () => {
                                 {stepTitle}
                             </h1>
 
-                            <p className="mt-2 max-w-2xl text-sm font-medium leading-6 text-[#77787e]">
+                            <p className="mt-2 max-w-2xl text-sm font-medium leading-6 text-[#707784]">
                                 Configure a structured competition
                                 that players can discover, register
                                 for, and compete in on SYNCO.
                             </p>
                         </div>
 
-                        <div className="rounded-xl border border-[#dedee1] bg-white px-4 py-3">
-                            <p className="text-[9px] font-black uppercase tracking-[0.16em] text-[#9a9ba0]">
+                        <div className="rounded-xl border border-[#D9DDE3] bg-white px-4 py-3">
+                            <p className="text-[9px] font-black uppercase tracking-[0.16em] text-[#8E96A3]">
                                 Current format
                             </p>
 
@@ -1432,7 +1432,7 @@ const CreateCompetition = () => {
                                     form.competitionType
                                 )}
 
-                                <span className="mx-2 text-[#c7c7ca]">
+                                <span className="mx-2 text-[#C5C9D0]">
                                     /
                                 </span>
 
@@ -1451,7 +1451,7 @@ const CreateCompetition = () => {
         ================================================= */}
 
                 {error && (
-                    <div className="mb-6 flex items-start gap-3 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm font-semibold text-red-700">
+                    <div className="mb-6 flex items-start gap-3 rounded-xl border border-[#D9DDE3] bg-[#F4F5F7] px-4 py-3 text-sm font-semibold text-[#000000]">
 
                         <Info
                             size={17}
@@ -1464,7 +1464,7 @@ const CreateCompetition = () => {
                 )}
 
                 {successMessage && (
-                    <div className="mb-6 flex items-start gap-3 rounded-xl border border-green-200 bg-green-50 px-4 py-3 text-sm font-semibold text-green-700">
+                    <div className="mb-6 flex items-start gap-3 rounded-xl border border-[#D6C98A] bg-[#F4F5F7] px-4 py-3 text-sm font-semibold text-[#000000]">
 
                         <Check
                             size={17}
@@ -1529,7 +1529,7 @@ const CreateCompetition = () => {
                                             className={inputClass}
                                         />
 
-                                        <div className="mt-2 flex justify-between text-[10px] font-semibold text-[#a0a1a6]">
+                                        <div className="mt-2 flex justify-between text-[10px] font-semibold text-[#9AA2AE]">
                                             <span>
                                                 Use a name players can recognize immediately.
                                             </span>
@@ -1563,7 +1563,7 @@ const CreateCompetition = () => {
                                             className={textareaClass}
                                         />
 
-                                        <p className="mt-2 text-[10px] font-semibold text-[#a0a1a6]">
+                                        <p className="mt-2 text-[10px] font-semibold text-[#9AA2AE]">
                                             Keep this concise. Rules and
                                             eligibility can be configured
                                             separately.
@@ -1579,7 +1579,7 @@ const CreateCompetition = () => {
                                         </FieldLabel>
 
                                         {loadingConfig ? (
-                                            <div className="flex h-12 items-center gap-2 rounded-xl border border-[#e4e4e7] bg-[#fafafa] px-4 text-sm font-semibold text-[#88898f]">
+                                            <div className="flex h-12 items-center gap-2 rounded-xl border border-[#E0E3E8] bg-[#FFFFFF] px-4 text-sm font-semibold text-[#858C98]">
                                                 <Loader2
                                                     size={16}
                                                     className="animate-spin"
@@ -1603,22 +1603,22 @@ const CreateCompetition = () => {
                                                                 handleGameChange(game.id)
                                                             }
                                                             className={`group rounded-xl border p-4 text-left transition ${selected
-                                                                    ? 'border-[#111114] bg-[#111114] text-white'
-                                                                    : 'border-[#e4e4e7] bg-[#fafafa] hover:border-[#bdbdc1] hover:bg-white'
+                                                                    ? 'border-[#000000] bg-[#000000] text-white'
+                                                                    : 'border-[#E0E3E8] bg-[#FFFFFF] hover:border-[#B8BDC5] hover:bg-white'
                                                                 }`}
                                                         >
                                                             <div className="flex items-center justify-between">
                                                                 <div
                                                                     className={`flex h-9 w-9 items-center justify-center rounded-lg ${selected
                                                                             ? 'bg-white/10'
-                                                                            : 'bg-white border border-[#e6e6e8]'
+                                                                            : 'bg-white border border-[#E4E7EB]'
                                                                         }`}
                                                                 >
                                                                     <Gamepad2 size={17} />
                                                                 </div>
 
                                                                 {selected && (
-                                                                    <div className="flex h-5 w-5 items-center justify-center rounded-full bg-white text-[#111114]">
+                                                                    <div className="flex h-5 w-5 items-center justify-center rounded-full bg-white text-[#000000]">
                                                                         <Check
                                                                             size={12}
                                                                             strokeWidth={3}
@@ -1667,8 +1667,8 @@ const CreateCompetition = () => {
                                                                 )
                                                             }
                                                             className={`rounded-xl border p-5 text-left transition ${selected
-                                                                ? 'border-[#111114] bg-[#111114] text-white'
-                                                                : 'border-[#e4e4e7] bg-[#fafafa] hover:border-[#bdbdc1] hover:bg-white'
+                                                                ? 'border-[#000000] bg-[#000000] text-white'
+                                                                : 'border-[#E0E3E8] bg-[#FFFFFF] hover:border-[#B8BDC5] hover:bg-white'
                                                                 }`}
                                                         >
 
@@ -1685,7 +1685,7 @@ const CreateCompetition = () => {
                                                                     <p
                                                                         className={`mt-1 text-xs font-semibold ${selected
                                                                             ? 'text-white/60'
-                                                                            : 'text-[#88898f]'
+                                                                            : 'text-[#858C98]'
                                                                             }`}
                                                                     >
                                                                         {formatLabel(
@@ -1713,7 +1713,7 @@ const CreateCompetition = () => {
                                                             <div
                                                                 className={`mt-4 flex items-center gap-2 text-[10px] font-black uppercase tracking-[0.12em] ${selected
                                                                     ? 'text-white/60'
-                                                                    : 'text-[#999a9f]'
+                                                                    : 'text-[#8E96A3]'
                                                                     }`}
                                                             >
                                                                 <Users
@@ -1798,7 +1798,7 @@ const CreateCompetition = () => {
 
                                             <ChevronDown
                                                 size={16}
-                                                className="pointer-events-none absolute right-4 top-1/2 -translate-y-1/2 text-[#88898f]"
+                                                className="pointer-events-none absolute right-4 top-1/2 -translate-y-1/2 text-[#858C98]"
                                             />
 
                                         </div>
@@ -1855,7 +1855,7 @@ const CreateCompetition = () => {
 
                                             <ChevronDown
                                                 size={16}
-                                                className="pointer-events-none absolute right-4 top-1/2 -translate-y-1/2 text-[#88898f]"
+                                                className="pointer-events-none absolute right-4 top-1/2 -translate-y-1/2 text-[#858C98]"
                                             />
 
                                         </div>
@@ -1893,7 +1893,7 @@ const CreateCompetition = () => {
                                             }
                                         />
 
-                                        <p className="mt-2 text-[10px] font-semibold text-[#999a9f]">
+                                        <p className="mt-2 text-[10px] font-semibold text-[#8E96A3]">
                                             This is the number of registered
                                             participants or teams.
                                         </p>
@@ -1941,7 +1941,7 @@ const CreateCompetition = () => {
                                                 }`}
                                         />
 
-                                        <p className="mt-2 text-[10px] font-semibold text-[#999a9f]">
+                                        <p className="mt-2 text-[10px] font-semibold text-[#8E96A3]">
                                             {form.competitionType ===
                                                 'VERSUS'
                                                 ? 'Knockout competitions use one match per bracket pairing.'
@@ -1953,18 +1953,18 @@ const CreateCompetition = () => {
 
                                 {/* FORMAT SUMMARY */}
 
-                                <div className="mt-8 rounded-2xl border border-[#e5e5e7] bg-[#fafafa] p-5">
+                                <div className="mt-8 rounded-2xl border border-[#E1E4E8] bg-[#FFFFFF] p-5">
 
                                     <div className="flex items-center gap-3">
 
-                                        <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-[#111114] text-white">
+                                        <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-[#000000] text-white">
                                             <Layers3
                                                 size={16}
                                             />
                                         </div>
 
                                         <div>
-                                            <p className="text-[10px] font-black uppercase tracking-[0.15em] text-[#999a9f]">
+                                            <p className="text-[10px] font-black uppercase tracking-[0.15em] text-[#8E96A3]">
                                                 Structure
                                             </p>
 
@@ -1979,8 +1979,8 @@ const CreateCompetition = () => {
 
                                     <div className="mt-5 grid grid-cols-2 gap-3 sm:grid-cols-4">
 
-                                        <div className="rounded-xl border border-[#e6e6e8] bg-white p-4">
-                                            <p className="text-[9px] font-black uppercase tracking-[0.12em] text-[#9a9ba0]">
+                                        <div className="rounded-xl border border-[#E4E7EB] bg-white p-4">
+                                            <p className="text-[9px] font-black uppercase tracking-[0.12em] text-[#8E96A3]">
                                                 Format
                                             </p>
 
@@ -1991,8 +1991,8 @@ const CreateCompetition = () => {
                                             </p>
                                         </div>
 
-                                        <div className="rounded-xl border border-[#e6e6e8] bg-white p-4">
-                                            <p className="text-[9px] font-black uppercase tracking-[0.12em] text-[#9a9ba0]">
+                                        <div className="rounded-xl border border-[#E4E7EB] bg-white p-4">
+                                            <p className="text-[9px] font-black uppercase tracking-[0.12em] text-[#8E96A3]">
                                                 Teams
                                             </p>
 
@@ -2001,8 +2001,8 @@ const CreateCompetition = () => {
                                             </p>
                                         </div>
 
-                                        <div className="rounded-xl border border-[#e6e6e8] bg-white p-4">
-                                            <p className="text-[9px] font-black uppercase tracking-[0.12em] text-[#9a9ba0]">
+                                        <div className="rounded-xl border border-[#E4E7EB] bg-white p-4">
+                                            <p className="text-[9px] font-black uppercase tracking-[0.12em] text-[#8E96A3]">
                                                 Team size
                                             </p>
 
@@ -2011,8 +2011,8 @@ const CreateCompetition = () => {
                                             </p>
                                         </div>
 
-                                        <div className="rounded-xl border border-[#e6e6e8] bg-white p-4">
-                                            <p className="text-[9px] font-black uppercase tracking-[0.12em] text-[#9a9ba0]">
+                                        <div className="rounded-xl border border-[#E4E7EB] bg-white p-4">
+                                            <p className="text-[9px] font-black uppercase tracking-[0.12em] text-[#8E96A3]">
                                                 Matches
                                             </p>
 
@@ -2049,7 +2049,7 @@ const CreateCompetition = () => {
                                     <div>
 
                                         <div className="mb-4 flex items-center gap-2">
-                                            <div className="h-1.5 w-1.5 rounded-full bg-[#E5FE00]" />
+                                            <div className="h-1.5 w-1.5 rounded-full bg-[#D6C98A]" />
 
                                             <h3 className="text-xs font-black uppercase tracking-[0.14em]">
                                                 Registration window
@@ -2115,7 +2115,7 @@ const CreateCompetition = () => {
                                     <div>
 
                                         <div className="mb-4 flex items-center gap-2">
-                                            <div className="h-1.5 w-1.5 rounded-full bg-[#E5FE00]" />
+                                            <div className="h-1.5 w-1.5 rounded-full bg-[#D6C98A]" />
 
                                             <h3 className="text-xs font-black uppercase tracking-[0.14em]">
                                                 Competition window
@@ -2178,13 +2178,13 @@ const CreateCompetition = () => {
 
                                     {/* TIMELINE */}
 
-                                    <div className="rounded-2xl border border-[#e5e5e7] bg-[#fafafa] p-5">
+                                    <div className="rounded-2xl border border-[#E1E4E8] bg-[#FFFFFF] p-5">
 
                                         <div className="flex items-center gap-3">
 
                                             <Clock3
                                                 size={17}
-                                                className="text-[#E5FE00]"
+                                                className="text-[#D6C98A]"
                                             />
 
                                             <div>
@@ -2192,7 +2192,7 @@ const CreateCompetition = () => {
                                                     Competition timeline
                                                 </p>
 
-                                                <p className="mt-1 text-xs font-medium text-[#898a90]">
+                                                <p className="mt-1 text-xs font-medium text-[#858C98]">
                                                     Registration must close before
                                                     the competition begins.
                                                 </p>
@@ -2200,12 +2200,12 @@ const CreateCompetition = () => {
 
                                         </div>
 
-                                        <div className="mt-5 h-px bg-[#e2e2e5]" />
+                                        <div className="mt-5 h-px bg-[#E1E4E8]" />
 
                                         <div className="mt-5 grid grid-cols-1 gap-4 sm:grid-cols-4">
 
                                             <div>
-                                                <p className="text-[9px] font-black uppercase tracking-[0.12em] text-[#9a9ba0]">
+                                                <p className="text-[9px] font-black uppercase tracking-[0.12em] text-[#8E96A3]">
                                                     Registration
                                                 </p>
 
@@ -2215,7 +2215,7 @@ const CreateCompetition = () => {
                                             </div>
 
                                             <div>
-                                                <p className="text-[9px] font-black uppercase tracking-[0.12em] text-[#9a9ba0]">
+                                                <p className="text-[9px] font-black uppercase tracking-[0.12em] text-[#8E96A3]">
                                                     Registration
                                                 </p>
 
@@ -2225,7 +2225,7 @@ const CreateCompetition = () => {
                                             </div>
 
                                             <div>
-                                                <p className="text-[9px] font-black uppercase tracking-[0.12em] text-[#9a9ba0]">
+                                                <p className="text-[9px] font-black uppercase tracking-[0.12em] text-[#8E96A3]">
                                                     Competition
                                                 </p>
 
@@ -2235,7 +2235,7 @@ const CreateCompetition = () => {
                                             </div>
 
                                             <div>
-                                                <p className="text-[9px] font-black uppercase tracking-[0.12em] text-[#9a9ba0]">
+                                                <p className="text-[9px] font-black uppercase tracking-[0.12em] text-[#8E96A3]">
                                                     Competition
                                                 </p>
 
@@ -2355,12 +2355,12 @@ const CreateCompetition = () => {
 
                                     {form.competitionType ===
                                         'CLASSIC' && (
-                                            <div className="rounded-2xl border border-[#e4e4e7] bg-[#fafafa] p-5">
+                                            <div className="rounded-2xl border border-[#E0E3E8] bg-[#FFFFFF] p-5">
 
                                                 <div className="flex items-start justify-between gap-4">
 
                                                     <div>
-                                                        <p className="text-[10px] font-black uppercase tracking-[0.16em] text-[#E5FE00]">
+                                                        <p className="text-[10px] font-black uppercase tracking-[0.16em] text-[#D6C98A]">
                                                             Points system
                                                         </p>
 
@@ -2368,7 +2368,7 @@ const CreateCompetition = () => {
                                                             Classic scoring
                                                         </h3>
 
-                                                        <p className="mt-1 text-xs font-medium leading-5 text-[#85868c]">
+                                                        <p className="mt-1 text-xs font-medium leading-5 text-[#7D8592]">
                                                             Placement points and kill
                                                             points are stored with the
                                                             competition configuration.
@@ -2377,14 +2377,14 @@ const CreateCompetition = () => {
 
                                                     <Trophy
                                                         size={20}
-                                                        className="text-[#E5FE00]"
+                                                        className="text-[#D6C98A]"
                                                     />
 
                                                 </div>
 
                                                 <div className="mt-6">
 
-                                                    <p className="mb-3 text-[10px] font-black uppercase tracking-[0.13em] text-[#77787e]">
+                                                    <p className="mb-3 text-[10px] font-black uppercase tracking-[0.13em] text-[#707784]">
                                                         Placement points
                                                     </p>
 
@@ -2401,10 +2401,10 @@ const CreateCompetition = () => {
                                                                     key={
                                                                         position
                                                                     }
-                                                                    className="rounded-xl border border-[#e4e4e7] bg-white p-3"
+                                                                    className="rounded-xl border border-[#E0E3E8] bg-white p-3"
                                                                 >
 
-                                                                    <p className="text-[9px] font-black uppercase tracking-[0.1em] text-[#9a9ba0]">
+                                                                    <p className="text-[9px] font-black uppercase tracking-[0.1em] text-[#8E96A3]">
                                                                         {position}
                                                                         {position ===
                                                                             '1'
@@ -2434,7 +2434,7 @@ const CreateCompetition = () => {
                                                                                     .value
                                                                             )
                                                                         }
-                                                                        className="mt-2 h-9 w-full rounded-lg border border-[#e6e6e8] bg-[#fafafa] px-2 text-sm font-black outline-none focus:border-[#111114]"
+                                                                        className="mt-2 h-9 w-full rounded-lg border border-[#E4E7EB] bg-[#FFFFFF] px-2 text-sm font-black outline-none focus:border-[#000000]"
                                                                     />
 
                                                                 </div>
@@ -2508,11 +2508,11 @@ const CreateCompetition = () => {
 
                                     {form.competitionType ===
                                         'VERSUS' && (
-                                            <div className="rounded-2xl border border-[#e4e4e7] bg-[#fafafa] p-5">
+                                            <div className="rounded-2xl border border-[#E0E3E8] bg-[#FFFFFF] p-5">
 
                                                 <div className="flex items-start gap-3">
 
-                                                    <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-[#111114] text-white">
+                                                    <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-[#000000] text-white">
                                                         <Swords
                                                             size={16}
                                                         />
@@ -2523,7 +2523,7 @@ const CreateCompetition = () => {
                                                             Knockout scoring
                                                         </p>
 
-                                                        <p className="mt-1 text-xs font-medium leading-5 text-[#85868c]">
+                                                        <p className="mt-1 text-xs font-medium leading-5 text-[#7D8592]">
                                                             This format is bracket-based.
                                                             The backend automatically
                                                             uses one match for each
@@ -2559,13 +2559,13 @@ const CreateCompetition = () => {
 
                                     {/* IDENTITY */}
 
-                                    <div className="rounded-2xl border border-[#e5e5e7] bg-[#fafafa] p-5">
+                                    <div className="rounded-2xl border border-[#E1E4E8] bg-[#FFFFFF] p-5">
 
                                         <div className="flex items-start justify-between gap-4">
 
                                             <div>
 
-                                                <p className="text-[9px] font-black uppercase tracking-[0.15em] text-[#999a9f]">
+                                                <p className="text-[9px] font-black uppercase tracking-[0.15em] text-[#8E96A3]">
                                                     Competition
                                                 </p>
 
@@ -2575,7 +2575,7 @@ const CreateCompetition = () => {
                                                 </h3>
 
                                                 {form.description && (
-                                                    <p className="mt-2 max-w-2xl text-xs font-medium leading-5 text-[#85868c]">
+                                                    <p className="mt-2 max-w-2xl text-xs font-medium leading-5 text-[#7D8592]">
                                                         {
                                                             form.description
                                                         }
@@ -2591,7 +2591,7 @@ const CreateCompetition = () => {
                                                         1
                                                     )
                                                 }
-                                                className="text-[10px] font-black uppercase tracking-[0.12em] text-[#E5FE00] hover:text-[#c9df00]"
+                                                className="text-[10px] font-black uppercase tracking-[0.12em] text-[#D6C98A] hover:text-[#C8BC80]"
                                             >
                                                 Edit
                                             </button>
@@ -2604,17 +2604,17 @@ const CreateCompetition = () => {
 
                                     <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
 
-                                        <div className="rounded-2xl border border-[#e5e5e7] bg-white p-5">
+                                        <div className="rounded-2xl border border-[#E1E4E8] bg-white p-5">
 
                                             <div className="flex items-center gap-3">
 
                                                 <Gamepad2
                                                     size={17}
-                                                    className="text-[#E5FE00]"
+                                                    className="text-[#D6C98A]"
                                                 />
 
                                                 <div>
-                                                    <p className="text-[9px] font-black uppercase tracking-[0.14em] text-[#999a9f]">
+                                                    <p className="text-[9px] font-black uppercase tracking-[0.14em] text-[#8E96A3]">
                                                         Game
                                                     </p>
 
@@ -2629,8 +2629,8 @@ const CreateCompetition = () => {
 
                                             <div className="mt-5 grid grid-cols-2 gap-3">
 
-                                                <div className="rounded-xl bg-[#f7f7f7] p-3">
-                                                    <p className="text-[9px] font-black uppercase tracking-[0.1em] text-[#9a9ba0]">
+                                                <div className="rounded-xl bg-[#F4F5F7] p-3">
+                                                    <p className="text-[9px] font-black uppercase tracking-[0.1em] text-[#8E96A3]">
                                                         Mode
                                                     </p>
 
@@ -2641,8 +2641,8 @@ const CreateCompetition = () => {
                                                     </p>
                                                 </div>
 
-                                                <div className="rounded-xl bg-[#f7f7f7] p-3">
-                                                    <p className="text-[9px] font-black uppercase tracking-[0.1em] text-[#9a9ba0]">
+                                                <div className="rounded-xl bg-[#F4F5F7] p-3">
+                                                    <p className="text-[9px] font-black uppercase tracking-[0.1em] text-[#8E96A3]">
                                                         Format
                                                     </p>
 
@@ -2657,17 +2657,17 @@ const CreateCompetition = () => {
 
                                         </div>
 
-                                        <div className="rounded-2xl border border-[#e5e5e7] bg-white p-5">
+                                        <div className="rounded-2xl border border-[#E1E4E8] bg-white p-5">
 
                                             <div className="flex items-center gap-3">
 
                                                 <Users
                                                     size={17}
-                                                    className="text-[#E5FE00]"
+                                                    className="text-[#D6C98A]"
                                                 />
 
                                                 <div>
-                                                    <p className="text-[9px] font-black uppercase tracking-[0.14em] text-[#999a9f]">
+                                                    <p className="text-[9px] font-black uppercase tracking-[0.14em] text-[#8E96A3]">
                                                         Participants
                                                     </p>
 
@@ -2684,8 +2684,8 @@ const CreateCompetition = () => {
 
                                             <div className="mt-5 grid grid-cols-2 gap-3">
 
-                                                <div className="rounded-xl bg-[#f7f7f7] p-3">
-                                                    <p className="text-[9px] font-black uppercase tracking-[0.1em] text-[#9a9ba0]">
+                                                <div className="rounded-xl bg-[#F4F5F7] p-3">
+                                                    <p className="text-[9px] font-black uppercase tracking-[0.1em] text-[#8E96A3]">
                                                         Team size
                                                     </p>
 
@@ -2694,8 +2694,8 @@ const CreateCompetition = () => {
                                                     </p>
                                                 </div>
 
-                                                <div className="rounded-xl bg-[#f7f7f7] p-3">
-                                                    <p className="text-[9px] font-black uppercase tracking-[0.1em] text-[#9a9ba0]">
+                                                <div className="rounded-xl bg-[#F4F5F7] p-3">
+                                                    <p className="text-[9px] font-black uppercase tracking-[0.1em] text-[#8E96A3]">
                                                         Matches
                                                     </p>
 
@@ -2712,7 +2712,7 @@ const CreateCompetition = () => {
 
                                     {/* SCHEDULE */}
 
-                                    <div className="rounded-2xl border border-[#e5e5e7] bg-white p-5">
+                                    <div className="rounded-2xl border border-[#E1E4E8] bg-white p-5">
 
                                         <div className="flex items-center justify-between">
 
@@ -2720,7 +2720,7 @@ const CreateCompetition = () => {
 
                                                 <CalendarDays
                                                     size={17}
-                                                    className="text-[#E5FE00]"
+                                                    className="text-[#D6C98A]"
                                                 />
 
                                                 <p className="text-sm font-black">
@@ -2736,7 +2736,7 @@ const CreateCompetition = () => {
                                                         3
                                                     )
                                                 }
-                                                className="text-[10px] font-black uppercase tracking-[0.12em] text-[#E5FE00]"
+                                                className="text-[10px] font-black uppercase tracking-[0.12em] text-[#D6C98A]"
                                             >
                                                 Edit
                                             </button>
@@ -2745,8 +2745,8 @@ const CreateCompetition = () => {
 
                                         <div className="mt-5 grid grid-cols-1 gap-3 sm:grid-cols-2">
 
-                                            <div className="rounded-xl bg-[#f7f7f7] p-4">
-                                                <p className="text-[9px] font-black uppercase tracking-[0.1em] text-[#9a9ba0]">
+                                            <div className="rounded-xl bg-[#F4F5F7] p-4">
+                                                <p className="text-[9px] font-black uppercase tracking-[0.1em] text-[#8E96A3]">
                                                     Registration
                                                 </p>
 
@@ -2757,7 +2757,7 @@ const CreateCompetition = () => {
                                                     )}
                                                 </p>
 
-                                                <p className="mt-1 text-xs font-bold text-[#88898f]">
+                                                <p className="mt-1 text-xs font-bold text-[#858C98]">
                                                     to{' '}
                                                     {form.registrationEnd.replace(
                                                         'T',
@@ -2766,8 +2766,8 @@ const CreateCompetition = () => {
                                                 </p>
                                             </div>
 
-                                            <div className="rounded-xl bg-[#f7f7f7] p-4">
-                                                <p className="text-[9px] font-black uppercase tracking-[0.1em] text-[#9a9ba0]">
+                                            <div className="rounded-xl bg-[#F4F5F7] p-4">
+                                                <p className="text-[9px] font-black uppercase tracking-[0.1em] text-[#8E96A3]">
                                                     Competition
                                                 </p>
 
@@ -2778,7 +2778,7 @@ const CreateCompetition = () => {
                                                     )}
                                                 </p>
 
-                                                <p className="mt-1 text-xs font-bold text-[#88898f]">
+                                                <p className="mt-1 text-xs font-bold text-[#858C98]">
                                                     to{' '}
                                                     {form.competitionEnd.replace(
                                                         'T',
@@ -2795,7 +2795,7 @@ const CreateCompetition = () => {
 
                                     {form.competitionType ===
                                         'CLASSIC' && (
-                                            <div className="rounded-2xl border border-[#e5e5e7] bg-white p-5">
+                                            <div className="rounded-2xl border border-[#E1E4E8] bg-white p-5">
 
                                                 <div className="flex items-center justify-between">
 
@@ -2803,7 +2803,7 @@ const CreateCompetition = () => {
 
                                                         <Trophy
                                                             size={17}
-                                                            className="text-[#E5FE00]"
+                                                            className="text-[#D6C98A]"
                                                         />
 
                                                         <p className="text-sm font-black">
@@ -2819,7 +2819,7 @@ const CreateCompetition = () => {
                                                                 4
                                                             )
                                                         }
-                                                        className="text-[10px] font-black uppercase tracking-[0.12em] text-[#E5FE00]"
+                                                        className="text-[10px] font-black uppercase tracking-[0.12em] text-[#D6C98A]"
                                                     >
                                                         Edit
                                                     </button>
@@ -2828,8 +2828,8 @@ const CreateCompetition = () => {
 
                                                 <div className="mt-5 grid grid-cols-3 gap-3">
 
-                                                    <div className="rounded-xl bg-[#f7f7f7] p-4">
-                                                        <p className="text-[9px] font-black uppercase tracking-[0.1em] text-[#9a9ba0]">
+                                                    <div className="rounded-xl bg-[#F4F5F7] p-4">
+                                                        <p className="text-[9px] font-black uppercase tracking-[0.1em] text-[#8E96A3]">
                                                             Kill
                                                         </p>
 
@@ -2838,8 +2838,8 @@ const CreateCompetition = () => {
                                                         </p>
                                                     </div>
 
-                                                    <div className="rounded-xl bg-[#f7f7f7] p-4">
-                                                        <p className="text-[9px] font-black uppercase tracking-[0.1em] text-[#9a9ba0]">
+                                                    <div className="rounded-xl bg-[#F4F5F7] p-4">
+                                                        <p className="text-[9px] font-black uppercase tracking-[0.1em] text-[#8E96A3]">
                                                             Bonus
                                                         </p>
 
@@ -2848,8 +2848,8 @@ const CreateCompetition = () => {
                                                         </p>
                                                     </div>
 
-                                                    <div className="rounded-xl bg-[#f7f7f7] p-4">
-                                                        <p className="text-[9px] font-black uppercase tracking-[0.1em] text-[#9a9ba0]">
+                                                    <div className="rounded-xl bg-[#F4F5F7] p-4">
+                                                        <p className="text-[9px] font-black uppercase tracking-[0.1em] text-[#8E96A3]">
                                                             1st
                                                         </p>
 
@@ -2870,11 +2870,11 @@ const CreateCompetition = () => {
 
                                     {/* DRAFT NOTICE */}
 
-                                    <div className="flex items-start gap-3 rounded-xl border border-[#dedee1] bg-[#fafafa] p-4">
+                                    <div className="flex items-start gap-3 rounded-xl border border-[#D9DDE3] bg-[#FFFFFF] p-4">
 
                                         <Info
                                             size={16}
-                                            className="mt-0.5 shrink-0 text-[#77787e]"
+                                            className="mt-0.5 shrink-0 text-[#707784]"
                                         />
 
                                         <div>
@@ -2882,7 +2882,7 @@ const CreateCompetition = () => {
                                                 This creates a draft
                                             </p>
 
-                                            <p className="mt-1 text-xs font-medium leading-5 text-[#85868c]">
+                                            <p className="mt-1 text-xs font-medium leading-5 text-[#7D8592]">
                                                 The competition will be created
                                                 as a draft. You can configure
                                                 participants, bracket details,
@@ -2902,7 +2902,7 @@ const CreateCompetition = () => {
                 FOOTER ACTIONS
             ================================================= */}
 
-                        <div className="flex flex-col-reverse gap-3 border-t border-[#e7e7e9] bg-[#fcfcfc] p-5 sm:flex-row sm:items-center sm:justify-between sm:p-6">
+                        <div className="flex flex-col-reverse gap-3 border-t border-[#E4E7EB] bg-[#F4F5F7] p-5 sm:flex-row sm:items-center sm:justify-between sm:p-6">
 
                             <button
                                 type="button"
@@ -2914,7 +2914,7 @@ const CreateCompetition = () => {
                                         : handleBack()
                                 }
                                 disabled={creating}
-                                className="inline-flex h-11 items-center justify-center gap-2 rounded-xl border border-[#dedee1] bg-white px-5 text-xs font-black uppercase tracking-[0.1em] text-[#55565c] transition hover:border-[#bcbcc1] hover:text-[#111114] disabled:cursor-not-allowed disabled:opacity-50"
+                                className="inline-flex h-11 items-center justify-center gap-2 rounded-xl border border-[#D9DDE3] bg-white px-5 text-xs font-black uppercase tracking-[0.1em] text-[#555B66] transition hover:border-[#B8BDC5] hover:text-[#000000] disabled:cursor-not-allowed disabled:opacity-50"
                             >
                                 <ArrowLeft
                                     size={15}
@@ -2933,7 +2933,7 @@ const CreateCompetition = () => {
                                         onClick={
                                             handleNext
                                         }
-                                        className="inline-flex h-11 items-center justify-center gap-2 rounded-xl bg-[#111114] px-6 text-xs font-black uppercase tracking-[0.1em] text-white transition hover:bg-[#29292d]"
+                                        className="inline-flex h-11 items-center justify-center gap-2 rounded-xl bg-[#000000] px-6 text-xs font-black uppercase tracking-[0.1em] text-white transition hover:bg-[#0B0B0B]"
                                     >
                                         Continue
 
@@ -2950,7 +2950,7 @@ const CreateCompetition = () => {
                                         disabled={
                                             creating
                                         }
-                                        className="inline-flex h-11 min-w-[190px] items-center justify-center gap-2 rounded-xl bg-[#111114] px-6 text-xs font-black uppercase tracking-[0.1em] text-white transition hover:bg-[#29292d] disabled:cursor-not-allowed disabled:opacity-60"
+                                        className="inline-flex h-11 min-w-[190px] items-center justify-center gap-2 rounded-xl bg-[#000000] px-6 text-xs font-black uppercase tracking-[0.1em] text-white transition hover:bg-[#0B0B0B] disabled:cursor-not-allowed disabled:opacity-60"
                                     >
 
                                         {creating ? (
@@ -2991,7 +2991,7 @@ const CreateCompetition = () => {
 
                             {/* PREVIEW */}
 
-                            <div className="overflow-hidden rounded-2xl border border-black/10 bg-[#111114] text-white">
+                            <div className="overflow-hidden rounded-2xl border border-black/10 bg-[#000000] text-white">
 
                                 <div className="relative p-6">
 
@@ -3015,7 +3015,7 @@ const CreateCompetition = () => {
 
                                         <div className="mt-8">
 
-                                            <p className="text-[9px] font-black uppercase tracking-[0.17em] text-[#E5FE00]">
+                                            <p className="text-[9px] font-black uppercase tracking-[0.17em] text-[#D6C98A]">
                                                 {selectedGame?.name ||
                                                     'Select game'}
                                             </p>
@@ -3066,7 +3066,7 @@ const CreateCompetition = () => {
 
                                                     <Clock3
                                                         size={13}
-                                                        className="text-[#E5FE00]"
+                                                        className="text-[#D6C98A]"
                                                     />
 
                                                     <span className="text-[9px] font-black uppercase tracking-[0.12em] text-white/40">
@@ -3098,7 +3098,7 @@ const CreateCompetition = () => {
 
                             <div className="rounded-2xl border border-black/10 bg-white p-5">
 
-                                <p className="text-[10px] font-black uppercase tracking-[0.17em] text-[#999a9f]">
+                                <p className="text-[10px] font-black uppercase tracking-[0.17em] text-[#8E96A3]">
                                     Setup checklist
                                 </p>
 
@@ -3154,8 +3154,8 @@ const CreateCompetition = () => {
 
                                                 <div
                                                     className={`flex h-6 w-6 items-center justify-center rounded-full ${complete
-                                                        ? 'bg-[#111114] text-white'
-                                                        : 'border border-[#dedee1] bg-white text-transparent'
+                                                        ? 'bg-[#000000] text-white'
+                                                        : 'border border-[#D9DDE3] bg-white text-transparent'
                                                         }`}
                                                 >
                                                     <Check
@@ -3168,8 +3168,8 @@ const CreateCompetition = () => {
 
                                                 <span
                                                     className={`text-xs font-bold ${complete
-                                                        ? 'text-[#33343a]'
-                                                        : 'text-[#999a9f]'
+                                                        ? 'text-[#111111]'
+                                                        : 'text-[#8E96A3]'
                                                         }`}
                                                 >
                                                     {label}
@@ -3185,13 +3185,13 @@ const CreateCompetition = () => {
 
                             {/* INFO */}
 
-                            <div className="rounded-2xl border border-[#e4e4e7] bg-[#fafafa] p-5">
+                            <div className="rounded-2xl border border-[#E0E3E8] bg-[#FFFFFF] p-5">
 
                                 <div className="flex items-start gap-3">
 
                                     <Info
                                         size={16}
-                                        className="mt-0.5 shrink-0 text-[#E5FE00]"
+                                        className="mt-0.5 shrink-0 text-[#D6C98A]"
                                     />
 
                                     <div>
@@ -3200,7 +3200,7 @@ const CreateCompetition = () => {
                                             Organizer controls
                                         </p>
 
-                                        <p className="mt-1 text-[11px] font-medium leading-5 text-[#85868c]">
+                                        <p className="mt-1 text-[11px] font-medium leading-5 text-[#7D8592]">
                                             Your competition starts as a
                                             draft. Registration and bracket
                                             controls can be handled after
