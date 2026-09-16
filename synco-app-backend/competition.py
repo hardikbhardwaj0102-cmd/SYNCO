@@ -941,8 +941,6 @@ def serialize_competition(
             competition.max_participants
         ),
 
-        # UI-friendly team terminology. The database column remains
-        # max_participants for backward compatibility.
         "maxTeams": (
             competition.max_participants
         ),
@@ -1133,7 +1131,7 @@ def validate_competition_configuration(
 
         return (
             False,
-            "teamSize and maxParticipants "
+            "teamSize and maxTeams "
             "must be integers."
         )
 
@@ -1156,12 +1154,20 @@ def validate_competition_configuration(
 
         return (
             False,
-            "V1 supports a maximum of 25 teams."
+            "A competition can have a maximum of "
+            "25 teams/participants."
         )
 
-    # Knockout brackets can use any team count from 2 to 25.
-    # The bracket generator expands the field to the next power of two
-    # and handles the difference as byes.
+    if expected_type == "VERSUS":
+
+        # Single-elimination accepts any field size from 2-25.
+        # The bracket generator expands the field to the next
+        # power of two and distributes unused slots as byes.
+        if max_participants > 25:
+            return (
+                False,
+                "Versus competitions support up to 25 participants."
+            )
 
     return True, mode_config
 
@@ -2622,27 +2628,7 @@ def generate_versus_bracket(
     # Shuffle before seeding
     # -----------------------------------------------------
 
-    bracket_config = (competition.configuration or {}).get(
-        "bracket",
-        {}
-    )
-
-    seeding_method = str(
-        bracket_config.get("seeding", "RANDOM")
-    ).upper()
-
-    # RANDOM keeps the current behaviour.
-    # RANKING / ORGANIZER preserve the locked seed order already assigned
-    # by the registration/organizer flow.
-    if seeding_method == "RANDOM":
-        random.shuffle(participants)
-    else:
-        participants.sort(
-            key=lambda item: (
-                item.seed is None,
-                item.seed if item.seed is not None else item.id
-            )
-        )
+    random.shuffle(participants)
 
     for index, participant in enumerate(
         participants,
@@ -4467,9 +4453,16 @@ def update_classic_standings(
             default=0
         )
 
-        standing.wins = 0
+        standing.wins = sum(
+            1
+            for item in stats
+            if int(item.placement or 0) == 1
+        )
 
-        standing.losses = 0
+        standing.losses = max(
+            0,
+            standing.matches_played - standing.wins
+        )
 
         standing.updated_at = (
             datetime.utcnow()
@@ -4486,23 +4479,49 @@ def update_classic_standings(
         .all()
     )
 
+    leaderboard_config = (
+        competition.configuration or {}
+    ).get("leaderboard", {})
+
+    configured_tiebreakers = leaderboard_config.get(
+        "tiebreakers",
+        [
+            "PLACEMENT_POINTS",
+            "KILLS",
+            "MATCH_WINS",
+        ]
+    )
+
+    supported_tiebreakers = {
+        "PLACEMENT_POINTS": lambda item: float(
+            item.placement_points or 0
+        ),
+        "KILLS": lambda item: int(
+            item.total_kills or 0
+        ),
+        "MATCH_WINS": lambda item: int(
+            item.wins or 0
+        ),
+        "BEST_MATCH_SCORE": lambda item: float(
+            item.best_match_score or 0
+        ),
+    }
+
+    tiebreaker_functions = [
+        supported_tiebreakers[item]
+        for item in configured_tiebreakers
+        if item in supported_tiebreakers
+    ]
+
+    # Total points is always the primary key. The organizer's
+    # configured tiebreakers are applied only when totals are equal.
+    sort_keys = [
+        lambda item: float(item.total_points or 0)
+    ] + tiebreaker_functions
+
     standings.sort(
-        key=lambda standing: (
-            float(
-                standing.total_points or 0
-            ),
-
-            float(
-                standing.placement_points or 0
-            ),
-
-            int(
-                standing.total_kills or 0
-            ),
-
-            float(
-                standing.best_match_score or 0
-            ),
+        key=lambda item: tuple(
+            key(item) for key in sort_keys
         ),
         reverse=True
     )
