@@ -144,9 +144,26 @@ const DEFAULT_PLACEMENT_POINTS = {
 };
 
 const TIEBREAKER_OPTIONS = [
-    { id: 'PLACEMENT_POINTS', label: 'Placement Points' },
-    { id: 'KILLS', label: 'Kills' },
-    { id: 'MATCH_WINS', label: 'Match Wins' },
+    {
+        id: 'PLACEMENT_POINTS',
+        label: 'Placement Points',
+        description: 'Higher cumulative placement points rank higher.',
+    },
+    {
+        id: 'KILLS',
+        label: 'Kills',
+        description: 'Higher cumulative kills rank higher.',
+    },
+    {
+        id: 'MATCH_WINS',
+        label: 'Match Wins',
+        description: 'More first-place match finishes rank higher.',
+    },
+    {
+        id: 'BEST_MATCH_SCORE',
+        label: 'Best Match Score',
+        description: 'Higher single-match score ranks higher.',
+    },
 ];
 
 /* =========================================================
@@ -305,8 +322,8 @@ const buildBracketPreview = (teamCount) => {
 ========================================================= */
 
 const SectionHeader = ({ icon: Icon, eyebrow, title, description }) => (
-    <div className="mb-7 flex items-start gap-4">
-        <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-[#111114] text-white">
+    <div className="mb-8 flex items-start gap-4 border-b border-[#eeeeef] pb-6">
+        <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-[#111114] text-white shadow-sm">
             <Icon size={18} strokeWidth={2} />
         </div>
         <div>
@@ -340,13 +357,13 @@ const FieldLabel = ({ children, required = false, hint }) => (
 );
 
 const inputClass =
-    'h-12 w-full rounded-xl border border-[#e4e4e7] bg-[#fafafa] px-4 text-sm font-semibold text-[#111114] outline-none transition placeholder:text-[#aaaab0] focus:border-[#111114] focus:bg-white';
+    'h-12 w-full rounded-xl border border-[#e4e4e7] bg-[#fafafa] px-4 text-sm font-semibold text-[#111114] outline-none transition duration-200 placeholder:text-[#aaaab0] hover:border-[#d3d3d6] focus:border-[#111114] focus:bg-white';
 
 const textareaClass =
-    'min-h-[120px] w-full resize-none rounded-xl border border-[#e4e4e7] bg-[#fafafa] px-4 py-3 text-sm font-semibold leading-6 text-[#111114] outline-none transition placeholder:text-[#aaaab0] focus:border-[#111114] focus:bg-white';
+    'min-h-[120px] w-full resize-none rounded-xl border border-[#e4e4e7] bg-[#fafafa] px-4 py-3 text-sm font-semibold leading-6 text-[#111114] outline-none transition duration-200 placeholder:text-[#aaaab0] hover:border-[#d3d3d6] focus:border-[#111114] focus:bg-white';
 
 const selectClass =
-    'h-12 w-full appearance-none rounded-xl border border-[#e4e4e7] bg-[#fafafa] px-4 pr-10 text-sm font-semibold text-[#111114] outline-none transition focus:border-[#111114] focus:bg-white';
+    'h-12 w-full appearance-none rounded-xl border border-[#e4e4e7] bg-[#fafafa] px-4 pr-10 text-sm font-semibold text-[#111114] outline-none transition duration-200 hover:border-[#d3d3d6] focus:border-[#111114] focus:bg-white';
 
 const StepPill = ({ number, title, active, complete }) => (
     <div
@@ -355,10 +372,10 @@ const StepPill = ({ number, title, active, complete }) => (
     >
         <div
             className={`flex h-8 w-8 items-center justify-center rounded-full border text-xs font-black ${complete
-                    ? 'border-[#111114] bg-[#111114] text-white'
-                    : active
-                        ? 'border-[#111114] bg-white text-[#111114]'
-                        : 'border-[#dedee1] bg-white text-[#a0a1a6]'
+                ? 'border-[#111114] bg-[#111114] text-white'
+                : active
+                    ? 'border-[#111114] bg-white text-[#111114]'
+                    : 'border-[#dedee1] bg-white text-[#a0a1a6]'
                 }`}
         >
             {complete ? <Check size={14} strokeWidth={3} /> : number}
@@ -566,6 +583,30 @@ const CreateCompetition = () => {
         }));
     };
 
+    const handleCompetitionTypeChange = (type) => {
+        const matchingMode = modeList.find(
+            (mode) => String(mode.type || mode.competition_type || '').toUpperCase() === type
+        );
+
+        if (!matchingMode) return;
+
+        const supportedSizes = Array.isArray(matchingMode.team_sizes)
+            ? matchingMode.team_sizes
+            : [1, 2, 3, 4];
+
+        setError('');
+        setForm((previous) => ({
+            ...previous,
+            competitionType: type,
+            gameMode: matchingMode.id,
+            teamSize: supportedSizes.includes(Number(previous.teamSize))
+                ? Number(previous.teamSize)
+                : Number(supportedSizes[0] || 1),
+            numberOfMatches:
+                matchingMode.default_matches || (type === 'CLASSIC' ? 3 : 1),
+        }));
+    };
+
     const updatePlacementPoints = (place, value) => {
         setError('');
         setForm((previous) => ({
@@ -670,8 +711,16 @@ const CreateCompetition = () => {
                 setError('Kill points must be zero or greater.');
                 return false;
             }
-            if (!Array.isArray(form.tiebreakers) || form.tiebreakers.length !== 3) {
-                setError('Configure the leaderboard tiebreakers.');
+            const allowedTiebreakers = new Set(TIEBREAKER_OPTIONS.map((item) => item.id));
+            const uniqueTiebreakers = new Set(form.tiebreakers || []);
+
+            if (
+                !Array.isArray(form.tiebreakers) ||
+                form.tiebreakers.length !== 3 ||
+                uniqueTiebreakers.size !== 3 ||
+                form.tiebreakers.some((id) => !allowedTiebreakers.has(id))
+            ) {
+                setError('Choose three different leaderboard tiebreakers.');
                 return false;
             }
         }
@@ -825,14 +874,14 @@ const CreateCompetition = () => {
     return (
         <div className="min-h-screen bg-[#f5f5f4] text-[#111114]">
             {/* TOP BAR */}
-            <div className="sticky top-0 z-40 border-b border-black/10 bg-white/95 backdrop-blur">
-                <div className="mx-auto flex h-[72px] max-w-[1400px] items-center justify-between px-5 lg:px-8">
+            <div className="sticky top-0 z-40 border-b border-black/10 bg-white/95 shadow-sm backdrop-blur">
+                <div className="mx-auto flex h-[76px] max-w-[1400px] items-center justify-between px-5 lg:px-8">
                     <button
                         type="button"
                         onClick={() => navigate('/competitions')}
-                        className="group flex items-center gap-3"
+                        className="group flex items-center gap-3 rounded-xl px-2 py-2 transition hover:bg-[#fafafa]"
                     >
-                        <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-[#111114] text-white transition group-hover:bg-[#2a2a2e]">
+                        <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-[#111114] text-white shadow-sm transition group-hover:bg-[#2a2a2e]">
                             <ArrowLeft size={16} />
                         </div>
                         <div className="text-left">
@@ -872,9 +921,30 @@ const CreateCompetition = () => {
                 </div>
             </div>
 
-            <main className="mx-auto max-w-[1400px] px-5 py-8 lg:px-8 lg:py-10">
+            <div className="border-b border-black/10 bg-white md:hidden">
+                <div className="mx-auto max-w-[1320px] px-5 py-3">
+                    <div className="flex items-center justify-between">
+                        <div>
+                            <p className="text-[9px] font-black uppercase tracking-[0.16em] text-[#9a9ba0]">
+                                Step {step} of 6
+                            </p>
+                            <p className="mt-1 text-xs font-black text-[#111114]">
+                                {stepTitle}
+                            </p>
+                        </div>
+                        <div className="h-1.5 w-24 overflow-hidden rounded-full bg-[#e7e7e9]">
+                            <div
+                                className="h-full rounded-full bg-[#111114] transition-all duration-300"
+                                style={{ width: `${(step / 6) * 100}%` }}
+                            />
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <main className="mx-auto max-w-[1320px] px-5 py-8 lg:px-8 lg:py-11">
                 {/* HEADER */}
-                <div className="mb-8">
+                <div className="mb-10">
                     <div className="flex items-center gap-2 text-[10px] font-black uppercase tracking-[0.18em] text-[#8b7f45]">
                         <Swords size={13} />
                         Competition Engine
@@ -918,11 +988,11 @@ const CreateCompetition = () => {
                     </div>
                 )}
 
-                <div className="grid grid-cols-1 gap-6 xl:grid-cols-[minmax(0,1fr)_340px]">
-                    <div className="rounded-2xl border border-black/10 bg-white">
+                <div className="grid grid-cols-1 gap-8 xl:grid-cols-[minmax(0,1fr)_320px]">
+                    <div className="overflow-hidden rounded-2xl border border-black/10 bg-white shadow-sm">
                         {/* STEP 1 */}
                         {step === 1 && (
-                            <div className="p-6 sm:p-8">
+                            <div className="p-6 sm:p-9">
                                 <SectionHeader
                                     icon={Gamepad2}
                                     eyebrow="01 / Basics"
@@ -1000,7 +1070,7 @@ const CreateCompetition = () => {
 
                         {/* STEP 2 */}
                         {step === 2 && (
-                            <div className="p-6 sm:p-8">
+                            <div className="p-6 sm:p-9">
                                 <SectionHeader
                                     icon={Users}
                                     eyebrow="02 / Format"
@@ -1023,28 +1093,35 @@ const CreateCompetition = () => {
                                                     title: 'Single Elimination',
                                                     description: 'Teams are eliminated after losing a pairing.',
                                                 },
-                                            ].map((item) => {
-                                                const active = form.competitionType === item.id;
-                                                return (
-                                                    <button
-                                                        key={item.id}
-                                                        type="button"
-                                                        onClick={() => updateForm('competitionType', item.id)}
-                                                        className={`rounded-xl border p-4 text-left transition ${active
+                                            ]
+                                                .filter((item) =>
+                                                    modeList.some(
+                                                        (mode) =>
+                                                            String(mode.type || mode.competition_type || '').toUpperCase() === item.id
+                                                    )
+                                                )
+                                                .map((item) => {
+                                                    const active = form.competitionType === item.id;
+                                                    return (
+                                                        <button
+                                                            key={item.id}
+                                                            type="button"
+                                                            onClick={() => handleCompetitionTypeChange(item.id)}
+                                                            className={`rounded-xl border p-4 text-left transition ${active
                                                                 ? 'border-[#111114] bg-[#111114] text-white'
                                                                 : 'border-[#e4e4e7] bg-[#fafafa] hover:border-[#bbbcc0]'
-                                                            }`}
-                                                    >
-                                                        <p className="text-sm font-black">{item.title}</p>
-                                                        <p
-                                                            className={`mt-1 text-xs font-medium leading-5 ${active ? 'text-white/70' : 'text-[#85868c]'
                                                                 }`}
                                                         >
-                                                            {item.description}
-                                                        </p>
-                                                    </button>
-                                                );
-                                            })}
+                                                            <p className="text-sm font-black">{item.title}</p>
+                                                            <p
+                                                                className={`mt-1 text-xs font-medium leading-5 ${active ? 'text-white/70' : 'text-[#85868c]'
+                                                                    }`}
+                                                            >
+                                                                {item.description}
+                                                            </p>
+                                                        </button>
+                                                    );
+                                                })}
                                         </div>
                                     </div>
 
@@ -1127,7 +1204,7 @@ const CreateCompetition = () => {
 
                         {/* STEP 3 */}
                         {step === 3 && (
-                            <div className="p-6 sm:p-8">
+                            <div className="p-6 sm:p-9">
                                 <SectionHeader
                                     icon={CalendarDays}
                                     eyebrow="03 / Schedule"
@@ -1167,7 +1244,7 @@ const CreateCompetition = () => {
 
                         {/* STEP 4 */}
                         {step === 4 && (
-                            <div className="p-6 sm:p-8">
+                            <div className="p-6 sm:p-9">
                                 <SectionHeader
                                     icon={ShieldCheck}
                                     eyebrow="04 / Governance"
@@ -1209,7 +1286,7 @@ const CreateCompetition = () => {
 
                         {/* STEP 5 VERSUS */}
                         {isVersus && step === 5 && (
-                            <div className="p-6 sm:p-8">
+                            <div className="p-6 sm:p-9">
                                 <SectionHeader
                                     icon={Layers3}
                                     eyebrow="05 / Bracket"
@@ -1275,8 +1352,8 @@ const CreateCompetition = () => {
                                         </InfoBox>
                                     </div>
 
-                                    <div className="min-w-0 rounded-2xl border border-[#e4e4e7] bg-[#fafafa] p-4 sm:p-5">
-                                        <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
+                                    <div className="min-w-0 overflow-hidden rounded-2xl border border-[#e4e4e7] bg-[#fafafa] p-5 sm:p-6">
+                                        <div className="mb-5 flex flex-wrap items-end justify-between gap-4 border-b border-[#eeeeef] pb-4">
                                             <div>
                                                 <p className="text-sm font-black">Bracket map</p>
                                                 <p className="mt-1 text-[10px] font-semibold text-[#8a8b90]">
@@ -1288,57 +1365,63 @@ const CreateCompetition = () => {
                                             </div>
                                         </div>
 
-                                        <div className="overflow-x-auto pb-2">
+                                        <div className="overflow-x-auto pb-3">
                                             <div
-                                                className="flex min-w-max items-stretch gap-5"
+                                                className="flex min-w-max items-stretch gap-7"
                                                 style={{ minHeight: Math.max(320, bracketPreview.rounds[0].length * 68) }}
                                             >
                                                 {bracketPreview.rounds.map((round, roundIndex) => (
-                                                    <div
-                                                        key={roundIndex}
-                                                        className="flex w-[190px] shrink-0 flex-col"
-                                                        style={{
-                                                            justifyContent: roundIndex === 0 ? 'space-between' : 'space-around',
-                                                        }}
-                                                    >
-                                                        <div className="mb-3 text-center">
-                                                            <p className="text-[9px] font-black uppercase tracking-[0.15em] text-[#9a9ba0]">
-                                                                {getRoundName(roundIndex + 1, bracketPreview.stats.rounds)}
-                                                            </p>
-                                                            <p className="mt-1 text-[10px] font-semibold text-[#8b8c91]">
-                                                                {round.length} {round.length === 1 ? 'match' : 'matches'}
-                                                            </p>
-                                                        </div>
+                                                    <div key={roundIndex} className="flex shrink-0 items-stretch gap-3">
+                                                        <div
+                                                            className="flex w-[204px] shrink-0 flex-col"
+                                                            style={{
+                                                                justifyContent: roundIndex === 0 ? 'space-between' : 'space-around',
+                                                            }}
+                                                        >
+                                                            <div className="mb-3 text-center">
+                                                                <p className="text-[9px] font-black uppercase tracking-[0.15em] text-[#9a9ba0]">
+                                                                    {getRoundName(roundIndex + 1, bracketPreview.stats.rounds)}
+                                                                </p>
+                                                                <p className="mt-1 text-[10px] font-semibold text-[#8b8c91]">
+                                                                    {round.length} {round.length === 1 ? 'match' : 'matches'}
+                                                                </p>
+                                                            </div>
 
-                                                        <div className="flex flex-1 flex-col justify-around gap-2">
-                                                            {round.map((match) => (
-                                                                <div key={`${roundIndex}-${match.number}`} className="rounded-xl border border-[#dedee1] bg-white shadow-sm">
-                                                                    <div className="flex items-center justify-between border-b border-[#eeeeef] px-3 py-2">
-                                                                        <span className="text-[9px] font-black uppercase tracking-[0.12em] text-[#9a9ba0]">
-                                                                            M{roundIndex === 0 ? match.number : `${roundIndex + 1}.${match.number}`}
-                                                                        </span>
-                                                                        {match.bye && (
-                                                                            <span className="rounded-full bg-[#fbf9ef] px-2 py-0.5 text-[8px] font-black uppercase text-[#8b7f45]">
-                                                                                BYE
+                                                            <div className="flex flex-1 flex-col justify-around gap-2">
+                                                                {round.map((match) => (
+                                                                    <div key={`${roundIndex}-${match.number}`} className="overflow-hidden rounded-xl border border-[#dedee1] bg-white shadow-sm transition duration-200 hover:border-[#cfcfd2]">
+                                                                        <div className="flex items-center justify-between border-b border-[#eeeeef] px-3 py-2">
+                                                                            <span className="text-[9px] font-black uppercase tracking-[0.12em] text-[#9a9ba0]">
+                                                                                M{roundIndex === 0 ? match.number : `${roundIndex + 1}.${match.number}`}
                                                                             </span>
-                                                                        )}
-                                                                    </div>
-                                                                    <div className="px-3 py-2">
-                                                                        <div className="flex items-center justify-between gap-2 border-b border-[#f0f0f1] pb-2">
-                                                                            <span className="truncate text-[10px] font-bold text-[#33343a]">{match.teamA}</span>
-                                                                            {roundIndex === 0 && match.seedA <= bracketPreview.stats.teams && (
-                                                                                <span className="text-[8px] font-black text-[#9a9ba0]">S{match.seedA}</span>
+                                                                            {match.bye && (
+                                                                                <span className="rounded-full bg-[#fbf9ef] px-2 py-0.5 text-[8px] font-black uppercase text-[#8b7f45]">
+                                                                                    BYE
+                                                                                </span>
                                                                             )}
                                                                         </div>
-                                                                        <div className="flex items-center justify-between gap-2 pt-2">
-                                                                            <span className="truncate text-[10px] font-bold text-[#33343a]">{match.teamB}</span>
-                                                                            {roundIndex === 0 && match.seedB <= bracketPreview.stats.teams && (
-                                                                                <span className="text-[8px] font-black text-[#9a9ba0]">S{match.seedB}</span>
-                                                                            )}
+                                                                        <div className="px-3 py-2">
+                                                                            <div className="flex items-center justify-between gap-2 border-b border-[#f0f0f1] pb-2">
+                                                                                <span className="truncate text-[10px] font-bold text-[#33343a]">{match.teamA}</span>
+                                                                                {roundIndex === 0 && match.seedA <= bracketPreview.stats.teams && (
+                                                                                    <span className="text-[8px] font-black text-[#9a9ba0]">S{match.seedA}</span>
+                                                                                )}
+                                                                            </div>
+                                                                            <div className="flex items-center justify-between gap-2 pt-2">
+                                                                                <span className="truncate text-[10px] font-bold text-[#33343a]">{match.teamB}</span>
+                                                                                {roundIndex === 0 && match.seedB <= bracketPreview.stats.teams && (
+                                                                                    <span className="text-[8px] font-black text-[#9a9ba0]">S{match.seedB}</span>
+                                                                                )}
+                                                                            </div>
                                                                         </div>
                                                                     </div>
+                                                                ))}
+                                                            </div>
+                                                            {roundIndex < bracketPreview.rounds.length - 1 && (
+                                                                <div className="flex w-8 shrink-0 items-center justify-center">
+                                                                    <ArrowRight size={16} className="text-[#b1b1b5]" />
                                                                 </div>
-                                                            ))}
+                                                            )}
                                                         </div>
                                                     </div>
                                                 ))}
@@ -1357,6 +1440,21 @@ const CreateCompetition = () => {
                                             </div>
                                         </div>
 
+                                        <div className="mt-4 grid gap-3 sm:grid-cols-3">
+                                            <div className="rounded-xl border border-[#e4e4e7] bg-white px-4 py-3">
+                                                <p className="text-[9px] font-black uppercase tracking-[0.14em] text-[#9a9ba0]">Stage 1</p>
+                                                <p className="mt-1 text-xs font-bold text-[#55565c]">Teams enter by seed</p>
+                                            </div>
+                                            <div className="rounded-xl border border-[#e4e4e7] bg-white px-4 py-3">
+                                                <p className="text-[9px] font-black uppercase tracking-[0.14em] text-[#9a9ba0]">Stage 2</p>
+                                                <p className="mt-1 text-xs font-bold text-[#55565c]">Winners advance</p>
+                                            </div>
+                                            <div className="rounded-xl border border-[#ded5a1] bg-[#fbf9ef] px-4 py-3">
+                                                <p className="text-[9px] font-black uppercase tracking-[0.14em] text-[#7b713e]">Finish</p>
+                                                <p className="mt-1 text-xs font-black text-[#5c5536]">Final winner is champion</p>
+                                            </div>
+                                        </div>
+
                                         <div className="mt-4 rounded-xl border border-[#e4e4e7] bg-white p-4">
                                             <div className="flex flex-wrap items-center gap-x-6 gap-y-2 text-[10px] font-semibold text-[#77787e]">
                                                 <span><strong className="text-[#111114]">1.</strong> teams are seeded</span>
@@ -1372,12 +1470,12 @@ const CreateCompetition = () => {
 
                         {/* STEP 5 CLASSIC */}
                         {!isVersus && step === 5 && (
-                            <div className="p-6 sm:p-8">
+                            <div className="p-6 sm:p-9">
                                 <SectionHeader
                                     icon={Trophy}
                                     eyebrow="05 / Points"
                                     title="Set the points table"
-                                    description="Keep the scoring model simple: placement is the primary score, kills can add a fixed per-kill value, and ties are resolved separately."
+                                    description="Classic tournaments are decided by cumulative points across multiple matches. No bracket is used."
                                 />
 
                                 <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_280px]">
@@ -1436,7 +1534,7 @@ const CreateCompetition = () => {
                                         </div>
 
                                         <InfoBox>
-                                            Keep the points table deterministic. SYNCO should calculate the same total score from the same result data every time.
+                                            Each match contributes to one cumulative table. The final leaderboard is ordered by total points, then the tiebreakers below.
                                         </InfoBox>
                                     </div>
                                 </div>
@@ -1470,8 +1568,8 @@ const CreateCompetition = () => {
                                                     </div>
                                                     <div className="min-w-0 flex-1">
                                                         <p className="text-sm font-black">{option?.label || formatLabel(id)}</p>
-                                                        <p className="mt-0.5 text-[10px] font-semibold text-[#8a8b90]">
-                                                            Higher value wins the tie.
+                                                        <p className="mt-0.5 text-[10px] font-semibold leading-4 text-[#8a8b90]">
+                                                            {option?.description || 'Higher value wins the tie.'}
                                                         </p>
                                                     </div>
                                                     <div className="flex items-center gap-1">
@@ -1513,7 +1611,7 @@ const CreateCompetition = () => {
 
                         {/* STEP 6 REVIEW */}
                         {step === 6 && (
-                            <div className="p-6 sm:p-8">
+                            <div className="p-6 sm:p-9">
                                 <SectionHeader
                                     icon={Check}
                                     eyebrow="06 / Review"
@@ -1586,15 +1684,15 @@ const CreateCompetition = () => {
                                 <div className="mt-6">
                                     <InfoBox>
                                         {isVersus
-                                            ? 'The preview is based on the maximum team field. When registration closes, SYNCO should generate the actual bracket from the teams that are locked into the competition.'
-                                            : 'The points configuration is stored with the competition so result entry and leaderboard calculations can use the same scoring contract.'}
+                                            ? 'This is a structural preview. After registration closes, SYNCO generates the real bracket from the locked teams using the selected seeding and bye rules.'
+                                            : 'Classic uses a points leaderboard only. SYNCO totals every verified match, then applies the saved tiebreaker order.'}
                                     </InfoBox>
                                 </div>
                             </div>
                         )}
 
                         {/* FOOTER ACTIONS */}
-                        <div className="flex flex-col-reverse gap-3 border-t border-[#eeeeef] p-6 sm:flex-row sm:items-center sm:justify-between sm:px-8">
+                        <div className="flex flex-col-reverse gap-3 border-t border-[#eeeeef] bg-[#fafafa] p-5 sm:flex-row sm:items-center sm:justify-between sm:px-7">
                             <button
                                 type="button"
                                 onClick={goBack}
@@ -1639,8 +1737,8 @@ const CreateCompetition = () => {
                     </div>
 
                     {/* SIDEBAR */}
-                    <aside className="space-y-5">
-                        <div className="rounded-2xl border border-black/10 bg-white p-5">
+                    <aside className="space-y-5 xl:sticky xl:top-[96px] xl:self-start">
+                        <div className="rounded-2xl border border-black/10 bg-white p-5 shadow-sm">
                             <div className="flex items-center gap-3">
                                 <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-[#111114] text-white">
                                     <Gamepad2 size={18} />
@@ -1654,7 +1752,7 @@ const CreateCompetition = () => {
                             </div>
                         </div>
 
-                        <div className="rounded-2xl border border-black/10 bg-white p-5">
+                        <div className="rounded-2xl border border-black/10 bg-white p-5 shadow-sm">
                             <p className="text-[10px] font-black uppercase tracking-[0.16em] text-[#8a8b90]">At a glance</p>
                             <div className="mt-4 space-y-4">
                                 <div className="flex items-center justify-between gap-4">
