@@ -1,4 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
+import { Plus } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
+
 import GameCarousel from '../components/Pickem/GameCarousel';
 import MatchCard from '../components/Pickem/MatchCard';
 import '../styles/pages/CompetitionEngine.css';
@@ -8,6 +11,8 @@ const API_URL =
   'http://127.0.0.1:5000';
 
 const CompetitionEngine = () => {
+  const navigate = useNavigate();
+
   const [activeTab, setActiveTab] = useState('ALL MATCHES');
   const [activeGame, setActiveGame] = useState('all');
 
@@ -40,7 +45,10 @@ const CompetitionEngine = () => {
 
       setGames(data?.games || []);
     } catch (err) {
-      console.error('Failed to load competition games:', err);
+      console.error(
+        'Failed to load competition games:',
+        err
+      );
     }
   };
 
@@ -88,8 +96,15 @@ const CompetitionEngine = () => {
 
       setCompetitions(data?.competitions || []);
     } catch (err) {
-      console.error('Failed to load competitions:', err);
-      setError(err.message || 'Unable to load competitions');
+      console.error(
+        'Failed to load competitions:',
+        err
+      );
+
+      setError(
+        err.message || 'Unable to load competitions'
+      );
+
       setCompetitions([]);
     } finally {
       setLoading(false);
@@ -152,7 +167,9 @@ const CompetitionEngine = () => {
     if (activeTab === 'LIVE BRACKETS') {
       result = result.filter((competition) => {
         const status =
-          String(competition.status || '').toUpperCase();
+          String(
+            competition.status || ''
+          ).toUpperCase();
 
         return (
           status === 'LIVE' ||
@@ -179,9 +196,13 @@ const CompetitionEngine = () => {
      CONVERT COMPETITION -> CARD
   ===================================================== */
 
-  const createMatchFromCompetition = (competition) => {
+  const createMatchFromCompetition = (
+    competition
+  ) => {
     const status =
-      String(competition.status || 'UPCOMING').toUpperCase();
+      String(
+        competition.status || 'UPCOMING'
+      ).toUpperCase();
 
     return {
       id: competition.id,
@@ -240,7 +261,8 @@ const CompetitionEngine = () => {
 
       userPick: null,
 
-      teams: competition.teams || [],
+      teams:
+        competition.teams || [],
     };
   };
 
@@ -256,14 +278,40 @@ const CompetitionEngine = () => {
       ================================================= */}
 
       <div className="comp-header-box">
-        <h1 className="comp-title">
-          Competitions
-        </h1>
 
-        <p className="comp-subtitle">
-          Discover tournaments, join competitions, and compete
-          for your place on SYNCO.
-        </p>
+        <div className="comp-header-content">
+
+          <div className="comp-header-text">
+
+            <h1 className="comp-title">
+              Competitions
+            </h1>
+
+            <p className="comp-subtitle">
+              Discover tournaments, join competitions,
+              and compete for your place on SYNCO.
+            </p>
+
+          </div>
+
+          {/* CREATE COMPETITION BUTTON */}
+
+          <button
+            type="button"
+            className="create-competition-btn"
+            onClick={() =>
+              navigate('/competitions/create')
+            }
+          >
+            <Plus size={18} strokeWidth={2.5} />
+
+            <span>
+              Create Competition
+            </span>
+          </button>
+
+        </div>
+
       </div>
 
       {/* =================================================
@@ -288,10 +336,13 @@ const CompetitionEngine = () => {
           'LIVE BRACKETS',
           'MY TOURNAMENTS',
         ].map((tab) => (
+
           <button
             key={tab}
             type="button"
-            onClick={() => setActiveTab(tab)}
+            onClick={() =>
+              setActiveTab(tab)
+            }
             className={`comp-tab-btn ${activeTab === tab
                 ? 'comp-tab-btn-active'
                 : 'comp-tab-btn-inactive'
@@ -299,6 +350,7 @@ const CompetitionEngine = () => {
           >
             {tab}
           </button>
+
         ))}
 
       </div>
@@ -309,7 +361,11 @@ const CompetitionEngine = () => {
 
       {loading && (
         <div className="comp-state-box">
-          <p>Loading competitions...</p>
+
+          <p>
+            Loading competitions...
+          </p>
+
         </div>
       )}
 
@@ -342,6 +398,7 @@ const CompetitionEngine = () => {
       {!loading &&
         !error &&
         filteredCompetitions.length === 0 && (
+
           <div className="comp-state-box">
 
             <h3>
@@ -349,11 +406,12 @@ const CompetitionEngine = () => {
             </h3>
 
             <p>
-              There are currently no competitions matching
-              your selected filters.
+              There are currently no competitions
+              matching your selected filters.
             </p>
 
           </div>
+
         )}
 
       {/* =================================================
@@ -366,12 +424,18 @@ const CompetitionEngine = () => {
 
           <div className="comp-list">
 
-            {filteredCompetitions.map((competition) => (
-              <MatchCard
-                key={competition.id}
-                match={createMatchFromCompetition(competition)}
-              />
-            ))}
+            {filteredCompetitions.map(
+              (competition) => (
+
+                <MatchCard
+                  key={competition.id}
+                  match={createMatchFromCompetition(
+                    competition
+                  )}
+                />
+
+              )
+            )}
 
           </div>
 

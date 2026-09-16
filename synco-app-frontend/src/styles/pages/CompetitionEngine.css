@@ -4,8 +4,20 @@
   @apply w-full max-w-[1200px] mx-auto bg-white rounded-2xl shadow-sm border border-synco-border p-8 min-h-[800px];
 }
 
+/* =====================================================
+   HEADER
+===================================================== */
+
 .comp-header-box {
   @apply mb-8;
+}
+
+.comp-header-content {
+  @apply flex items-center justify-between gap-6;
+}
+
+.comp-header-text {
+  @apply min-w-0;
 }
 
 .comp-title {
@@ -15,6 +27,26 @@
 .comp-subtitle {
   @apply text-synco-textMuted text-sm;
 }
+
+/* =====================================================
+   CREATE COMPETITION BUTTON
+===================================================== */
+
+.create-competition-btn {
+  @apply flex items-center justify-center gap-2 shrink-0 h-11 px-5 rounded-xl bg-synco-dark text-white border border-synco-dark text-xs font-bold transition-all duration-200;
+}
+
+.create-competition-btn:hover {
+  @apply bg-black border-black;
+}
+
+.create-competition-btn:active {
+  @apply scale-[0.98];
+}
+
+/* =====================================================
+   TABS
+===================================================== */
 
 .comp-tabs-container {
   @apply flex gap-2 mb-10;
@@ -30,4 +62,70 @@
 
 .comp-tab-btn-inactive {
   @apply bg-synco-light text-synco-textMuted hover:bg-gray-200;
+}
+
+/* =====================================================
+   STATE
+===================================================== */
+
+.comp-state-box {
+  @apply flex flex-col items-center justify-center min-h-[280px] rounded-2xl border border-synco-border bg-synco-light text-center p-8;
+}
+
+.comp-state-box h3 {
+  @apply text-lg font-bold text-black mb-2;
+}
+
+.comp-state-box p {
+  @apply text-sm text-synco-textMuted;
+}
+
+.comp-error-box {
+  @apply border-red-200 bg-red-50;
+}
+
+.comp-retry-btn {
+  @apply mt-5 px-5 py-2.5 rounded-xl bg-synco-dark text-white text-xs font-bold transition-all;
+}
+
+.comp-retry-btn:hover {
+  @apply bg-black;
+}
+
+/* =====================================================
+   COMPETITION LIST
+===================================================== */
+
+.comp-list {
+  @apply flex flex-col gap-4;
+}
+
+/* =====================================================
+   RESPONSIVE
+===================================================== */
+
+@media (max-width: 700px) {
+  .comp-engine-container {
+    @apply p-5;
+  }
+
+  .comp-header-content {
+    @apply flex-col items-start;
+  }
+
+  .create-competition-btn {
+    @apply w-full;
+  }
+
+  .comp-title {
+    @apply text-3xl;
+  }
+
+  .comp-tabs-container {
+    @apply flex-col;
+  }
+
+  .comp-tab-btn {
+    @apply flex-none;
+  }
 }
