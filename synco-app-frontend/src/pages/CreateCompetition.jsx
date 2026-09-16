@@ -302,16 +302,16 @@ const StepPill = ({
     return (
         <div
             className={`flex items-center gap-3 ${active
-                    ? 'text-[#111114]'
-                    : 'text-[#a0a1a6]'
+                ? 'text-[#111114]'
+                : 'text-[#a0a1a6]'
                 }`}
         >
             <div
                 className={`flex h-8 w-8 items-center justify-center rounded-full border text-xs font-black ${complete
-                        ? 'border-[#111114] bg-[#111114] text-white'
-                        : active
-                            ? 'border-[#111114] bg-white text-[#111114]'
-                            : 'border-[#dedee1] bg-white text-[#a0a1a6]'
+                    ? 'border-[#111114] bg-[#111114] text-white'
+                    : active
+                        ? 'border-[#111114] bg-white text-[#111114]'
+                        : 'border-[#dedee1] bg-white text-[#a0a1a6]'
                     }`}
             >
                 {complete ? (
@@ -498,7 +498,19 @@ const CreateCompetition = () => {
     ===================================================== */
 
     const selectedGame = useMemo(() => {
-        const directGame = games.find(
+        const gameList = Array.isArray(games)
+            ? games
+            : Object.entries(games || {}).map(
+                ([id, gameConfig]) => ({
+                    id,
+                    name:
+                        gameConfig?.game_names?.[0] ||
+                        formatLabel(id),
+                    ...gameConfig,
+                })
+            );
+
+        const directGame = gameList.find(
             (game) =>
                 String(game.id) ===
                 String(form.gameId)
@@ -1594,8 +1606,8 @@ const CreateCompetition = () => {
                                                                     )
                                                                 }
                                                                 className={`group rounded-xl border p-4 text-left transition ${selected
-                                                                        ? 'border-[#111114] bg-[#111114] text-white'
-                                                                        : 'border-[#e4e4e7] bg-[#fafafa] hover:border-[#bdbdc1] hover:bg-white'
+                                                                    ? 'border-[#111114] bg-[#111114] text-white'
+                                                                    : 'border-[#e4e4e7] bg-[#fafafa] hover:border-[#bdbdc1] hover:bg-white'
                                                                     }`}
                                                             >
 
@@ -1603,8 +1615,8 @@ const CreateCompetition = () => {
 
                                                                     <div
                                                                         className={`flex h-9 w-9 items-center justify-center rounded-lg ${selected
-                                                                                ? 'bg-white/10'
-                                                                                : 'bg-white border border-[#e6e6e8]'
+                                                                            ? 'bg-white/10'
+                                                                            : 'bg-white border border-[#e6e6e8]'
                                                                             }`}
                                                                     >
                                                                         <Gamepad2
@@ -1665,8 +1677,8 @@ const CreateCompetition = () => {
                                                                 )
                                                             }
                                                             className={`rounded-xl border p-5 text-left transition ${selected
-                                                                    ? 'border-[#111114] bg-[#111114] text-white'
-                                                                    : 'border-[#e4e4e7] bg-[#fafafa] hover:border-[#bdbdc1] hover:bg-white'
+                                                                ? 'border-[#111114] bg-[#111114] text-white'
+                                                                : 'border-[#e4e4e7] bg-[#fafafa] hover:border-[#bdbdc1] hover:bg-white'
                                                                 }`}
                                                         >
 
@@ -1682,8 +1694,8 @@ const CreateCompetition = () => {
 
                                                                     <p
                                                                         className={`mt-1 text-xs font-semibold ${selected
-                                                                                ? 'text-white/60'
-                                                                                : 'text-[#88898f]'
+                                                                            ? 'text-white/60'
+                                                                            : 'text-[#88898f]'
                                                                             }`}
                                                                     >
                                                                         {formatLabel(
@@ -1710,8 +1722,8 @@ const CreateCompetition = () => {
 
                                                             <div
                                                                 className={`mt-4 flex items-center gap-2 text-[10px] font-black uppercase tracking-[0.12em] ${selected
-                                                                        ? 'text-white/60'
-                                                                        : 'text-[#999a9f]'
+                                                                    ? 'text-white/60'
+                                                                    : 'text-[#999a9f]'
                                                                     }`}
                                                             >
                                                                 <Users
@@ -1933,9 +1945,9 @@ const CreateCompetition = () => {
                                                 )
                                             }
                                             className={`${inputClass} ${form.competitionType ===
-                                                    'VERSUS'
-                                                    ? 'cursor-not-allowed opacity-50'
-                                                    : ''
+                                                'VERSUS'
+                                                ? 'cursor-not-allowed opacity-50'
+                                                : ''
                                                 }`}
                                         />
 
@@ -3152,8 +3164,8 @@ const CreateCompetition = () => {
 
                                                 <div
                                                     className={`flex h-6 w-6 items-center justify-center rounded-full ${complete
-                                                            ? 'bg-[#111114] text-white'
-                                                            : 'border border-[#dedee1] bg-white text-transparent'
+                                                        ? 'bg-[#111114] text-white'
+                                                        : 'border border-[#dedee1] bg-white text-transparent'
                                                         }`}
                                                 >
                                                     <Check
@@ -3166,8 +3178,8 @@ const CreateCompetition = () => {
 
                                                 <span
                                                     className={`text-xs font-bold ${complete
-                                                            ? 'text-[#33343a]'
-                                                            : 'text-[#999a9f]'
+                                                        ? 'text-[#33343a]'
+                                                        : 'text-[#999a9f]'
                                                         }`}
                                                 >
                                                     {label}
