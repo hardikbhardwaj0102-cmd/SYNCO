@@ -35,14 +35,14 @@
 .create-competition-btn {
   @apply flex items-center justify-center gap-2 shrink-0 h-11 px-5 rounded-xl text-xs font-bold transition-all duration-200;
 
-  background-color: #E5FE00;
-  color: #0B0E14;
-  border: 1px solid #E5FE00;
+  background-color: #d6c98a;
+  color: #0b0e14;
+  border: 1px solid #d6c98a;
 }
 
 .create-competition-btn:hover {
-  background-color: #d5ed00;
-  border-color: #d5ed00;
+  background-color: #c9bc79;
+  border-color: #c9bc79;
 }
 
 .create-competition-btn:active {
