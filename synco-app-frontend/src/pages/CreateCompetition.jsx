@@ -5,16 +5,16 @@ import {
     CalendarDays,
     Check,
     ChevronDown,
+    ArrowDown,
+    ArrowUp,
     Clock3,
     Gamepad2,
     Info,
     Layers3,
     Loader2,
-    Plus,
     ShieldCheck,
     Swords,
     Trophy,
-    Trash2,
     Users,
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
@@ -23,7 +23,9 @@ const API_URL =
     import.meta.env.VITE_API_URL ||
     'https://synco-backend-vi7b.onrender.com';
 
-const MAX_TEAMS = 25;
+/* =========================================================
+   FALLBACK CONFIG
+========================================================= */
 
 const FALLBACK_CONFIG = {
     bgmi: {
@@ -141,67 +143,19 @@ const DEFAULT_PLACEMENT_POINTS = {
     10: 1,
 };
 
-const INITIAL_POINT_RULES = [
-    {
-        id: 'placement',
-        name: 'Placement',
-        type: 'PLACEMENT',
-        unit: 'per finish',
-        points: 15,
-        enabled: true,
-    },
-    {
-        id: 'kill',
-        name: 'Elimination / Kill',
-        type: 'KILL',
-        unit: 'per kill',
-        points: 1,
-        enabled: true,
-    },
-    {
-        id: 'win',
-        name: 'Match Win',
-        type: 'WIN',
-        unit: 'per win',
-        points: 0,
-        enabled: true,
-    },
-    {
-        id: 'objective',
-        name: 'Objective',
-        type: 'OBJECTIVE',
-        unit: 'per objective',
-        points: 0,
-        enabled: false,
-    },
-    {
-        id: 'survival',
-        name: 'Survival / Time',
-        type: 'SURVIVAL',
-        unit: 'per unit',
-        points: 0,
-        enabled: false,
-    },
-    {
-        id: 'bonus',
-        name: 'Bonus',
-        type: 'BONUS',
-        unit: 'flat bonus',
-        points: 0,
-        enabled: true,
-    },
-    {
-        id: 'penalty',
-        name: 'Penalty',
-        type: 'PENALTY',
-        unit: 'per event',
-        points: 0,
-        enabled: false,
-    },
+const TIEBREAKER_OPTIONS = [
+    { id: 'PLACEMENT_POINTS', label: 'Placement Points' },
+    { id: 'KILLS', label: 'Kills' },
+    { id: 'MATCH_WINS', label: 'Match Wins' },
 ];
+
+/* =========================================================
+   HELPERS
+========================================================= */
 
 const slugifyGame = (value) => {
     const normalized = String(value || '').trim().toLowerCase();
+
     const aliases = {
         bgmi: 'bgmi',
         'battlegrounds mobile india': 'bgmi',
@@ -213,6 +167,7 @@ const slugifyGame = (value) => {
         valorant: 'valorant',
         'clash royale': 'clash-royale',
     };
+
     return aliases[normalized] || normalized.replace(/[^a-z0-9]+/g, '-');
 };
 
@@ -226,6 +181,7 @@ const formatLabel = (value) => {
 };
 
 const localDateTimeValue = (date) => {
+    if (!date) return '';
     const pad = (number) => String(number).padStart(2, '0');
     return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(
         date.getDate()
@@ -259,33 +215,109 @@ const getDefaultCompetitionEnd = () => {
     return localDateTimeValue(date);
 };
 
-const getBracketSize = (teams) => {
+const nextPowerOfTwo = (value) => {
     let size = 1;
-    while (size < Number(teams || 0)) size *= 2;
-    return size;
+    while (size < value) size *= 2;
+    return Math.max(2, size);
 };
 
-const getOrdinal = (position) => {
-    const value = Number(position);
-    if (value % 100 >= 11 && value % 100 <= 13) return `${value}th`;
-    const suffix = { 1: 'st', 2: 'nd', 3: 'rd' }[value % 10] || 'th';
-    return `${value}${suffix}`;
+const getRoundName = (roundNumber, totalRounds) => {
+    const remaining = totalRounds - roundNumber;
+    if (remaining === 0) return 'Final';
+    if (remaining === 1) return 'Semi Finals';
+    if (remaining === 2) return 'Quarter Finals';
+    if (remaining === 3) return 'Round of 16';
+    return `Round ${roundNumber}`;
 };
+
+const getBracketStats = (teamCount) => {
+    const teams = Math.max(2, Number(teamCount) || 2);
+    const slots = nextPowerOfTwo(teams);
+    const rounds = Math.log2(slots);
+    return {
+        teams,
+        slots,
+        byes: slots - teams,
+        matches: teams - 1,
+        rounds,
+    };
+};
+
+const getSeedPairing = (slotCount) => {
+    let seeds = [1, 2];
+    while (seeds.length < slotCount) {
+        const nextSize = seeds.length * 2;
+        seeds = seeds.flatMap((seed) => [seed, nextSize + 1 - seed]);
+    }
+    return seeds;
+};
+
+/*
+ * Preview helper intentionally mirrors the backend's important
+ * bracket property: a single-elimination bracket expands to the
+ * next power-of-two size, and empty slots become byes.
+ */
+const buildBracketPreview = (teamCount) => {
+    const stats = getBracketStats(teamCount);
+    const seedSlots = getSeedPairing(stats.slots);
+
+    const firstRound = [];
+
+    for (let i = 0; i < stats.slots / 2; i += 1) {
+        const seedA = seedSlots[i * 2];
+        const seedB = seedSlots[i * 2 + 1];
+        const aActive = seedA <= stats.teams;
+        const bActive = seedB <= stats.teams;
+
+        firstRound.push({
+            number: i + 1,
+            seedA,
+            seedB,
+            teamA: aActive ? `Seed ${seedA}` : 'BYE',
+            teamB: bActive ? `Seed ${seedB}` : 'BYE',
+            bye:
+                (aActive && !bActive) || (!aActive && bActive),
+        });
+    }
+
+    const rounds = [firstRound];
+    let previousCount = firstRound.length;
+
+    while (previousCount > 1) {
+        const currentCount = previousCount / 2;
+        const currentRound = [];
+        for (let index = 0; index < currentCount; index += 1) {
+            currentRound.push({
+                number: index + 1,
+                teamA: `Winner M${index * 2 + 1}`,
+                teamB: `Winner M${index * 2 + 2}`,
+            });
+        }
+        rounds.push(currentRound);
+        previousCount = currentCount;
+    }
+
+    return { stats, rounds };
+};
+
+/* =========================================================
+   REUSABLE UI
+========================================================= */
 
 const SectionHeader = ({ icon: Icon, eyebrow, title, description }) => (
     <div className="mb-7 flex items-start gap-4">
-        <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-black/10 bg-black text-white">
+        <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-[#111114] text-white">
             <Icon size={18} strokeWidth={2} />
         </div>
         <div>
-            <p className="text-[10px] font-black uppercase tracking-[0.2em] text-[#8E96A3]">
+            <p className="text-[10px] font-black uppercase tracking-[0.2em] text-[#8a8b90]">
                 {eyebrow}
             </p>
-            <h2 className="mt-1 text-xl font-black tracking-tight text-[#111111]">
+            <h2 className="mt-1 text-xl font-black tracking-tight text-[#111114]">
                 {title}
             </h2>
             {description && (
-                <p className="mt-1 max-w-2xl text-sm font-medium leading-6 text-[#7D8592]">
+                <p className="mt-1 max-w-2xl text-sm font-medium leading-6 text-[#77787e]">
                     {description}
                 </p>
             )}
@@ -295,45 +327,78 @@ const SectionHeader = ({ icon: Icon, eyebrow, title, description }) => (
 
 const FieldLabel = ({ children, required = false, hint }) => (
     <div className="mb-2 flex items-center justify-between gap-4">
-        <label className="text-[11px] font-black uppercase tracking-[0.12em] text-[#373B42]">
+        <label className="text-[11px] font-black uppercase tracking-[0.12em] text-[#37383d]">
             {children}
-            {required && <span className="ml-1 text-[#D6C98A]">*</span>}
+            {required && <span className="ml-1 text-[#bcae67]">*</span>}
         </label>
         {hint && (
-            <span className="text-[10px] font-semibold text-[#8E96A3]">{hint}</span>
+            <span className="text-[10px] font-semibold text-[#9a9ba0]">
+                {hint}
+            </span>
         )}
     </div>
 );
 
 const inputClass =
-    'h-12 w-full rounded-xl border border-[#E0E3E8] bg-[#FAFBFC] px-4 text-sm font-semibold text-[#111111] outline-none transition placeholder:text-[#A3AAB5] focus:border-[#111111] focus:bg-white';
+    'h-12 w-full rounded-xl border border-[#e4e4e7] bg-[#fafafa] px-4 text-sm font-semibold text-[#111114] outline-none transition placeholder:text-[#aaaab0] focus:border-[#111114] focus:bg-white';
 
 const textareaClass =
-    'min-h-[120px] w-full resize-none rounded-xl border border-[#E0E3E8] bg-[#FAFBFC] px-4 py-3 text-sm font-semibold leading-6 text-[#111111] outline-none transition placeholder:text-[#A3AAB5] focus:border-[#111111] focus:bg-white';
+    'min-h-[120px] w-full resize-none rounded-xl border border-[#e4e4e7] bg-[#fafafa] px-4 py-3 text-sm font-semibold leading-6 text-[#111114] outline-none transition placeholder:text-[#aaaab0] focus:border-[#111114] focus:bg-white';
 
 const selectClass =
-    'h-12 w-full appearance-none rounded-xl border border-[#E0E3E8] bg-[#FAFBFC] px-4 pr-10 text-sm font-semibold text-[#111111] outline-none transition focus:border-[#111111] focus:bg-white';
+    'h-12 w-full appearance-none rounded-xl border border-[#e4e4e7] bg-[#fafafa] px-4 pr-10 text-sm font-semibold text-[#111114] outline-none transition focus:border-[#111114] focus:bg-white';
 
 const StepPill = ({ number, title, active, complete }) => (
-    <div className={`flex items-center gap-2 ${active ? 'text-[#111111]' : 'text-[#A0A6AF]'}`}>
+    <div
+        className={`flex items-center gap-3 ${active ? 'text-[#111114]' : 'text-[#a0a1a6]'
+            }`}
+    >
         <div
             className={`flex h-8 w-8 items-center justify-center rounded-full border text-xs font-black ${complete
-                    ? 'border-[#111111] bg-[#111111] text-white'
+                    ? 'border-[#111114] bg-[#111114] text-white'
                     : active
-                        ? 'border-[#111111] bg-white text-[#111111]'
-                        : 'border-[#D9DDE3] bg-white text-[#A0A6AF]'
+                        ? 'border-[#111114] bg-white text-[#111114]'
+                        : 'border-[#dedee1] bg-white text-[#a0a1a6]'
                 }`}
         >
             {complete ? <Check size={14} strokeWidth={3} /> : number}
         </div>
-        <span className="hidden text-[10px] font-black uppercase tracking-[0.12em] lg:block">
+        <span className="hidden text-[10px] font-black uppercase tracking-[0.14em] md:block">
             {title}
         </span>
     </div>
 );
 
+const InfoBox = ({ children }) => (
+    <div className="rounded-xl border border-[#e6e2cc] bg-[#fbf9ef] p-4">
+        <div className="flex items-start gap-3">
+            <Info size={16} className="mt-0.5 shrink-0 text-[#9f934d]" />
+            <div className="text-xs font-medium leading-5 text-[#69664f]">
+                {children}
+            </div>
+        </div>
+    </div>
+);
+
+const StatCard = ({ label, value, hint }) => (
+    <div className="rounded-xl border border-[#e4e4e7] bg-[#fafafa] p-4">
+        <p className="text-[9px] font-black uppercase tracking-[0.14em] text-[#9a9ba0]">
+            {label}
+        </p>
+        <p className="mt-1 text-2xl font-black tracking-tight text-[#111114]">
+            {value}
+        </p>
+        {hint && <p className="mt-1 text-[10px] font-semibold text-[#8b8c91]">{hint}</p>}
+    </div>
+);
+
+/* =========================================================
+   COMPONENT
+========================================================= */
+
 const CreateCompetition = () => {
     const navigate = useNavigate();
+
     const [step, setStep] = useState(1);
     const [games, setGames] = useState([]);
     const [config, setConfig] = useState(FALLBACK_CONFIG);
@@ -352,6 +417,9 @@ const CreateCompetition = () => {
         teamSize: 4,
         maxTeams: 16,
         numberOfMatches: 3,
+        bestOf: 1,
+        seedingMethod: 'BALANCED_SEEDING',
+        allowAutomaticByes: true,
         registrationStart: getDefaultRegistrationStart(),
         registrationEnd: getDefaultRegistrationEnd(),
         competitionStart: getDefaultCompetitionStart(),
@@ -359,25 +427,14 @@ const CreateCompetition = () => {
         competitionRules: '',
         matchRules: '',
         eligibilityRules: '',
-    });
-
-    const [bracket, setBracket] = useState({
-        type: 'SINGLE_ELIMINATION',
-        seeding: 'RANDOM',
-        allowByes: true,
-        autoGenerateAfterRegistration: true,
-        bestOf: 1,
-        thirdPlaceMatch: false,
-    });
-
-    const [pointsTable, setPointsTable] = useState({
-        placementPoints: { ...DEFAULT_PLACEMENT_POINTS },
         killPoints: 1,
-        bonusPoints: 0,
-        rules: INITIAL_POINT_RULES,
-        maxPointsPerMatch: '',
-        tiebreakers: ['TOTAL_POINTS', 'PLACEMENT_POINTS', 'KILLS'],
+        placementPoints: DEFAULT_PLACEMENT_POINTS,
+        tiebreakers: ['PLACEMENT_POINTS', 'KILLS', 'MATCH_WINS'],
     });
+
+    /* =====================================================
+       LOAD CONFIG
+    ===================================================== */
 
     useEffect(() => {
         const loadConfiguration = async () => {
@@ -385,51 +442,29 @@ const CreateCompetition = () => {
                 setLoadingConfig(true);
                 const response = await fetch(`${API_URL}/api/competitions/config`, {
                     method: 'GET',
-                    headers: { Accept: 'application/json' },
                     credentials: 'include',
-                    cache: 'no-store',
+                    headers: { Accept: 'application/json' },
                 });
+
+                if (!response.ok) throw new Error('Unable to load competition configuration.');
+
                 const data = await response.json();
-
-                if (response.ok && data?.success) {
-                    if (data?.games) setGames(data.games);
-                    if (data?.config) setConfig(data.config);
-                    else if (data?.games) setConfig(data.games);
-                }
-
-                try {
-                    const gamesResponse = await fetch(`${API_URL}/api/games`, {
-                        credentials: 'include',
-                        headers: { Accept: 'application/json' },
-                        cache: 'no-store',
-                    });
-                    if (gamesResponse.ok) {
-                        const gamesData = await gamesResponse.json();
-                        if (Array.isArray(gamesData?.games) && gamesData.games.length) {
-                            setGames(gamesData.games);
-                        }
-                    }
-                } catch (gamesError) {
-                    console.error('Games fallback failed:', gamesError);
-                }
+                setConfig(data?.games && typeof data.games === 'object' ? data.games : FALLBACK_CONFIG);
+                setGames(Array.isArray(data?.gamesList) ? data.gamesList : []);
             } catch (loadError) {
-                console.error('Competition config load failed:', loadError);
+                console.warn('Competition configuration fallback:', loadError);
+                setConfig(FALLBACK_CONFIG);
             } finally {
                 setLoadingConfig(false);
             }
         };
+
         loadConfiguration();
     }, []);
 
-    const availableGames = useMemo(() => {
+    const gameList = useMemo(() => {
         if (Array.isArray(games) && games.length) return games;
-        if (games && typeof games === 'object') {
-            return Object.entries(games).map(([id, gameConfig]) => ({
-                id,
-                name: gameConfig?.game_names?.[0] || formatLabel(id),
-                ...gameConfig,
-            }));
-        }
+
         return Object.entries(config || {}).map(([id, gameConfig]) => ({
             id,
             name: gameConfig?.game_names?.[0] || formatLabel(id),
@@ -438,336 +473,303 @@ const CreateCompetition = () => {
     }, [games, config]);
 
     const selectedGame = useMemo(() => {
-        return (
-            availableGames.find((game) => String(game.id) === String(form.gameId)) || {
-                id: form.gameId,
-                name:
-                    config?.[slugifyGame(form.gameId)]?.game_names?.[0] ||
-                    formatLabel(form.gameId),
-            }
+        const direct = gameList.find(
+            (game) => String(game.id) === String(form.gameId)
         );
-    }, [availableGames, config, form.gameId]);
+        if (direct) return direct;
 
-    const gameConfig = useMemo(() => {
-        const slug = slugifyGame(selectedGame?.slug || selectedGame?.name || form.gameId);
-        return config?.[slug] || config?.[form.gameId] || FALLBACK_CONFIG[slug] || FALLBACK_CONFIG[form.gameId] || null;
-    }, [config, selectedGame, form.gameId]);
+        const fallbackKey = slugifyGame(form.gameId);
+        const fallback = config?.[fallbackKey];
+        return {
+            id: form.gameId,
+            name: fallback?.game_names?.[0] || formatLabel(form.gameId),
+            ...fallback,
+        };
+    }, [gameList, config, form.gameId]);
 
-    const availableModes = useMemo(() => {
-        if (!gameConfig?.modes) return [];
-        return Object.entries(gameConfig.modes).map(([id, mode]) => ({ id, ...mode }));
-    }, [gameConfig]);
+    const modeList = useMemo(() => {
+        const modes = selectedGame?.modes || config?.[slugifyGame(form.gameId)]?.modes || {};
+        return Object.entries(modes).map(([id, mode]) => ({ id, ...mode }));
+    }, [selectedGame, config, form.gameId]);
 
     const selectedMode = useMemo(
-        () => availableModes.find((mode) => mode.id === form.gameMode) || availableModes[0] || null,
-        [availableModes, form.gameMode]
+        () => modeList.find((mode) => mode.id === form.gameMode) || modeList[0] || null,
+        [modeList, form.gameMode]
     );
 
-    const bracketPreview = useMemo(() => {
-        const maxTeams = Math.max(2, Math.min(MAX_TEAMS, Number(form.maxTeams) || 2));
-        const bracketSize = getBracketSize(maxTeams);
-        const rounds = Math.log2(bracketSize);
-        const byes = Math.max(0, bracketSize - maxTeams);
-        const firstRoundMatches = bracketSize / 2;
-        const totalMatches = bracketSize - 1;
-        return { maxTeams, bracketSize, rounds, byes, firstRoundMatches, totalMatches };
-    }, [form.maxTeams]);
+    const isVersus = form.competitionType === 'VERSUS';
+    const bracketPreview = useMemo(
+        () => buildBracketPreview(Number(form.maxTeams)),
+        [form.maxTeams]
+    );
 
-    const updateField = (field, value) => {
+    const totalRoundsName = useMemo(() => {
+        const stats = bracketPreview.stats;
+        return stats.rounds === 1 ? 'Final' : `${stats.rounds} rounds`;
+    }, [bracketPreview]);
+
+    useEffect(() => {
+        if (!selectedMode) return;
+
+        const nextType = selectedMode.type || selectedMode.competition_type || 'CLASSIC';
+        const nextStructure = selectedMode.structure || (nextType === 'VERSUS' ? 'KNOCKOUT' : 'POINTS');
+        const supportedSizes = Array.isArray(selectedMode.team_sizes)
+            ? selectedMode.team_sizes
+            : [1, 2, 3, 4];
+        const nextTeamSize = supportedSizes.includes(Number(form.teamSize))
+            ? Number(form.teamSize)
+            : Number(supportedSizes[0]);
+
+        setForm((previous) => {
+            const nextMatches = selectedMode.default_matches || (nextType === 'CLASSIC' ? 3 : 1);
+            const needsTypeUpdate = previous.competitionType !== nextType;
+            const needsModeUpdate = previous.gameMode !== selectedMode.id;
+            const needsTeamSizeUpdate = Number(previous.teamSize) !== nextTeamSize;
+            const needsMatchesUpdate = Number(previous.numberOfMatches) !== Number(nextMatches);
+
+            if (!needsTypeUpdate && !needsModeUpdate && !needsTeamSizeUpdate && !needsMatchesUpdate) {
+                return previous;
+            }
+
+            return {
+                ...previous,
+                competitionType: nextType,
+                gameMode: selectedMode.id,
+                teamSize: nextTeamSize,
+                numberOfMatches: nextMatches,
+            };
+        });
+    }, [selectedMode]);
+
+    const updateForm = (field, value) => {
+        setError('');
         setForm((previous) => ({ ...previous, [field]: value }));
-        setError('');
-        setSuccessMessage('');
     };
 
-    const handleGameChange = (gameId) => {
-        const game = availableGames.find((item) => String(item.id) === String(gameId)) || {
-            id: gameId,
-            name: formatLabel(gameId),
-        };
-        const slug = slugifyGame(game.slug || game.name || gameId);
-        const nextConfig = config?.[slug] || config?.[gameId] || FALLBACK_CONFIG[slug] || FALLBACK_CONFIG[gameId];
-        const nextModes = nextConfig?.modes ? Object.entries(nextConfig.modes) : [];
-        const firstMode = nextModes[0];
-        const modeId = firstMode?.[0] || '';
-        const modeConfig = firstMode?.[1] || null;
-        const nextTeamSizes = modeConfig?.team_sizes || [1];
-        const nextTeamSize = nextTeamSizes.includes(Number(form.teamSize)) ? Number(form.teamSize) : nextTeamSizes[0];
-        const nextType = modeConfig?.type || 'VERSUS';
+    const handleGameChange = (value) => {
+        const game = gameList.find((item) => String(item.id) === String(value));
+        const nextModes = game?.modes || config?.[slugifyGame(value)]?.modes || {};
+        const [firstModeId, firstModeConfig] = Object.entries(nextModes)[0] || ['CLASSIC', null];
+        const nextType = firstModeConfig?.type || 'CLASSIC';
+        const supportedSizes = Array.isArray(firstModeConfig?.team_sizes)
+            ? firstModeConfig.team_sizes
+            : [1, 2, 3, 4];
 
+        setError('');
         setForm((previous) => ({
             ...previous,
-            gameId,
-            gameMode: modeId,
+            gameId: value,
+            gameMode: firstModeId,
             competitionType: nextType,
-            participantType: modeConfig?.participant_type || 'TEAM',
-            teamSize: nextTeamSize,
-            numberOfMatches: modeConfig?.default_matches || 1,
+            teamSize: Number(supportedSizes[0] || 1),
+            numberOfMatches: firstModeConfig?.default_matches || (nextType === 'CLASSIC' ? 3 : 1),
         }));
-        setError('');
     };
 
-    const handleModeChange = (modeId) => {
-        const mode = availableModes.find((item) => item.id === modeId);
-        if (!mode) return;
-        const teamSizes = mode.team_sizes || [1];
-        const teamSize = teamSizes.includes(Number(form.teamSize)) ? Number(form.teamSize) : teamSizes[0];
-        const isClassic = mode.type === 'CLASSIC';
-
+    const updatePlacementPoints = (place, value) => {
+        setError('');
         setForm((previous) => ({
-            ...previous,
-            gameMode: modeId,
-            competitionType: mode.type,
-            participantType: mode.participant_type || 'TEAM',
-            teamSize,
-            numberOfMatches: isClassic ? mode.default_matches || 1 : 1,
-        }));
-        setError('');
-    };
-
-    const updatePlacementPoints = (position, value) => {
-        setPointsTable((previous) => ({
             ...previous,
             placementPoints: {
                 ...previous.placementPoints,
-                [position]: Math.max(0, Number(value) || 0),
+                [place]: value,
             },
         }));
-        setError('');
     };
 
-    const updatePointRule = (id, field, value) => {
-        setPointsTable((previous) => ({
-            ...previous,
-            rules: previous.rules.map((rule) =>
-                rule.id === id
-                    ? {
-                        ...rule,
-                        [field]: field === 'points' ? Math.max(0, Number(value) || 0) : value,
-                    }
-                    : rule
-            ),
-        }));
-        setError('');
-    };
-
-    const addPointRule = () => {
-        setPointsTable((previous) => ({
-            ...previous,
-            rules: [
-                ...previous.rules,
-                {
-                    id: `custom-${Date.now()}`,
-                    name: 'Custom rule',
-                    type: 'CUSTOM',
-                    unit: 'per event',
-                    points: 0,
-                    enabled: true,
-                },
-            ],
-        }));
-    };
-
-    const removePointRule = (id) => {
-        setPointsTable((previous) => ({
-            ...previous,
-            rules: previous.rules.filter((rule) => rule.id !== id),
-        }));
-    };
-
-    const toggleTiebreaker = (key) => {
-        setPointsTable((previous) => {
-            const exists = previous.tiebreakers.includes(key);
-            if (exists) {
-                return {
-                    ...previous,
-                    tiebreakers: previous.tiebreakers.filter((item) => item !== key),
-                };
-            }
-            return { ...previous, tiebreakers: [...previous.tiebreakers, key] };
+    const moveTiebreaker = (index, direction) => {
+        setForm((previous) => {
+            const next = [...previous.tiebreakers];
+            const target = index + direction;
+            if (target < 0 || target >= next.length) return previous;
+            [next[index], next[target]] = [next[target], next[index]];
+            return { ...previous, tiebreakers: next };
         });
     };
 
-    const validateStep = (currentStep) => {
+    const validateStep = (stepNumber) => {
         setError('');
 
-        if (currentStep === 1) {
+        if (stepNumber === 1) {
             if (!form.title.trim()) {
-                setError('Competition name is required.');
+                setError('Competition title is required.');
                 return false;
             }
-            if (form.title.trim().length < 3) {
-                setError('Competition name must contain at least 3 characters.');
+            if (!form.gameId) {
+                setError('Select a game.');
                 return false;
             }
-            if (!form.gameId || !form.gameMode) {
-                setError('Select a game and competition format.');
-                return false;
-            }
-            return true;
         }
 
-        if (currentStep === 2) {
-            const teamSize = Number(form.teamSize);
+        if (stepNumber === 2) {
             const maxTeams = Number(form.maxTeams);
-            const numberOfMatches = Number(form.numberOfMatches);
-            const allowedSizes = selectedMode?.team_sizes || [];
+            if (!Number.isInteger(maxTeams) || maxTeams < 2 || maxTeams > 25) {
+                setError('Maximum teams must be between 2 and 25.');
+                return false;
+            }
 
-            if (!allowedSizes.includes(teamSize)) {
-                setError(`Team size must be one of: ${allowedSizes.join(', ')}.`);
+            if (!Number(form.teamSize) || Number(form.teamSize) < 1) {
+                setError('Select a valid team size.');
                 return false;
             }
-            if (maxTeams < 2 || maxTeams > MAX_TEAMS) {
-                setError(`Maximum teams must be between 2 and ${MAX_TEAMS}.`);
-                return false;
+
+            if (form.competitionType === 'CLASSIC') {
+                const matches = Number(form.numberOfMatches);
+                if (!Number.isInteger(matches) || matches < 1 || matches > 50) {
+                    setError('Classic competitions need between 1 and 50 matches.');
+                    return false;
+                }
             }
-            if (form.competitionType === 'CLASSIC' && numberOfMatches < 1) {
-                setError('Classic competitions require at least one match.');
-                return false;
-            }
-            return true;
         }
 
-        if (currentStep === 3) {
-            const registrationStart = new Date(form.registrationStart);
+        if (stepNumber === 3) {
+            const start = new Date(form.registrationStart);
             const registrationEnd = new Date(form.registrationEnd);
             const competitionStart = new Date(form.competitionStart);
             const competitionEnd = new Date(form.competitionEnd);
-            if ([registrationStart, registrationEnd, competitionStart, competitionEnd].some((date) => Number.isNaN(date.getTime()))) {
-                setError('Please provide all competition dates.');
+
+            if ([start, registrationEnd, competitionStart, competitionEnd].some((date) => Number.isNaN(date.getTime()))) {
+                setError('Please provide all schedule dates.');
                 return false;
             }
-            if (registrationEnd <= registrationStart) {
-                setError('Registration end must be after registration start.');
+            if (registrationEnd <= start) {
+                setError('Registration must end after it starts.');
                 return false;
             }
             if (competitionStart < registrationEnd) {
-                setError('Competition start must be on or after registration end.');
+                setError('Competition should start after registration closes.');
                 return false;
             }
             if (competitionEnd <= competitionStart) {
-                setError('Competition end must be after competition start.');
+                setError('Competition must end after it starts.');
                 return false;
             }
-            return true;
         }
 
-        if (currentStep === 4) {
+        if (stepNumber === 4) {
             if (!form.competitionRules.trim()) {
-                setError('Add at least the main competition rules.');
+                setError('Add the competition rules.');
                 return false;
             }
-            return true;
         }
 
-        if (currentStep === 5) {
-            if (form.competitionType === 'VERSUS') {
-                if (!['SINGLE_ELIMINATION'].includes(bracket.type)) {
-                    setError('The current tournament engine supports single elimination brackets.');
-                    return false;
-                }
-                if (bracketPreview.maxTeams < 2) {
-                    setError('A bracket needs at least 2 teams.');
-                    return false;
-                }
-                if (bracket.bestOf < 1 || bracket.bestOf % 2 === 0) {
-                    setError('Best-of must be an odd number such as 1, 3, or 5.');
-                    return false;
-                }
+        if (stepNumber === 5 && isVersus) {
+            if (!form.seedingMethod) {
+                setError('Select a seeding method.');
+                return false;
             }
-            return true;
         }
 
-        if (currentStep === 6) {
-            if (form.competitionType === 'CLASSIC') {
-                if (!pointsTable.tiebreakers.length) {
-                    setError('Select at least one tiebreaker.');
-                    return false;
-                }
-                if (Object.values(pointsTable.placementPoints).some((value) => Number(value) < 0)) {
-                    setError('Point values cannot be negative.');
-                    return false;
-                }
+        if (stepNumber === 6 && !isVersus) {
+            const placementValues = Object.values(form.placementPoints).map(Number);
+            if (placementValues.some((value) => !Number.isFinite(value) || value < 0)) {
+                setError('Placement points must be zero or greater.');
+                return false;
             }
-            return true;
+            if (!Number.isFinite(Number(form.killPoints)) || Number(form.killPoints) < 0) {
+                setError('Kill points must be zero or greater.');
+                return false;
+            }
+            if (!Array.isArray(form.tiebreakers) || form.tiebreakers.length !== 3) {
+                setError('Configure the leaderboard tiebreakers.');
+                return false;
+            }
         }
 
         return true;
     };
 
-    const handleNext = () => {
+    const goNext = () => {
         if (!validateStep(step)) return;
-        setStep((previous) => Math.min(previous + 1, 7));
+        const lastStep = isVersus ? 6 : 6;
+        setStep((previous) => Math.min(previous + 1, lastStep));
         window.scrollTo({ top: 0, behavior: 'smooth' });
     };
 
-    const handleBack = () => {
+    const goBack = () => {
         setError('');
         setStep((previous) => Math.max(previous - 1, 1));
         window.scrollTo({ top: 0, behavior: 'smooth' });
     };
 
     const handleCreate = async () => {
-        for (let current = 1; current <= 6; current += 1) {
-            if (!validateStep(current)) {
-                setStep(current);
-                return;
-            }
+        if (!validateStep(4)) {
+            setStep(4);
+            return;
+        }
+
+        if (!validateStep(5)) {
+            setStep(5);
+            return;
+        }
+
+        if (!isVersus && !validateStep(6)) {
+            setStep(6);
+            return;
         }
 
         setCreating(true);
         setError('');
         setSuccessMessage('');
 
-        try {
-            const payload = {
-                title: form.title.trim(),
-                description: form.description.trim(),
-                gameId: form.gameId,
-                competitionType: form.competitionType,
-                gameMode: form.gameMode,
-                participantType: 'TEAM',
-                teamSize: Number(form.teamSize),
-                // Backward-compatible database field. Internally this represents team count.
-                maxParticipants: Number(form.maxTeams),
-                numberOfMatches: form.competitionType === 'VERSUS' ? 1 : Number(form.numberOfMatches),
-                configuration: {
-                    structure: selectedMode?.structure || null,
-                    maxTeams: Number(form.maxTeams),
-                    bracket:
-                        form.competitionType === 'VERSUS'
-                            ? {
-                                ...bracket,
-                                bracketSize: bracketPreview.bracketSize,
-                                expectedByes: bracketPreview.byes,
-                                expectedRounds: bracketPreview.rounds,
-                                firstRoundMatches: bracketPreview.firstRoundMatches,
-                                totalMatches: bracketPreview.totalMatches,
-                            }
-                            : null,
-                    scoring:
-                        form.competitionType === 'CLASSIC'
-                            ? {
-                                placementPoints: pointsTable.placementPoints,
-                                killPoints: Number(pointsTable.killPoints) || 0,
-                                bonusPoints: Number(pointsTable.bonusPoints) || 0,
-                                rules: pointsTable.rules,
-                                maxPointsPerMatch:
-                                    pointsTable.maxPointsPerMatch === ''
-                                        ? null
-                                        : Number(pointsTable.maxPointsPerMatch),
-                                tiebreakers: pointsTable.tiebreakers,
-                            }
-                            : null,
-                },
-                competitionRules: form.competitionRules.trim(),
-                matchRules: form.matchRules.trim(),
-                eligibilityRules: form.eligibilityRules.trim(),
-                registrationStart: form.registrationStart,
-                registrationEnd: form.registrationEnd,
-                competitionStart: form.competitionStart,
-                competitionEnd: form.competitionEnd,
-            };
+        const structure = selectedMode?.structure || (isVersus ? 'KNOCKOUT' : 'POINTS');
+        const payload = {
+            title: form.title.trim(),
+            description: form.description.trim(),
+            gameId: form.gameId,
+            competitionType: form.competitionType,
+            gameMode: form.gameMode,
+            participantType: form.participantType,
+            teamSize: Number(form.teamSize),
 
+            /*
+             * New public contract: maxTeams.
+             * maxParticipants is retained for compatibility with the
+             * existing Competition SQLAlchemy model/backend.
+             */
+            maxTeams: Number(form.maxTeams),
+            maxParticipants: Number(form.maxTeams),
+
+            numberOfMatches: isVersus ? 1 : Number(form.numberOfMatches),
+            configuration: {
+                structure,
+                bracket: isVersus
+                    ? {
+                        type: 'SINGLE_ELIMINATION',
+                        seeding: form.seedingMethod,
+                        allowByes: Boolean(form.allowAutomaticByes),
+                        maxTeams: Number(form.maxTeams),
+                        bracketSlots: bracketPreview.stats.slots,
+                        expectedByes: bracketPreview.stats.byes,
+                        expectedMatches: bracketPreview.stats.matches,
+                        expectedRounds: bracketPreview.stats.rounds,
+                        bestOf: Number(form.bestOf),
+                    }
+                    : null,
+                scoring: !isVersus
+                    ? {
+                        placementPoints: form.placementPoints,
+                        killPoints: Number(form.killPoints),
+                        tiebreakers: ['TOTAL_POINTS', ...form.tiebreakers],
+                    }
+                    : null,
+                leaderboard: !isVersus
+                    ? {
+                        primary: 'TOTAL_POINTS',
+                        tiebreakers: form.tiebreakers,
+                    }
+                    : null,
+            },
+            competitionRules: form.competitionRules.trim(),
+            matchRules: form.matchRules.trim(),
+            eligibilityRules: form.eligibilityRules.trim(),
+            registrationStart: form.registrationStart,
+            registrationEnd: form.registrationEnd,
+            competitionStart: form.competitionStart,
+            competitionEnd: form.competitionEnd,
+        };
+
+        try {
             const response = await fetch(`${API_URL}/api/competitions`, {
                 method: 'POST',
                 credentials: 'include',
@@ -794,7 +796,7 @@ const CreateCompetition = () => {
             const createdCompetition = data?.competition;
             setSuccessMessage('Competition created successfully.');
 
-            setTimeout(() => {
+            window.setTimeout(() => {
                 if (createdCompetition?.id) {
                     navigate(`/competitions/${createdCompetition.id}`);
                 } else {
@@ -809,944 +811,903 @@ const CreateCompetition = () => {
         }
     };
 
-    const stepTitle = {
-        1: 'Competition basics',
-        2: 'Format & teams',
-        3: 'Schedule',
-        4: 'Rules & governance',
-        5: 'Bracket setup',
-        6: 'Points table',
-        7: 'Review',
-    }[step];
+    const stepTitle =
+        {
+            1: 'Competition basics',
+            2: 'Format & teams',
+            3: 'Schedule',
+            4: 'Rules',
+            5: isVersus ? 'Bracket setup' : 'Tournament structure',
+            6: isVersus ? 'Review' : 'Points & leaderboard',
+        }[step] || 'Create competition';
+
 
     return (
-        <div className="min-h-screen bg-[#F4F5F7] text-[#111111]">
-            <div className="sticky top-0 z-40 border-b border-[#E0E3E8] bg-white/95 backdrop-blur">
-                <div className="mx-auto flex min-h-[72px] max-w-[1400px] items-center justify-between gap-5 px-5 py-3 lg:px-8">
+        <div className="min-h-screen bg-[#f5f5f4] text-[#111114]">
+            {/* TOP BAR */}
+            <div className="sticky top-0 z-40 border-b border-black/10 bg-white/95 backdrop-blur">
+                <div className="mx-auto flex h-[72px] max-w-[1400px] items-center justify-between px-5 lg:px-8">
                     <button
                         type="button"
                         onClick={() => navigate('/competitions')}
                         className="group flex items-center gap-3"
                     >
-                        <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-[#000000] text-white transition group-hover:bg-[#171717]">
+                        <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-[#111114] text-white transition group-hover:bg-[#2a2a2e]">
                             <ArrowLeft size={16} />
                         </div>
                         <div className="text-left">
-                            <p className="text-[10px] font-black uppercase tracking-[0.18em] text-[#8E96A3]">
+                            <p className="text-[10px] font-black uppercase tracking-[0.18em] text-[#999a9f]">
                                 SYNCO
                             </p>
-                            <p className="text-sm font-black tracking-tight">Create Tournament</p>
+                            <p className="text-sm font-black tracking-tight">
+                                Create Competition
+                            </p>
                         </div>
                     </button>
 
-                    <div className="hidden items-center gap-3 xl:flex">
+                    <div className="hidden items-center gap-4 md:flex">
                         {[
                             ['1', 'Basics'],
-                            ['2', 'Teams'],
+                            ['2', 'Format'],
                             ['3', 'Schedule'],
                             ['4', 'Rules'],
-                            ['5', 'Bracket'],
-                            ['6', 'Points'],
-                            ['7', 'Review'],
+                            ['5', isVersus ? 'Bracket' : 'Points'],
+                            ['6', 'Review'],
                         ].map(([number, title], index) => (
-                            <div key={number} className="flex items-center gap-3">
+                            <div key={number} className="flex items-center gap-4">
                                 <StepPill
                                     number={number}
                                     title={title}
                                     active={step === Number(number)}
                                     complete={step > Number(number)}
                                 />
-                                {index < 6 && <div className="h-px w-5 bg-[#DDE1E6]" />}
+                                {index < 5 && <div className="h-px w-5 bg-[#dedee1]" />}
                             </div>
                         ))}
                     </div>
 
-                    <div className="hidden rounded-full border border-[#E0E3E8] bg-[#FAFBFC] px-4 py-2 text-[10px] font-black uppercase tracking-[0.15em] text-[#6F7783] sm:block">
+                    <div className="hidden rounded-full border border-[#e5e5e7] bg-[#fafafa] px-4 py-2 text-[10px] font-black uppercase tracking-[0.15em] text-[#77787e] sm:block">
                         Organizer
                     </div>
                 </div>
             </div>
 
             <main className="mx-auto max-w-[1400px] px-5 py-8 lg:px-8 lg:py-10">
+                {/* HEADER */}
                 <div className="mb-8">
-                    <div className="flex items-center gap-2 text-[10px] font-black uppercase tracking-[0.18em] text-[#B4A86F]">
+                    <div className="flex items-center gap-2 text-[10px] font-black uppercase tracking-[0.18em] text-[#8b7f45]">
                         <Swords size={13} />
                         Competition Engine
                     </div>
+
                     <div className="mt-2 flex flex-col justify-between gap-4 lg:flex-row lg:items-end">
                         <div>
-                            <h1 className="text-3xl font-black tracking-[-0.04em] sm:text-4xl">{stepTitle}</h1>
-                            <p className="mt-2 max-w-2xl text-sm font-medium leading-6 text-[#7D8592]">
-                                Build the tournament structure, rules, bracket logic, and scoring before publishing it to players.
+                            <h1 className="text-3xl font-black tracking-[-0.04em] sm:text-4xl">
+                                {stepTitle}
+                            </h1>
+                            <p className="mt-2 max-w-2xl text-sm font-medium leading-6 text-[#77787e]">
+                                Build a competition with a clear progression path, transparent scoring, and rules that SYNCO can enforce consistently.
                             </p>
                         </div>
-                        <div className="rounded-xl border border-[#E0E3E8] bg-white px-4 py-3">
-                            <p className="text-[9px] font-black uppercase tracking-[0.16em] text-[#8E96A3]">
+
+                        <div className="rounded-xl border border-[#dedee1] bg-white px-4 py-3">
+                            <p className="text-[9px] font-black uppercase tracking-[0.16em] text-[#9a9ba0]">
                                 Current format
                             </p>
                             <p className="mt-1 text-sm font-black">
                                 {formatLabel(form.competitionType)}
-                                <span className="mx-2 text-[#C5CBD3]">/</span>
+                                <span className="mx-2 text-[#c7c7ca]">/</span>
                                 {formatLabel(form.gameMode)}
                             </p>
                         </div>
                     </div>
                 </div>
 
+                {/* ALERTS */}
                 {error && (
-                    <div className="mb-6 flex items-start gap-3 rounded-xl border border-[#D9DDE3] bg-white px-4 py-3 text-sm font-semibold text-[#3D434B]">
-                        <Info size={17} className="mt-0.5 shrink-0 text-[#B4A86F]" />
+                    <div className="mb-6 flex items-start gap-3 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm font-semibold text-red-700">
+                        <Info size={17} className="mt-0.5 shrink-0" />
                         <p>{error}</p>
                     </div>
                 )}
 
                 {successMessage && (
-                    <div className="mb-6 flex items-start gap-3 rounded-xl border border-[#D9DDE3] bg-white px-4 py-3 text-sm font-semibold text-[#30353B]">
-                        <Check size={17} className="mt-0.5 shrink-0 text-[#B4A86F]" />
+                    <div className="mb-6 flex items-start gap-3 rounded-xl border border-[#e6e2cc] bg-[#fbf9ef] px-4 py-3 text-sm font-semibold text-[#6d643a]">
+                        <Check size={17} className="mt-0.5 shrink-0" />
                         <p>{successMessage}</p>
                     </div>
                 )}
 
                 <div className="grid grid-cols-1 gap-6 xl:grid-cols-[minmax(0,1fr)_340px]">
-                    <div className="overflow-hidden rounded-2xl border border-[#E0E3E8] bg-white">
+                    <div className="rounded-2xl border border-black/10 bg-white">
+                        {/* STEP 1 */}
                         {step === 1 && (
                             <div className="p-6 sm:p-8">
                                 <SectionHeader
-                                    icon={Trophy}
-                                    eyebrow="01 / Identity"
-                                    title="Competition basics"
-                                    description="Give the tournament a clear identity and connect it to a supported game and format."
+                                    icon={Gamepad2}
+                                    eyebrow="01 / Basics"
+                                    title="Start with the competition identity"
+                                    description="Give players enough information to understand what they are joining before they register."
                                 />
-                                <div className="space-y-6">
+
+                                <div className="grid gap-6">
                                     <div>
-                                        <FieldLabel required>Competition name</FieldLabel>
+                                        <FieldLabel required>Competition title</FieldLabel>
                                         <input
-                                            type="text"
                                             value={form.title}
-                                            onChange={(event) => updateField('title', event.target.value)}
-                                            placeholder="e.g. SYNCO BGMI Open #1"
-                                            maxLength={100}
+                                            onChange={(event) => updateForm('title', event.target.value)}
                                             className={inputClass}
+                                            placeholder="SYNCO BGMI Open #01"
                                         />
-                                        <div className="mt-2 flex justify-between text-[10px] font-semibold text-[#8E96A3]">
-                                            <span>Use a name players can recognize immediately.</span>
-                                            <span>{form.title.length}/100</span>
-                                        </div>
                                     </div>
 
                                     <div>
                                         <FieldLabel>Description</FieldLabel>
                                         <textarea
                                             value={form.description}
-                                            onChange={(event) => updateField('description', event.target.value)}
-                                            placeholder="Describe what players should expect from this tournament."
-                                            maxLength={500}
+                                            onChange={(event) => updateForm('description', event.target.value)}
                                             className={textareaClass}
+                                            placeholder="Explain the competition format, audience, and what players are competing for."
                                         />
                                     </div>
 
-                                    <div>
-                                        <FieldLabel required>Game</FieldLabel>
-                                        {loadingConfig ? (
-                                            <div className="flex h-12 items-center gap-2 rounded-xl border border-[#E0E3E8] bg-[#FAFBFC] px-4 text-sm font-semibold text-[#8E96A3]">
-                                                <Loader2 size={16} className="animate-spin" />
-                                                Loading games...
+                                    <div className="grid gap-6 md:grid-cols-2">
+                                        <div>
+                                            <FieldLabel required>Game</FieldLabel>
+                                            <div className="relative">
+                                                <select
+                                                    value={form.gameId}
+                                                    onChange={(event) => handleGameChange(event.target.value)}
+                                                    className={selectClass}
+                                                    disabled={loadingConfig}
+                                                >
+                                                    {gameList.map((game) => (
+                                                        <option key={game.id} value={game.id}>
+                                                            {game.name || formatLabel(game.id)}
+                                                        </option>
+                                                    ))}
+                                                </select>
+                                                <ChevronDown className="pointer-events-none absolute right-4 top-1/2 -translate-y-1/2 text-[#8d8e93]" size={16} />
                                             </div>
-                                        ) : (
-                                            <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
-                                                {availableGames.map((game) => {
-                                                    const selected = String(form.gameId) === String(game.id);
-                                                    return (
-                                                        <button
-                                                            key={game.id}
-                                                            type="button"
-                                                            onClick={() => handleGameChange(game.id)}
-                                                            className={`rounded-xl border p-4 text-left transition ${selected
-                                                                    ? 'border-[#000000] bg-[#000000] text-white'
-                                                                    : 'border-[#E0E3E8] bg-[#FAFBFC] hover:border-[#BFC5CC] hover:bg-white'
-                                                                }`}
-                                                        >
-                                                            <div className="flex items-center justify-between">
-                                                                <div className={`flex h-9 w-9 items-center justify-center rounded-lg ${selected ? 'bg-white/10' : 'border border-[#E5E8EC] bg-white'}`}>
-                                                                    <Gamepad2 size={17} />
-                                                                </div>
-                                                                {selected && (
-                                                                    <div className="flex h-5 w-5 items-center justify-center rounded-full bg-white text-black">
-                                                                        <Check size={12} strokeWidth={3} />
-                                                                    </div>
-                                                                )}
-                                                            </div>
-                                                            <p className="mt-4 text-sm font-black">{game.name}</p>
-                                                        </button>
-                                                    );
-                                                })}
+                                        </div>
+
+                                        <div>
+                                            <FieldLabel>Mode</FieldLabel>
+                                            <div className="relative">
+                                                <select
+                                                    value={form.gameMode}
+                                                    onChange={(event) => updateForm('gameMode', event.target.value)}
+                                                    className={selectClass}
+                                                >
+                                                    {modeList.map((mode) => (
+                                                        <option key={mode.id} value={mode.id}>
+                                                            {formatLabel(mode.id)}
+                                                        </option>
+                                                    ))}
+                                                </select>
+                                                <ChevronDown className="pointer-events-none absolute right-4 top-1/2 -translate-y-1/2 text-[#8d8e93]" size={16} />
                                             </div>
-                                        )}
+                                        </div>
                                     </div>
 
-                                    <div>
+                                    <InfoBox>
+                                        <span className="font-black">{selectedGame?.name || formatLabel(form.gameId)}</span>{' '}
+                                        is configured as a <span className="font-black">{formatLabel(form.competitionType)}</span> competition in this setup.
+                                    </InfoBox>
+                                </div>
+                            </div>
+                        )}
+
+                        {/* STEP 2 */}
+                        {step === 2 && (
+                            <div className="p-6 sm:p-8">
+                                <SectionHeader
+                                    icon={Users}
+                                    eyebrow="02 / Format"
+                                    title="Define teams and field size"
+                                    description="Maximum teams is the organizer-facing limit. SYNCO uses the actual registered teams when the bracket is generated."
+                                />
+
+                                <div className="grid gap-6 md:grid-cols-2">
+                                    <div className="md:col-span-2">
                                         <FieldLabel required>Competition format</FieldLabel>
-                                        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-                                            {availableModes.map((mode) => {
-                                                const selected = form.gameMode === mode.id;
+                                        <div className="grid gap-3 sm:grid-cols-2">
+                                            {[
+                                                {
+                                                    id: 'CLASSIC',
+                                                    title: 'Points / League',
+                                                    description: 'Teams play multiple matches and accumulate points.',
+                                                },
+                                                {
+                                                    id: 'VERSUS',
+                                                    title: 'Single Elimination',
+                                                    description: 'Teams are eliminated after losing a pairing.',
+                                                },
+                                            ].map((item) => {
+                                                const active = form.competitionType === item.id;
                                                 return (
                                                     <button
-                                                        key={mode.id}
+                                                        key={item.id}
                                                         type="button"
-                                                        onClick={() => handleModeChange(mode.id)}
-                                                        className={`rounded-xl border p-5 text-left transition ${selected
-                                                                ? 'border-[#000000] bg-[#000000] text-white'
-                                                                : 'border-[#E0E3E8] bg-[#FAFBFC] hover:border-[#BFC5CC] hover:bg-white'
+                                                        onClick={() => updateForm('competitionType', item.id)}
+                                                        className={`rounded-xl border p-4 text-left transition ${active
+                                                                ? 'border-[#111114] bg-[#111114] text-white'
+                                                                : 'border-[#e4e4e7] bg-[#fafafa] hover:border-[#bbbcc0]'
                                                             }`}
                                                     >
-                                                        <div className="flex items-start justify-between gap-4">
-                                                            <div>
-                                                                <p className="text-sm font-black">{formatLabel(mode.id)}</p>
-                                                                <p className={`mt-1 text-xs font-semibold ${selected ? 'text-white/60' : 'text-[#8E96A3]'}`}>
-                                                                    {formatLabel(mode.type)} · {formatLabel(mode.structure)}
-                                                                </p>
-                                                            </div>
-                                                            {selected && <Check size={18} strokeWidth={3} />}
-                                                        </div>
-                                                        <div className={`mt-4 flex items-center gap-2 text-[10px] font-black uppercase tracking-[0.12em] ${selected ? 'text-white/60' : 'text-[#8E96A3]'}`}>
-                                                            <Users size={12} />
-                                                            {(mode.team_sizes || []).join(' / ')} team sizes
-                                                        </div>
+                                                        <p className="text-sm font-black">{item.title}</p>
+                                                        <p
+                                                            className={`mt-1 text-xs font-medium leading-5 ${active ? 'text-white/70' : 'text-[#85868c]'
+                                                                }`}
+                                                        >
+                                                            {item.description}
+                                                        </p>
                                                     </button>
                                                 );
                                             })}
                                         </div>
                                     </div>
-                                </div>
-                            </div>
-                        )}
 
-                        {step === 2 && (
-                            <div className="p-6 sm:p-8">
-                                <SectionHeader
-                                    icon={Users}
-                                    eyebrow="02 / Structure"
-                                    title="Format & teams"
-                                    description="Tournament capacity is defined by teams. The organiser can accept up to 25 teams."
-                                />
+                                    <div>
+                                        <FieldLabel required hint="2–25">Maximum teams</FieldLabel>
+                                        <input
+                                            type="number"
+                                            min="2"
+                                            max="25"
+                                            step="1"
+                                            value={form.maxTeams}
+                                            onChange={(event) =>
+                                                updateForm('maxTeams', Math.min(25, Math.max(2, Number(event.target.value) || 2)))
+                                            }
+                                            className={inputClass}
+                                        />
+                                    </div>
 
-                                <div className="space-y-6">
-                                    <div className="grid grid-cols-1 gap-6 sm:grid-cols-2">
-                                        <div>
-                                            <FieldLabel>Participant type</FieldLabel>
-                                            <div className="flex h-12 items-center justify-between rounded-xl border border-[#E0E3E8] bg-[#FAFBFC] px-4">
-                                                <span className="text-sm font-bold">Teams</span>
-                                                <span className="rounded-full border border-[#D9DDE3] bg-white px-2.5 py-1 text-[9px] font-black uppercase tracking-[0.12em] text-[#6F7783]">
-                                                    Fixed by game format
-                                                </span>
-                                            </div>
+                                    <div>
+                                        <FieldLabel required>Team size</FieldLabel>
+                                        <div className="relative">
+                                            <select
+                                                value={form.teamSize}
+                                                onChange={(event) => updateForm('teamSize', Number(event.target.value))}
+                                                className={selectClass}
+                                            >
+                                                {(selectedMode?.team_sizes || [1, 2, 3, 4]).map((size) => (
+                                                    <option key={size} value={size}>
+                                                        {size === 1 ? 'Solo' : `${size} players`}
+                                                    </option>
+                                                ))}
+                                            </select>
+                                            <ChevronDown className="pointer-events-none absolute right-4 top-1/2 -translate-y-1/2 text-[#8d8e93]" size={16} />
                                         </div>
+                                    </div>
 
+                                    {!isVersus && (
                                         <div>
-                                            <FieldLabel>Team size</FieldLabel>
-                                            <div className="relative">
-                                                <select
-                                                    value={form.teamSize}
-                                                    onChange={(event) => updateField('teamSize', Number(event.target.value))}
-                                                    className={selectClass}
-                                                >
-                                                    {(selectedMode?.team_sizes || [1]).map((size) => (
-                                                        <option key={size} value={size}>
-                                                            {size} {size === 1 ? 'Player' : 'Players'}
-                                                        </option>
-                                                    ))}
-                                                </select>
-                                                <ChevronDown size={16} className="pointer-events-none absolute right-4 top-1/2 -translate-y-1/2 text-[#8E96A3]" />
-                                            </div>
-                                        </div>
-
-                                        <div>
-                                            <FieldLabel required hint={`2–${MAX_TEAMS}`}>
-                                                Maximum teams
-                                            </FieldLabel>
-                                            <input
-                                                type="number"
-                                                min="2"
-                                                max={MAX_TEAMS}
-                                                value={form.maxTeams}
-                                                onChange={(event) => updateField('maxTeams', Math.min(MAX_TEAMS, Math.max(2, Number(event.target.value) || 2)))}
-                                                className={inputClass}
-                                            />
-                                            <p className="mt-2 text-[10px] font-semibold text-[#8E96A3]">
-                                                This controls tournament capacity. Team count is used to initialise the bracket.
-                                            </p>
-                                        </div>
-
-                                        <div>
-                                            <FieldLabel hint={form.competitionType === 'VERSUS' ? 'Fixed at 1' : 'Minimum 1'}>
-                                                Number of matches
-                                            </FieldLabel>
+                                            <FieldLabel required hint="1–50">Matches per team</FieldLabel>
                                             <input
                                                 type="number"
                                                 min="1"
-                                                max="100"
-                                                disabled={form.competitionType === 'VERSUS'}
+                                                max="50"
+                                                step="1"
                                                 value={form.numberOfMatches}
-                                                onChange={(event) => updateField('numberOfMatches', Number(event.target.value))}
-                                                className={`${inputClass} ${form.competitionType === 'VERSUS' ? 'cursor-not-allowed opacity-50' : ''}`}
+                                                onChange={(event) =>
+                                                    updateForm('numberOfMatches', Math.min(50, Math.max(1, Number(event.target.value) || 1)))
+                                                }
+                                                className={inputClass}
                                             />
-                                            <p className="mt-2 text-[10px] font-semibold text-[#8E96A3]">
-                                                {form.competitionType === 'VERSUS'
-                                                    ? 'Knockout uses the bracket to determine match count.'
-                                                    : 'Classic tournaments can accumulate points over multiple matches.'}
-                                            </p>
                                         </div>
-                                    </div>
+                                    )}
 
-                                    <div className="rounded-2xl border border-[#E0E3E8] bg-[#FAFBFC] p-5">
-                                        <div className="flex items-center gap-3">
-                                            <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-[#000000] text-white">
-                                                <Layers3 size={16} />
-                                            </div>
-                                            <div>
-                                                <p className="text-[10px] font-black uppercase tracking-[0.15em] text-[#8E96A3]">Tournament structure</p>
-                                                <p className="mt-1 text-sm font-black">{formatLabel(selectedMode?.structure)}</p>
+                                    {isVersus && (
+                                        <div>
+                                            <FieldLabel>Match length</FieldLabel>
+                                            <div className="relative">
+                                                <select
+                                                    value={form.bestOf}
+                                                    onChange={(event) => updateForm('bestOf', Number(event.target.value))}
+                                                    className={selectClass}
+                                                >
+                                                    <option value="1">Best of 1</option>
+                                                    <option value="3">Best of 3</option>
+                                                    <option value="5">Best of 5</option>
+                                                </select>
+                                                <ChevronDown className="pointer-events-none absolute right-4 top-1/2 -translate-y-1/2 text-[#8d8e93]" size={16} />
                                             </div>
                                         </div>
+                                    )}
+                                </div>
 
-                                        <div className="mt-5 grid grid-cols-2 gap-3 sm:grid-cols-4">
-                                            {[
-                                                ['Maximum teams', form.maxTeams],
-                                                ['Team size', form.teamSize],
-                                                ['Matches', form.numberOfMatches],
-                                                ['Format', formatLabel(form.competitionType)],
-                                            ].map(([label, value]) => (
-                                                <div key={label} className="rounded-xl border border-[#E3E6EA] bg-white p-4">
-                                                    <p className="text-[9px] font-black uppercase tracking-[0.12em] text-[#8E96A3]">{label}</p>
-                                                    <p className="mt-1 text-sm font-black">{value}</p>
-                                                </div>
-                                            ))}
-                                        </div>
-                                    </div>
+                                <div className="mt-8">
+                                    <InfoBox>
+                                        A 25-team knockout does <span className="font-black">not</span> mean 25 opening matches. SYNCO expands the bracket to the next power of two, distributes the empty slots as byes, and keeps the total elimination match count at <span className="font-black">teams − 1</span>.
+                                    </InfoBox>
                                 </div>
                             </div>
                         )}
 
+                        {/* STEP 3 */}
                         {step === 3 && (
                             <div className="p-6 sm:p-8">
                                 <SectionHeader
                                     icon={CalendarDays}
-                                    eyebrow="03 / Timing"
-                                    title="Competition schedule"
-                                    description="Create a real registration window and a defined tournament runtime."
+                                    eyebrow="03 / Schedule"
+                                    title="Set the registration and match window"
+                                    description="Registration should close before competition begins so the final field can be locked before brackets are generated."
                                 />
-                                <div className="space-y-8">
-                                    <div>
-                                        <div className="mb-4 flex items-center gap-2">
-                                            <div className="h-1.5 w-1.5 rounded-full bg-[#D6C98A]" />
-                                            <h3 className="text-xs font-black uppercase tracking-[0.14em]">Registration window</h3>
-                                        </div>
-                                        <div className="grid grid-cols-1 gap-5 sm:grid-cols-2">
-                                            <div>
-                                                <FieldLabel required>Registration starts</FieldLabel>
-                                                <input type="datetime-local" value={form.registrationStart} onChange={(event) => updateField('registrationStart', event.target.value)} className={inputClass} />
-                                            </div>
-                                            <div>
-                                                <FieldLabel required>Registration ends</FieldLabel>
-                                                <input type="datetime-local" value={form.registrationEnd} onChange={(event) => updateField('registrationEnd', event.target.value)} className={inputClass} />
-                                            </div>
-                                        </div>
-                                    </div>
 
-                                    <div>
-                                        <div className="mb-4 flex items-center gap-2">
-                                            <div className="h-1.5 w-1.5 rounded-full bg-[#D6C98A]" />
-                                            <h3 className="text-xs font-black uppercase tracking-[0.14em]">Competition window</h3>
-                                        </div>
-                                        <div className="grid grid-cols-1 gap-5 sm:grid-cols-2">
-                                            <div>
-                                                <FieldLabel required>Competition starts</FieldLabel>
-                                                <input type="datetime-local" value={form.competitionStart} onChange={(event) => updateField('competitionStart', event.target.value)} className={inputClass} />
+                                <div className="grid gap-6 md:grid-cols-2">
+                                    {[
+                                        ['registrationStart', 'Registration opens'],
+                                        ['registrationEnd', 'Registration closes'],
+                                        ['competitionStart', 'Competition starts'],
+                                        ['competitionEnd', 'Competition ends'],
+                                    ].map(([field, label]) => (
+                                        <div key={field}>
+                                            <FieldLabel required>{label}</FieldLabel>
+                                            <div className="relative">
+                                                <input
+                                                    type="datetime-local"
+                                                    value={form[field]}
+                                                    onChange={(event) => updateForm(field, event.target.value)}
+                                                    className={`${inputClass} pr-12`}
+                                                />
+                                                <Clock3 className="pointer-events-none absolute right-4 top-1/2 -translate-y-1/2 text-[#8d8e93]" size={16} />
                                             </div>
-                                            <div>
-                                                <FieldLabel required>Competition ends</FieldLabel>
-                                                <input type="datetime-local" value={form.competitionEnd} onChange={(event) => updateField('competitionEnd', event.target.value)} className={inputClass} />
-                                            </div>
                                         </div>
-                                    </div>
+                                    ))}
+                                </div>
 
-                                    <div className="rounded-2xl border border-[#E0E3E8] bg-[#FAFBFC] p-5">
-                                        <div className="flex items-center gap-3">
-                                            <Clock3 size={17} className="text-[#B4A86F]" />
-                                            <div>
-                                                <p className="text-sm font-black">Competition timeline</p>
-                                                <p className="mt-1 text-xs font-medium text-[#7D8592]">Registration closes before competitive play begins.</p>
-                                            </div>
-                                        </div>
-                                        <div className="mt-5 grid grid-cols-1 gap-4 sm:grid-cols-4">
-                                            {[
-                                                ['Registration', 'Opens', form.registrationStart],
-                                                ['Registration', 'Closes', form.registrationEnd],
-                                                ['Competition', 'Starts', form.competitionStart],
-                                                ['Competition', 'Ends', form.competitionEnd],
-                                            ].map(([label, sublabel, value]) => (
-                                                <div key={`${label}-${sublabel}`} className="rounded-xl border border-[#E3E6EA] bg-white p-4">
-                                                    <p className="text-[9px] font-black uppercase tracking-[0.12em] text-[#8E96A3]">{label}</p>
-                                                    <p className="mt-1 text-xs font-bold">{sublabel}</p>
-                                                    <p className="mt-2 text-[11px] font-semibold text-[#7D8592]">{value.replace('T', ' ')}</p>
-                                                </div>
-                                            ))}
-                                        </div>
-                                    </div>
+                                <div className="mt-8 grid gap-4 sm:grid-cols-3">
+                                    <StatCard label="Registration" value={form.registrationEnd ? new Date(form.registrationEnd).toLocaleDateString() : '—'} hint="Closes before competition" />
+                                    <StatCard label="Start" value={form.competitionStart ? new Date(form.competitionStart).toLocaleDateString() : '—'} hint="Competition begins" />
+                                    <StatCard label="End" value={form.competitionEnd ? new Date(form.competitionEnd).toLocaleDateString() : '—'} hint="Competition ends" />
                                 </div>
                             </div>
                         )}
 
+                        {/* STEP 4 */}
                         {step === 4 && (
                             <div className="p-6 sm:p-8">
                                 <SectionHeader
                                     icon={ShieldCheck}
                                     eyebrow="04 / Governance"
-                                    title="Rules & governance"
-                                    description="Define the rules that govern player behaviour, match handling, and eligibility."
+                                    title="Write the rules SYNCO will publish"
+                                    description="Keep rules explicit. The same rules should be visible to organizers and players before registration."
                                 />
-                                <div className="space-y-6">
+
+                                <div className="grid gap-6">
                                     <div>
                                         <FieldLabel required>Competition rules</FieldLabel>
                                         <textarea
                                             value={form.competitionRules}
-                                            onChange={(event) => updateField('competitionRules', event.target.value)}
-                                            placeholder={`Example:\n• Players must use their registered SYNCO account.\n• No cheating, exploits, or unauthorized software.\n• Match results must be submitted within the allowed window.\n• Organizer decisions follow the published tournament rules.`}
+                                            onChange={(event) => updateForm('competitionRules', event.target.value)}
                                             className={textareaClass}
+                                            placeholder="Entry requirements, scoring disputes, no-show policy, cheating rules, result verification..."
                                         />
                                     </div>
                                     <div>
                                         <FieldLabel>Match rules</FieldLabel>
                                         <textarea
                                             value={form.matchRules}
-                                            onChange={(event) => updateField('matchRules', event.target.value)}
-                                            placeholder="Lobby rules, maps, room settings, side selection, result submission, and rematch conditions."
+                                            onChange={(event) => updateForm('matchRules', event.target.value)}
                                             className={textareaClass}
+                                            placeholder="Lobby rules, map selection, rematch policy, disconnect handling..."
                                         />
                                     </div>
                                     <div>
-                                        <FieldLabel>Eligibility</FieldLabel>
+                                        <FieldLabel>Eligibility rules</FieldLabel>
                                         <textarea
                                             value={form.eligibilityRules}
-                                            onChange={(event) => updateField('eligibilityRules', event.target.value)}
-                                            placeholder="Region restrictions, age requirements, account requirements, rank requirements, or invite-only conditions."
+                                            onChange={(event) => updateForm('eligibilityRules', event.target.value)}
                                             className={textareaClass}
+                                            placeholder="Age, account requirements, region restrictions, roster requirements..."
                                         />
                                     </div>
                                 </div>
                             </div>
                         )}
 
-                        {step === 5 && (
+                        {/* STEP 5 VERSUS */}
+                        {isVersus && step === 5 && (
                             <div className="p-6 sm:p-8">
                                 <SectionHeader
-                                    icon={Swords}
-                                    eyebrow="05 / Bracket engine"
-                                    title="Bracket setup"
-                                    description="Configure how knockout matches will be initialized when registration closes. The helper calculates the bracket shape from team capacity."
+                                    icon={Layers3}
+                                    eyebrow="05 / Bracket"
+                                    title="Build a fair single-elimination bracket"
+                                    description="This is a live preview of the structure SYNCO will generate after registration closes and the final teams are locked."
                                 />
 
-                                {form.competitionType === 'VERSUS' ? (
-                                    <div className="space-y-6">
-                                        <div className="grid grid-cols-1 gap-5 sm:grid-cols-2">
-                                            <div>
-                                                <FieldLabel>Bracket type</FieldLabel>
-                                                <div className="relative">
-                                                    <select value={bracket.type} onChange={(event) => setBracket((previous) => ({ ...previous, type: event.target.value }))} className={selectClass}>
-                                                        <option value="SINGLE_ELIMINATION">Single Elimination</option>
-                                                    </select>
-                                                    <ChevronDown size={16} className="pointer-events-none absolute right-4 top-1/2 -translate-y-1/2 text-[#8E96A3]" />
-                                                </div>
-                                            </div>
-
-                                            <div>
-                                                <FieldLabel>Seeding method</FieldLabel>
-                                                <div className="relative">
-                                                    <select value={bracket.seeding} onChange={(event) => setBracket((previous) => ({ ...previous, seeding: event.target.value }))} className={selectClass}>
-                                                        <option value="RANDOM">Random</option>
-                                                        <option value="RANKING">Ranking based</option>
-                                                        <option value="ORGANIZER">Organizer assigned</option>
-                                                    </select>
-                                                    <ChevronDown size={16} className="pointer-events-none absolute right-4 top-1/2 -translate-y-1/2 text-[#8E96A3]" />
-                                                </div>
-                                            </div>
-
-                                            <div>
-                                                <FieldLabel hint="1, 3, 5">Match series</FieldLabel>
-                                                <div className="relative">
-                                                    <select value={bracket.bestOf} onChange={(event) => setBracket((previous) => ({ ...previous, bestOf: Number(event.target.value) }))} className={selectClass}>
-                                                        <option value="1">Best of 1</option>
-                                                        <option value="3">Best of 3</option>
-                                                        <option value="5">Best of 5</option>
-                                                    </select>
-                                                    <ChevronDown size={16} className="pointer-events-none absolute right-4 top-1/2 -translate-y-1/2 text-[#8E96A3]" />
-                                                </div>
+                                <div className="grid gap-6 lg:grid-cols-[280px_minmax(0,1fr)]">
+                                    <div className="space-y-5">
+                                        <div>
+                                            <FieldLabel>Seeding method</FieldLabel>
+                                            <div className="relative">
+                                                <select
+                                                    value={form.seedingMethod}
+                                                    onChange={(event) => updateForm('seedingMethod', event.target.value)}
+                                                    className={selectClass}
+                                                >
+                                                    <option value="BALANCED_SEEDING">Balanced seeding</option>
+                                                    <option value="REGISTRATION_ORDER">Registration order</option>
+                                                    <option value="RANDOM">Random seeding</option>
+                                                </select>
+                                                <ChevronDown className="pointer-events-none absolute right-4 top-1/2 -translate-y-1/2 text-[#8d8e93]" size={16} />
                                             </div>
                                         </div>
 
-                                        <div className="rounded-2xl border border-[#E0E3E8] bg-[#FAFBFC] p-5">
-                                            <div className="flex items-start justify-between gap-4">
+                                        <div>
+                                            <FieldLabel>Bracket type</FieldLabel>
+                                            <div className="flex h-12 items-center rounded-xl border border-[#e4e4e7] bg-[#fafafa] px-4 text-sm font-semibold">
+                                                Single Elimination
+                                            </div>
+                                        </div>
+
+                                        <div className="rounded-xl border border-[#e4e4e7] bg-[#fafafa] p-4">
+                                            <div className="flex items-center justify-between">
                                                 <div>
-                                                    <p className="text-[10px] font-black uppercase tracking-[0.16em] text-[#B4A86F]">Initialization helper</p>
-                                                    <h3 className="mt-1 text-base font-black">{bracketPreview.maxTeams}-team bracket plan</h3>
-                                                    <p className="mt-1 text-xs font-medium leading-5 text-[#7D8592]">
-                                                        The live bracket should be generated from the teams actually locked into the tournament at registration close. These values are the pre-registration bracket shape.
+                                                    <p className="text-xs font-black">Automatic byes</p>
+                                                    <p className="mt-1 text-[10px] font-semibold text-[#8a8b90]">
+                                                        Spread empty slots into the first round.
                                                     </p>
                                                 </div>
-                                                <div className="rounded-full border border-[#D9DDE3] bg-white px-3 py-1.5 text-[9px] font-black uppercase tracking-[0.12em] text-[#6F7783]">
-                                                    {bracket.allowByes ? 'Byes allowed' : 'No byes'}
-                                                </div>
-                                            </div>
-
-                                            <div className="mt-5 grid grid-cols-2 gap-3 sm:grid-cols-5">
-                                                {[
-                                                    ['Capacity', bracketPreview.maxTeams],
-                                                    ['Bracket size', bracketPreview.bracketSize],
-                                                    ['Byes', bracketPreview.byes],
-                                                    ['Rounds', bracketPreview.rounds],
-                                                    ['Total matches', bracketPreview.totalMatches],
-                                                ].map(([label, value]) => (
-                                                    <div key={label} className="rounded-xl border border-[#E3E6EA] bg-white p-4">
-                                                        <p className="text-[9px] font-black uppercase tracking-[0.12em] text-[#8E96A3]">{label}</p>
-                                                        <p className="mt-1 text-lg font-black">{value}</p>
-                                                    </div>
-                                                ))}
+                                                <button
+                                                    type="button"
+                                                    aria-pressed={form.allowAutomaticByes}
+                                                    onClick={() => updateForm('allowAutomaticByes', !form.allowAutomaticByes)}
+                                                    className={`relative h-6 w-11 rounded-full transition ${form.allowAutomaticByes ? 'bg-[#d6c98a]' : 'bg-[#d6d6da]'}`}
+                                                >
+                                                    <span
+                                                        className={`absolute top-1 h-4 w-4 rounded-full bg-white shadow-sm transition ${form.allowAutomaticByes ? 'left-6' : 'left-1'}`}
+                                                    />
+                                                </button>
                                             </div>
                                         </div>
 
-                                        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-                                            <button
-                                                type="button"
-                                                onClick={() => setBracket((previous) => ({ ...previous, allowByes: !previous.allowByes }))}
-                                                className="flex items-center justify-between rounded-xl border border-[#E0E3E8] bg-white p-4 text-left"
-                                            >
-                                                <div>
-                                                    <p className="text-xs font-black">Allow automatic byes</p>
-                                                    <p className="mt-1 text-[10px] font-semibold text-[#8E96A3]">Required when team capacity is not a power of two.</p>
-                                                </div>
-                                                <div className={`flex h-6 w-10 items-center rounded-full p-1 transition ${bracket.allowByes ? 'bg-[#111111]' : 'bg-[#D9DDE3]'}`}>
-                                                    <div className={`h-4 w-4 rounded-full bg-white transition ${bracket.allowByes ? 'translate-x-4' : ''}`} />
-                                                </div>
-                                            </button>
-
-                                            <button
-                                                type="button"
-                                                onClick={() => setBracket((previous) => ({ ...previous, autoGenerateAfterRegistration: !previous.autoGenerateAfterRegistration }))}
-                                                className="flex items-center justify-between rounded-xl border border-[#E0E3E8] bg-white p-4 text-left"
-                                            >
-                                                <div>
-                                                    <p className="text-xs font-black">Generate from locked teams</p>
-                                                    <p className="mt-1 text-[10px] font-semibold text-[#8E96A3]">Avoids creating empty live matches before registration closes.</p>
-                                                </div>
-                                                <div className={`flex h-6 w-10 items-center rounded-full p-1 transition ${bracket.autoGenerateAfterRegistration ? 'bg-[#111111]' : 'bg-[#D9DDE3]'}`}>
-                                                    <div className={`h-4 w-4 rounded-full bg-white transition ${bracket.autoGenerateAfterRegistration ? 'translate-x-4' : ''}`} />
-                                                </div>
-                                            </button>
+                                        <div className="grid grid-cols-2 gap-3">
+                                            <StatCard label="Teams" value={bracketPreview.stats.teams} />
+                                            <StatCard label="Slots" value={bracketPreview.stats.slots} />
+                                            <StatCard label="Byes" value={bracketPreview.stats.byes} />
+                                            <StatCard label="Matches" value={bracketPreview.stats.matches} />
                                         </div>
 
-                                        <div className="flex items-start gap-3 rounded-xl border border-[#E0E3E8] bg-[#FAFBFC] p-4">
-                                            <Info size={16} className="mt-0.5 shrink-0 text-[#B4A86F]" />
-                                            <p className="text-xs font-medium leading-5 text-[#68707C]">
-                                                Example: 25 teams initialise to a 32-slot single-elimination bracket, which creates 7 byes, 5 rounds, and 31 bracket matches. Actual match participants should be populated from the locked tournament teams.
-                                            </p>
-                                        </div>
+                                        <InfoBox>
+                                            <span className="font-black">Fairness rule:</span> every active team must lose exactly once to be eliminated. Empty slots are handled as byes, so no fake matches are added just to fill the bracket.
+                                        </InfoBox>
                                     </div>
-                                ) : (
-                                    <div className="rounded-2xl border border-[#E0E3E8] bg-[#FAFBFC] p-6">
-                                        <div className="flex items-start gap-3">
-                                            <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-[#000000] text-white">
-                                                <Layers3 size={16} />
-                                            </div>
+
+                                    <div className="min-w-0 rounded-2xl border border-[#e4e4e7] bg-[#fafafa] p-4 sm:p-5">
+                                        <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
                                             <div>
-                                                <p className="text-sm font-black">Bracket not used for this format</p>
-                                                <p className="mt-1 text-xs font-medium leading-5 text-[#7D8592]">
-                                                    Classic competitions use cumulative points and the points table instead of a knockout bracket. You can continue to the points configuration.
+                                                <p className="text-sm font-black">Bracket map</p>
+                                                <p className="mt-1 text-[10px] font-semibold text-[#8a8b90]">
+                                                    {bracketPreview.stats.teams} teams → {bracketPreview.stats.slots} slots → {bracketPreview.stats.matches} matches → champion
                                                 </p>
                                             </div>
+                                            <div className="rounded-full border border-[#e0dfd0] bg-[#fbf9ef] px-3 py-1.5 text-[10px] font-black text-[#736a3f]">
+                                                {totalRoundsName}
+                                            </div>
+                                        </div>
+
+                                        <div className="overflow-x-auto pb-2">
+                                            <div
+                                                className="flex min-w-max items-stretch gap-5"
+                                                style={{ minHeight: Math.max(320, bracketPreview.rounds[0].length * 68) }}
+                                            >
+                                                {bracketPreview.rounds.map((round, roundIndex) => (
+                                                    <div
+                                                        key={roundIndex}
+                                                        className="flex w-[190px] shrink-0 flex-col"
+                                                        style={{
+                                                            justifyContent: roundIndex === 0 ? 'space-between' : 'space-around',
+                                                        }}
+                                                    >
+                                                        <div className="mb-3 text-center">
+                                                            <p className="text-[9px] font-black uppercase tracking-[0.15em] text-[#9a9ba0]">
+                                                                {getRoundName(roundIndex + 1, bracketPreview.stats.rounds)}
+                                                            </p>
+                                                            <p className="mt-1 text-[10px] font-semibold text-[#8b8c91]">
+                                                                {round.length} {round.length === 1 ? 'match' : 'matches'}
+                                                            </p>
+                                                        </div>
+
+                                                        <div className="flex flex-1 flex-col justify-around gap-2">
+                                                            {round.map((match) => (
+                                                                <div key={`${roundIndex}-${match.number}`} className="rounded-xl border border-[#dedee1] bg-white shadow-sm">
+                                                                    <div className="flex items-center justify-between border-b border-[#eeeeef] px-3 py-2">
+                                                                        <span className="text-[9px] font-black uppercase tracking-[0.12em] text-[#9a9ba0]">
+                                                                            M{roundIndex === 0 ? match.number : `${roundIndex + 1}.${match.number}`}
+                                                                        </span>
+                                                                        {match.bye && (
+                                                                            <span className="rounded-full bg-[#fbf9ef] px-2 py-0.5 text-[8px] font-black uppercase text-[#8b7f45]">
+                                                                                BYE
+                                                                            </span>
+                                                                        )}
+                                                                    </div>
+                                                                    <div className="px-3 py-2">
+                                                                        <div className="flex items-center justify-between gap-2 border-b border-[#f0f0f1] pb-2">
+                                                                            <span className="truncate text-[10px] font-bold text-[#33343a]">{match.teamA}</span>
+                                                                            {roundIndex === 0 && match.seedA <= bracketPreview.stats.teams && (
+                                                                                <span className="text-[8px] font-black text-[#9a9ba0]">S{match.seedA}</span>
+                                                                            )}
+                                                                        </div>
+                                                                        <div className="flex items-center justify-between gap-2 pt-2">
+                                                                            <span className="truncate text-[10px] font-bold text-[#33343a]">{match.teamB}</span>
+                                                                            {roundIndex === 0 && match.seedB <= bracketPreview.stats.teams && (
+                                                                                <span className="text-[8px] font-black text-[#9a9ba0]">S{match.seedB}</span>
+                                                                            )}
+                                                                        </div>
+                                                                    </div>
+                                                                </div>
+                                                            ))}
+                                                        </div>
+                                                    </div>
+                                                ))}
+
+                                                <div className="flex w-[120px] shrink-0 flex-col justify-center">
+                                                    <div className="rounded-2xl border border-[#ded5a1] bg-[#fbf9ef] p-4 text-center">
+                                                        <Trophy className="mx-auto text-[#a59755]" size={22} />
+                                                        <p className="mt-2 text-[9px] font-black uppercase tracking-[0.14em] text-[#7b713e]">
+                                                            Champion
+                                                        </p>
+                                                        <p className="mt-1 text-[10px] font-semibold text-[#8b8464]">
+                                                            Winner of Final
+                                                        </p>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+
+                                        <div className="mt-4 rounded-xl border border-[#e4e4e7] bg-white p-4">
+                                            <div className="flex flex-wrap items-center gap-x-6 gap-y-2 text-[10px] font-semibold text-[#77787e]">
+                                                <span><strong className="text-[#111114]">1.</strong> teams are seeded</span>
+                                                <span><strong className="text-[#111114]">2.</strong> first-round byes fill unused slots</span>
+                                                <span><strong className="text-[#111114]">3.</strong> winners advance automatically</span>
+                                                <span><strong className="text-[#111114]">4.</strong> final winner is champion</span>
+                                            </div>
                                         </div>
                                     </div>
-                                )}
+                                </div>
                             </div>
                         )}
 
-                        {step === 6 && (
+                        {/* STEP 5 CLASSIC */}
+                        {!isVersus && step === 5 && (
                             <div className="p-6 sm:p-8">
                                 <SectionHeader
                                     icon={Trophy}
-                                    eyebrow="06 / Scoring engine"
-                                    title="Points table"
-                                    description="Predefine exactly how teams earn, lose, and break ties on the leaderboard."
+                                    eyebrow="05 / Points"
+                                    title="Set the points table"
+                                    description="Keep the scoring model simple: placement is the primary score, kills can add a fixed per-kill value, and ties are resolved separately."
                                 />
 
-                                {form.competitionType === 'CLASSIC' ? (
-                                    <div className="space-y-6">
-                                        <div className="rounded-2xl border border-[#E0E3E8] bg-[#FAFBFC] p-5">
-                                            <div className="flex items-start justify-between gap-4">
-                                                <div>
-                                                    <p className="text-[10px] font-black uppercase tracking-[0.16em] text-[#B4A86F]">Placement</p>
-                                                    <h3 className="mt-1 text-base font-black">Position points</h3>
-                                                    <p className="mt-1 text-xs font-medium leading-5 text-[#7D8592]">Define the base points awarded for each final placement in a match.</p>
-                                                </div>
-                                                <Trophy size={20} className="text-[#B4A86F]" />
-                                            </div>
-                                            <div className="mt-5 grid grid-cols-2 gap-2 sm:grid-cols-5">
-                                                {Object.entries(pointsTable.placementPoints).map(([position, points]) => (
-                                                    <div key={position} className="rounded-xl border border-[#E0E3E8] bg-white p-3">
-                                                        <p className="text-[9px] font-black uppercase tracking-[0.1em] text-[#8E96A3]">{getOrdinal(position)}</p>
-                                                        <input type="number" min="0" value={points} onChange={(event) => updatePlacementPoints(position, event.target.value)} className="mt-2 h-9 w-full rounded-lg border border-[#E4E7EB] bg-[#FAFBFC] px-2 text-sm font-black outline-none focus:border-[#111111]" />
-                                                    </div>
-                                                ))}
-                                            </div>
-                                        </div>
-
-                                        <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
+                                <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_280px]">
+                                    <div>
+                                        <div className="mb-4 flex items-end justify-between gap-4">
                                             <div>
-                                                <FieldLabel hint="per kill">Kill points</FieldLabel>
-                                                <input type="number" min="0" value={pointsTable.killPoints} onChange={(event) => setPointsTable((previous) => ({ ...previous, killPoints: Math.max(0, Number(event.target.value) || 0) }))} className={inputClass} />
-                                            </div>
-                                            <div>
-                                                <FieldLabel hint="flat">Default bonus</FieldLabel>
-                                                <input type="number" min="0" value={pointsTable.bonusPoints} onChange={(event) => setPointsTable((previous) => ({ ...previous, bonusPoints: Math.max(0, Number(event.target.value) || 0) }))} className={inputClass} />
-                                            </div>
-                                            <div>
-                                                <FieldLabel hint="optional">Points cap / match</FieldLabel>
-                                                <input type="number" min="0" value={pointsTable.maxPointsPerMatch} onChange={(event) => setPointsTable((previous) => ({ ...previous, maxPointsPerMatch: event.target.value }))} placeholder="No cap" className={inputClass} />
-                                            </div>
-                                        </div>
-
-                                        <div className="rounded-2xl border border-[#E0E3E8] bg-white p-5">
-                                            <div className="flex items-center justify-between gap-4">
-                                                <div>
-                                                    <p className="text-sm font-black">Scoring events</p>
-                                                    <p className="mt-1 text-xs font-medium text-[#7D8592]">Keep the rules explicit so result entry and standings can use the same contract.</p>
-                                                </div>
-                                                <button type="button" onClick={addPointRule} className="inline-flex h-9 items-center gap-2 rounded-lg bg-[#000000] px-3 text-[10px] font-black uppercase tracking-[0.1em] text-white">
-                                                    <Plus size={13} />
-                                                    Add rule
-                                                </button>
-                                            </div>
-
-                                            <div className="mt-5 space-y-3">
-                                                {pointsTable.rules.map((rule) => (
-                                                    <div key={rule.id} className="grid grid-cols-[minmax(0,1.3fr)_120px_90px_36px] items-center gap-3 rounded-xl border border-[#E3E6EA] bg-[#FAFBFC] p-3">
-                                                        <div>
-                                                            <input
-                                                                type="text"
-                                                                value={rule.name}
-                                                                onChange={(event) => updatePointRule(rule.id, 'name', event.target.value)}
-                                                                className="h-9 w-full rounded-lg border border-[#E0E3E8] bg-white px-3 text-xs font-black outline-none focus:border-[#111111]"
-                                                            />
-                                                            <p className="mt-1 text-[9px] font-semibold uppercase tracking-[0.1em] text-[#8E96A3]">{formatLabel(rule.type)} · {rule.unit}</p>
-                                                        </div>
-                                                        <select value={rule.type} onChange={(event) => updatePointRule(rule.id, 'type', event.target.value)} className="h-9 rounded-lg border border-[#E0E3E8] bg-white px-2 text-[10px] font-black outline-none">
-                                                            <option value="PLACEMENT">Placement</option>
-                                                            <option value="KILL">Kill</option>
-                                                            <option value="WIN">Win</option>
-                                                            <option value="OBJECTIVE">Objective</option>
-                                                            <option value="SURVIVAL">Survival</option>
-                                                            <option value="BONUS">Bonus</option>
-                                                            <option value="PENALTY">Penalty</option>
-                                                            <option value="CUSTOM">Custom</option>
-                                                        </select>
-                                                        <input type="number" min="0" value={rule.points} onChange={(event) => updatePointRule(rule.id, 'points', event.target.value)} className="h-9 rounded-lg border border-[#E0E3E8] bg-white px-2 text-xs font-black outline-none focus:border-[#111111]" />
-                                                        <button type="button" onClick={() => removePointRule(rule.id)} className="flex h-9 w-9 items-center justify-center rounded-lg border border-[#E0E3E8] bg-white text-[#7D8592] transition hover:bg-[#F4F5F7]">
-                                                            <Trash2 size={14} />
-                                                        </button>
-                                                    </div>
-                                                ))}
-                                            </div>
-                                        </div>
-
-                                        <div className="rounded-2xl border border-[#E0E3E8] bg-[#FAFBFC] p-5">
-                                            <div>
-                                                <p className="text-sm font-black">Leaderboard tiebreakers</p>
-                                                <p className="mt-1 text-xs font-medium text-[#7D8592]">Select the order used when teams have the same total points.</p>
-                                            </div>
-                                            <div className="mt-4 grid grid-cols-1 gap-2 sm:grid-cols-3">
-                                                {[
-                                                    ['TOTAL_POINTS', 'Total points'],
-                                                    ['PLACEMENT_POINTS', 'Placement points'],
-                                                    ['KILLS', 'Kills'],
-                                                    ['WINS', 'Match wins'],
-                                                ].map(([key, label]) => {
-                                                    const selected = pointsTable.tiebreakers.includes(key);
-                                                    return (
-                                                        <button key={key} type="button" onClick={() => toggleTiebreaker(key)} className={`rounded-xl border p-3 text-left ${selected ? 'border-[#000000] bg-white' : 'border-[#E0E3E8] bg-[#FFFFFF]'}`}>
-                                                            <div className="flex items-center gap-3">
-                                                                <div className={`flex h-6 w-6 items-center justify-center rounded-full ${selected ? 'bg-[#000000] text-white' : 'border border-[#D9DDE3] text-transparent'}`}>
-                                                                    <Check size={12} />
-                                                                </div>
-                                                                <span className="text-xs font-black">{label}</span>
-                                                            </div>
-                                                        </button>
-                                                    );
-                                                })}
-                                            </div>
-                                        </div>
-                                    </div>
-                                ) : (
-                                    <div className="rounded-2xl border border-[#E0E3E8] bg-[#FAFBFC] p-6">
-                                        <div className="flex items-start gap-3">
-                                            <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-[#000000] text-white">
-                                                <Trophy size={16} />
-                                            </div>
-                                            <div>
-                                                <p className="text-sm font-black">Point table not used in knockout mode</p>
-                                                <p className="mt-1 text-xs font-medium leading-5 text-[#7D8592]">
-                                                    Versus tournaments resolve through bracket winners. Match winners advance through the bracket instead of accumulating a classic leaderboard score.
+                                                <p className="text-sm font-black">Placement points</p>
+                                                <p className="mt-1 text-xs font-medium text-[#8a8b90]">
+                                                    Enter the points awarded for each final placement.
                                                 </p>
                                             </div>
-                                        </div>
-                                    </div>
-                                )}
-                            </div>
-                        )}
-
-                        {step === 7 && (
-                            <div className="p-6 sm:p-8">
-                                <SectionHeader
-                                    icon={Check}
-                                    eyebrow="07 / Final check"
-                                    title="Review tournament"
-                                    description="Everything configured here will be stored in the competition draft."
-                                />
-
-                                <div className="space-y-4">
-                                    <div className="rounded-2xl border border-[#E0E3E8] bg-[#FAFBFC] p-5">
-                                        <div className="flex items-start justify-between gap-4">
-                                            <div>
-                                                <p className="text-[9px] font-black uppercase tracking-[0.15em] text-[#8E96A3]">Tournament</p>
-                                                <h3 className="mt-1 text-xl font-black">{form.title || 'Untitled tournament'}</h3>
-                                                {form.description && <p className="mt-2 max-w-2xl text-xs font-medium leading-5 text-[#7D8592]">{form.description}</p>}
-                                            </div>
-                                            <button type="button" onClick={() => setStep(1)} className="text-[10px] font-black uppercase tracking-[0.12em] text-[#B4A86F]">Edit</button>
-                                        </div>
-                                    </div>
-
-                                    <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-                                        <div className="rounded-2xl border border-[#E0E3E8] bg-white p-5">
-                                            <div className="flex items-center gap-3">
-                                                <Gamepad2 size={17} className="text-[#B4A86F]" />
-                                                <div>
-                                                    <p className="text-[9px] font-black uppercase tracking-[0.14em] text-[#8E96A3]">Game</p>
-                                                    <p className="mt-1 text-sm font-black">{selectedGame?.name}</p>
-                                                </div>
-                                            </div>
-                                            <div className="mt-5 grid grid-cols-2 gap-3">
-                                                <div className="rounded-xl bg-[#F4F5F7] p-3">
-                                                    <p className="text-[9px] font-black uppercase tracking-[0.1em] text-[#8E96A3]">Format</p>
-                                                    <p className="mt-1 text-xs font-black">{formatLabel(form.competitionType)}</p>
-                                                </div>
-                                                <div className="rounded-xl bg-[#F4F5F7] p-3">
-                                                    <p className="text-[9px] font-black uppercase tracking-[0.1em] text-[#8E96A3]">Mode</p>
-                                                    <p className="mt-1 text-xs font-black">{formatLabel(form.gameMode)}</p>
-                                                </div>
+                                            <div className="rounded-full border border-[#e0dfd0] bg-[#fbf9ef] px-3 py-1.5 text-[9px] font-black uppercase tracking-[0.12em] text-[#736a3f]">
+                                                {Object.keys(form.placementPoints).length} places configured
                                             </div>
                                         </div>
 
-                                        <div className="rounded-2xl border border-[#E0E3E8] bg-white p-5">
-                                            <div className="flex items-center gap-3">
-                                                <Users size={17} className="text-[#B4A86F]" />
-                                                <div>
-                                                    <p className="text-[9px] font-black uppercase tracking-[0.14em] text-[#8E96A3]">Teams</p>
-                                                    <p className="mt-1 text-sm font-black">Up to {form.maxTeams}</p>
-                                                </div>
-                                            </div>
-                                            <div className="mt-5 grid grid-cols-2 gap-3">
-                                                <div className="rounded-xl bg-[#F4F5F7] p-3">
-                                                    <p className="text-[9px] font-black uppercase tracking-[0.1em] text-[#8E96A3]">Team size</p>
-                                                    <p className="mt-1 text-xs font-black">{form.teamSize}</p>
-                                                </div>
-                                                <div className="rounded-xl bg-[#F4F5F7] p-3">
-                                                    <p className="text-[9px] font-black uppercase tracking-[0.1em] text-[#8E96A3]">Matches</p>
-                                                    <p className="mt-1 text-xs font-black">{form.competitionType === 'VERSUS' ? bracketPreview.totalMatches : form.numberOfMatches}</p>
-                                                </div>
-                                            </div>
-                                        </div>
-                                    </div>
-
-                                    {form.competitionType === 'VERSUS' ? (
-                                        <div className="rounded-2xl border border-[#E0E3E8] bg-white p-5">
-                                            <div className="flex items-center justify-between gap-4">
-                                                <div className="flex items-center gap-3">
-                                                    <Swords size={17} className="text-[#B4A86F]" />
-                                                    <p className="text-sm font-black">Bracket configuration</p>
-                                                </div>
-                                                <button type="button" onClick={() => setStep(5)} className="text-[10px] font-black uppercase tracking-[0.12em] text-[#B4A86F]">Edit</button>
-                                            </div>
-                                            <div className="mt-5 grid grid-cols-2 gap-3 sm:grid-cols-5">
-                                                {[
-                                                    ['Type', formatLabel(bracket.type)],
-                                                    ['Seeding', formatLabel(bracket.seeding)],
-                                                    ['Slot count', bracketPreview.bracketSize],
-                                                    ['Byes', bracketPreview.byes],
-                                                    ['Rounds', bracketPreview.rounds],
-                                                ].map(([label, value]) => (
-                                                    <div key={label} className="rounded-xl bg-[#F4F5F7] p-3">
-                                                        <p className="text-[9px] font-black uppercase tracking-[0.1em] text-[#8E96A3]">{label}</p>
-                                                        <p className="mt-1 text-xs font-black">{value}</p>
+                                        <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-5">
+                                            {Object.entries(form.placementPoints).map(([place, points]) => (
+                                                <div key={place} className="rounded-xl border border-[#e4e4e7] bg-[#fafafa] p-3">
+                                                    <div className="flex items-center justify-between">
+                                                        <span className="text-[9px] font-black uppercase tracking-[0.12em] text-[#9a9ba0]">
+                                                            #{place}
+                                                        </span>
+                                                        <span className="text-[9px] font-bold text-[#b2b2b6]">pts</span>
                                                     </div>
-                                                ))}
-                                            </div>
+                                                    <input
+                                                        type="number"
+                                                        min="0"
+                                                        step="1"
+                                                        value={points}
+                                                        onChange={(event) => updatePlacementPoints(place, event.target.value)}
+                                                        className="mt-2 h-10 w-full rounded-lg border border-[#dddddf] bg-white px-3 text-sm font-black outline-none focus:border-[#111114]"
+                                                    />
+                                                </div>
+                                            ))}
                                         </div>
-                                    ) : (
-                                        <div className="rounded-2xl border border-[#E0E3E8] bg-white p-5">
-                                            <div className="flex items-center justify-between gap-4">
-                                                <div className="flex items-center gap-3">
-                                                    <Trophy size={17} className="text-[#B4A86F]" />
-                                                    <p className="text-sm font-black">Points table</p>
-                                                </div>
-                                                <button type="button" onClick={() => setStep(6)} className="text-[10px] font-black uppercase tracking-[0.12em] text-[#B4A86F]">Edit</button>
-                                            </div>
-                                            <div className="mt-5 grid grid-cols-3 gap-3">
-                                                <div className="rounded-xl bg-[#F4F5F7] p-4">
-                                                    <p className="text-[9px] font-black uppercase tracking-[0.1em] text-[#8E96A3]">Kill</p>
-                                                    <p className="mt-1 text-lg font-black">{pointsTable.killPoints}</p>
-                                                </div>
-                                                <div className="rounded-xl bg-[#F4F5F7] p-4">
-                                                    <p className="text-[9px] font-black uppercase tracking-[0.1em] text-[#8E96A3]">1st</p>
-                                                    <p className="mt-1 text-lg font-black">{pointsTable.placementPoints['1']}</p>
-                                                </div>
-                                                <div className="rounded-xl bg-[#F4F5F7] p-4">
-                                                    <p className="text-[9px] font-black uppercase tracking-[0.1em] text-[#8E96A3]">Tiebreakers</p>
-                                                    <p className="mt-1 text-lg font-black">{pointsTable.tiebreakers.length}</p>
-                                                </div>
-                                            </div>
-                                        </div>
-                                    )}
+                                    </div>
 
-                                    <div className="flex items-start gap-3 rounded-xl border border-[#E0E3E8] bg-[#FAFBFC] p-4">
-                                        <Info size={16} className="mt-0.5 shrink-0 text-[#B4A86F]" />
-                                        <div>
-                                            <p className="text-xs font-black">Draft creation</p>
-                                            <p className="mt-1 text-xs font-medium leading-5 text-[#7D8592]">
-                                                The tournament is created as a draft. Registration, locked-team seeding, bracket generation, and live match controls happen through the organiser flow after creation.
+                                    <div className="space-y-4">
+                                        <div className="rounded-xl border border-[#e4e4e7] bg-[#fafafa] p-4">
+                                            <p className="text-sm font-black">Kills</p>
+                                            <p className="mt-1 text-[10px] font-semibold leading-5 text-[#85868c]">
+                                                Fixed points awarded for each verified kill in a match.
                                             </p>
+                                            <div className="mt-3 flex items-center gap-2">
+                                                <input
+                                                    type="number"
+                                                    min="0"
+                                                    step="1"
+                                                    value={form.killPoints}
+                                                    onChange={(event) => updateForm('killPoints', event.target.value)}
+                                                    className="h-11 flex-1 rounded-xl border border-[#dddddf] bg-white px-3 text-sm font-black outline-none focus:border-[#111114]"
+                                                />
+                                                <span className="text-xs font-black text-[#77787e]">/ kill</span>
+                                            </div>
                                         </div>
+
+                                        <InfoBox>
+                                            Keep the points table deterministic. SYNCO should calculate the same total score from the same result data every time.
+                                        </InfoBox>
                                     </div>
                                 </div>
-                            </div>
-                        )}
 
-                        <div className="flex flex-col-reverse gap-3 border-t border-[#E3E6EA] bg-[#F4F5F7] p-5 sm:flex-row sm:items-center sm:justify-between sm:p-6">
-                            <button
-                                type="button"
-                                onClick={() => (step === 1 ? navigate('/competitions') : handleBack())}
-                                disabled={creating}
-                                className="inline-flex h-11 items-center justify-center gap-2 rounded-xl border border-[#D9DDE3] bg-white px-5 text-xs font-black uppercase tracking-[0.1em] text-[#555B66] transition hover:border-[#B8BDC5] hover:text-black disabled:cursor-not-allowed disabled:opacity-50"
-                            >
-                                <ArrowLeft size={15} />
-                                {step === 1 ? 'Cancel' : 'Back'}
-                            </button>
+                                <div className="mt-8 border-t border-[#eeeeef] pt-8">
+                                    <div className="mb-4">
+                                        <p className="text-sm font-black">Leaderboard tiebreakers</p>
+                                        <p className="mt-1 max-w-2xl text-xs font-medium leading-5 text-[#85868c]">
+                                            Total Points is always the primary leaderboard value. When two teams finish on the same total, SYNCO checks these rules from top to bottom.
+                                        </p>
+                                    </div>
 
-                            <div className="flex items-center justify-end gap-3">
-                                {step < 7 ? (
-                                    <button
-                                        type="button"
-                                        onClick={handleNext}
-                                        disabled={creating}
-                                        className="inline-flex h-11 items-center justify-center gap-2 rounded-xl bg-[#000000] px-6 text-xs font-black uppercase tracking-[0.1em] text-white transition hover:bg-[#111111] disabled:cursor-not-allowed disabled:opacity-60"
-                                    >
-                                        Continue
-                                        <ArrowRight size={15} />
-                                    </button>
-                                ) : (
-                                    <button
-                                        type="button"
-                                        onClick={handleCreate}
-                                        disabled={creating}
-                                        className="inline-flex h-11 min-w-[190px] items-center justify-center gap-2 rounded-xl bg-[#000000] px-6 text-xs font-black uppercase tracking-[0.1em] text-white transition hover:bg-[#111111] disabled:cursor-not-allowed disabled:opacity-60"
-                                    >
-                                        {creating ? (
-                                            <>
-                                                <Loader2 size={16} className="animate-spin" />
-                                                Creating...
-                                            </>
-                                        ) : (
-                                            <>
-                                                <Trophy size={15} />
-                                                Create Tournament
-                                            </>
-                                        )}
-                                    </button>
-                                )}
-                            </div>
-                        </div>
-                    </div>
-
-                    <aside className="hidden xl:block">
-                        <div className="sticky top-[96px] space-y-4">
-                            <div className="overflow-hidden rounded-2xl border border-black/10 bg-[#000000] text-white">
-                                <div className="relative p-6">
-                                    <div className="absolute right-0 top-0 h-32 w-32 translate-x-1/3 -translate-y-1/3 rounded-full border border-white/10" />
-                                    <div className="absolute bottom-0 left-0 h-24 w-24 -translate-x-1/3 translate-y-1/3 rounded-full border border-white/10" />
-                                    <div className="relative">
-                                        <div className="flex items-center justify-between">
-                                            <span className="rounded-full border border-white/10 bg-white/5 px-3 py-1.5 text-[9px] font-black uppercase tracking-[0.14em] text-white/60">Draft</span>
-                                            <span className="text-[9px] font-black uppercase tracking-[0.14em] text-white/40">SYNCO</span>
-                                        </div>
-                                        <div className="mt-8">
-                                            <p className="text-[9px] font-black uppercase tracking-[0.17em] text-[#D6C98A]">{selectedGame?.name || 'Select game'}</p>
-                                            <h3 className="mt-2 line-clamp-2 text-xl font-black tracking-tight">{form.title || 'Your tournament name'}</h3>
-                                            <p className="mt-2 text-xs font-medium leading-5 text-white/45">{form.description || 'Your tournament description will appear here.'}</p>
-                                        </div>
-                                        <div className="mt-6 grid grid-cols-2 gap-2">
-                                            <div className="rounded-xl border border-white/10 bg-white/5 p-3">
-                                                <p className="text-[8px] font-black uppercase tracking-[0.12em] text-white/35">Format</p>
-                                                <p className="mt-1 text-xs font-black">{formatLabel(form.competitionType)}</p>
+                                    <div className="grid gap-3">
+                                        <div className="flex items-center gap-4 rounded-xl border border-[#dedee1] bg-[#111114] px-4 py-4 text-white">
+                                            <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-white/10 text-xs font-black">1</div>
+                                            <div className="flex-1">
+                                                <p className="text-sm font-black">Total Points</p>
+                                                <p className="mt-0.5 text-[10px] font-semibold text-white/60">
+                                                    Always checked first. Higher total ranks higher.
+                                                </p>
                                             </div>
-                                            <div className="rounded-xl border border-white/10 bg-white/5 p-3">
-                                                <p className="text-[8px] font-black uppercase tracking-[0.12em] text-white/35">Teams</p>
-                                                <p className="mt-1 text-xs font-black">{form.maxTeams}</p>
-                                            </div>
+                                            <Trophy size={17} className="text-[#d6c98a]" />
                                         </div>
-                                        <div className="mt-2 rounded-xl border border-white/10 bg-white/5 p-3">
-                                            <div className="flex items-center justify-between">
-                                                <div className="flex items-center gap-2">
-                                                    <Clock3 size={13} className="text-[#D6C98A]" />
-                                                    <span className="text-[9px] font-black uppercase tracking-[0.12em] text-white/40">Competition</span>
+
+                                        {form.tiebreakers.map((id, index) => {
+                                            const option = TIEBREAKER_OPTIONS.find((item) => item.id === id);
+                                            return (
+                                                <div key={id} className="flex items-center gap-3 rounded-xl border border-[#e4e4e7] bg-[#fafafa] p-3">
+                                                    <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg border border-[#dedee1] bg-white text-xs font-black text-[#55565c]">
+                                                        {index + 2}
+                                                    </div>
+                                                    <div className="min-w-0 flex-1">
+                                                        <p className="text-sm font-black">{option?.label || formatLabel(id)}</p>
+                                                        <p className="mt-0.5 text-[10px] font-semibold text-[#8a8b90]">
+                                                            Higher value wins the tie.
+                                                        </p>
+                                                    </div>
+                                                    <div className="flex items-center gap-1">
+                                                        <button
+                                                            type="button"
+                                                            onClick={() => moveTiebreaker(index, -1)}
+                                                            disabled={index === 0}
+                                                            className="flex h-8 w-8 items-center justify-center rounded-lg border border-[#dedee1] bg-white text-[#55565c] disabled:cursor-not-allowed disabled:opacity-30"
+                                                            aria-label="Move tiebreaker up"
+                                                        >
+                                                            <ArrowUp size={15} />
+                                                        </button>
+                                                        <button
+                                                            type="button"
+                                                            onClick={() => moveTiebreaker(index, 1)}
+                                                            disabled={index === form.tiebreakers.length - 1}
+                                                            className="flex h-8 w-8 items-center justify-center rounded-lg border border-[#dedee1] bg-white text-[#55565c] disabled:cursor-not-allowed disabled:opacity-30"
+                                                            aria-label="Move tiebreaker down"
+                                                        >
+                                                            <ArrowDown size={15} />
+                                                        </button>
+                                                    </div>
                                                 </div>
-                                                <span className="text-[10px] font-bold text-white/60">{form.competitionStart?.split('T')[0] || 'Not set'}</span>
-                                            </div>
-                                        </div>
+                                            );
+                                        })}
                                     </div>
-                                </div>
-                            </div>
 
-                            <div className="rounded-2xl border border-[#E0E3E8] bg-white p-5">
-                                <p className="text-[10px] font-black uppercase tracking-[0.17em] text-[#8E96A3]">Setup checklist</p>
-                                <div className="mt-4 space-y-3">
-                                    {[
-                                        ['Competition identity', Boolean(form.title.trim())],
-                                        ['Game & format', Boolean(form.gameId && form.gameMode)],
-                                        ['Team capacity', Number(form.maxTeams) >= 2 && Number(form.maxTeams) <= MAX_TEAMS],
-                                        ['Schedule', Boolean(form.registrationStart && form.registrationEnd && form.competitionStart && form.competitionEnd)],
-                                        ['Rules', Boolean(form.competitionRules.trim())],
-                                        ['Bracket setup', form.competitionType !== 'VERSUS' || Boolean(bracket.type)],
-                                        ['Points table', form.competitionType !== 'CLASSIC' || pointsTable.tiebreakers.length > 0],
-                                    ].map(([label, complete]) => (
-                                        <div key={label} className="flex items-center gap-3">
-                                            <div className={`flex h-6 w-6 items-center justify-center rounded-full ${complete ? 'bg-[#000000] text-white' : 'border border-[#D9DDE3] bg-white text-transparent'}`}>
-                                                <Check size={12} strokeWidth={3} />
-                                            </div>
-                                            <span className={`text-xs font-bold ${complete ? 'text-[#111111]' : 'text-[#8E96A3]'}`}>{label}</span>
-                                        </div>
-                                    ))}
-                                </div>
-                            </div>
-
-                            <div className="rounded-2xl border border-[#E0E3E8] bg-white p-5">
-                                <div className="flex items-start gap-3">
-                                    <Info size={16} className="mt-0.5 shrink-0 text-[#B4A86F]" />
-                                    <div>
-                                        <p className="text-xs font-black">Organizer controls</p>
-                                        <p className="mt-1 text-[11px] font-medium leading-5 text-[#7D8592]">
-                                            The tournament starts as a draft. Teams are locked before bracket generation and the scoring contract remains attached to the competition.
+                                    <div className="mt-4 rounded-xl border border-[#e4e4e7] bg-white p-4">
+                                        <p className="text-[10px] font-black uppercase tracking-[0.14em] text-[#8a8b90]">
+                                            Final ranking rule
+                                        </p>
+                                        <p className="mt-2 text-xs font-semibold leading-5 text-[#55565c]">
+                                            Total Points → {form.tiebreakers.map((id) => TIEBREAKER_OPTIONS.find((item) => item.id === id)?.label).join(' → ')}
                                         </p>
                                     </div>
                                 </div>
                             </div>
+                        )}
+
+                        {/* STEP 6 REVIEW */}
+                        {step === 6 && (
+                            <div className="p-6 sm:p-8">
+                                <SectionHeader
+                                    icon={Check}
+                                    eyebrow="06 / Review"
+                                    title="Review before publishing"
+                                    description="The competition is created as a draft. You can then publish registration and manage participants from the organizer controls."
+                                />
+
+                                <div className="grid gap-4 sm:grid-cols-2">
+                                    <div className="rounded-xl border border-[#e4e4e7] bg-[#fafafa] p-5 sm:col-span-2">
+                                        <p className="text-[9px] font-black uppercase tracking-[0.14em] text-[#9a9ba0]">Competition</p>
+                                        <p className="mt-1 text-lg font-black">{form.title || 'Untitled competition'}</p>
+                                        <p className="mt-1 text-xs font-semibold text-[#85868c]">
+                                            {selectedGame?.name || formatLabel(form.gameId)} · {formatLabel(form.gameMode)} · {formatLabel(form.competitionType)}
+                                        </p>
+                                    </div>
+
+                                    <StatCard label="Teams" value={form.maxTeams} hint="Organizer limit" />
+                                    <StatCard label="Team size" value={form.teamSize} hint="Players per team" />
+
+                                    {isVersus ? (
+                                        <>
+                                            <StatCard label="Bracket slots" value={bracketPreview.stats.slots} hint={`${bracketPreview.stats.byes} automatic byes`} />
+                                            <StatCard label="Matches" value={bracketPreview.stats.matches} hint="Minimum elimination matches" />
+                                            <StatCard label="Seeding" value={formatLabel(form.seedingMethod)} hint="Applied when bracket is generated" />
+                                            <StatCard label="Match length" value={`BO${form.bestOf}`} hint="Per pairing" />
+                                        </>
+                                    ) : (
+                                        <>
+                                            <StatCard label="Matches / team" value={form.numberOfMatches} hint="Points-stage matches" />
+                                            <StatCard label="Kill points" value={form.killPoints} hint="Points per verified kill" />
+                                        </>
+                                    )}
+                                </div>
+
+                                {isVersus ? (
+                                    <div className="mt-6 rounded-2xl border border-[#e4e4e7] bg-[#fafafa] p-5">
+                                        <p className="text-sm font-black">Bracket flow</p>
+                                        <div className="mt-4 overflow-x-auto pb-2">
+                                            <div className="flex min-w-max items-center gap-3">
+                                                {bracketPreview.rounds.map((round, index) => (
+                                                    <div key={index} className="flex items-center gap-3">
+                                                        <div className="rounded-xl border border-[#dedee1] bg-white px-4 py-3 text-center">
+                                                            <p className="text-[9px] font-black uppercase tracking-[0.14em] text-[#9a9ba0]">
+                                                                {getRoundName(index + 1, bracketPreview.stats.rounds)}
+                                                            </p>
+                                                            <p className="mt-1 text-sm font-black">
+                                                                {round.length} {round.length === 1 ? 'match' : 'matches'}
+                                                            </p>
+                                                        </div>
+                                                        {index < bracketPreview.rounds.length - 1 && <ArrowRight size={15} className="text-[#aaaab0]" />}
+                                                    </div>
+                                                ))}
+                                                <ArrowRight size={15} className="text-[#aaaab0]" />
+                                                <div className="rounded-xl border border-[#ded5a1] bg-[#fbf9ef] px-4 py-3 text-center">
+                                                    <p className="text-[9px] font-black uppercase tracking-[0.14em] text-[#7b713e]">Champion</p>
+                                                    <p className="mt-1 text-sm font-black text-[#5c5536]">1 winner</p>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                ) : (
+                                    <div className="mt-6 rounded-2xl border border-[#e4e4e7] bg-[#fafafa] p-5">
+                                        <p className="text-sm font-black">Leaderboard flow</p>
+                                        <p className="mt-2 text-xs font-semibold leading-5 text-[#77787e]">
+                                            Total Points → {form.tiebreakers.map((id) => TIEBREAKER_OPTIONS.find((item) => item.id === id)?.label).join(' → ')}
+                                        </p>
+                                    </div>
+                                )}
+
+                                <div className="mt-6">
+                                    <InfoBox>
+                                        {isVersus
+                                            ? 'The preview is based on the maximum team field. When registration closes, SYNCO should generate the actual bracket from the teams that are locked into the competition.'
+                                            : 'The points configuration is stored with the competition so result entry and leaderboard calculations can use the same scoring contract.'}
+                                    </InfoBox>
+                                </div>
+                            </div>
+                        )}
+
+                        {/* FOOTER ACTIONS */}
+                        <div className="flex flex-col-reverse gap-3 border-t border-[#eeeeef] p-6 sm:flex-row sm:items-center sm:justify-between sm:px-8">
+                            <button
+                                type="button"
+                                onClick={goBack}
+                                disabled={step === 1 || creating}
+                                className="flex h-11 items-center justify-center gap-2 rounded-xl border border-[#dedee1] bg-white px-5 text-xs font-black text-[#4c4d52] transition hover:border-[#c9c9cc] disabled:cursor-not-allowed disabled:opacity-40"
+                            >
+                                <ArrowLeft size={15} />
+                                Back
+                            </button>
+
+                            {step < 6 ? (
+                                <button
+                                    type="button"
+                                    onClick={goNext}
+                                    disabled={creating}
+                                    className="flex h-11 items-center justify-center gap-2 rounded-xl border border-[#d6c98a] bg-[#d6c98a] px-6 text-xs font-black text-[#0b0e14] transition hover:border-[#c9bc79] hover:bg-[#c9bc79] disabled:cursor-not-allowed disabled:opacity-50"
+                                >
+                                    Continue
+                                    <ArrowRight size={15} />
+                                </button>
+                            ) : (
+                                <button
+                                    type="button"
+                                    onClick={handleCreate}
+                                    disabled={creating}
+                                    className="flex h-11 min-w-[190px] items-center justify-center gap-2 rounded-xl border border-[#d6c98a] bg-[#d6c98a] px-6 text-xs font-black text-[#0b0e14] transition hover:border-[#c9bc79] hover:bg-[#c9bc79] disabled:cursor-not-allowed disabled:opacity-50"
+                                >
+                                    {creating ? (
+                                        <>
+                                            <Loader2 size={15} className="animate-spin" />
+                                            Creating...
+                                        </>
+                                    ) : (
+                                        <>
+                                            <Check size={15} />
+                                            Create competition
+                                        </>
+                                    )}
+                                </button>
+                            )}
                         </div>
+                    </div>
+
+                    {/* SIDEBAR */}
+                    <aside className="space-y-5">
+                        <div className="rounded-2xl border border-black/10 bg-white p-5">
+                            <div className="flex items-center gap-3">
+                                <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-[#111114] text-white">
+                                    <Gamepad2 size={18} />
+                                </div>
+                                <div className="min-w-0">
+                                    <p className="truncate text-sm font-black">{selectedGame?.name || formatLabel(form.gameId)}</p>
+                                    <p className="mt-1 text-[10px] font-bold uppercase tracking-[0.12em] text-[#8a8b90]">
+                                        {formatLabel(form.gameMode)}
+                                    </p>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div className="rounded-2xl border border-black/10 bg-white p-5">
+                            <p className="text-[10px] font-black uppercase tracking-[0.16em] text-[#8a8b90]">At a glance</p>
+                            <div className="mt-4 space-y-4">
+                                <div className="flex items-center justify-between gap-4">
+                                    <span className="text-xs font-semibold text-[#7a7b80]">Teams</span>
+                                    <span className="text-xs font-black">{form.maxTeams}</span>
+                                </div>
+                                <div className="flex items-center justify-between gap-4">
+                                    <span className="text-xs font-semibold text-[#7a7b80]">Team size</span>
+                                    <span className="text-xs font-black">{form.teamSize}</span>
+                                </div>
+                                <div className="flex items-center justify-between gap-4">
+                                    <span className="text-xs font-semibold text-[#7a7b80]">Structure</span>
+                                    <span className="text-xs font-black">{isVersus ? 'Knockout' : 'Points'}</span>
+                                </div>
+                                {isVersus ? (
+                                    <div className="flex items-center justify-between gap-4">
+                                        <span className="text-xs font-semibold text-[#7a7b80]">Matches</span>
+                                        <span className="text-xs font-black">{bracketPreview.stats.matches}</span>
+                                    </div>
+                                ) : (
+                                    <div className="flex items-center justify-between gap-4">
+                                        <span className="text-xs font-semibold text-[#7a7b80]">Matches / team</span>
+                                        <span className="text-xs font-black">{form.numberOfMatches}</span>
+                                    </div>
+                                )}
+                            </div>
+                        </div>
+
+                        {isVersus ? (
+                            <div className="rounded-2xl border border-[#e4e4e7] bg-[#fafafa] p-5">
+                                <div className="flex items-start gap-3">
+                                    <Layers3 size={16} className="mt-0.5 shrink-0 text-[#8b7f45]" />
+                                    <div>
+                                        <p className="text-xs font-black">Bracket generation</p>
+                                        <p className="mt-1 text-[11px] font-medium leading-5 text-[#85868c]">
+                                            The preview helps the organizer understand the structure. The real bracket should be generated from locked teams after registration closes.
+                                        </p>
+                                    </div>
+                                </div>
+                            </div>
+                        ) : (
+                            <div className="rounded-2xl border border-[#e4e4e7] bg-[#fafafa] p-5">
+                                <div className="flex items-start gap-3">
+                                    <Trophy size={16} className="mt-0.5 shrink-0 text-[#8b7f45]" />
+                                    <div>
+                                        <p className="text-xs font-black">Leaderboard contract</p>
+                                        <p className="mt-1 text-[11px] font-medium leading-5 text-[#85868c]">
+                                            Total points are primary. The configured tiebreakers are applied in order for equal scores.
+                                        </p>
+                                    </div>
+                                </div>
+                            </div>
+                        )}
                     </aside>
                 </div>
             </main>
