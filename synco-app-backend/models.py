@@ -144,6 +144,20 @@ class User(db.Model):
         nullable=False
     )
 
+    # -----------------------------------------------------
+    # ACCOUNT ROLE
+    # -----------------------------------------------------
+
+    # Platform-level authorization role.
+    # Keep this separate from ProfileGame.role, which stores
+    # a player's role for a specific game.
+    account_role = db.Column(
+        db.String(30),
+        nullable=False,
+        default="player",
+        index=True
+    )
+
     # =====================================================
     # SYNCO REWARDS
     # =====================================================
@@ -260,6 +274,8 @@ class User(db.Model):
 
             "email_verified": self.email_verified,
             "discord_verified": self.discord_verified,
+
+            "account_role": self.account_role,
 
             "xp": self.xp,
             "level": self.level,
@@ -4595,4 +4611,410 @@ class CompetitionAuditLog(db.Model):
                 if self.created_at
                 else None
             )
+        }
+# =========================================================
+# ORGANIZER APPLICATION
+# =========================================================
+
+class OrganizerApplication(db.Model):
+
+    __tablename__ = "organizer_applications"
+
+    id = db.Column(
+        db.Integer,
+        primary_key=True
+    )
+
+    # -----------------------------------------------------
+    # APPLICANT
+    # -----------------------------------------------------
+
+    user_id = db.Column(
+        db.Integer,
+        db.ForeignKey("users.id", ondelete="CASCADE"),
+        nullable=False,
+        unique=True,
+        index=True
+    )
+
+    # -----------------------------------------------------
+    # APPLICATION ID
+    # -----------------------------------------------------
+
+    application_code = db.Column(
+        db.String(32),
+        unique=True,
+        nullable=False,
+        index=True
+    )
+
+    # -----------------------------------------------------
+    # ORGANIZER DETAILS
+    # -----------------------------------------------------
+
+    organization_name = db.Column(
+        db.String(150),
+        nullable=False
+    )
+
+    organizer_type = db.Column(
+        db.String(50),
+        nullable=False
+    )
+
+    country = db.Column(
+        db.String(100),
+        nullable=False
+    )
+
+    city = db.Column(
+        db.String(100),
+        nullable=True
+    )
+
+    contact_phone = db.Column(
+        db.String(30),
+        nullable=False
+    )
+
+    # -----------------------------------------------------
+    # EXPERIENCE
+    # -----------------------------------------------------
+
+    experience_years = db.Column(
+        db.Integer,
+        nullable=False,
+        default=0
+    )
+
+    events_organized = db.Column(
+        db.Integer,
+        nullable=False,
+        default=0
+    )
+
+    largest_event_size = db.Column(
+        db.Integer,
+        nullable=True
+    )
+
+    # JSON stored as PostgreSQL JSONB
+    games = db.Column(
+        db.JSON,
+        nullable=False,
+        default=list
+    )
+
+    # -----------------------------------------------------
+    # ONLINE PRESENCE
+    # -----------------------------------------------------
+
+    website_url = db.Column(
+        db.String(500),
+        nullable=True
+    )
+
+    discord_url = db.Column(
+        db.String(500),
+        nullable=True
+    )
+
+    social_url = db.Column(
+        db.String(500),
+        nullable=True
+    )
+
+    # -----------------------------------------------------
+    # EXPERIENCE / HISTORY
+    # -----------------------------------------------------
+
+    previous_event_url = db.Column(
+        db.String(500),
+        nullable=True
+    )
+
+    experience_description = db.Column(
+        db.Text,
+        nullable=True
+    )
+
+    # -----------------------------------------------------
+    # PLANNED SYNCO USAGE
+    # -----------------------------------------------------
+
+    planned_games = db.Column(
+        db.JSON,
+        nullable=False,
+        default=list
+    )
+
+    tournament_frequency = db.Column(
+        db.String(40),
+        nullable=False
+    )
+
+    expected_participants = db.Column(
+        db.Integer,
+        nullable=True
+    )
+
+    organizer_description = db.Column(
+        db.Text,
+        nullable=False
+    )
+
+    # -----------------------------------------------------
+    # APPLICATION STATUS
+    # -----------------------------------------------------
+
+    status = db.Column(
+        db.String(30),
+        nullable=False,
+        default="pending",
+        index=True
+    )
+
+    # pending
+    # under_review
+    # approved
+    # rejected
+    # suspended
+
+    rejection_reason = db.Column(
+        db.Text,
+        nullable=True
+    )
+
+    # -----------------------------------------------------
+    # REVIEW INFORMATION
+    # -----------------------------------------------------
+
+    reviewed_by = db.Column(
+        db.Integer,
+        db.ForeignKey("users.id", ondelete="SET NULL"),
+        nullable=True
+    )
+
+    reviewed_at = db.Column(
+        db.DateTime,
+        nullable=True
+    )
+
+    # -----------------------------------------------------
+    # AUDIT INFORMATION
+    # -----------------------------------------------------
+
+    submitted_ip = db.Column(
+        db.String(64),
+        nullable=True
+    )
+
+    user_agent = db.Column(
+        db.Text,
+        nullable=True
+    )
+
+    submitted_at = db.Column(
+        db.DateTime,
+        nullable=False,
+        server_default=db.func.now()
+    )
+
+    created_at = db.Column(
+        db.DateTime,
+        nullable=False,
+        server_default=db.func.now()
+    )
+
+    updated_at = db.Column(
+        db.DateTime,
+        nullable=False,
+        server_default=db.func.now(),
+        onupdate=db.func.now()
+    )
+
+    # -----------------------------------------------------
+    # RELATIONSHIPS
+    # -----------------------------------------------------
+
+    applicant = db.relationship(
+        "User",
+        foreign_keys=[user_id],
+        backref=db.backref(
+            "organizer_application",
+            uselist=False,
+            cascade="all, delete-orphan"
+        )
+    )
+
+    reviewer = db.relationship(
+        "User",
+        foreign_keys=[reviewed_by]
+    )
+
+    def to_dict(self):
+
+        return {
+            "id": self.id,
+            "application_code": self.application_code,
+            "user_id": self.user_id,
+
+            "organization_name": self.organization_name,
+            "organizer_type": self.organizer_type,
+            "country": self.country,
+            "city": self.city,
+            "contact_phone": self.contact_phone,
+
+            "experience_years": self.experience_years,
+            "events_organized": self.events_organized,
+            "largest_event_size": self.largest_event_size,
+
+            "games": self.games or [],
+
+            "website_url": self.website_url,
+            "discord_url": self.discord_url,
+            "social_url": self.social_url,
+
+            "previous_event_url": self.previous_event_url,
+            "experience_description": self.experience_description,
+
+            "planned_games": self.planned_games or [],
+            "tournament_frequency": self.tournament_frequency,
+            "expected_participants": self.expected_participants,
+
+            "organizer_description": self.organizer_description,
+
+            "status": self.status,
+            "rejection_reason": self.rejection_reason,
+
+            "reviewed_by": self.reviewed_by,
+            "reviewed_at": (
+                self.reviewed_at.isoformat()
+                if self.reviewed_at
+                else None
+            ),
+
+            "submitted_at": (
+                self.submitted_at.isoformat()
+                if self.submitted_at
+                else None
+            ),
+
+            "created_at": (
+                self.created_at.isoformat()
+                if self.created_at
+                else None
+            ),
+
+            "updated_at": (
+                self.updated_at.isoformat()
+                if self.updated_at
+                else None
+            ),
+        }
+
+
+# =========================================================
+# ORGANIZER APPLICATION AUDIT LOG
+# =========================================================
+
+class OrganizerApplicationAuditLog(db.Model):
+
+    __tablename__ = "organizer_application_audit_logs"
+
+    id = db.Column(
+        db.Integer,
+        primary_key=True
+    )
+
+    application_id = db.Column(
+        db.Integer,
+        db.ForeignKey(
+            "organizer_applications.id",
+            ondelete="CASCADE"
+        ),
+        nullable=False,
+        index=True
+    )
+
+    actor_id = db.Column(
+        db.Integer,
+        db.ForeignKey(
+            "users.id",
+            ondelete="SET NULL"
+        ),
+        nullable=True,
+        index=True
+    )
+
+    action = db.Column(
+        db.String(50),
+        nullable=False
+    )
+
+    previous_status = db.Column(
+        db.String(30),
+        nullable=True
+    )
+
+    new_status = db.Column(
+        db.String(30),
+        nullable=True
+    )
+
+    reason = db.Column(
+        db.Text,
+        nullable=True
+    )
+
+    metadata = db.Column(
+        db.JSON,
+        nullable=True
+    )
+
+    ip_address = db.Column(
+        db.String(64),
+        nullable=True
+    )
+
+    user_agent = db.Column(
+        db.Text,
+        nullable=True
+    )
+
+    created_at = db.Column(
+        db.DateTime,
+        nullable=False,
+        server_default=db.func.now()
+    )
+
+    application = db.relationship(
+        "OrganizerApplication",
+        backref=db.backref(
+            "audit_logs",
+            lazy="dynamic",
+            cascade="all, delete-orphan"
+        )
+    )
+
+    actor = db.relationship(
+        "User"
+    )
+
+    def to_dict(self):
+
+        return {
+            "id": self.id,
+            "application_id": self.application_id,
+            "actor_id": self.actor_id,
+            "action": self.action,
+            "previous_status": self.previous_status,
+            "new_status": self.new_status,
+            "reason": self.reason,
+            "metadata": self.metadata or {},
+            "created_at": (
+                self.created_at.isoformat()
+                if self.created_at
+                else None
+            ),
         }

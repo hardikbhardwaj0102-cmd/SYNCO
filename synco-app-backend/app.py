@@ -3,7 +3,7 @@ import os
 from flask import Flask
 from flask_cors import CORS
 from dotenv import load_dotenv
-
+from organizers import organizers_bp
 from models import db
 from seed_games import seed_initial_games
 from competition import competition_bp
@@ -179,6 +179,8 @@ app.register_blueprint(search_bp)
 app.register_blueprint(leaderboards_bp)
 
 app.register_blueprint(competition_bp)
+
+app.register_blueprint(organizers_bp)
 # =========================================================
 # HEALTH CHECK
 # =========================================================
