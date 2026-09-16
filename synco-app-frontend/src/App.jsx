@@ -9,7 +9,7 @@ import {
 import { AuthProvider, useAuth } from './context/AuthContext';
 
 import HybridLayout from './components/HybridLayout';
-
+import CreateCompetition from './pages/CreateCompetition';
 import LandingPage from './pages/LandingPage';
 import GamesHub from './pages/GamesHub';
 import GameDetails from './pages/GameDetails';
@@ -286,6 +286,10 @@ function App() {
               />
 
             </Route>
+            <Route
+              path="/competitions/create"
+              element={<CreateCompetition />}
+            />
 
           </Route>
 
