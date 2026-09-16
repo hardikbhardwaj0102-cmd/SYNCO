@@ -33,15 +33,20 @@
 ===================================================== */
 
 .create-competition-btn {
-  @apply flex items-center justify-center gap-2 shrink-0 h-11 px-5 rounded-xl bg-synco-dark text-white border border-synco-dark text-xs font-bold transition-all duration-200;
+  @apply flex items-center justify-center gap-2 shrink-0 h-11 px-5 rounded-xl text-xs font-bold transition-all duration-200;
+
+  background-color: #E5FE00;
+  color: #0B0E14;
+  border: 1px solid #E5FE00;
 }
 
 .create-competition-btn:hover {
-  @apply bg-black border-black;
+  background-color: #d5ed00;
+  border-color: #d5ed00;
 }
 
 .create-competition-btn:active {
-  @apply scale-[0.98];
+  transform: scale(0.98);
 }
 
 /* =====================================================

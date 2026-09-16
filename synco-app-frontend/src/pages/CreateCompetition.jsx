@@ -269,7 +269,7 @@ const FieldLabel = ({
                 {children}
 
                 {required && (
-                    <span className="ml-1 text-[#8b5cf6]">
+                    <span className="ml-1 text-[#E5FE00]">
                         *
                     </span>
                 )}
@@ -536,6 +536,30 @@ const CreateCompetition = () => {
        GAME CONFIG
     ===================================================== */
 
+    const availableGames = useMemo(() => {
+        if (Array.isArray(games) && games.length) {
+            return games;
+        }
+
+        if (games && typeof games === 'object' && !Array.isArray(games)) {
+            return Object.entries(games).map(([id, gameConfig]) => ({
+                id,
+                name:
+                    gameConfig?.game_names?.[0] ||
+                    formatLabel(id),
+                ...gameConfig,
+            }));
+        }
+
+        return Object.entries(config || {}).map(([id, gameConfig]) => ({
+            id,
+            name:
+                gameConfig?.game_names?.[0] ||
+                formatLabel(id),
+            ...gameConfig,
+        }));
+    }, [games, config]);
+
     const gameConfig = useMemo(() => {
         const slug =
             slugifyGame(
@@ -598,7 +622,7 @@ const CreateCompetition = () => {
 
     const handleGameChange = (gameId) => {
         const game =
-            games.find(
+            availableGames.find(
                 (item) =>
                     String(item.id) ===
                     String(gameId)
@@ -1376,7 +1400,7 @@ const CreateCompetition = () => {
 
                 <div className="mb-8">
 
-                    <div className="flex items-center gap-2 text-[10px] font-black uppercase tracking-[0.18em] text-[#8b5cf6]">
+                    <div className="flex items-center gap-2 text-[10px] font-black uppercase tracking-[0.18em] text-[#E5FE00]">
                         <Swords
                             size={13}
                         />
@@ -1566,83 +1590,49 @@ const CreateCompetition = () => {
                                         ) : (
                                             <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
 
-                                                {(
-                                                    games.length
-                                                        ? games
-                                                        : Object.keys(
-                                                            config
-                                                        ).map(
-                                                            (id) => ({
-                                                                id,
-                                                                name:
-                                                                    config[
-                                                                        id
-                                                                    ]
-                                                                        ?.game_names?.[0] ||
-                                                                    formatLabel(
-                                                                        id
-                                                                    ),
-                                                            })
-                                                        )
-                                                ).map(
-                                                    (game) => {
-                                                        const selected =
-                                                            String(
-                                                                form.gameId
-                                                            ) ===
-                                                            String(
-                                                                game.id
-                                                            );
+                                                {availableGames.map((game) => {
+                                                    const selected =
+                                                        String(form.gameId) ===
+                                                        String(game.id);
 
-                                                        return (
-                                                            <button
-                                                                key={
-                                                                    game.id
-                                                                }
-                                                                type="button"
-                                                                onClick={() =>
-                                                                    handleGameChange(
-                                                                        game.id
-                                                                    )
-                                                                }
-                                                                className={`group rounded-xl border p-4 text-left transition ${selected
+                                                    return (
+                                                        <button
+                                                            key={game.id}
+                                                            type="button"
+                                                            onClick={() =>
+                                                                handleGameChange(game.id)
+                                                            }
+                                                            className={`group rounded-xl border p-4 text-left transition ${selected
                                                                     ? 'border-[#111114] bg-[#111114] text-white'
                                                                     : 'border-[#e4e4e7] bg-[#fafafa] hover:border-[#bdbdc1] hover:bg-white'
-                                                                    }`}
-                                                            >
-
-                                                                <div className="flex items-center justify-between">
-
-                                                                    <div
-                                                                        className={`flex h-9 w-9 items-center justify-center rounded-lg ${selected
+                                                                }`}
+                                                        >
+                                                            <div className="flex items-center justify-between">
+                                                                <div
+                                                                    className={`flex h-9 w-9 items-center justify-center rounded-lg ${selected
                                                                             ? 'bg-white/10'
                                                                             : 'bg-white border border-[#e6e6e8]'
-                                                                            }`}
-                                                                    >
-                                                                        <Gamepad2
-                                                                            size={17}
-                                                                        />
-                                                                    </div>
-
-                                                                    {selected && (
-                                                                        <div className="flex h-5 w-5 items-center justify-center rounded-full bg-white text-[#111114]">
-                                                                            <Check
-                                                                                size={12}
-                                                                                strokeWidth={3}
-                                                                            />
-                                                                        </div>
-                                                                    )}
-
+                                                                        }`}
+                                                                >
+                                                                    <Gamepad2 size={17} />
                                                                 </div>
 
-                                                                <p className="mt-4 text-sm font-black">
-                                                                    {game.name}
-                                                                </p>
+                                                                {selected && (
+                                                                    <div className="flex h-5 w-5 items-center justify-center rounded-full bg-white text-[#111114]">
+                                                                        <Check
+                                                                            size={12}
+                                                                            strokeWidth={3}
+                                                                        />
+                                                                    </div>
+                                                                )}
+                                                            </div>
 
-                                                            </button>
-                                                        );
-                                                    }
-                                                )}
+                                                            <p className="mt-4 text-sm font-black">
+                                                                {game.name}
+                                                            </p>
+                                                        </button>
+                                                    );
+                                                })}
 
                                             </div>
                                         )}
@@ -2059,7 +2049,7 @@ const CreateCompetition = () => {
                                     <div>
 
                                         <div className="mb-4 flex items-center gap-2">
-                                            <div className="h-1.5 w-1.5 rounded-full bg-[#8b5cf6]" />
+                                            <div className="h-1.5 w-1.5 rounded-full bg-[#E5FE00]" />
 
                                             <h3 className="text-xs font-black uppercase tracking-[0.14em]">
                                                 Registration window
@@ -2125,7 +2115,7 @@ const CreateCompetition = () => {
                                     <div>
 
                                         <div className="mb-4 flex items-center gap-2">
-                                            <div className="h-1.5 w-1.5 rounded-full bg-[#8b5cf6]" />
+                                            <div className="h-1.5 w-1.5 rounded-full bg-[#E5FE00]" />
 
                                             <h3 className="text-xs font-black uppercase tracking-[0.14em]">
                                                 Competition window
@@ -2194,7 +2184,7 @@ const CreateCompetition = () => {
 
                                             <Clock3
                                                 size={17}
-                                                className="text-[#8b5cf6]"
+                                                className="text-[#E5FE00]"
                                             />
 
                                             <div>
@@ -2370,7 +2360,7 @@ const CreateCompetition = () => {
                                                 <div className="flex items-start justify-between gap-4">
 
                                                     <div>
-                                                        <p className="text-[10px] font-black uppercase tracking-[0.16em] text-[#8b5cf6]">
+                                                        <p className="text-[10px] font-black uppercase tracking-[0.16em] text-[#E5FE00]">
                                                             Points system
                                                         </p>
 
@@ -2387,7 +2377,7 @@ const CreateCompetition = () => {
 
                                                     <Trophy
                                                         size={20}
-                                                        className="text-[#8b5cf6]"
+                                                        className="text-[#E5FE00]"
                                                     />
 
                                                 </div>
@@ -2601,7 +2591,7 @@ const CreateCompetition = () => {
                                                         1
                                                     )
                                                 }
-                                                className="text-[10px] font-black uppercase tracking-[0.12em] text-[#8b5cf6] hover:text-[#6d3ee8]"
+                                                className="text-[10px] font-black uppercase tracking-[0.12em] text-[#E5FE00] hover:text-[#c9df00]"
                                             >
                                                 Edit
                                             </button>
@@ -2620,7 +2610,7 @@ const CreateCompetition = () => {
 
                                                 <Gamepad2
                                                     size={17}
-                                                    className="text-[#8b5cf6]"
+                                                    className="text-[#E5FE00]"
                                                 />
 
                                                 <div>
@@ -2673,7 +2663,7 @@ const CreateCompetition = () => {
 
                                                 <Users
                                                     size={17}
-                                                    className="text-[#8b5cf6]"
+                                                    className="text-[#E5FE00]"
                                                 />
 
                                                 <div>
@@ -2730,7 +2720,7 @@ const CreateCompetition = () => {
 
                                                 <CalendarDays
                                                     size={17}
-                                                    className="text-[#8b5cf6]"
+                                                    className="text-[#E5FE00]"
                                                 />
 
                                                 <p className="text-sm font-black">
@@ -2746,7 +2736,7 @@ const CreateCompetition = () => {
                                                         3
                                                     )
                                                 }
-                                                className="text-[10px] font-black uppercase tracking-[0.12em] text-[#8b5cf6]"
+                                                className="text-[10px] font-black uppercase tracking-[0.12em] text-[#E5FE00]"
                                             >
                                                 Edit
                                             </button>
@@ -2813,7 +2803,7 @@ const CreateCompetition = () => {
 
                                                         <Trophy
                                                             size={17}
-                                                            className="text-[#8b5cf6]"
+                                                            className="text-[#E5FE00]"
                                                         />
 
                                                         <p className="text-sm font-black">
@@ -2829,7 +2819,7 @@ const CreateCompetition = () => {
                                                                 4
                                                             )
                                                         }
-                                                        className="text-[10px] font-black uppercase tracking-[0.12em] text-[#8b5cf6]"
+                                                        className="text-[10px] font-black uppercase tracking-[0.12em] text-[#E5FE00]"
                                                     >
                                                         Edit
                                                     </button>
@@ -3025,7 +3015,7 @@ const CreateCompetition = () => {
 
                                         <div className="mt-8">
 
-                                            <p className="text-[9px] font-black uppercase tracking-[0.17em] text-[#c084fc]">
+                                            <p className="text-[9px] font-black uppercase tracking-[0.17em] text-[#E5FE00]">
                                                 {selectedGame?.name ||
                                                     'Select game'}
                                             </p>
@@ -3076,7 +3066,7 @@ const CreateCompetition = () => {
 
                                                     <Clock3
                                                         size={13}
-                                                        className="text-[#c084fc]"
+                                                        className="text-[#E5FE00]"
                                                     />
 
                                                     <span className="text-[9px] font-black uppercase tracking-[0.12em] text-white/40">
@@ -3201,7 +3191,7 @@ const CreateCompetition = () => {
 
                                     <Info
                                         size={16}
-                                        className="mt-0.5 shrink-0 text-[#8b5cf6]"
+                                        className="mt-0.5 shrink-0 text-[#E5FE00]"
                                     />
 
                                     <div>
