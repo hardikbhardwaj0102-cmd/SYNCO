@@ -1133,10 +1133,30 @@ const CreateCompetition = () => {
                                             max="25"
                                             step="1"
                                             value={form.maxTeams}
-                                            onChange={(event) =>
-                                                updateForm('maxTeams', Math.min(25, Math.max(2, Number(event.target.value) || 2)))
-                                            }
-                                            className={inputClass}
+                                            onChange={(event) => {
+                                                const raw = event.target.value;
+                                                if (raw === '') {
+                                                    updateForm('maxTeams', '');
+                                                    return;
+                                                }
+
+                                                const numeric = Number(raw);
+                                                if (numeric > 25) {
+                                                    updateForm('maxTeams', 25);
+                                                    return;
+                                                }
+
+                                                updateForm('maxTeams', raw);
+                                            }}
+                                            onBlur={() => {
+                                                const numeric = Number(form.maxTeams);
+                                                if (!Number.isInteger(numeric) || numeric < 2) {
+                                                    updateForm('maxTeams', 2);
+                                                } else if (numeric > 25) {
+                                                    updateForm('maxTeams', 25);
+                                                }
+                                            }}
+                                            className={`${inputClass} min-w-0 [appearance:textfield] text-center text-base [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none`}
                                         />
                                     </div>
 
@@ -1507,7 +1527,7 @@ const CreateCompetition = () => {
                                                         step="1"
                                                         value={points}
                                                         onChange={(event) => updatePlacementPoints(place, event.target.value)}
-                                                        className="mt-2 h-10 w-full rounded-lg border border-[#dddddf] bg-white px-3 text-sm font-black outline-none focus:border-[#111114]"
+                                                        className="mt-2 h-11 min-w-0 w-full rounded-lg border border-[#dddddf] bg-white px-2.5 text-center text-base font-black leading-none outline-none focus:border-[#111114] [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
                                                     />
                                                 </div>
                                             ))}
