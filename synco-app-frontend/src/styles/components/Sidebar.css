@@ -1,71 +1,238 @@
-@reference "../global.css";
+/* =========================================
+   SYNCO PILL SIDEBAR STYLES (DARK GLASS)
+========================================= */
 
 .sidebar-container {
-  @apply w-[100px] flex-shrink-0 bg-white border-r border-synco-border flex flex-col items-center py-6 h-full shadow-sm z-50 relative;
+  position: fixed;
+  top: 0;
+  left: 0;
+  height: 100vh;
+  width: 90px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 1.5rem 0;
+  gap: 1.25rem;
+  background-color: transparent;
+  z-index: 50;
 }
 
-.sidebar-logo {
-  @apply mb-8 font-header text-3xl font-bold tracking-tighter italic;
-  font-family: 'Cyber Horizon', 'Oswald', sans-serif;
-  font-size: 1.6vw
+/* =========================================
+   TOP LOGO BUBBLE
+========================================= */
+.sidebar-logo-bubble {
+  width: 56px;
+  height: 56px;
+  border-radius: 50%;
+  background: rgba(15, 15, 15, 0.6);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid rgba(255, 255, 255, 0.15); 
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #ffffff; /* Light icon */
+  box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.37);
+  transition: all 0.3s ease;
+  cursor: pointer;
 }
 
-.sidebar-nav {
-  @apply flex-1 w-full flex flex-col gap-6 overflow-y-visible items-center;
+.sidebar-logo-bubble:hover {
+  border-color: #D6C98A; /* Golden accent */
+  box-shadow: 0 0 20px rgba(214, 201, 138, 0.3);
+  color: #D6C98A;
 }
 
+/* =========================================
+   MAIN NAVIGATION PILL
+========================================= */
+.sidebar-main-pill {
+  width: 64px;
+  flex: 1;
+  background: rgba(15, 15, 15, 0.5);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 9999px; /* Pill shape */
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  align-items: center;
+  padding: 1.5rem 0 0.5rem 0;
+  box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.37);
+}
+
+.sidebar-nav-top, .sidebar-nav-bottom {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1rem;
+  width: 100%;
+}
+
+/* =========================================
+   ICONS & INTERACTIONS
+========================================= */
 .sidebar-item-wrapper {
-  @apply w-full relative flex justify-center;
+  position: relative;
+  display: flex;
+  justify-content: center;
+  width: 100%;
 }
 
 .sidebar-link {
-  @apply flex flex-col items-center justify-center w-full gap-1 transition-colors;
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: rgba(255, 255, 255, 0.5); /* Muted light gray for inactive */
+  transition: all 0.2s ease;
+  position: relative;
+  text-decoration: none;
+}
+
+.sidebar-link:hover {
+  color: #ffffff; /* White text on hover */
+  background-color: rgba(255, 255, 255, 0.1); /* Subtle glass hover background */
 }
 
 .sidebar-link-active {
-  @apply text-black font-bold;
+  background-color: #D6C98A; /* Golden active state */
+  color: #000000; /* Dark icon on gold background for high contrast */
+  box-shadow: 0 0 15px rgba(214, 201, 138, 0.4);
 }
 
-.sidebar-link-inactive {
-  @apply text-synco-textMuted hover:text-black;
+/* =========================================
+   TOOLTIPS
+========================================= */
+.sidebar-tooltip {
+  position: absolute;
+  left: 60px;
+  top: 50%;
+  transform: translateY(-50%);
+  background: rgba(20, 20, 20, 0.85);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  color: #ffffff;
+  padding: 0.35rem 0.75rem;
+  border-radius: 0.5rem;
+  font-size: 0.75rem;
+  font-weight: 600;
+  white-space: nowrap;
+  opacity: 0;
+  visibility: hidden;
+  transition: all 0.2s ease;
+  pointer-events: none;
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+  z-index: 100;
 }
 
-.sidebar-link-text {
-  @apply text-[10px] uppercase font-bold text-center px-1;
+.sidebar-link:hover .sidebar-tooltip {
+  opacity: 1;
+  visibility: visible;
+  left: 70px; 
 }
 
-.sidebar-bottom-section {
-  @apply w-full flex flex-col items-center border-t border-synco-border mt-4 pt-4 gap-4;
+/* =========================================
+   MORE & REWARDS SUBMENU
+========================================= */
+.sidebar-submenu {
+  position: absolute;
+  left: 70px;
+  top: 50%;
+  transform: translateY(-50%);
+  padding: 0.5rem;
+  background: rgba(20, 20, 20, 0.9);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  border-radius: 1rem;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4);
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  z-index: 1000;
+  opacity: 0;
+  visibility: hidden;
+  transition: all 0.2s ease;
 }
 
-.sidebar-bottom-link {
-  @apply flex flex-col items-center gap-1 transition-colors;
+.sidebar-item-wrapper:hover .sidebar-submenu {
+  opacity: 1;
+  visibility: visible;
 }
 
-.sidebar-bottom-link-active {
-  @apply text-black;
+.sidebar-submenu-link {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.5rem 1rem;
+  color: rgba(255, 255, 255, 0.7);
+  text-decoration: none;
+  border-radius: 0.5rem;
+  font-size: 0.875rem;
+  font-weight: 600;
+  transition: all 0.2s ease;
 }
 
-.sidebar-bottom-link-inactive {
-  @apply text-synco-textMuted hover:text-black;
+.sidebar-submenu-link:hover {
+  background-color: rgba(255, 255, 255, 0.1);
+  color: #ffffff;
 }
 
-.sidebar-bottom-text {
-  @apply text-[10px] uppercase font-bold;
+/* =========================================
+   BADGES & AVATARS
+========================================= */
+.sidebar-badge {
+  position: absolute;
+  top: -2px;
+  right: -2px;
+  min-width: 18px;
+  height: 18px;
+  padding: 0 4px;
+  border-radius: 9999px;
+  background-color: #ef4444; 
+  color: #ffffff;
+  font-size: 10px;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 2px solid rgba(15, 15, 15, 0.8); /* Matches dark pill background */
 }
 
-.sidebar-profile-link {
-  @apply flex flex-col items-center gap-1 text-synco-textMuted hover:text-black mt-2;
+.sidebar-avatar {
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  object-fit: cover;
+  border: 2px solid transparent;
+  transition: border-color 0.2s ease;
 }
 
-.sidebar-profile-avatar {
-  @apply w-8 h-8 rounded-full bg-gray-200 flex items-center justify-center border-2 border-transparent hover:border-black transition-all;
+.sidebar-link-active .sidebar-avatar,
+.sidebar-link:hover .sidebar-avatar {
+  border-color: #D6C98A;
 }
 
-.sidebar-profile-avatar img {
-  @apply w-full h-full rounded-full object-cover;
+.sidebar-profile-fallback {
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  background-color: rgba(255, 255, 255, 0.1);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: rgba(255, 255, 255, 0.7);
+  border: 2px solid transparent;
+  transition: border-color 0.2s ease;
 }
 
-.sidebar-profile-name {
-  @apply text-[10px] font-bold text-center text-orange-700 truncate w-20;
+.sidebar-link-active .sidebar-profile-fallback,
+.sidebar-link:hover .sidebar-profile-fallback {
+  border-color: #D6C98A;
+  color: #D6C98A;
 }

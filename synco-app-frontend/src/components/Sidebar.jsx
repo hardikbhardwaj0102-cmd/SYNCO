@@ -22,7 +22,6 @@ import '../styles/components/Sidebar.css';
 
 const API_URL = 'https://synco-backend-vi7b.onrender.com';
 
-
 // =========================================================
 // SIDEBAR
 // =========================================================
@@ -33,20 +32,17 @@ const Sidebar = () => {
 
   const { user, isAuthenticated } = useAuth();
 
-
   // =========================================================
   // FETCH NOTIFICATION COUNT
   // =========================================================
 
   const fetchUnreadCount = async () => {
-
     if (!isAuthenticated) {
       setUnreadCount(0);
       return;
     }
 
     try {
-
       const response = await fetch(
         `${API_URL}/api/notifications/unread-count`,
         {
@@ -63,7 +59,6 @@ const Sidebar = () => {
           'Notification count request failed:',
           response.status
         );
-
         return;
       }
 
@@ -72,24 +67,19 @@ const Sidebar = () => {
       if (data.success) {
         setUnreadCount(data.unreadCount || 0);
       }
-
     } catch (error) {
-
       console.error(
         'Failed to fetch notification count:',
         error
       );
-
     }
   };
-
 
   // =========================================================
   // INITIAL FETCH + AUTO REFRESH
   // =========================================================
 
   useEffect(() => {
-
     if (!isAuthenticated) {
       setUnreadCount(0);
       return;
@@ -105,16 +95,13 @@ const Sidebar = () => {
     return () => {
       clearInterval(interval);
     };
-
   }, [isAuthenticated]);
-
 
   // =========================================================
   // REFRESH WHEN NOTIFICATIONS ARE UPDATED
   // =========================================================
 
   useEffect(() => {
-
     const handleNotificationsUpdated = () => {
       fetchUnreadCount();
     };
@@ -125,302 +112,213 @@ const Sidebar = () => {
     );
 
     return () => {
-
       window.removeEventListener(
         'notifications-updated',
         handleNotificationsUpdated
       );
-
     };
-
   }, [isAuthenticated]);
-
 
   // =========================================================
   // MAIN NAVIGATION
   // =========================================================
 
   const navItems = [
-
     {
       icon: Home,
       label: 'Home',
       path: '/'
     },
-
     {
       icon: Search,
       label: 'Search',
       path: '/search'
     },
-
     {
       icon: Trophy,
       label: 'Competitions',
       path: '/competitions'
     },
-
     {
       icon: Gamepad2,
       label: 'Play',
       path: '/play'
     },
-
     {
       icon: Crown,
       label: 'Ranking',
       path: '/ranking'
     },
-
     {
       icon: Shield,
       label: 'Clubs',
       path: '/clubs'
     }
-
   ];
-
 
   // =========================================================
   // RENDER
   // =========================================================
 
   return (
-
     <aside className="sidebar-container">
 
-
       {/* =====================================================
-          LOGO
+          TOP LOGO BUBBLE
           ===================================================== */}
-
-      <div className="sidebar-logo">
-        SYNCO
+      <div className="sidebar-logo-bubble">
+        <span style={{ fontFamily: 'Super Brigade, sans-serif', fontSize: '11px', fontWeight: 'bold', letterSpacing: '0.05em' }}>
+          SYN
+        </span>
       </div>
 
-
       {/* =====================================================
-          MAIN NAVIGATION
+          MAIN NAVIGATION PILL
           ===================================================== */}
+      <div className="sidebar-main-pill">
+        
+        <div className="sidebar-nav-top">
+          {navItems.map((item) => (
+            <div
+              key={item.label}
+              className="sidebar-item-wrapper"
+              onMouseEnter={() =>
+                item.label === 'Play' &&
+                setIsPlayHovered(true)
+              }
+              onMouseLeave={() =>
+                item.label === 'Play' &&
+                setIsPlayHovered(false)
+              }
+            >
+              <NavLink
+                to={item.path}
+                className={({ isActive }) =>
+                  `sidebar-link ${
+                    isActive ? 'sidebar-link-active' : ''
+                  }`
+                }
+              >
+                <item.icon
+                  size={20}
+                  strokeWidth={1.5}
+                />
+                
+                {/* Tooltip on Hover matching your CSS */}
+                <span className="sidebar-tooltip">
+                  {item.label}
+                </span>
+              </NavLink>
 
-      <nav className="sidebar-nav">
+              {/* =================================================
+                  GAMES DROPDOWN
+                  ================================================= */}
+              {item.label === 'Play' && (
+                <div className="sidebar-submenu" style={{ opacity: isPlayHovered ? 1 : 0, visibility: isPlayHovered ? 'visible' : 'hidden' }}>
+                  <GamesDropdown
+                    isVisible={isPlayHovered}
+                  />
+                </div>
+              )}
+            </div>
+          ))}
+        </div>
 
-        {navItems.map((item) => (
+        {/* =====================================================
+            BOTTOM NAVIGATION SECTION
+            ===================================================== */}
+        <div className="sidebar-nav-bottom">
 
-          <div
-            key={item.label}
-            className="sidebar-item-wrapper"
-
-            onMouseEnter={() =>
-              item.label === 'Play' &&
-              setIsPlayHovered(true)
-            }
-
-            onMouseLeave={() =>
-              item.label === 'Play' &&
-              setIsPlayHovered(false)
-            }
-          >
-
+          {/* ===================================================
+              NOTIFICATIONS
+              ================================================== */}
+          <div className="sidebar-item-wrapper">
             <NavLink
-              to={item.path}
-
+              to="/notifications"
               className={({ isActive }) =>
-                `sidebar-link ${isActive
-                  ? 'sidebar-link-active'
-                  : 'sidebar-link-inactive'
+                `sidebar-link ${
+                  isActive ? 'sidebar-link-active' : ''
                 }`
               }
             >
+              <div style={{ position: 'relative', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                <Bell size={20} strokeWidth={1.5} />
 
-              <item.icon
-                size={24}
-                strokeWidth={1.5}
-              />
+                {/* =============================================
+                    UNREAD BADGE
+                    ============================================= */}
+                {unreadCount > 0 && (
+                  <span className="sidebar-badge">
+                    {unreadCount > 99 ? '99+' : unreadCount}
+                  </span>
+                )}
+              </div>
 
-              <span className="sidebar-link-text">
-                {item.label}
+              <span className="sidebar-tooltip">
+                Notifications
               </span>
-
             </NavLink>
-
-
-            {/* =================================================
-                GAMES DROPDOWN
-                ================================================= */}
-
-            {item.label === 'Play' && (
-
-              <GamesDropdown
-                isVisible={isPlayHovered}
-              />
-
-            )}
-
           </div>
 
-        ))}
-
-      </nav>
-
-
-      {/* =====================================================
-          BOTTOM SECTION
-          ===================================================== */}
-
-      <div className="sidebar-bottom-section">
-
-
-        {/* ===================================================
-            NOTIFICATIONS
-            =================================================== */}
-
-        <NavLink
-          to="/notifications"
-
-          className={({ isActive }) =>
-            `sidebar-link ${isActive
-              ? 'sidebar-link-active'
-              : 'sidebar-link-inactive'
-            }`
-          }
-        >
-
-          <div
-            style={{
-              position: 'relative',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center'
-            }}
-          >
-
-            <Bell
-              size={24}
-              strokeWidth={1.5}
-            />
-
-
-            {/* =============================================
-                UNREAD BADGE
-                ============================================= */}
-
-            {unreadCount > 0 && (
-
-              <span
-                style={{
-                  position: 'absolute',
-                  top: '-7px',
-                  right: '-9px',
-                  minWidth: '17px',
-                  height: '17px',
-                  padding: '0 4px',
-                  borderRadius: '999px',
-                  background: '#000',
-                  color: '#fff',
-                  fontSize: '9px',
-                  fontWeight: '700',
-                  lineHeight: '17px',
-                  textAlign: 'center',
-                  border: '2px solid #fff',
-                  boxSizing: 'content-box'
-                }}
-              >
-
-                {unreadCount > 99
-                  ? '99+'
-                  : unreadCount}
-
+          {/* ===================================================
+              REWARDS
+              ================================================== */}
+          <div className="sidebar-item-wrapper">
+            <NavLink
+              to="/rewards"
+              className={({ isActive }) =>
+                `sidebar-link ${
+                  isActive ? 'sidebar-link-active' : ''
+                }`
+              }
+            >
+              <Gift size={20} strokeWidth={1.5} />
+              <span className="sidebar-tooltip">
+                Rewards
               </span>
-
-            )}
-
+            </NavLink>
           </div>
 
+          {/* ===================================================
+              PROFILE
+              ================================================== */}
+          <div className="sidebar-item-wrapper">
+            <NavLink
+              to={
+                user?.username
+                  ? `/profile/${encodeURIComponent(user.username)}`
+                  : '/settings'
+              }
+              className={({ isActive }) =>
+                `sidebar-link ${
+                  isActive ? 'sidebar-link-active' : ''
+                }`
+              }
+            >
+              {user?.avatar ? (
+                <img
+                  src={user.avatar}
+                  alt="Profile"
+                  className="sidebar-avatar"
+                />
+              ) : (
+                <div className="sidebar-profile-fallback">
+                  <User size={20} />
+                </div>
+              )}
 
-          <span className="sidebar-link-text">
-            Notifications
-          </span>
-
-        </NavLink>
-
-
-        {/* ===================================================
-            REWARDS
-            =================================================== */}
-
-        <NavLink
-          to="/rewards"
-
-          className={({ isActive }) =>
-            `sidebar-bottom-link ${isActive
-              ? 'sidebar-bottom-link-active'
-              : 'sidebar-bottom-link-inactive'
-            }`
-          }
-        >
-
-          <Gift
-            size={24}
-            strokeWidth={1.5}
-          />
-
-          <span className="sidebar-bottom-text">
-            Rewards
-          </span>
-
-        </NavLink>
-
-
-        {/* ===================================================
-            PROFILE
-            =================================================== */}
-
-        <NavLink
-          to={
-            user?.username
-              ? `/profile/${encodeURIComponent(user.username)}`
-              : '/settings'
-          }
-
-          className="sidebar-profile-link"
-        >
-
-          <div className="sidebar-profile-avatar">
-
-            {user?.avatar ? (
-
-              <img
-                src={user.avatar}
-                alt="Profile"
-              />
-
-            ) : (
-
-              <User size={18} />
-
-            )}
-
+              <span className="sidebar-tooltip">
+                {user?.username || user?.name || 'Profile'}
+              </span>
+            </NavLink>
           </div>
 
-
-          <span className="sidebar-profile-name">
-
-            {user?.username ||
-              user?.name ||
-              'Profile'}
-
-          </span>
-
-        </NavLink>
+        </div>
 
       </div>
 
     </aside>
-
   );
-
 };
-
 
 export default Sidebar;

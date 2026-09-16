@@ -1,9 +1,7 @@
 import { useEffect, useState } from 'react';
-
 import {
   Settings,
   Video,
-  PlaySquare,
   ShieldCheck,
   Share2,
   Link2,
@@ -12,14 +10,22 @@ import {
   ChevronDown,
   Copy,
   Check,
+  Gamepad2,
+  Users,
+  Clock,
+  PlaySquare,
 } from 'lucide-react';
 
 import { useAuth } from '../context/AuthContext';
 import { useNavigate, useParams } from 'react-router-dom';
 
 import '../styles/pages/ProfileView.css';
-import VideoClip from '../components/VideoClip';
 import '../styles/components/GameLogos.css';
+
+// =========================================================
+// BACKGROUND CHARACTER ASSET
+// =========================================================
+import characterBg from '../assets/profile-view-character.png';
 
 
 // =========================================================
@@ -117,7 +123,6 @@ const ProfileView = () => {
   const { user } = useAuth();
 
   const [activeTab, setActiveTab] = useState('MOMENTS');
-  const [matchFilter, setMatchFilter] = useState('ONGOING');
 
   const [profile, setProfile] = useState(null);
   const [gameCatalog, setGameCatalog] = useState([]);
@@ -322,10 +327,6 @@ const ProfileView = () => {
     setIsUploadingClip(true);
 
     try {
-      // -------------------------------------------------------
-      // READ VIDEO METADATA
-      // -------------------------------------------------------
-
       const metadata = await new Promise(
         (resolve, reject) => {
           const video =
@@ -360,11 +361,6 @@ const ProfileView = () => {
         }
       );
 
-
-      // -------------------------------------------------------
-      // VIDEO VALIDATION
-      // -------------------------------------------------------
-
       if (metadata.duration > 120) {
         throw new Error(
           'Clips must be 120 seconds or shorter.'
@@ -381,11 +377,6 @@ const ProfileView = () => {
           'Clips must be between 720p and 1080p.'
         );
       }
-
-
-      // -------------------------------------------------------
-      // FORM DATA
-      // -------------------------------------------------------
 
       const formData = new FormData();
 
@@ -434,11 +425,6 @@ const ProfileView = () => {
         metadata.height
       );
 
-
-      // -------------------------------------------------------
-      // UPLOAD
-      // -------------------------------------------------------
-
       const response = await fetch(
         `${API_URL}/api/profile/clips`,
         {
@@ -457,11 +443,6 @@ const ProfileView = () => {
         );
       }
 
-
-      // -------------------------------------------------------
-      // UPDATE PROFILE LOCALLY
-      // -------------------------------------------------------
-
       setProfile((prev) => ({
         ...prev,
         clips: [
@@ -469,11 +450,6 @@ const ProfileView = () => {
           ...(prev.clips || []),
         ],
       }));
-
-
-      // -------------------------------------------------------
-      // RESET MODAL
-      // -------------------------------------------------------
 
       setIsAddClipModalOpen(false);
       setIsClipGameMenuOpen(false);
@@ -505,999 +481,300 @@ const ProfileView = () => {
 
 
   // =========================================================
-  // LOADING
+  // LOADING / ERROR
   // =========================================================
 
   if (isLoading) {
     return (
-      <div className="w-full text-center py-20 font-bold uppercase tracking-widest text-xs text-gray-500">
-        Loading profile...
+      <div className="w-full h-screen flex items-center justify-center font-bold uppercase tracking-widest text-xs text-gray-500 bg-black">
+        Loading interface...
       </div>
     );
   }
-
-
-  // =========================================================
-  // ERROR
-  // =========================================================
 
   if (error || !profile) {
     return (
-      <div className="w-full text-center py-20 font-bold uppercase tracking-widest text-xs text-gray-500">
-        This profile is unavailable.
+      <div className="w-full h-screen flex items-center justify-center font-bold uppercase tracking-widest text-xs text-gray-500 bg-black">
+        Operative Not Found.
       </div>
     );
   }
-
-
-  // =========================================================
-  // MOMENTS
-  // =========================================================
 
   const moments = profile.clips || [];
 
 
   // =========================================================
-  // RENDER
+  // RENDER (IMMERSIVE LOBBY HUD)
   // =========================================================
 
   return (
     <div className="public-profile-wrapper">
 
-      {/* =====================================================
-          1. PLAYER CARD HEADER
-          ===================================================== */}
+      {/* BACKGROUND CHARACTER */}
+      <img
+        src={characterBg}
+        alt="SYNCO Operative"
+        className="lobby-background"
+      />
+      <div className="lobby-vignette"></div>
 
-      <div className="profile-card-container">
-
-        {/* ===================================================
-            LEFT — AVATAR
-            =================================================== */}
-
-        {profile.avatarUrl ? (
-          <img
-            src={profile.avatarUrl}
-            alt={`${profile.username} avatar`}
-            className="profile-avatar-large"
-          />
-        ) : (
-          <div className="profile-avatar-large profile-avatar-fallback">
-            {profile.username
-              ?.slice(0, 1)
-              .toUpperCase()}
+      {/* HUD LAYER */}
+      <div className="hud-layer">
+        
+        {/* =======================
+            LEFT HUD: TABS & FEEDS
+            ======================= */}
+        <div className="hud-left">
+          
+          <div className="hud-tabs">
+            <button className={`hud-tab-btn ${activeTab === 'MOMENTS' ? 'active' : ''}`} onClick={() => setActiveTab('MOMENTS')}>Moments</button>
+            <button className={`hud-tab-btn ${activeTab === 'ROSTER' ? 'active' : ''}`} onClick={() => setActiveTab('ROSTER')}>Roster</button>
+            <button className={`hud-tab-btn ${activeTab === 'COMPS' ? 'active' : ''}`} onClick={() => setActiveTab('COMPS')}>Comps</button>
           </div>
-        )}
 
-
-        {/* ===================================================
-            CENTER — INFO & STATS
-            =================================================== */}
-
-        <div className="profile-info-col">
-
-          <div className="profile-username-row">
-            <h1 className="profile-username">
-              {profile.username}
-            </h1>
-
-            {profile.linkedStatus?.discord && (
-              <ShieldCheck
-                className="profile-verified-badge"
-                size={24}
-                aria-label="Discord verified"
-              />
+          <div className="hud-list-container">
+            
+            {activeTab === 'MOMENTS' && (
+              moments.length > 0 ? (
+                moments.slice(0, 6).map((moment) => (
+                  <div key={moment.id} className="w-full aspect-video rounded-xl overflow-hidden glass-hud flex-shrink-0 relative group cursor-pointer border border-white/10">
+                    <video
+                      src={moment.url}
+                      className="w-full h-full object-cover"
+                      muted
+                      loop
+                      playsInline
+                      onMouseEnter={(e) => e.target.play()}
+                      onMouseLeave={(e) => { e.target.pause(); e.target.currentTime = 0; }}
+                    />
+                    <div className="absolute inset-0 flex items-center justify-center bg-black/40 group-hover:bg-transparent transition-all duration-300 pointer-events-none">
+                      <PlaySquare size={28} className="text-white opacity-80" />
+                    </div>
+                  </div>
+                ))
+              ) : (
+                <div className="w-full py-12 glass-hud flex flex-col items-center justify-center text-gray-400">
+                  <Video size={24} className="mb-2 opacity-50" />
+                  <span className="text-[9px] font-bold uppercase tracking-widest">No Moments</span>
+                </div>
+              )
             )}
+
+            {activeTab === 'ROSTER' && (
+              profile.games?.length > 0 ? (
+                profile.games.map((game) => (
+                  <div className="glass-hud p-3 flex items-center gap-3" key={game.id}>
+                    <img src={getGameLogo(game.id, game.gameName || game.name) || '/games/default-placeholder.png'} alt={game.gameName} className="h-8 object-contain" />
+                    <div className="min-w-0">
+                      <h4 className="font-bold text-xs uppercase truncate">{game.gameName || game.name}</h4>
+                      <span className="text-[9px] text-gray-400 uppercase tracking-widest truncate block">{game.ign}</span>
+                    </div>
+                  </div>
+                ))
+              ) : (
+                <span className="text-[10px] text-gray-400 uppercase tracking-widest p-2">No verified titles.</span>
+              )
+            )}
+
+            {activeTab === 'COMPS' && (
+              <>
+                <div className="glass-hud p-3 mb-2">
+                  <span className="text-[9px] font-bold text-emerald-400 uppercase tracking-widest block mb-1">Live Now</span>
+                  <h4 className="font-bold text-xs uppercase">SYNCO Summer Cup</h4>
+                  <div className="flex gap-3 mt-1 text-[9px] text-gray-400 uppercase tracking-widest">
+                    <span className="flex items-center gap-1"><Gamepad2 size={10}/> BGMI</span>
+                    <span className="flex items-center gap-1"><Users size={10}/> 4v4</span>
+                  </div>
+                </div>
+                <div className="glass-hud p-3">
+                  <span className="text-[9px] font-bold text-[#D6C98A] uppercase tracking-widest block mb-1">Upcoming</span>
+                  <h4 className="font-bold text-xs uppercase">Arena Knockout</h4>
+                  <div className="flex gap-3 mt-1 text-[9px] text-gray-400 uppercase tracking-widest">
+                    <span className="flex items-center gap-1"><Gamepad2 size={10}/> Valorant</span>
+                    <span className="flex items-center gap-1"><Clock size={10}/> Tomorrow</span>
+                  </div>
+                </div>
+              </>
+            )}
+
           </div>
 
-
-          {/* Name / Region / UID / Bio */}
-
-          <div className="mb-4">
-
-            <span className="profile-bio-name">
-              {profile.name}
-
-              {profile.region &&
-                ` • ${profile.region}`}
-            </span>
+          {activeTab === 'MOMENTS' && isOwner && (
+            <div className="hud-upload-btn" onClick={() => setIsAddClipModalOpen(true)}>
+              <span>Add Moment</span>
+              <div className="hud-upload-icon"><Plus size={14} /></div>
+            </div>
+          )}
+        </div>
 
 
-            {/* SYNCO UID */}
+        {/* =======================
+            RIGHT HUD: IDENTITY & STATS
+            ======================= */}
+        <div className="hud-right">
+          
+          <div>
+            <div className="hud-top-status">
+              <div className="hud-status-btn" onClick={shareProfile} title="Share Profile"><Share2 size={16} /></div>
+              {isOwner && (
+                <div className="hud-status-btn" onClick={() => navigate('/settings')} title="Settings"><Settings size={16} /></div>
+              )}
+            </div>
 
-            {profile.uid && (
-              <div className="flex items-center gap-2 mt-2">
-
-                <span className="text-[10px] font-bold uppercase tracking-widest text-gray-400">
-                  SYNCO UID
-                </span>
-
-                <span className="text-xs font-bold tracking-wider text-black">
-                  {profile.uid}
-                </span>
-
-                <button
-                  type="button"
-                  onClick={copySyncoUid}
-                  className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg border border-black/10 bg-white text-[10px] font-bold uppercase tracking-wider text-gray-500 hover:text-black hover:border-black/30 transition-all"
-                  title="Copy SYNCO UID"
-                >
-                  {uidCopied ? (
-                    <>
-                      <Check size={12} />
-                      Copied
-                    </>
-                  ) : (
-                    <>
-                      <Copy size={12} />
-                      Copy
-                    </>
-                  )}
-                </button>
-
+            <div className="hud-identity">
+              <div>
+                <div className="hud-level">{profile.stats?.matches ? Math.min(99, Math.floor(profile.stats.matches / 5) + 1) : 42}</div> 
+                <div className="hud-level-label">LEVEL</div>
               </div>
-            )}
-
-
-            {/* Bio */}
-
-            <p className="profile-bio-text">
-              {profile.bio ||
-                'No bio added yet.'}
-            </p>
-
-          </div>
-
-
-          {/* PROFILE STATS */}
-
-          <div className="profile-stats-container">
-
-            <div className="stat-item">
-              <span className="stat-value">
-                {profile.stats?.matches || 0}
-              </span>
-
-              <span className="stat-label">
-                Matches
-              </span>
-            </div>
-
-
-            <div className="stat-item">
-              <span className="stat-value">
-                {profile.stats?.winRate || 0}%
-              </span>
-
-              <span className="stat-label">
-                Win Rate
-              </span>
-            </div>
-
-
-            <div className="stat-item">
-              <span className="stat-value">
-                {profile.stats?.trophies || 0}
-              </span>
-
-              <span className="stat-label">
-                Trophies
-              </span>
-            </div>
-
-          </div>
-
-        </div>
-
-
-        {/* ===================================================
-            RIGHT — ACTIONS & SOCIALS
-            =================================================== */}
-
-        <div className="profile-actions-col">
-
-          <div className="profile-top-actions">
-
-            <button
-              onClick={shareProfile}
-              className="text-gray-400 hover:text-black transition-colors"
-              title="Share Profile"
-            >
-              <Share2 size={18} />
-            </button>
-
-            {isOwner && (
-              <button
-                onClick={() => navigate('/settings')}
-                className="text-gray-400 hover:text-black transition-colors"
-                title="Edit Profile"
-              >
-                <Settings size={20} />
-              </button>
-            )}
-
-          </div>
-
-
-          {/* SOCIAL LINKS */}
-
-          <div className="profile-socials-container">
-
-            {/* YouTube */}
-
-            {profile.socials?.youtube && (
-              <a
-                href={externalSocialUrl(
-                  profile.socials.youtube,
-                  'youtube'
-                )}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="social-link-btn group"
-              >
-                <Link2
-                  size={14}
-                  className="group-hover:text-red-500 transition-colors"
-                />
-
-                <span className="hidden md:inline">
-                  YouTube
-                </span>
-              </a>
-            )}
-
-
-            {/* Instagram */}
-
-            {profile.socials?.instagram && (
-              <a
-                href={externalSocialUrl(
-                  profile.socials.instagram,
-                  'instagram'
-                )}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="social-link-btn group"
-              >
-                <Link2
-                  size={14}
-                  className="group-hover:text-pink-500 transition-colors"
-                />
-
-                <span className="hidden md:inline">
-                  Instagram
-                </span>
-              </a>
-            )}
-
-
-            {/* Twitch */}
-
-            {profile.socials?.twitch && (
-              <a
-                href={externalSocialUrl(
-                  profile.socials.twitch,
-                  'twitch'
-                )}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="social-link-btn group"
-              >
-                <Link2
-                  size={14}
-                  className="group-hover:text-purple-500 transition-colors"
-                />
-
-                <span className="hidden md:inline">
-                  Twitch
-                </span>
-              </a>
-            )}
-
-
-            {/* X */}
-
-            {profile.socials?.x && (
-              <a
-                href={externalSocialUrl(
-                  profile.socials.x,
-                  'x'
-                )}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="social-link-btn group"
-              >
-                <Link2
-                  size={14}
-                  className="group-hover:text-blue-400 transition-colors"
-                />
-
-                <span className="hidden md:inline">
-                  Twitter
-                </span>
-              </a>
-            )}
-
-          </div>
-
-        </div>
-
-      </div>
-
-
-      {/* =====================================================
-          2. PROFESSIONAL GAME ROSTER
-          ===================================================== */}
-
-      <div className="profile-games-roster">
-
-        {profile.games?.length > 0 ? (
-
-          profile.games.map((game) => {
-
-            const logoUrl = getGameLogo(
-              game.id,
-              game.gameName || game.name
-            );
-
-            const logoClass = game.id === 'cr'
-              ? 'game-logo--clash-royale'
-              : `game-logo--${game.id}`;
-
-            return (
-              <div
-                className="game-roster-item"
-                key={game.id}
-              >
-
-                {logoUrl ? (
-                  <img
-                    src={logoUrl}
-                    alt={`${game.gameName || game.name} Logo`}
-                    className={`game-roster-logo game-logo ${logoClass}`}
-                    onError={(event) => {
-                      console.error(
-                        `Failed to load game logo: ${logoUrl}`
-                      );
-
-                      event.currentTarget.style.display =
-                        'none';
-                    }}
-                  />
-                ) : (
-                  <div className="game-roster-logo game-roster-logo-fallback">
-                    {(
-                      game.gameName ||
-                      game.name ||
-                      '?'
-                    )
-                      .slice(0, 1)
-                      .toUpperCase()}
+              <div className="hud-names">
+                <div className="flex items-center gap-2">
+                  <h1>{profile.username}</h1>
+                  {profile.linkedStatus?.discord && <ShieldCheck size={16} className="text-emerald-400 mb-1" />}
+                </div>
+                <p>{profile.name} {profile.region ? `• ${profile.region}` : ''}</p>
+                
+                {profile.uid && (
+                  <div className="flex items-center gap-2 mt-1">
+                    <span className="text-[9px] text-gray-400 font-mono">UID: {profile.uid}</span>
+                    <button onClick={copySyncoUid} className="hover:text-white transition" title="Copy UID">
+                      {uidCopied ? <Check size={10} className="text-emerald-400"/> : <Copy size={10}/>}
+                    </button>
                   </div>
                 )}
-
-                <span className="game-roster-ign">
-                  {game.ign}
-                </span>
-
               </div>
-            );
-          })
-
-        ) : (
-
-          <span className="text-xs font-bold text-gray-400 uppercase tracking-widest">
-            No verified game titles registered.
-          </span>
-
-        )}
-
-      </div>
-
-
-      {/* =====================================================
-          3. ESPORTS NAVIGATION
-          ===================================================== */}
-
-      <div className="profile-tabs">
-
-        <button
-          className={`profile-tab ${activeTab === 'MOMENTS'
-              ? 'active'
-              : ''
-            }`}
-          onClick={() =>
-            setActiveTab('MOMENTS')
-          }
-        >
-          <Video size={16} />
-          Moments
-        </button>
-
-
-        <button
-          className={`profile-tab ${activeTab === 'MATCHES'
-              ? 'active'
-              : ''
-            }`}
-          onClick={() =>
-            setActiveTab('MATCHES')
-          }
-        >
-          <PlaySquare size={16} />
-          Matches
-        </button>
-
-      </div>
-
-
-      {/* =====================================================
-          4. TAB CONTENT
-          ===================================================== */}
-
-      <div className="tab-content mt-4">
-
-        {/* ===================================================
-            MOMENTS
-            =================================================== */}
-
-        {activeTab === 'MOMENTS' && (
-
-          <div className="flex flex-col gap-4">
-
-            {/* Add Clip Button */}
-
-            {isOwner &&
-              moments.length < 6 && (
-
-                <button
-                  className="add-clip-small-btn"
-                  onClick={() =>
-                    setIsAddClipModalOpen(true)
-                  }
-                >
-                  <Plus size={14} />
-                  Add New Clip ({moments.length}/6)
-                </button>
-
-              )}
-
-
-            {/* Clips */}
-
-            {moments.length > 0 ? (
-
-              <div className="moments-grid-container">
-
-                {moments
-                  .slice(0, 6)
-                  .map((moment) => (
-
-                    <VideoClip
-                      key={moment.id}
-                      id={moment.id}
-                      url={moment.url}
-                      title={moment.title}
-                      description={moment.description}
-                      game={moment.game}
-                      initialLikes={moment.likes}
-                      initialComments={moment.comments}
-                    />
-
-                  ))}
-
-              </div>
-
-            ) : (
-
-              <div className="empty-content-area w-full border-none mt-4">
-
-                <Video
-                  size={32}
-                  className="text-gray-300"
-                />
-
-                <h2 className="empty-title">
-                  No Moments
-                </h2>
-
-                <p className="empty-subtitle mb-4">
-                  Gameplay highlights will appear here.
-                </p>
-
-                {isOwner && (
-
-                  <button
-                    className="add-clip-small-btn"
-                    onClick={() =>
-                      setIsAddClipModalOpen(true)
-                    }
-                  >
-                    <Plus size={14} />
-                    Upload First Clip
-                  </button>
-
-                )}
-
-              </div>
-
-            )}
-
-          </div>
-
-        )}
-
-
-        {/* ===================================================
-            MATCHES
-            =================================================== */}
-
-        {activeTab === 'MATCHES' && (
-
-          <div className="mt-4">
-
-            <div className="match-filters">
-
-              <button
-                className={`match-filter-btn ${matchFilter === 'ONGOING'
-                    ? 'active'
-                    : 'inactive'
-                  }`}
-                onClick={() =>
-                  setMatchFilter('ONGOING')
-                }
-              >
-                Ongoing
-              </button>
-
-
-              <button
-                className={`match-filter-btn ${matchFilter === 'COMPLETED'
-                    ? 'active'
-                    : 'inactive'
-                  }`}
-                onClick={() =>
-                  setMatchFilter('COMPLETED')
-                }
-              >
-                Completed
-              </button>
-
             </div>
 
-
-            <div className="empty-content-area border-none w-full">
-
-              <PlaySquare
-                size={32}
-                className="text-gray-300"
-              />
-
-              <h2 className="empty-title">
-                No {matchFilter.toLowerCase()} matches
-              </h2>
-
-              <p className="empty-subtitle">
-                Bracket history will appear here.
-              </p>
-
+            <div className="mt-6">
+              <div className="hud-stat-line">
+                <span className="hud-stat-label">Win Rate</span>
+                <span className="hud-stat-value">{profile.stats?.winRate || 0}%</span>
+              </div>
+              <div className="hud-stat-line">
+                <span className="hud-stat-label">Trophies</span>
+                <span className="hud-stat-value text-[#D6C98A]">{profile.stats?.trophies || 0}</span>
+              </div>
+              <div className="hud-stat-line">
+                <span className="hud-stat-label">Matches</span>
+                <span className="hud-stat-value">{profile.stats?.matches || 0}</span>
+              </div>
             </div>
 
+            <div className="hud-socials-grid">
+              {profile.socials?.youtube && <a href={externalSocialUrl(profile.socials.youtube, 'youtube')} target="_blank" rel="noreferrer" className="hud-social-square"><Link2 size={16} /></a>}
+              {profile.socials?.instagram && <a href={externalSocialUrl(profile.socials.instagram, 'instagram')} target="_blank" rel="noreferrer" className="hud-social-square"><Link2 size={16} /></a>}
+              {profile.socials?.twitch && <a href={externalSocialUrl(profile.socials.twitch, 'twitch')} target="_blank" rel="noreferrer" className="hud-social-square"><Link2 size={16} /></a>}
+              {profile.socials?.x && <a href={externalSocialUrl(profile.socials.x, 'x')} target="_blank" rel="noreferrer" className="hud-social-square"><Link2 size={16} /></a>}
+            </div>
           </div>
 
-        )}
+          <div className="hud-action-btn" onClick={() => navigate('/competitive-profile')}>
+            View Competitive Profile
+          </div>
+
+        </div>
 
       </div>
 
 
       {/* =====================================================
-          5. ADD CLIP MODAL
+          ADD CLIP MODAL
           ===================================================== */}
-
       {isAddClipModalOpen && (
-
-        <div
-          className="clip-modal-overlay"
-          onClick={() => {
-            setIsAddClipModalOpen(false);
-            setIsClipGameMenuOpen(false);
-          }}
-        >
-
-          <div
-            className="clip-modal-content"
-            onClick={(e) =>
-              e.stopPropagation()
-            }
-          >
-
-            {/* Modal Header */}
-
-            <div className="clip-modal-header">
-
-              <h3 className="clip-modal-title">
-                Upload Gameplay Clip
-              </h3>
-
-              <button
-                onClick={() => {
-                  setIsAddClipModalOpen(false);
-                  setIsClipGameMenuOpen(false);
-                }}
-                className="text-gray-400 hover:text-black transition-colors"
-              >
+        <div className="clip-modal-overlay" onClick={() => { setIsAddClipModalOpen(false); setIsClipGameMenuOpen(false); }}>
+          <div className="clip-modal-content" onClick={(e) => e.stopPropagation()}>
+            
+            <div className="flex justify-between items-center mb-6">
+              <h3 className="text-lg font-bold uppercase tracking-wider">Upload Moment</h3>
+              <button onClick={() => { setIsAddClipModalOpen(false); setIsClipGameMenuOpen(false); }} className="text-gray-400 hover:text-white transition-colors">
                 <X size={20} />
               </button>
-
             </div>
-
-
-            {/* Upload Form */}
-
-            <form
-              onSubmit={handleAddClipSubmit}
-              className="space-y-4"
-            >
-
-              {/* Video Title */}
-
+            
+            <form onSubmit={handleAddClipSubmit} className="space-y-4">
               <div>
-
-                <label className="block text-[11px] font-bold uppercase tracking-wider text-black/50 mb-2">
-                  Video Title
-                </label>
-
+                <label className="block text-[10px] font-bold uppercase tracking-wider text-gray-400 mb-2">Video Title</label>
                 <input
                   type="text"
-                  className="w-full h-12 px-4 rounded-xl border border-black/10 bg-white text-black text-sm outline-none transition-all placeholder:text-black/25 focus:border-black focus:ring-1 focus:ring-black"
+                  className="w-full h-11 px-4 rounded-xl border border-white/10 bg-white/5 text-white text-sm outline-none focus:border-[#D6C98A]"
                   placeholder="e.g. 1v5 Clutch on Bind"
                   value={newClip.title}
-                  onChange={(e) =>
-                    setNewClip({
-                      ...newClip,
-                      title: e.target.value,
-                    })
-                  }
+                  onChange={(e) => setNewClip({ ...newClip, title: e.target.value })}
                   required
                 />
-
               </div>
-
-
-              {/* Description */}
 
               <div>
-
-                <label className="block text-[11px] font-bold uppercase tracking-wider text-black/50 mb-2">
-                  Description (Optional)
-                </label>
-
+                <label className="block text-[10px] font-bold uppercase tracking-wider text-gray-400 mb-2">Description (Optional)</label>
                 <textarea
-                  className="w-full h-20 px-4 py-3 rounded-xl border border-black/10 bg-white text-black text-sm outline-none transition-all placeholder:text-black/25 focus:border-black focus:ring-1 focus:ring-black resize-none"
-                  placeholder="Share your thoughts on this play..."
+                  className="w-full h-20 px-4 py-3 rounded-xl border border-white/10 bg-white/5 text-white text-sm outline-none focus:border-[#D6C98A] resize-none"
+                  placeholder="Share details about this play..."
                   value={newClip.description}
-                  onChange={(e) =>
-                    setNewClip({
-                      ...newClip,
-                      description: e.target.value,
-                    })
-                  }
+                  onChange={(e) => setNewClip({ ...newClip, description: e.target.value })}
                 />
-
               </div>
 
-
-              {/* =================================================
-                  GAME SELECT
-                  ================================================= */}
-
-              <div className="custom-game-select-wrapper mb-4">
-
-                <label className="block text-[11px] font-bold uppercase tracking-wider text-black/50 mb-2">
-                  Game
-                </label>
-
-
+              {/* GAME SELECT DROPDOWN */}
+              <div className="relative">
+                <label className="block text-[10px] font-bold uppercase tracking-wider text-gray-400 mb-2">Game</label>
                 <button
                   type="button"
-                  className="w-full h-12 px-4 rounded-xl border border-black/10 bg-white text-black text-sm outline-none transition-all focus:border-black focus:ring-1 focus:ring-black cursor-pointer flex items-center justify-between"
-                  onClick={() =>
-                    setIsClipGameMenuOpen(
-                      !isClipGameMenuOpen
-                    )
-                  }
+                  className="w-full h-11 px-4 rounded-xl border border-white/10 bg-white/5 text-white text-sm outline-none flex items-center justify-between cursor-pointer"
+                  onClick={() => setIsClipGameMenuOpen(!isClipGameMenuOpen)}
                 >
-
-                  <div className="flex items-center gap-3 min-w-0">
-
-                    {newClip.gameId &&
-                      getGameLogo(
-                        newClip.gameId,
-                        newClip.game
-                      ) && (
-
-                        <img
-                          src={getGameLogo(
-                            newClip.gameId,
-                            newClip.game
-                          )}
-                          alt=""
-                          className={`game-logo ${newClip.gameId === 'cr'
-                              ? 'game-logo--clash-royale'
-                              : `game-logo--${newClip.gameId}`
-                            }`}
-                          style={{
-                            width: '32px',
-                            height: '32px',
-                            objectFit: 'contain',
-                          }}
-                        />
-
-                      )}
-
-                    <span className="text-left truncate">
-                      {newClip.game ||
-                        'Select a registered game'}
-                    </span>
-
-                  </div>
-
-
-                  <ChevronDown
-                    size={16}
-                    className={`text-gray-400 transition-transform duration-200 flex-shrink-0 ${isClipGameMenuOpen
-                        ? 'rotate-180'
-                        : ''
-                      }`}
-                  />
-
+                  <span className="truncate">{newClip.game || 'Select a registered game'}</span>
+                  <ChevronDown size={16} className={`text-gray-400 transition-transform ${isClipGameMenuOpen ? 'rotate-180' : ''}`} />
                 </button>
 
-
-                {/* GAME MENU */}
-
                 {isClipGameMenuOpen && (
-
                   <>
-
-                    <div
-                      className="custom-game-select-overlay"
-                      onClick={() =>
-                        setIsClipGameMenuOpen(false)
-                      }
-                    />
-
-
-                    <div className="custom-game-select-menu !top-[70px]">
-
-                      {gameCatalog.map((game) => {
-
-                        const logoUrl =
-                          getGameLogo(
-                            game.id,
-                            game.name
-                          );
-
-                        return (
-
-                          <button
-                            type="button"
-                            key={game.id}
-                            className={`custom-game-option ${newClip.game === game.name
-                                ? 'active'
-                                : ''
-                              }`}
-                            onClick={() => {
-
-                              setNewClip({
-                                ...newClip,
-                                game: game.name,
-                                gameId: game.id,
-                              });
-
-                              setIsClipGameMenuOpen(
-                                false
-                              );
-
-                            }}
-                          >
-
-                            {/* GAME ICON */}
-
-                            <div className="game-option-icon">
-
-                              {logoUrl ? (
-
-                                <img
-                                  src={logoUrl}
-                                  alt={`${game.name} Logo`}
-                                  className={`game-logo ${game.id === 'cr'
-                                      ? 'game-logo--clash-royale'
-                                      : `game-logo--${game.id}`
-                                    }`}
-                                  style={{
-                                    width: '42px',
-                                    height: '42px',
-                                    objectFit: 'contain',
-                                  }}
-                                  onError={(event) => {
-                                    event.currentTarget.style.display =
-                                      'none';
-                                  }}
-                                />
-
-                              ) : (
-
-                                <span className="text-xs font-bold text-gray-400">
-                                  {game.name
-                                    ?.slice(0, 1)
-                                    .toUpperCase()}
-                                </span>
-
-                              )}
-
-                            </div>
-
-
-                            {/* GAME TEXT */}
-
-                            <div className="game-option-text">
-
-                              <span className="game-option-title">
-                                {game.name}
-                              </span>
-
-                              <span className="game-option-subtitle">
-                                {game.shortName ||
-                                  game.name}
-                              </span>
-
-                            </div>
-
-                          </button>
-
-                        );
-                      })}
-
+                    <div className="fixed inset-0 z-20" onClick={() => setIsClipGameMenuOpen(false)} />
+                    <div className="absolute top-full left-0 right-0 mt-2 z-30 bg-[#141414] border border-white/10 rounded-xl shadow-xl max-h-48 overflow-y-auto p-1">
+                      {gameCatalog.map((game) => (
+                        <button
+                          type="button"
+                          key={game.id}
+                          className="w-full px-3 py-2 text-left text-xs text-white hover:bg-white/10 rounded-lg flex items-center gap-2 transition"
+                          onClick={() => {
+                            setNewClip({ ...newClip, game: game.name, gameId: game.id });
+                            setIsClipGameMenuOpen(false);
+                          }}
+                        >
+                          <span className="font-medium">{game.name}</span>
+                        </button>
+                      ))}
                     </div>
-
                   </>
-
                 )}
-
               </div>
 
-
-              {/* ROLE TAG */}
-
               <div>
-
-                <label className="block text-[11px] font-bold uppercase tracking-wider text-black/50 mb-2">
-                  Role Tag
-                </label>
-
-                <select
-                  className="w-full h-12 px-4 rounded-xl border border-black/10 bg-white text-black text-sm outline-none focus:border-black focus:ring-1 focus:ring-black"
-                  value={newClip.roleTag}
-                  onChange={(e) =>
-                    setNewClip({
-                      ...newClip,
-                      roleTag: e.target.value,
-                    })
-                  }
-                  required
-                >
-
-                  <option value="">
-                    Select a role
-                  </option>
-
-                  {roleTags.map((roleTag) => (
-                    <option
-                      key={roleTag}
-                      value={roleTag}
-                    >
-                      {roleTag}
-                    </option>
-                  ))}
-
-                </select>
-
-              </div>
-
-
-              {/* SKILL TAG */}
-
-              <div>
-
-                <label className="block text-[11px] font-bold uppercase tracking-wider text-black/50 mb-2">
-                  Skill Tag
-                </label>
-
-                <select
-                  className="w-full h-12 px-4 rounded-xl border border-black/10 bg-white text-black text-sm outline-none focus:border-black focus:ring-1 focus:ring-black"
-                  value={newClip.skillTag}
-                  onChange={(e) =>
-                    setNewClip({
-                      ...newClip,
-                      skillTag: e.target.value,
-                    })
-                  }
-                  required
-                >
-
-                  <option value="">
-                    Select a skill
-                  </option>
-
-                  {skillTags.map((skillTag) => (
-                    <option
-                      key={skillTag}
-                      value={skillTag}
-                    >
-                      {skillTag}
-                    </option>
-                  ))}
-
-                </select>
-
-              </div>
-
-
-              {/* VIDEO FILE */}
-
-              <div>
-
-                <label className="block text-[11px] font-bold uppercase tracking-wider text-black/50 mb-2">
-                  Video File
-                </label>
-
+                <label className="block text-[10px] font-bold uppercase tracking-wider text-gray-400 mb-2">Video File</label>
                 <input
                   type="file"
                   accept="video/mp4,video/webm,video/quicktime"
-                  className="w-full text-sm text-gray-500 file:mr-4 file:py-2.5 file:px-4 file:rounded-xl file:border-0 file:text-xs file:font-bold file:bg-gray-100 file:text-black hover:file:bg-gray-200 cursor-pointer"
-                  onChange={(e) =>
-                    setNewClip({
-                      ...newClip,
-                      file:
-                        e.target.files?.[0] ||
-                        null,
-                    })
-                  }
+                  className="w-full text-xs text-gray-300 file:mr-4 file:py-2 file:px-3 file:rounded-xl file:border-0 file:bg-white/10 file:text-white cursor-pointer"
+                  onChange={(e) => setNewClip({ ...newClip, file: e.target.files?.[0] || null })}
                   required
                 />
-
               </div>
 
-
-              {/* UPLOAD ERROR */}
-
               {clipUploadError && (
-
-                <p className="clip-upload-error">
+                <p className="rounded-lg bg-red-900/50 px-3 py-2 text-xs font-semibold text-red-200 border border-red-800">
                   {clipUploadError}
                 </p>
-
               )}
-
-
-              {/* UPLOAD BUTTON */}
 
               <button
                 type="submit"
                 disabled={isUploadingClip}
-                className="w-full h-12 mt-4 rounded-xl bg-black text-white text-sm font-bold tracking-wide hover:bg-[#171717] transition-all disabled:opacity-50"
+                className="w-full h-11 mt-4 rounded-xl bg-[#D6C98A] text-black text-xs font-bold uppercase tracking-widest hover:bg-yellow-600 transition-all disabled:opacity-50 cursor-pointer"
               >
-                {isUploadingClip
-                  ? 'Checking and uploading...'
-                  : 'Upload to Moments'}
+                {isUploadingClip ? 'Uploading...' : 'Deploy Moment'}
               </button>
-
             </form>
 
           </div>
-
         </div>
-
       )}
 
     </div>
