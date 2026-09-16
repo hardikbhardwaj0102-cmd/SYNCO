@@ -142,7 +142,7 @@ def write_audit(
         previous_status=previous_status,
         new_status=new_status,
         reason=reason,
-        metadata=metadata or {},
+        audit_metadata=metadata or {},
         ip_address=client_ip(),
         user_agent=request.headers.get("User-Agent"),
     )

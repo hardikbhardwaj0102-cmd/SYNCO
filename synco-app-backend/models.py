@@ -4967,7 +4967,8 @@ class OrganizerApplicationAuditLog(db.Model):
         nullable=True
     )
 
-    metadata = db.Column(
+    audit_metadata = db.Column(
+        "metadata",
         db.JSON,
         nullable=True
     )
@@ -5011,7 +5012,7 @@ class OrganizerApplicationAuditLog(db.Model):
             "previous_status": self.previous_status,
             "new_status": self.new_status,
             "reason": self.reason,
-            "metadata": self.metadata or {},
+            "metadata": self.audit_metadata or {},
             "created_at": (
                 self.created_at.isoformat()
                 if self.created_at

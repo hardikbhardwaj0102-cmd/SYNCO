@@ -310,6 +310,7 @@ def google_callback():
 
         session.clear()
 
+        session["user_id"] = user.id
         session["user"] = user.to_dict()
 
         session.permanent = True
@@ -520,6 +521,7 @@ def discord_callback():
 
         session.clear()
 
+        session["user_id"] = user.id
         session["user"] = user.to_dict()
 
         session.permanent = True
@@ -842,11 +844,15 @@ def get_current_user():
         "user"
     )
 
+    session_user_id = session.get(
+        "user_id"
+    )
+
     # -----------------------------------------------------
     # No session
     # -----------------------------------------------------
 
-    if not session_user:
+    if not session_user and not session_user_id:
 
         return jsonify({
             "authenticated": False,
@@ -856,9 +862,12 @@ def get_current_user():
     # Get actual database user
     # -----------------------------------------------------
 
-    user_id = session_user.get(
-        "id"
-    )
+    user_id = session_user_id
+
+    if not user_id and session_user:
+        user_id = session_user.get(
+            "id"
+        )
 
     if not user_id:
 
@@ -887,6 +896,7 @@ def get_current_user():
 
     user = user_record.to_dict()
 
+    session["user_id"] = user_record.id
     session["user"] = user
     session.permanent = True
 
@@ -1164,6 +1174,7 @@ def login():
 
     session.clear()
 
+    session["user_id"] = user.id
     session["user"] = user.to_dict()
 
     session.permanent = True
