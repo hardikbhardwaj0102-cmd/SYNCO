@@ -12,6 +12,7 @@ import {
     RefreshCw,
     Search,
     ShieldCheck,
+    ShieldOff,
     X,
 } from "lucide-react";
 
@@ -201,6 +202,12 @@ const OrganizerAdmin = () => {
     const [rejectReason, setRejectReason] =
         useState("");
 
+    const [showSuspend, setShowSuspend] =
+        useState(false);
+
+    const [suspendReason, setSuspendReason] =
+        useState("");
+
 
     // =====================================================
     // LOAD APPLICATIONS
@@ -341,9 +348,24 @@ const OrganizerAdmin = () => {
                 return;
             }
 
+            if (
+                action === "suspend" &&
+                !suspendReason.trim()
+            ) {
+
+                setError(
+                    "A suspension reason is required."
+                );
+
+                return;
+            }
+
             let options = {
                 method: "POST",
             };
+
+            let endpoint =
+                `/api/organizers/admin/applications/${applicationId}/${action}`;
 
             if (action === "reject") {
 
@@ -352,27 +374,78 @@ const OrganizerAdmin = () => {
                 });
             }
 
+            if (action === "suspend") {
+
+                const applicant =
+                    application?.applicant || {};
+
+                const targetUserId =
+                    applicant.id ||
+                    applicant.user_id ||
+                    applicant.userId;
+
+                if (!targetUserId) {
+                    setError(
+                        "Unable to identify the organizer account."
+                    );
+
+                    return;
+                }
+
+                endpoint =
+                    `/api/organizers/admin/users/${targetUserId}/suspend`;
+
+                options.body = JSON.stringify({
+                    reason: suspendReason.trim(),
+                });
+            }
+
             const data =
                 await apiRequest(
-                    `/api/organizers/admin/applications/${applicationId}/${action}`,
+                    endpoint,
                     options
                 );
 
-            setApplication(
-                (previous) => {
+            if (action === "suspend") {
 
-                    if (!previous) {
-                        return previous;
+                setApplication(
+                    (previous) => {
+
+                        if (!previous) {
+                            return previous;
+                        }
+
+                        return {
+                            ...previous,
+                            status: "suspended",
+                            applicant: {
+                                ...(previous.applicant || {}),
+                                ...((data && data.user) || {}),
+                                accountRole: "player",
+                                account_role: "player",
+                            },
+                        };
                     }
+                );
 
-                    return {
-                        ...previous,
-                        ...(
-                            data.application || {}
-                        ),
-                    };
-                }
-            );
+            } else {
+
+                setApplication(
+                    (previous) => {
+
+                        if (!previous) {
+                            return previous;
+                        }
+
+                        return {
+                            ...previous,
+                            ...(
+                                data.application || {}
+                            ),
+                        };
+                    }
+                );
+            }
 
             setSuccess(
                 data.message ||
@@ -381,6 +454,13 @@ const OrganizerAdmin = () => {
 
             setShowReject(false);
             setRejectReason("");
+
+            setShowSuspend(false);
+            setSuspendReason("");
+
+            if (action === "suspend") {
+                await loadApplication(true);
+            }
 
         } catch (err) {
 
@@ -794,7 +874,9 @@ const OrganizerAdmin = () => {
                                 {status !==
                                     "approved" &&
                                     status !==
-                                    "rejected" && (
+                                    "rejected" &&
+                                    status !==
+                                    "suspended" && (
 
                                         <>
 
@@ -892,6 +974,30 @@ const OrganizerAdmin = () => {
 
                                         </>
                                     )}
+
+                                {status === "approved" && (
+
+                                    <button
+                                        onClick={() =>
+                                            setShowSuspend(true)
+                                        }
+                                        disabled={
+                                            Boolean(
+                                                actionLoading
+                                            )
+                                        }
+                                        className="inline-flex items-center gap-2 rounded-lg border border-red-200 bg-red-50 px-4 py-2.5 text-sm font-semibold text-red-700 hover:bg-red-100 disabled:opacity-50"
+                                    >
+
+                                        <ShieldOff
+                                            size={15}
+                                        />
+
+                                        Suspend Organizer
+
+                                    </button>
+
+                                )}
 
                             </div>
 
@@ -1022,6 +1128,98 @@ const OrganizerAdmin = () => {
                             </div>
 
                         </div>
+                    )}
+
+
+                    {/* =============================================
+                        SUSPEND PANEL
+                    ============================================= */}
+
+                    {showSuspend && (
+
+                        <div className="mt-6 rounded-2xl border border-red-200 bg-red-50 p-5">
+
+                            <div className="flex items-start justify-between gap-4">
+
+                                <div>
+
+                                    <h2 className="text-sm font-bold text-red-800">
+                                        Suspend organizer account
+                                    </h2>
+
+                                    <p className="mt-1 text-xs leading-5 text-red-700">
+                                        This will remove organizer access and move the application to suspended. A reason is required and will be recorded in the review history.
+                                    </p>
+
+                                </div>
+
+                                <button
+                                    onClick={() =>
+                                        setShowSuspend(false)
+                                    }
+                                    className="text-red-500 hover:text-red-800"
+                                >
+                                    <X size={17} />
+                                </button>
+
+                            </div>
+
+                            <textarea
+                                value={
+                                    suspendReason
+                                }
+                                onChange={(event) =>
+                                    setSuspendReason(
+                                        event.target.value
+                                    )
+                                }
+                                rows={4}
+                                placeholder="Enter suspension reason..."
+                                className="mt-4 w-full rounded-xl border border-red-200 bg-white px-4 py-3 text-sm outline-none focus:border-red-400"
+                            />
+
+                            <div className="mt-3 flex justify-end gap-2">
+
+                                <button
+                                    onClick={() =>
+                                        setShowSuspend(false)
+                                    }
+                                    className="rounded-lg border border-neutral-300 bg-white px-4 py-2.5 text-sm font-semibold text-neutral-700 hover:bg-neutral-50"
+                                >
+                                    Cancel
+                                </button>
+
+                                <button
+                                    onClick={() =>
+                                        performAction(
+                                            "suspend"
+                                        )
+                                    }
+                                    disabled={
+                                        actionLoading ===
+                                        "suspend"
+                                    }
+                                    className="inline-flex items-center gap-2 rounded-lg bg-red-600 px-4 py-2.5 text-sm font-semibold text-white hover:bg-red-700 disabled:opacity-50"
+                                >
+
+                                    {actionLoading ===
+                                        "suspend" && (
+
+                                            <Loader2
+                                                size={15}
+                                                className="animate-spin"
+                                            />
+
+                                        )}
+
+                                    Confirm Suspension
+
+                                </button>
+
+                            </div>
+
+                        </div>
+
                     )}
 
 
@@ -1760,9 +1958,9 @@ const OrganizerAdmin = () => {
                                             )
                                         }
                                         className={`w-full text-left grid grid-cols-1 md:grid-cols-[1.4fr_1fr_1fr_130px_40px] gap-3 md:gap-4 px-5 py-4 hover:bg-neutral-50 transition ${index !==
-                                                filteredApplications.length - 1
-                                                ? "border-b border-neutral-200"
-                                                : ""
+                                            filteredApplications.length - 1
+                                            ? "border-b border-neutral-200"
+                                            : ""
                                             }`}
                                     >
 
