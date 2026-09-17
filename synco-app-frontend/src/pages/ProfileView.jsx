@@ -144,6 +144,19 @@ const ProfileView = () => {
   const [isClipGameMenuOpen, setIsClipGameMenuOpen] = useState(false);
 
   // =========================================================
+  // ORGANIZER APPLICATION STATE
+  // =========================================================
+
+  const [organizerApplication, setOrganizerApplication] = useState(null);
+  const [organizerAccountRole, setOrganizerAccountRole] = useState(
+    user?.account_role ||
+    user?.accountRole ||
+    'player'
+  );
+  const [isOrganizerStatusLoading, setIsOrganizerStatusLoading] =
+    useState(false);
+
+  // =========================================================
   // CLIP TAGS
   // =========================================================
 
@@ -259,6 +272,73 @@ const ProfileView = () => {
     profile?.isOwner ||
     user?.username === username;
 
+  const resolvedAccountRole =
+    user?.account_role ||
+    user?.accountRole ||
+    profile?.account_role ||
+    profile?.accountRole ||
+    organizerAccountRole ||
+    'player';
+
+  // =========================================================
+  // LOAD ORGANIZER APPLICATION STATUS
+  // =========================================================
+
+  useEffect(() => {
+    if (!isOwner) {
+      return;
+    }
+
+    let cancelled = false;
+
+    const loadOrganizerStatus = async () => {
+      setIsOrganizerStatusLoading(true);
+
+      try {
+        const response = await fetch(
+          `${API_URL}/api/organizers/application`,
+          {
+            method: 'GET',
+            credentials: 'include',
+            headers: {
+              Accept: 'application/json',
+            },
+            cache: 'no-store',
+          }
+        );
+
+        const data = await response.json().catch(() => ({}));
+
+        if (cancelled) return;
+
+        if (response.ok) {
+          setOrganizerAccountRole(
+            data.accountRole ||
+            resolvedAccountRole ||
+            'player'
+          );
+          setOrganizerApplication(data.application || null);
+        }
+      } catch (organizerError) {
+        if (!cancelled) {
+          console.error(
+            'Error loading organizer status:',
+            organizerError
+          );
+        }
+      } finally {
+        if (!cancelled) {
+          setIsOrganizerStatusLoading(false);
+        }
+      }
+    };
+
+    loadOrganizerStatus();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [isOwner, user?.account_role, user?.accountRole, username]);
 
   // =========================================================
   // SHARE PROFILE
@@ -520,12 +600,12 @@ const ProfileView = () => {
 
       {/* HUD LAYER */}
       <div className="hud-layer">
-        
+
         {/* =======================
             LEFT HUD: TABS & FEEDS
             ======================= */}
         <div className="hud-left">
-          
+
           <div className="hud-tabs">
             <button className={`hud-tab-btn ${activeTab === 'MOMENTS' ? 'active' : ''}`} onClick={() => setActiveTab('MOMENTS')}>Moments</button>
             <button className={`hud-tab-btn ${activeTab === 'ROSTER' ? 'active' : ''}`} onClick={() => setActiveTab('ROSTER')}>Roster</button>
@@ -533,7 +613,7 @@ const ProfileView = () => {
           </div>
 
           <div className="hud-list-container">
-            
+
             {activeTab === 'MOMENTS' && (
               moments.length > 0 ? (
                 moments.slice(0, 6).map((moment) => (
@@ -582,16 +662,16 @@ const ProfileView = () => {
                   <span className="text-[9px] font-bold text-emerald-400 uppercase tracking-widest block mb-1">Live Now</span>
                   <h4 className="font-bold text-xs uppercase">SYNCO Summer Cup</h4>
                   <div className="flex gap-3 mt-1 text-[9px] text-gray-400 uppercase tracking-widest">
-                    <span className="flex items-center gap-1"><Gamepad2 size={10}/> BGMI</span>
-                    <span className="flex items-center gap-1"><Users size={10}/> 4v4</span>
+                    <span className="flex items-center gap-1"><Gamepad2 size={10} /> BGMI</span>
+                    <span className="flex items-center gap-1"><Users size={10} /> 4v4</span>
                   </div>
                 </div>
                 <div className="glass-hud p-3">
                   <span className="text-[9px] font-bold text-[#D6C98A] uppercase tracking-widest block mb-1">Upcoming</span>
                   <h4 className="font-bold text-xs uppercase">Arena Knockout</h4>
                   <div className="flex gap-3 mt-1 text-[9px] text-gray-400 uppercase tracking-widest">
-                    <span className="flex items-center gap-1"><Gamepad2 size={10}/> Valorant</span>
-                    <span className="flex items-center gap-1"><Clock size={10}/> Tomorrow</span>
+                    <span className="flex items-center gap-1"><Gamepad2 size={10} /> Valorant</span>
+                    <span className="flex items-center gap-1"><Clock size={10} /> Tomorrow</span>
                   </div>
                 </div>
               </>
@@ -612,7 +692,7 @@ const ProfileView = () => {
             RIGHT HUD: IDENTITY & STATS
             ======================= */}
         <div className="hud-right">
-          
+
           <div>
             <div className="hud-top-status">
               <div className="hud-status-btn" onClick={shareProfile} title="Share Profile"><Share2 size={16} /></div>
@@ -623,7 +703,7 @@ const ProfileView = () => {
 
             <div className="hud-identity">
               <div>
-                <div className="hud-level">{profile.stats?.matches ? Math.min(99, Math.floor(profile.stats.matches / 5) + 1) : 42}</div> 
+                <div className="hud-level">{profile.stats?.matches ? Math.min(99, Math.floor(profile.stats.matches / 5) + 1) : 42}</div>
                 <div className="hud-level-label">LEVEL</div>
               </div>
               <div className="hud-names">
@@ -632,12 +712,12 @@ const ProfileView = () => {
                   {profile.linkedStatus?.discord && <ShieldCheck size={16} className="text-emerald-400 mb-1" />}
                 </div>
                 <p>{profile.name} {profile.region ? `• ${profile.region}` : ''}</p>
-                
+
                 {profile.uid && (
                   <div className="flex items-center gap-2 mt-1">
                     <span className="text-[9px] text-gray-400 font-mono">UID: {profile.uid}</span>
                     <button onClick={copySyncoUid} className="hover:text-white transition" title="Copy UID">
-                      {uidCopied ? <Check size={10} className="text-emerald-400"/> : <Copy size={10}/>}
+                      {uidCopied ? <Check size={10} className="text-emerald-400" /> : <Copy size={10} />}
                     </button>
                   </div>
                 )}
@@ -667,7 +747,87 @@ const ProfileView = () => {
             </div>
           </div>
 
-          <div className="hud-action-btn" onClick={() => navigate('/competitive-profile')}>
+          {isOwner && resolvedAccountRole !== 'admin' && (
+            <div
+              className="mt-4 overflow-hidden rounded-2xl border border-white/10 bg-black/35 backdrop-blur-md transition-all duration-300 hover:border-[#D6C98A]/40"
+            >
+              <div className="px-4 py-4">
+                <div className="flex items-start gap-3">
+                  <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-[#D6C98A]/20 bg-[#D6C98A]/10 text-[#D6C98A]">
+                    <Trophy size={17} />
+                  </div>
+
+                  <div className="min-w-0 flex-1">
+                    <p className="text-[10px] font-black uppercase tracking-[0.18em] text-[#D6C98A]">
+                      SYNCO ORGANIZER
+                    </p>
+
+                    <h3 className="mt-1 text-sm font-black uppercase tracking-wide text-white">
+                      {organizerApplication
+                        ? 'Organizer Application'
+                        : 'Become an Organizer'}
+                    </h3>
+
+                    <p className="mt-2 text-[10px] leading-4 text-gray-400">
+                      {organizerApplication
+                        ? `Application ${organizerApplication.status || 'pending'}`
+                        : 'Run tournaments, create competitions, and build your esports community on SYNCO.'}
+                    </p>
+                  </div>
+
+                  <span className="mt-1 flex h-5 w-5 shrink-0 items-center justify-center text-gray-500">
+                    {isOrganizerStatusLoading ? (
+                      <span className="h-3.5 w-3.5 animate-spin rounded-full border border-white/20 border-t-white" />
+                    ) : (
+                      <ChevronDown
+                        size={14}
+                        className="-rotate-90"
+                      />
+                    )}
+                  </span>
+                </div>
+
+                {!isOrganizerStatusLoading && (
+                  <>
+                    {organizerApplication ? (
+                      <button
+                        type="button"
+                        onClick={() => navigate('/organizer/register')}
+                        className="mt-4 flex h-10 w-full items-center justify-between rounded-xl border border-white/10 bg-white/5 px-3 text-[9px] font-black uppercase tracking-[0.16em] text-white transition hover:border-[#D6C98A]/40 hover:bg-white/10"
+                      >
+                        <span>
+                          {organizerApplication.status === 'approved'
+                            ? 'Open Organizer'
+                            : 'View Application'}
+                        </span>
+                        <ChevronDown
+                          size={14}
+                          className="-rotate-90"
+                        />
+                      </button>
+                    ) : (
+                      <button
+                        type="button"
+                        onClick={() => navigate('/organizer/register')}
+                        className="mt-4 flex h-10 w-full items-center justify-between rounded-xl bg-[#D6C98A] px-3 text-[9px] font-black uppercase tracking-[0.16em] text-black transition hover:bg-[#e4dba5]"
+                      >
+                        <span>Apply to Become an Organizer</span>
+                        <ChevronDown
+                          size={14}
+                          className="-rotate-90"
+                        />
+                      </button>
+                    )}
+                  </>
+                )}
+              </div>
+            </div>
+          )}
+
+          <div
+            className="hud-action-btn"
+            onClick={() => navigate('/competitive-profile')}
+          >
             View Competitive Profile
           </div>
 
@@ -682,14 +842,14 @@ const ProfileView = () => {
       {isAddClipModalOpen && (
         <div className="clip-modal-overlay" onClick={() => { setIsAddClipModalOpen(false); setIsClipGameMenuOpen(false); }}>
           <div className="clip-modal-content" onClick={(e) => e.stopPropagation()}>
-            
+
             <div className="flex justify-between items-center mb-6">
               <h3 className="text-lg font-bold uppercase tracking-wider">Upload Moment</h3>
               <button onClick={() => { setIsAddClipModalOpen(false); setIsClipGameMenuOpen(false); }} className="text-gray-400 hover:text-white transition-colors">
                 <X size={20} />
               </button>
             </div>
-            
+
             <form onSubmit={handleAddClipSubmit} className="space-y-4">
               <div>
                 <label className="block text-[10px] font-bold uppercase tracking-wider text-gray-400 mb-2">Video Title</label>
