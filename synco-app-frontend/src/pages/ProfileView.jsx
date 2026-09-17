@@ -14,6 +14,7 @@ import {
   Users,
   Clock,
   PlaySquare,
+  Trophy,
 } from 'lucide-react';
 
 import { useAuth } from '../context/AuthContext';
