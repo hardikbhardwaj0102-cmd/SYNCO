@@ -10,7 +10,7 @@ import { AuthProvider, useAuth } from './context/AuthContext';
 
 import OrganizerRegister from "./pages/OrganizerRegister";
 import OrganizerAdmin from "./pages/OrganizerAdmin";
-
+import AdminUsers from "./pages/AdminUsers";
 import HybridLayout from './components/HybridLayout';
 import CreateCompetition from './pages/CreateCompetition';
 import LandingPage from './pages/LandingPage';
@@ -212,7 +212,10 @@ function App() {
                 path="/search"
                 element={<Search />}
               />
-
+              <Route
+                path="/admin/users"
+                element={<AdminUsers />}
+              />
 
               {/* -------------------------------------------------
                   DASHBOARD
