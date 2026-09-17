@@ -30,7 +30,6 @@ import ForgotPass from './pages/ForgotPass';
 import ResetPassword from './pages/ResetPassword';
 
 import DashboardHome from './pages/DashboardHome';
-import AdminDashboard from './pages/AdminDashboard';
 import Reward from './pages/Reward';
 import AddFriends from './pages/AddFriends';
 import Notification from './pages/notification';
@@ -46,7 +45,6 @@ const IndexRoute = () => {
 
   const {
     isAuthenticated,
-    user,
     loading,
   } = useAuth();
 
@@ -54,17 +52,9 @@ const IndexRoute = () => {
     return null;
   }
 
-  if (!isAuthenticated) {
-    return <LandingPage />;
-  }
-
-  const accountRole =
-    user?.accountRole ??
-    user?.account_role;
-
-  return accountRole === "admin"
-    ? <AdminDashboard />
-    : <DashboardHome />;
+  return isAuthenticated
+    ? <DashboardHome />
+    : <LandingPage />;
 };
 
 
@@ -97,10 +87,16 @@ const ProtectedRoute = () => {
 
 
 // =========================================================
-// ROLE-AWARE DASHBOARD ROUTE
+// ADMIN ROUTE
 // =========================================================
 
-const DashboardRoute = () => {
+
+
+// =========================================================
+// ORGANIZER ROUTE
+// =========================================================
+
+const OrganizerRoute = () => {
 
   const {
     user,
@@ -111,19 +107,31 @@ const DashboardRoute = () => {
     return null;
   }
 
-  const accountRole =
-    user?.accountRole ??
-    user?.account_role;
+  if (!user) {
+    return (
+      <Navigate
+        to="/login"
+        replace
+      />
+    );
+  }
 
-  return accountRole === "admin"
-    ? <AdminDashboard />
-    : <DashboardHome />;
+  const accountRole =
+    user.accountRole ??
+    user.account_role;
+
+  if (accountRole !== "organizer") {
+    return (
+      <Navigate
+        to="/organizer/register"
+        replace
+      />
+    );
+  }
+
+  return <Outlet />;
 };
 
-
-// =========================================================
-// ADMIN ROUTE
-// =========================================================
 
 const AdminRoute = () => {
 
@@ -247,13 +255,18 @@ function App() {
                 path="/search"
                 element={<Search />}
               />
+              <Route
+                path="/admin/users"
+                element={<AdminUsers />}
+              />
+
               {/* -------------------------------------------------
                   DASHBOARD
                   ------------------------------------------------- */}
 
               <Route
                 path="/home"
-                element={<DashboardRoute />}
+                element={<DashboardHome />}
               />
 
 
@@ -369,11 +382,6 @@ function App() {
               <Route element={<AdminRoute />}>
 
                 <Route
-                  path="/admin"
-                  element={<AdminDashboard />}
-                />
-
-                <Route
                   path="/admin/organizers"
                   element={<OrganizerAdmin />}
                 />
@@ -381,11 +389,6 @@ function App() {
                 <Route
                   path="/admin/organizers/:applicationId"
                   element={<OrganizerAdmin />}
-                />
-
-                <Route
-                  path="/admin/users"
-                  element={<AdminUsers />}
                 />
 
               </Route>
@@ -407,10 +410,14 @@ function App() {
                 CREATE COMPETITION
                 ------------------------------------------------- */}
 
-            <Route
-              path="/competitions/create"
-              element={<CreateCompetition />}
-            />
+            <Route element={<OrganizerRoute />}>
+
+              <Route
+                path="/competitions/create"
+                element={<CreateCompetition />}
+              />
+
+            </Route>
 
           </Route>
 

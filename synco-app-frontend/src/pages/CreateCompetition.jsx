@@ -835,6 +835,19 @@ const CreateCompetition = () => {
             }
 
             const data = await response.json();
+
+            // Backend authorization is authoritative.
+            // A user's organizer access can change after this page is opened.
+            if (response.status === 401) {
+                navigate('/login', { replace: true });
+                return;
+            }
+
+            if (response.status === 403) {
+                navigate('/organizer/register', { replace: true });
+                return;
+            }
+
             if (!response.ok) {
                 throw new Error(data?.message || data?.error || 'Unable to create competition.');
             }

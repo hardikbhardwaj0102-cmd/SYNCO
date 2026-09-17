@@ -266,6 +266,12 @@ def current_user():
 
     user_id = session.get("user_id")
 
+    # Compatibility with the current SYNCO auth session, which stores
+    # the authenticated user under session["user"].
+    if not user_id:
+        session_user = session.get("user") or {}
+        user_id = session_user.get("id")
+
     if not user_id:
         return None
 
@@ -273,6 +279,61 @@ def current_user():
         User,
         user_id
     )
+
+
+def organizer_account_required():
+    """
+    Verify that the currently authenticated database user is an
+    approved and active SYNCO organizer.
+
+    This check is intentionally performed against the User row instead
+    of trusting any frontend value or request payload.
+    """
+
+    user = current_user()
+
+    if not user:
+        return None, (
+            jsonify({
+                "success": False,
+                "message": "Authentication required."
+            }),
+            401
+        )
+
+    account_role = str(
+        getattr(user, "account_role", "player") or "player"
+    ).strip().lower()
+
+    if account_role != "organizer":
+        return None, (
+            jsonify({
+                "success": False,
+                "message": "Organizer access required to create a competition.",
+                "redirect": "/organizer/register"
+            }),
+            403
+        )
+
+    # Newer SYNCO user records may also expose account_status.  The
+    # getattr fallback keeps this backend compatible with older records
+    # while still blocking explicitly suspended/disabled accounts.
+    account_status = str(
+        getattr(user, "account_status", "active") or "active"
+    ).strip().lower()
+
+    if account_status != "active":
+        return None, (
+            jsonify({
+                "success": False,
+                "message": "Your organizer account is not active and cannot create a competition.",
+                "redirect": "/organizer/register",
+                "accountStatus": account_status
+            }),
+            403
+        )
+
+    return user, None
 
 
 def parse_datetime(value):
@@ -1260,14 +1321,17 @@ def get_competition_games():
 )
 def create_competition():
 
-    user = current_user()
+    # -----------------------------------------------------
+    # PLATFORM-LEVEL ORGANIZER AUTHORIZATION
+    # -----------------------------------------------------
+    # This is the security boundary for tournament creation.
+    # Never rely on React route protection or a client-supplied
+    # organizerId. The database-backed User.account_role is checked
+    # before any competition data is processed or persisted.
+    user, authorization_error = organizer_account_required()
 
-    if not user:
-
-        return jsonify({
-            "success": False,
-            "message": "Authentication required."
-        }), 401
+    if authorization_error:
+        return authorization_error
 
     data = request.get_json(
         silent=True
