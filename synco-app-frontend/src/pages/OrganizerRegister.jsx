@@ -271,6 +271,7 @@ export default function OrganizerRegister() {
     const [authenticated, setAuthenticated] = useState(false);
     const [accountRole, setAccountRole] = useState("player");
     const [existingApplication, setExistingApplication] = useState(null);
+    const [isReapply, setIsReapply] = useState(false);
     const [success, setSuccess] = useState(false);
     const [error, setError] = useState("");
     const [submittedApplication, setSubmittedApplication] = useState(null);
@@ -312,6 +313,7 @@ export default function OrganizerRegister() {
                 setAuthenticated(true);
                 setAccountRole(data.accountRole || "player");
                 setExistingApplication(data.application || null);
+                setIsReapply(false);
             } catch (err) {
                 if (!cancelled) {
                     setError(
@@ -355,6 +357,66 @@ export default function OrganizerRegister() {
         });
 
         setError("");
+    };
+
+    const startReapply = () => {
+        if (!existingApplication) {
+            return;
+        }
+
+        const application = existingApplication;
+
+        setForm({
+            organization_name: application.organization_name || "",
+            organizer_type: application.organizer_type || "",
+            country: application.country || "",
+            city: application.city || "",
+            contact_phone: application.contact_phone || "",
+            games: Array.isArray(application.games)
+                ? [...application.games]
+                : [],
+            website_url: application.website_url || "",
+            discord_url: application.discord_url || "",
+            social_url: application.social_url || "",
+            previous_event_url: application.previous_event_url || "",
+            experience_years:
+                application.experience_years === null ||
+                    application.experience_years === undefined
+                    ? ""
+                    : String(application.experience_years),
+            events_organized:
+                application.events_organized === null ||
+                    application.events_organized === undefined
+                    ? ""
+                    : String(application.events_organized),
+            largest_event_size:
+                application.largest_event_size === null ||
+                    application.largest_event_size === undefined
+                    ? ""
+                    : String(application.largest_event_size),
+            experience_description:
+                application.experience_description || "",
+            planned_games: Array.isArray(application.planned_games)
+                ? [...application.planned_games]
+                : [],
+            tournament_frequency:
+                application.tournament_frequency || "",
+            expected_participants:
+                application.expected_participants === null ||
+                    application.expected_participants === undefined
+                    ? ""
+                    : String(application.expected_participants),
+            organizer_description:
+                application.organizer_description || "",
+        });
+
+        setIsReapply(true);
+        setSuccess(false);
+        setSubmittedApplication(null);
+        setError("");
+        setStep(1);
+        setExistingApplication(null);
+        window.scrollTo({ top: 0, behavior: "smooth" });
     };
 
     const getGameLabels = (values) =>
@@ -649,6 +711,7 @@ export default function OrganizerRegister() {
 
     if (existingApplication && !success) {
         const status = existingApplication.status || "pending";
+        const suspended = status === "suspended";
 
         return (
             <div className="min-h-screen bg-[#f7f7f5]">
@@ -663,12 +726,15 @@ export default function OrganizerRegister() {
                         </p>
 
                         <h1 className="mt-3 text-3xl font-black tracking-tight text-neutral-950">
-                            Application already submitted
+                            {suspended
+                                ? "Your application is suspended"
+                                : "Application already submitted"}
                         </h1>
 
                         <p className="mt-4 text-sm leading-6 text-neutral-500">
-                            Your organizer application is already in the SYNCO
-                            review process.
+                            {suspended
+                                ? "Your previous organizer access was suspended. You can review and submit the application again for a new review."
+                                : "Your organizer application is already in the SYNCO review process."}
                         </p>
 
                         <div className="mt-8 rounded-2xl border border-neutral-200 bg-neutral-50 p-5">
@@ -677,7 +743,7 @@ export default function OrganizerRegister() {
                                     Status
                                 </span>
                                 <span className="rounded-full bg-neutral-900 px-3 py-1 text-xs font-bold uppercase tracking-wider text-white">
-                                    {status.replace("_", " ")}
+                                    {status.replace(/_/g, " ")}
                                 </span>
                             </div>
 
@@ -692,6 +758,29 @@ export default function OrganizerRegister() {
                                 </div>
                             )}
                         </div>
+
+                        {suspended && (
+                            <div className="mt-5 rounded-2xl border border-neutral-200 bg-white p-5">
+                                <p className="text-xs font-bold uppercase tracking-[0.16em] text-neutral-500">
+                                    Reapplication
+                                </p>
+                                <p className="mt-2 text-sm leading-6 text-neutral-700">
+                                    Your previous application details will be pre-filled. You can update them before sending the application back to the SYNCO review queue.
+                                </p>
+
+                                <button
+                                    type="button"
+                                    onClick={startReapply}
+                                    className="mt-5 inline-flex h-12 items-center justify-center rounded-xl bg-neutral-900 px-6 text-sm font-bold text-white transition hover:bg-neutral-800"
+                                >
+                                    Reapply
+                                    <ArrowRight
+                                        size={17}
+                                        className="ml-2"
+                                    />
+                                </button>
+                            </div>
+                        )}
 
                         {existingApplication.rejection_reason && (
                             <div className="mt-4 rounded-2xl border border-neutral-200 bg-white p-5">
@@ -719,11 +808,15 @@ export default function OrganizerRegister() {
                         </div>
 
                         <p className="mt-7 text-xs font-bold uppercase tracking-[0.22em] text-neutral-500">
-                            Application Submitted
+                            {isReapply
+                                ? "Application Resubmitted"
+                                : "Application Submitted"}
                         </p>
 
                         <h1 className="mt-3 text-3xl font-black tracking-tight text-neutral-950">
-                            Your organizer application is in review
+                            {isReapply
+                                ? "Your organizer application is back in review"
+                                : "Your organizer application is in review"}
                         </h1>
 
                         <p className="mx-auto mt-4 max-w-xl text-sm leading-6 text-neutral-500">
@@ -1522,11 +1615,15 @@ export default function OrganizerRegister() {
                                                         size={17}
                                                         className="mr-2 animate-spin"
                                                     />
-                                                    Submitting...
+                                                    {isReapply
+                                                        ? "Resubmitting..."
+                                                        : "Submitting..."}
                                                 </>
                                             ) : (
                                                 <>
-                                                    Submit Application
+                                                    {isReapply
+                                                        ? "Resubmit Application"
+                                                        : "Submit Application"}
                                                     <ChevronRight
                                                         size={17}
                                                         className="ml-2"

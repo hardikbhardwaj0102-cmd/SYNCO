@@ -13,6 +13,8 @@ import {
 
 import '../styles/pages/DashboardHome.css';
 import VideoClip from '../components/VideoClip';
+import AdminDashboard from './AdminDashboard';
+import { useAuth } from '../context/AuthContext';
 
 
 // =========================================================
@@ -27,6 +29,14 @@ const API_URL = 'https://synco-backend-vi7b.onrender.com';
 // =========================================================
 
 const DashboardHome = () => {
+
+  const { user } = useAuth();
+
+  const accountRole =
+    user?.accountRole ??
+    user?.account_role;
+
+  const isAdmin = accountRole === 'admin';
 
   const [gameCatalog, setGameCatalog] = useState([]);
   const [profileGames, setProfileGames] = useState([]);
@@ -45,6 +55,10 @@ const DashboardHome = () => {
   // =========================================================
 
   useEffect(() => {
+
+    if (isAdmin) {
+      return;
+    }
 
     const loadDashboardData = async () => {
 
@@ -141,7 +155,7 @@ const DashboardHome = () => {
 
     loadDashboardData();
 
-  }, []);
+  }, [isAdmin]);
 
 
   // =========================================================
@@ -264,6 +278,15 @@ const DashboardHome = () => {
       setCommentError(error.message || 'Unable to post comment.');
     }
   };
+
+
+  // =========================================================
+  // ADMIN DASHBOARD
+  // =========================================================
+
+  if (isAdmin) {
+    return <AdminDashboard />;
+  }
 
 
   // =========================================================
@@ -834,8 +857,8 @@ const DashboardHome = () => {
                           size={32}
 
                           className={`cursor-pointer transition-transform group-hover:scale-110 ${clip.isLiked
-                              ? 'fill-[#D32F2F] text-[#D32F2F]'
-                              : 'text-[#D32F2F]'
+                            ? 'fill-[#D32F2F] text-[#D32F2F]'
+                            : 'text-[#D32F2F]'
                             }`}
                         />
 

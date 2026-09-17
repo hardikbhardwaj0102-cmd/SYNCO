@@ -30,6 +30,7 @@ import ForgotPass from './pages/ForgotPass';
 import ResetPassword from './pages/ResetPassword';
 
 import DashboardHome from './pages/DashboardHome';
+import AdminDashboard from './pages/AdminDashboard';
 import Reward from './pages/Reward';
 import AddFriends from './pages/AddFriends';
 import Notification from './pages/notification';
@@ -45,6 +46,7 @@ const IndexRoute = () => {
 
   const {
     isAuthenticated,
+    user,
     loading,
   } = useAuth();
 
@@ -52,9 +54,17 @@ const IndexRoute = () => {
     return null;
   }
 
-  return isAuthenticated
-    ? <DashboardHome />
-    : <LandingPage />;
+  if (!isAuthenticated) {
+    return <LandingPage />;
+  }
+
+  const accountRole =
+    user?.accountRole ??
+    user?.account_role;
+
+  return accountRole === "admin"
+    ? <AdminDashboard />
+    : <DashboardHome />;
 };
 
 
@@ -83,6 +93,31 @@ const ProtectedRoute = () => {
   }
 
   return <Outlet />;
+};
+
+
+// =========================================================
+// ROLE-AWARE DASHBOARD ROUTE
+// =========================================================
+
+const DashboardRoute = () => {
+
+  const {
+    user,
+    loading,
+  } = useAuth();
+
+  if (loading) {
+    return null;
+  }
+
+  const accountRole =
+    user?.accountRole ??
+    user?.account_role;
+
+  return accountRole === "admin"
+    ? <AdminDashboard />
+    : <DashboardHome />;
 };
 
 
@@ -212,18 +247,13 @@ function App() {
                 path="/search"
                 element={<Search />}
               />
-              <Route
-                path="/admin/users"
-                element={<AdminUsers />}
-              />
-
               {/* -------------------------------------------------
                   DASHBOARD
                   ------------------------------------------------- */}
 
               <Route
                 path="/home"
-                element={<DashboardHome />}
+                element={<DashboardRoute />}
               />
 
 
@@ -339,6 +369,11 @@ function App() {
               <Route element={<AdminRoute />}>
 
                 <Route
+                  path="/admin"
+                  element={<AdminDashboard />}
+                />
+
+                <Route
                   path="/admin/organizers"
                   element={<OrganizerAdmin />}
                 />
@@ -346,6 +381,11 @@ function App() {
                 <Route
                   path="/admin/organizers/:applicationId"
                   element={<OrganizerAdmin />}
+                />
+
+                <Route
+                  path="/admin/users"
+                  element={<AdminUsers />}
                 />
 
               </Route>
