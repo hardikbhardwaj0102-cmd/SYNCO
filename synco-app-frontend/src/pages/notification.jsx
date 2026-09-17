@@ -392,9 +392,9 @@ const Notification = () => {
         const data =
             notification.data || {};
 
-        // -----------------------------------------------------
+        // =====================================================
         // ORGANIZER APPLICATION
-        // -----------------------------------------------------
+        // =====================================================
 
         if (
             normalizedType ===
@@ -407,25 +407,40 @@ const Notification = () => {
                 notification.referenceId ??
                 notification.reference_id;
 
-            if (applicationId) {
+            const audience =
+                data.audience || "";
+
+            // Admin notification
+            if (
+                audience === "admin"
+                && applicationId
+            ) {
 
                 navigate(
                     `/admin/organizers/${applicationId}`
                 );
 
-            } else {
+                return;
+            }
 
-                setError(
-                    "This organizer application notification is missing its application ID."
+            // Applicant notification
+            if (
+                audience === "applicant"
+            ) {
+
+                navigate(
+                    "/organizer/register"
                 );
+
+                return;
             }
 
             return;
         }
 
-        // -----------------------------------------------------
+        // =====================================================
         // CLUB
-        // -----------------------------------------------------
+        // =====================================================
 
         const clubId =
             data.clubId ??
@@ -457,9 +472,9 @@ const Notification = () => {
             return;
         }
 
-        // -----------------------------------------------------
-        // FRIEND REQUEST
-        // -----------------------------------------------------
+        // =====================================================
+        // FRIENDS
+        // =====================================================
 
         if (
             normalizedType ===
@@ -473,9 +488,9 @@ const Notification = () => {
             return;
         }
 
-        // -----------------------------------------------------
-        // TOURNAMENT
-        // -----------------------------------------------------
+        // =====================================================
+        // TOURNAMENTS
+        // =====================================================
 
         if (
             normalizedType ===
@@ -498,7 +513,6 @@ const Notification = () => {
             return;
         }
     };
-
     // =========================================================
     // FILTERED NOTIFICATIONS
     // =========================================================
@@ -990,8 +1004,8 @@ const Notification = () => {
                             setFilter("all")
                         }
                         className={`rounded-lg px-3.5 py-2 text-sm font-semibold transition ${filter === "all"
-                                ? "bg-black text-white"
-                                : "text-neutral-500 hover:bg-neutral-100 hover:text-black"
+                            ? "bg-black text-white"
+                            : "text-neutral-500 hover:bg-neutral-100 hover:text-black"
                             }`}
                     >
                         All
@@ -1002,8 +1016,8 @@ const Notification = () => {
                             setFilter("unread")
                         }
                         className={`rounded-lg px-3.5 py-2 text-sm font-semibold transition ${filter === "unread"
-                                ? "bg-black text-white"
-                                : "text-neutral-500 hover:bg-neutral-100 hover:text-black"
+                            ? "bg-black text-white"
+                            : "text-neutral-500 hover:bg-neutral-100 hover:text-black"
                             }`}
                     >
                         Unread
@@ -1137,9 +1151,9 @@ const Notification = () => {
                                                         index
                                                     }
                                                     className={`relative ${index !==
-                                                            group.items.length - 1
-                                                            ? "border-b border-neutral-200"
-                                                            : ""
+                                                        group.items.length - 1
+                                                        ? "border-b border-neutral-200"
+                                                        : ""
                                                         }`}
                                                 >
 
@@ -1153,8 +1167,8 @@ const Notification = () => {
 
                                                     <div
                                                         className={`p-4 sm:p-5 transition ${unread
-                                                                ? "bg-neutral-50"
-                                                                : "bg-white"
+                                                            ? "bg-neutral-50"
+                                                            : "bg-white"
                                                             }`}
                                                     >
 
@@ -1164,8 +1178,8 @@ const Notification = () => {
 
                                                             <div
                                                                 className={`w-10 h-10 rounded-xl flex items-center justify-center shrink-0 ${unread
-                                                                        ? "bg-black text-white"
-                                                                        : "bg-neutral-100 text-neutral-500"
+                                                                    ? "bg-black text-white"
+                                                                    : "bg-neutral-100 text-neutral-500"
                                                                     }`}
                                                             >
                                                                 {getIcon(
@@ -1192,8 +1206,8 @@ const Notification = () => {
 
                                                                             <h3
                                                                                 className={`text-sm ${unread
-                                                                                        ? "font-bold text-black"
-                                                                                        : "font-semibold text-neutral-800"
+                                                                                    ? "font-bold text-black"
+                                                                                    : "font-semibold text-neutral-800"
                                                                                     }`}
                                                                             >
                                                                                 {

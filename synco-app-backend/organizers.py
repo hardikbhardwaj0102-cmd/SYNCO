@@ -29,12 +29,6 @@ organizers_bp = Blueprint(
 
 
 def get_current_user():
-    """
-    Resolve the currently authenticated SYNCO user.
-
-    Supports the common session keys used by the existing
-    SYNCO authentication system.
-    """
 
     possible_keys = (
         "user_id",
@@ -43,6 +37,7 @@ def get_current_user():
     )
 
     for key in possible_keys:
+
         value = session.get(key)
 
         if value is None:
@@ -65,9 +60,11 @@ def get_current_user():
 
 
 def require_login():
+
     user = get_current_user()
 
     if user is None:
+
         return None, (
             jsonify({
                 "error": "Authentication required.",
@@ -79,12 +76,14 @@ def require_login():
 
 
 def require_admin():
+
     user, error = require_login()
 
     if error:
         return None, error
 
     if user.account_role != "admin":
+
         return None, (
             jsonify({
                 "error": "Admin access required.",
@@ -96,12 +95,14 @@ def require_admin():
 
 
 # =========================================================
-# GENERAL HELPERS
+# HELPERS
 # =========================================================
 
 
 def generate_application_code():
+
     while True:
+
         code = (
             "ORG-"
             + datetime.utcnow().strftime("%Y")
@@ -118,7 +119,10 @@ def generate_application_code():
 
 
 def client_ip():
-    forwarded = request.headers.get("X-Forwarded-For")
+
+    forwarded = request.headers.get(
+        "X-Forwarded-For"
+    )
 
     if forwarded:
         return forwarded.split(",")[0].strip()
@@ -126,7 +130,11 @@ def client_ip():
     return request.remote_addr
 
 
-def clean_string(value, max_length=None):
+def clean_string(
+    value,
+    max_length=None,
+):
+
     if value is None:
         return None
 
@@ -142,13 +150,18 @@ def clean_string(value, max_length=None):
 
 
 def clean_list(value):
+
     if not isinstance(value, list):
         return []
 
     result = []
 
     for item in value:
-        item = clean_string(item, 100)
+
+        item = clean_string(
+            item,
+            100,
+        )
 
         if item and item not in result:
             result.append(item)
@@ -157,7 +170,7 @@ def clean_list(value):
 
 
 # =========================================================
-# AUDIT LOG
+# AUDIT
 # =========================================================
 
 
@@ -170,6 +183,7 @@ def write_audit(
     reason=None,
     metadata=None,
 ):
+
     audit = OrganizerApplicationAuditLog(
         application_id=application.id,
         actor_id=actor_id,
@@ -179,41 +193,41 @@ def write_audit(
         reason=reason,
         audit_metadata=metadata or {},
         ip_address=client_ip(),
-        user_agent=request.headers.get("User-Agent"),
+        user_agent=request.headers.get(
+            "User-Agent"
+        ),
     )
 
     db.session.add(audit)
 
 
 # =========================================================
-# ADMIN NOTIFICATION
+# NOTIFY ADMINS
 # =========================================================
 
 
-def notify_admins_of_new_application(application, applicant):
-    """
-    Create a notification for every SYNCO admin account.
-
-    This uses the existing Notification model and therefore
-    appears automatically through /api/notifications.
-    """
+def notify_admins_of_new_application(
+    application,
+    applicant,
+):
 
     admins = User.query.filter_by(
         account_role="admin"
     ).all()
 
+    applicant_name = (
+        applicant.name
+        or applicant.username
+        or f"User #{applicant.id}"
+    )
+
     for admin in admins:
 
-        applicant_name = (
-            applicant.name
-            or applicant.username
-            or f"User #{applicant.id}"
-        )
-
         notification = Notification(
+
             user_id=admin.id,
 
-            notification_type="organizer_application",
+            notification_type="ORGANIZER_APPLICATION",
 
             title="New Organizer Application",
 
@@ -227,12 +241,26 @@ def notify_admins_of_new_application(application, applicant):
             reference_id=application.id,
 
             data={
+                "audience": "admin",
+
                 "applicationId": application.id,
-                "applicationCode": application.application_code,
+
+                "applicationCode": (
+                    application.application_code
+                ),
+
                 "applicantId": applicant.id,
+
                 "applicantUid": applicant.uid,
-                "applicantUsername": applicant.username,
-                "organizationName": application.organization_name,
+
+                "applicantUsername": (
+                    applicant.username
+                ),
+
+                "organizationName": (
+                    application.organization_name
+                ),
+
                 "status": application.status,
             },
 
@@ -240,6 +268,117 @@ def notify_admins_of_new_application(application, applicant):
         )
 
         db.session.add(notification)
+
+
+# =========================================================
+# NOTIFY APPLICANT
+# =========================================================
+
+
+def notify_applicant_application_status(
+    application,
+    applicant,
+    status,
+    reason=None,
+):
+
+    if applicant is None:
+        return
+
+    organization_name = (
+        application.organization_name
+        or "your organization"
+    )
+
+    if status == "under_review":
+
+        title = "Organizer Application Under Review"
+
+        message = (
+            f"Your organizer application for "
+            f"{organization_name} is now under review."
+        )
+
+    elif status == "approved":
+
+        title = "Organizer Application Approved"
+
+        message = (
+            f"Your organizer application for "
+            f"{organization_name} has been approved. "
+            f"Your SYNCO account is now an organizer."
+        )
+
+    elif status == "rejected":
+
+        title = "Organizer Application Rejected"
+
+        message = (
+            f"Your organizer application for "
+            f"{organization_name} was rejected."
+        )
+
+        if reason:
+            message += f" Reason: {reason}"
+
+    elif status == "suspended":
+
+        title = "Organizer Status Suspended"
+
+        message = (
+            f"Your SYNCO organizer status has been suspended "
+            f"for {organization_name}."
+        )
+
+        if reason:
+            message += f" Reason: {reason}"
+
+    else:
+
+        title = "Organizer Application Updated"
+
+        message = (
+            f"Your organizer application for "
+            f"{organization_name} has been updated."
+        )
+
+    notification = Notification(
+
+        user_id=applicant.id,
+
+        notification_type="ORGANIZER_APPLICATION",
+
+        title=title,
+
+        message=message,
+
+        reference_type="organizer_application",
+
+        reference_id=application.id,
+
+        data={
+
+            "audience": "applicant",
+
+            "applicationId": application.id,
+
+            "applicationCode": (
+                application.application_code
+            ),
+
+            "organizationName": (
+                application.organization_name
+            ),
+
+            "status": status,
+
+            "reason": reason,
+        },
+
+        is_read=False,
+    )
+
+    db.session.add(notification)
 
 
 # =========================================================
@@ -258,11 +397,8 @@ def submit_application():
     if error:
         return error
 
-    # -----------------------------------------------------
-    # ROLE CHECK
-    # -----------------------------------------------------
-
     if user.account_role == "admin":
+
         return jsonify({
             "error": (
                 "Admin accounts do not need an organizer application."
@@ -270,29 +406,29 @@ def submit_application():
         }), 400
 
     if user.account_role == "organizer":
-        return jsonify({
-            "error": "You are already an approved organizer.",
-        }), 400
 
-    # -----------------------------------------------------
-    # EXISTING APPLICATION CHECK
-    # -----------------------------------------------------
+        return jsonify({
+            "error": (
+                "You are already an approved organizer."
+            ),
+        }), 400
 
     existing = OrganizerApplication.query.filter_by(
         user_id=user.id
     ).first()
 
     if existing:
+
         return jsonify({
-            "error": "You already have an organizer application.",
+            "error": (
+                "You already have an organizer application."
+            ),
             "application": existing.to_dict(),
         }), 409
 
-    # -----------------------------------------------------
-    # REQUEST DATA
-    # -----------------------------------------------------
-
-    data = request.get_json(silent=True) or {}
+    data = request.get_json(
+        silent=True
+    ) or {}
 
     organization_name = clean_string(
         data.get("organization_name"),
@@ -363,7 +499,7 @@ def submit_application():
     )
 
     # -----------------------------------------------------
-    # REQUIRED VALIDATION
+    # REQUIRED
     # -----------------------------------------------------
 
     required = {
@@ -382,82 +518,122 @@ def submit_application():
     ]
 
     if missing:
+
         return jsonify({
             "error": "Required fields are missing.",
             "fields": missing,
         }), 400
 
     if not games:
+
         return jsonify({
-            "error": "Select at least one game you organize.",
+            "error": (
+                "Select at least one game you organize."
+            ),
         }), 400
 
     if not planned_games:
+
         return jsonify({
             "error": (
-                "Select at least one game you plan to organize on SYNCO."
+                "Select at least one game you plan "
+                "to organize on SYNCO."
             ),
         }), 400
 
     # -----------------------------------------------------
-    # NUMBER VALIDATION
+    # NUMBERS
     # -----------------------------------------------------
 
     try:
 
         experience_years = int(
-            data.get("experience_years", 0)
+            data.get(
+                "experience_years",
+                0,
+            )
         )
 
         events_organized = int(
-            data.get("events_organized", 0)
+            data.get(
+                "events_organized",
+                0,
+            )
         )
 
         largest_event_size = data.get(
             "largest_event_size"
         )
 
-        if largest_event_size not in (None, ""):
+        if largest_event_size not in (
+            None,
+            "",
+        ):
+
             largest_event_size = int(
                 largest_event_size
             )
+
         else:
+
             largest_event_size = None
 
         expected_participants = data.get(
             "expected_participants"
         )
 
-        if expected_participants not in (None, ""):
+        if expected_participants not in (
+            None,
+            "",
+        ):
+
             expected_participants = int(
                 expected_participants
             )
+
         else:
+
             expected_participants = None
 
-    except (TypeError, ValueError):
+    except (
+        TypeError,
+        ValueError,
+    ):
 
         return jsonify({
-            "error": "One or more numeric fields are invalid.",
+            "error": (
+                "One or more numeric fields are invalid."
+            ),
         }), 400
 
-    if experience_years < 0 or experience_years > 100:
+    if (
+        experience_years < 0
+        or experience_years > 100
+    ):
+
         return jsonify({
-            "error": "Invalid organizer experience value.",
+            "error": (
+                "Invalid organizer experience value."
+            ),
         }), 400
 
     if events_organized < 0:
+
         return jsonify({
-            "error": "Events organized cannot be negative.",
+            "error": (
+                "Events organized cannot be negative."
+            ),
         }), 400
 
     if (
         largest_event_size is not None
         and largest_event_size <= 0
     ):
+
         return jsonify({
             "error": (
-                "Largest event size must be greater than zero."
+                "Largest event size must be greater "
+                "than zero."
             ),
         }), 400
 
@@ -465,17 +641,20 @@ def submit_application():
         expected_participants is not None
         and expected_participants <= 0
     ):
+
         return jsonify({
             "error": (
-                "Expected participants must be greater than zero."
+                "Expected participants must be greater "
+                "than zero."
             ),
         }), 400
 
     # -----------------------------------------------------
-    # CREATE APPLICATION
+    # CREATE
     # -----------------------------------------------------
 
     application = OrganizerApplication(
+
         user_id=user.id,
 
         application_code=generate_application_code(),
@@ -527,7 +706,6 @@ def submit_application():
 
     db.session.add(application)
 
-    # Get application.id before creating notification/audit.
     db.session.flush()
 
     # -----------------------------------------------------
@@ -536,16 +714,13 @@ def submit_application():
 
     write_audit(
         application=application,
-
         actor_id=user.id,
-
         action="submitted",
-
         new_status="pending",
     )
 
     # -----------------------------------------------------
-    # NOTIFY ALL ADMINS
+    # ADMIN NOTIFICATION
     # -----------------------------------------------------
 
     notify_admins_of_new_application(
@@ -553,17 +728,16 @@ def submit_application():
         applicant=user,
     )
 
-    # -----------------------------------------------------
-    # COMMIT
-    # -----------------------------------------------------
-
     db.session.commit()
 
     return jsonify({
+
         "message": (
             "Organizer application submitted successfully."
         ),
+
         "application": application.to_dict(),
+
     }), 201
 
 
@@ -588,17 +762,20 @@ def my_application():
     ).first()
 
     return jsonify({
+
         "application": (
             application.to_dict()
             if application
             else None
         ),
+
         "accountRole": user.account_role,
+
     })
 
 
 # =========================================================
-# ADMIN: LIST APPLICATIONS
+# ADMIN: LIST
 # =========================================================
 
 
@@ -631,8 +808,11 @@ def admin_applications():
         }
 
         if status not in allowed_statuses:
+
             return jsonify({
-                "error": "Invalid status filter.",
+                "error": (
+                    "Invalid status filter."
+                ),
             }), 400
 
         query = query.filter_by(
@@ -650,24 +830,36 @@ def admin_applications():
         item = application.to_dict()
 
         item["applicant"] = {
+
             "id": application.applicant.id,
+
             "uid": application.applicant.uid,
+
             "username": application.applicant.username,
+
             "name": application.applicant.name,
+
             "email": application.applicant.email,
-            "accountRole": application.applicant.account_role,
+
+            "accountRole": (
+                application.applicant.account_role
+            ),
+
         }
 
         response.append(item)
 
     return jsonify({
+
         "applications": response,
+
         "count": len(response),
+
     })
 
 
 # =========================================================
-# ADMIN: APPLICATION DETAILS
+# ADMIN: DETAILS
 # =========================================================
 
 
@@ -675,7 +867,9 @@ def admin_applications():
     "/admin/applications/<int:application_id>",
     methods=["GET"],
 )
-def admin_application_details(application_id):
+def admin_application_details(
+    application_id
+):
 
     admin, error = require_admin()
 
@@ -688,8 +882,11 @@ def admin_application_details(application_id):
     )
 
     if application is None:
+
         return jsonify({
-            "error": "Organizer application not found.",
+            "error": (
+                "Organizer application not found."
+            ),
         }), 404
 
     logs = OrganizerApplicationAuditLog.query.filter_by(
@@ -701,12 +898,21 @@ def admin_application_details(application_id):
     data = application.to_dict()
 
     data["applicant"] = {
+
         "id": application.applicant.id,
+
         "uid": application.applicant.uid,
+
         "username": application.applicant.username,
+
         "name": application.applicant.name,
+
         "email": application.applicant.email,
-        "accountRole": application.applicant.account_role,
+
+        "accountRole": (
+            application.applicant.account_role
+        ),
+
     }
 
     data["audit_logs"] = [
@@ -718,7 +924,7 @@ def admin_application_details(application_id):
 
 
 # =========================================================
-# ADMIN: MARK UNDER REVIEW
+# ADMIN: UNDER REVIEW
 # =========================================================
 
 
@@ -726,7 +932,9 @@ def admin_application_details(application_id):
     "/admin/applications/<int:application_id>/review",
     methods=["POST"],
 )
-def review_application(application_id):
+def review_application(
+    application_id
+):
 
     admin, error = require_admin()
 
@@ -739,14 +947,19 @@ def review_application(application_id):
     )
 
     if application is None:
+
         return jsonify({
-            "error": "Organizer application not found.",
+            "error": (
+                "Organizer application not found."
+            ),
         }), 404
 
     if application.status == "approved":
+
         return jsonify({
             "error": (
-                "Approved applications cannot be moved back to review."
+                "Approved applications cannot be "
+                "moved back to review."
             ),
         }), 400
 
@@ -770,12 +983,28 @@ def review_application(application_id):
         new_status="under_review",
     )
 
+    # -----------------------------------------------------
+    # NOTIFY APPLICANT
+    # -----------------------------------------------------
+
+    notify_applicant_application_status(
+        application=application,
+
+        applicant=application.applicant,
+
+        status="under_review",
+    )
+
     db.session.commit()
 
     return jsonify({
-        "message": "Application moved to review.",
+
+        "message": (
+            "Application moved to review."
+        ),
 
         "application": application.to_dict(),
+
     })
 
 
@@ -788,7 +1017,9 @@ def review_application(application_id):
     "/admin/applications/<int:application_id>/approve",
     methods=["POST"],
 )
-def approve_application(application_id):
+def approve_application(
+    application_id
+):
 
     admin, error = require_admin()
 
@@ -801,20 +1032,29 @@ def approve_application(application_id):
     )
 
     if application is None:
+
         return jsonify({
-            "error": "Organizer application not found.",
+            "error": (
+                "Organizer application not found."
+            ),
         }), 404
 
     if application.status == "approved":
+
         return jsonify({
-            "error": "Application is already approved.",
+            "error": (
+                "Application is already approved."
+            ),
         }), 400
 
     applicant = application.applicant
 
     if applicant is None:
+
         return jsonify({
-            "error": "Applicant account no longer exists.",
+            "error": (
+                "Applicant account no longer exists."
+            ),
         }), 400
 
     previous_status = application.status
@@ -830,8 +1070,7 @@ def approve_application(application_id):
     # -----------------------------------------------------
     # PLATFORM ROLE
     # -----------------------------------------------------
-    # This changes User.account_role only.
-    # ProfileGame.role remains untouched.
+    # Do not touch ProfileGame.role.
 
     applicant.account_role = "organizer"
 
@@ -847,14 +1086,30 @@ def approve_application(application_id):
         new_status="approved",
 
         metadata={
+
             "account_role_before": "player",
+
             "account_role_after": "organizer",
+
         },
+    )
+
+    # -----------------------------------------------------
+    # NOTIFY APPLICANT
+    # -----------------------------------------------------
+
+    notify_applicant_application_status(
+        application=application,
+
+        applicant=applicant,
+
+        status="approved",
     )
 
     db.session.commit()
 
     return jsonify({
+
         "message": (
             "Organizer approved successfully."
         ),
@@ -862,6 +1117,7 @@ def approve_application(application_id):
         "application": application.to_dict(),
 
         "user": applicant.to_dict(),
+
     })
 
 
@@ -874,7 +1130,9 @@ def approve_application(application_id):
     "/admin/applications/<int:application_id>/reject",
     methods=["POST"],
 )
-def reject_application(application_id):
+def reject_application(
+    application_id
+):
 
     admin, error = require_admin()
 
@@ -887,8 +1145,11 @@ def reject_application(application_id):
     )
 
     if application is None:
+
         return jsonify({
-            "error": "Organizer application not found.",
+            "error": (
+                "Organizer application not found."
+            ),
         }), 404
 
     data = request.get_json(
@@ -901,15 +1162,19 @@ def reject_application(application_id):
     )
 
     if not reason:
+
         return jsonify({
-            "error": "A rejection reason is required.",
+            "error": (
+                "A rejection reason is required."
+            ),
         }), 400
 
     if application.status == "approved":
+
         return jsonify({
             "error": (
-                "An approved organizer cannot be rejected "
-                "from this endpoint."
+                "An approved organizer cannot be "
+                "rejected from this endpoint."
             ),
         }), 400
 
@@ -937,19 +1202,35 @@ def reject_application(application_id):
         reason=reason,
     )
 
+    # -----------------------------------------------------
+    # NOTIFY APPLICANT
+    # -----------------------------------------------------
+
+    notify_applicant_application_status(
+        application=application,
+
+        applicant=application.applicant,
+
+        status="rejected",
+
+        reason=reason,
+    )
+
     db.session.commit()
 
     return jsonify({
+
         "message": (
             "Organizer application rejected."
         ),
 
         "application": application.to_dict(),
+
     })
 
 
 # =========================================================
-# ADMIN: SUSPEND ORGANIZER
+# ADMIN: SUSPEND
 # =========================================================
 
 
@@ -970,11 +1251,13 @@ def suspend_organizer(user_id):
     )
 
     if user is None:
+
         return jsonify({
             "error": "User not found.",
         }), 404
 
     if user.account_role != "organizer":
+
         return jsonify({
             "error": (
                 "User is not an approved organizer."
@@ -991,8 +1274,11 @@ def suspend_organizer(user_id):
     )
 
     if not reason:
+
         return jsonify({
-            "error": "A suspension reason is required.",
+            "error": (
+                "A suspension reason is required."
+            ),
         }), 400
 
     application = OrganizerApplication.query.filter_by(
@@ -1027,15 +1313,34 @@ def suspend_organizer(user_id):
             reason=reason,
 
             metadata={
+
                 "account_role_before": previous_role,
+
                 "account_role_after": "player",
+
             },
+        )
+
+        # -------------------------------------------------
+        # NOTIFY APPLICANT
+        # -------------------------------------------------
+
+        notify_applicant_application_status(
+            application=application,
+
+            applicant=user,
+
+            status="suspended",
+
+            reason=reason,
         )
 
     db.session.commit()
 
     return jsonify({
+
         "message": "Organizer suspended.",
 
         "user": user.to_dict(),
+
     })
