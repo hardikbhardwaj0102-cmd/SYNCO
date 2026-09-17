@@ -18,6 +18,7 @@ import {
     Users,
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
+import { useAuth } from '../context/AuthContext';
 
 const API_URL =
     import.meta.env.VITE_API_URL ||
@@ -415,6 +416,7 @@ const StatCard = ({ label, value, hint }) => (
 
 const CreateCompetition = () => {
     const navigate = useNavigate();
+    const { user, loading: authLoading } = useAuth();
 
     const [step, setStep] = useState(1);
     const [games, setGames] = useState([]);
@@ -423,6 +425,21 @@ const CreateCompetition = () => {
     const [creating, setCreating] = useState(false);
     const [error, setError] = useState('');
     const [successMessage, setSuccessMessage] = useState('');
+
+    useEffect(() => {
+        if (authLoading) return;
+
+        if (!user) {
+            navigate('/login', { replace: true });
+            return;
+        }
+
+        const accountRole = user.accountRole ?? user.account_role;
+
+        if (accountRole !== 'organizer') {
+            navigate('/organizer/register', { replace: true });
+        }
+    }, [authLoading, user, navigate]);
 
     const [form, setForm] = useState({
         title: '',
@@ -836,8 +853,6 @@ const CreateCompetition = () => {
 
             const data = await response.json();
 
-            // Backend authorization is authoritative.
-            // A user's organizer access can change after this page is opened.
             if (response.status === 401) {
                 navigate('/login', { replace: true });
                 return;
@@ -883,6 +898,10 @@ const CreateCompetition = () => {
             6: isVersus ? 'Review' : 'Points & leaderboard',
         }[step] || 'Create competition';
 
+
+    if (authLoading || !user || (user.accountRole ?? user.account_role) !== 'organizer') {
+        return null;
+    }
 
     return (
         <div className="min-h-screen bg-[#f5f5f4] text-[#111114]">
