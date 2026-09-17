@@ -158,6 +158,31 @@ class User(db.Model):
         index=True
     )
 
+    # -----------------------------------------------------
+    # ACCOUNT STATUS
+    # -----------------------------------------------------
+    # Platform account lifecycle. This is intentionally
+    # separate from account_role.
+    #
+    # active    -> normal access
+    # suspended -> login/API access blocked
+    account_status = db.Column(
+        db.String(20),
+        nullable=False,
+        default="active",
+        index=True
+    )
+
+    account_status_reason = db.Column(
+        db.Text,
+        nullable=True
+    )
+
+    account_status_changed_at = db.Column(
+        db.DateTime,
+        nullable=True
+    )
+
     # =====================================================
     # SYNCO REWARDS
     # =====================================================
@@ -276,6 +301,13 @@ class User(db.Model):
             "discord_verified": self.discord_verified,
 
             "account_role": self.account_role,
+            "account_status": self.account_status,
+            "account_status_reason": self.account_status_reason,
+            "account_status_changed_at": (
+                self.account_status_changed_at.isoformat()
+                if self.account_status_changed_at
+                else None
+            ),
 
             "xp": self.xp,
             "level": self.level,
@@ -300,6 +332,111 @@ def assign_synco_uid(mapper, connection, target):
 
     if not target.uid:
         target.uid = generate_synco_uid()
+
+
+# =========================================================
+# ADMIN USER ACTION AUDIT LOG
+# =========================================================
+
+class AdminUserActionLog(db.Model):
+
+    __tablename__ = "admin_user_action_logs"
+
+    id = db.Column(
+        db.Integer,
+        primary_key=True
+    )
+
+    admin_id = db.Column(
+        db.Integer,
+        db.ForeignKey("users.id", ondelete="SET NULL"),
+        nullable=True,
+        index=True
+    )
+
+    target_user_id = db.Column(
+        db.Integer,
+        db.ForeignKey("users.id", ondelete="SET NULL"),
+        nullable=True,
+        index=True
+    )
+
+    # Snapshot values are preserved even after a hard delete.
+    target_uid = db.Column(
+        db.String(10),
+        nullable=True,
+        index=True
+    )
+
+    target_email = db.Column(
+        db.String(255),
+        nullable=True
+    )
+
+    action = db.Column(
+        db.String(50),
+        nullable=False,
+        index=True
+    )
+
+    reason = db.Column(
+        db.Text,
+        nullable=True
+    )
+
+    audit_metadata = db.Column(
+        "metadata",
+        db.JSON,
+        nullable=False,
+        default=dict
+    )
+
+    ip_address = db.Column(
+        db.String(64),
+        nullable=True
+    )
+
+    user_agent = db.Column(
+        db.Text,
+        nullable=True
+    )
+
+    created_at = db.Column(
+        db.DateTime,
+        default=datetime.utcnow,
+        nullable=False,
+        index=True
+    )
+
+    admin = db.relationship(
+        "User",
+        foreign_keys=[admin_id]
+    )
+
+    target_user = db.relationship(
+        "User",
+        foreign_keys=[target_user_id]
+    )
+
+    def to_dict(self):
+
+        return {
+            "id": self.id,
+            "adminId": self.admin_id,
+            "targetUserId": self.target_user_id,
+            "targetUid": self.target_uid,
+            "targetEmail": self.target_email,
+            "action": self.action,
+            "reason": self.reason,
+            "metadata": self.audit_metadata or {},
+            "ipAddress": self.ip_address,
+            "userAgent": self.user_agent,
+            "createdAt": (
+                self.created_at.isoformat()
+                if self.created_at
+                else None
+            )
+        }
 
 
 # =========================================================

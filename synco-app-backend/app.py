@@ -17,8 +17,8 @@ from clubs import clubs_bp
 from friends import friends_bp
 from notifications import notifications_bp
 from leaderboards import leaderboards_bp
-
-
+from admin_users import admin_users_bp
+from account_guard import install_account_status_guard
 # =========================================================
 # LOAD ENVIRONMENT VARIABLES
 # =========================================================
@@ -181,6 +181,10 @@ app.register_blueprint(leaderboards_bp)
 app.register_blueprint(competition_bp)
 
 app.register_blueprint(organizers_bp)
+
+app.register_blueprint(admin_users_bp)
+
+install_account_status_guard(app)
 # =========================================================
 # HEALTH CHECK
 # =========================================================

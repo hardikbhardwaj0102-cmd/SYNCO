@@ -99,6 +99,44 @@ def get_frontend_url():
 
 
 # =========================================================
+# ACCOUNT STATUS HELPERS
+# =========================================================
+
+def account_blocked_response(user):
+    if not user:
+        return None
+
+    if user.account_status == "suspended":
+        return jsonify({
+            "success": False,
+            "message": (
+                "This SYNCO account is suspended. "
+                "Please contact SYNCO support."
+            ),
+            "account_status": user.account_status,
+            "reason": user.account_status_reason,
+        }), 403
+
+    return None
+
+
+def ensure_user_active(user):
+    response = account_blocked_response(user)
+
+    if response is not None:
+        return response
+
+    if user.account_status != "active":
+        return jsonify({
+            "success": False,
+            "message": "This SYNCO account is not active.",
+            "account_status": user.account_status,
+        }), 403
+
+    return None
+
+
+# =========================================================
 # INITIALIZE OAUTH
 # =========================================================
 
@@ -304,13 +342,17 @@ def google_callback():
             user.id,
         )
 
+        status_response = ensure_user_active(user)
+
+        if status_response is not None:
+            return status_response
+
         # -------------------------------------------------
         # CREATE SESSION
         # -------------------------------------------------
 
         session.clear()
 
-        session["user_id"] = user.id
         session["user"] = user.to_dict()
 
         session.permanent = True
@@ -515,13 +557,17 @@ def discord_callback():
             user.id,
         )
 
+        status_response = ensure_user_active(user)
+
+        if status_response is not None:
+            return status_response
+
         # -------------------------------------------------
         # CREATE SESSION
         # -------------------------------------------------
 
         session.clear()
 
-        session["user_id"] = user.id
         session["user"] = user.to_dict()
 
         session.permanent = True
@@ -844,15 +890,11 @@ def get_current_user():
         "user"
     )
 
-    session_user_id = session.get(
-        "user_id"
-    )
-
     # -----------------------------------------------------
     # No session
     # -----------------------------------------------------
 
-    if not session_user and not session_user_id:
+    if not session_user:
 
         return jsonify({
             "authenticated": False,
@@ -862,12 +904,9 @@ def get_current_user():
     # Get actual database user
     # -----------------------------------------------------
 
-    user_id = session_user_id
-
-    if not user_id and session_user:
-        user_id = session_user.get(
-            "id"
-        )
+    user_id = session_user.get(
+        "id"
+    )
 
     if not user_id:
 
@@ -890,13 +929,25 @@ def get_current_user():
             "authenticated": False,
         }), 401
 
+    if user_record.account_status != "active":
+
+        session.clear()
+
+        return jsonify({
+            "authenticated": False,
+            "message": (
+                "This SYNCO account is suspended."
+            ),
+            "account_status": user_record.account_status,
+            "reason": user_record.account_status_reason,
+        }), 403
+
     # -----------------------------------------------------
     # Refresh session user
     # -----------------------------------------------------
 
     user = user_record.to_dict()
 
-    session["user_id"] = user_record.id
     session["user"] = user
     session.permanent = True
 
@@ -944,6 +995,11 @@ def forgot_password():
                 "this email address."
             ),
         }), 404
+
+    status_response = ensure_user_active(user)
+
+    if status_response is not None:
+        return status_response
 
     token = reset_token_serializer().dumps({
         "user_id": user.id,
@@ -1063,6 +1119,11 @@ def reset_password():
             ),
         }), 400
 
+    status_response = ensure_user_active(user)
+
+    if status_response is not None:
+        return status_response
+
     # -----------------------------------------------------
     # Update password
     # -----------------------------------------------------
@@ -1137,6 +1198,11 @@ def login():
             ),
         }), 401
 
+    status_response = ensure_user_active(user)
+
+    if status_response is not None:
+        return status_response
+
     # -----------------------------------------------------
     # Social-only account
     # -----------------------------------------------------
@@ -1174,7 +1240,6 @@ def login():
 
     session.clear()
 
-    session["user_id"] = user.id
     session["user"] = user.to_dict()
 
     session.permanent = True
