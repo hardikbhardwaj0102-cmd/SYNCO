@@ -49,10 +49,12 @@ const Notification = () => {
     const apiRequest = async (url, options = {}) => {
         const response = await fetch(`${API_URL}${url}`, {
             credentials: "include",
+
             headers: {
                 "Content-Type": "application/json",
                 ...(options.headers || {}),
             },
+
             ...options,
         });
 
@@ -104,12 +106,16 @@ const Notification = () => {
             setUnreadCount(
                 Number(data.unreadCount || 0)
             );
+
         } catch (err) {
+
             setError(
                 err.message ||
                 "Unable to load notifications."
             );
+
         } finally {
+
             setLoading(false);
             setRefreshing(false);
         }
@@ -128,6 +134,7 @@ const Notification = () => {
     // =========================================================
 
     const markAsRead = async (notification) => {
+
         if (
             notification.isRead ||
             notification.is_read
@@ -138,9 +145,12 @@ const Notification = () => {
         const notificationId =
             notification.id;
 
-        if (!notificationId) return;
+        if (!notificationId) {
+            return;
+        }
 
         try {
+
             setActionId(notificationId);
 
             await apiRequest(
@@ -166,12 +176,16 @@ const Notification = () => {
             setUnreadCount((previous) =>
                 Math.max(0, previous - 1)
             );
+
         } catch (err) {
+
             setError(
                 err.message ||
                 "Unable to mark notification as read."
             );
+
         } finally {
+
             setActionId(null);
         }
     };
@@ -181,9 +195,13 @@ const Notification = () => {
     // =========================================================
 
     const markAllAsRead = async () => {
-        if (unreadCount === 0) return;
+
+        if (unreadCount === 0) {
+            return;
+        }
 
         try {
+
             setMarkingAll(true);
             setError("");
             setSuccess("");
@@ -208,12 +226,16 @@ const Notification = () => {
             setSuccess(
                 "All notifications marked as read."
             );
+
         } catch (err) {
+
             setError(
                 err.message ||
                 "Unable to mark notifications as read."
             );
+
         } finally {
+
             setMarkingAll(false);
         }
     };
@@ -226,6 +248,7 @@ const Notification = () => {
         notification,
         action
     ) => {
+
         const data =
             notification?.data || {};
 
@@ -236,13 +259,16 @@ const Notification = () => {
             notification.reference_id;
 
         if (!inviteId) {
+
             setError(
                 "This invitation is missing its invite ID."
             );
+
             return;
         }
 
         try {
+
             setActionId(
                 `${action}-${notification.id}`
             );
@@ -255,11 +281,17 @@ const Notification = () => {
                     ? `/api/clubs/invites/${inviteId}/accept`
                     : `/api/clubs/invites/${inviteId}/decline`;
 
-            await apiRequest(endpoint, {
-                method: "POST",
-            });
+            await apiRequest(
+                endpoint,
+                {
+                    method: "POST",
+                }
+            );
 
-            // Mark the notification as read locally.
+            // -------------------------------------------------
+            // Mark notification as read locally
+            // -------------------------------------------------
+
             setNotifications((previous) =>
                 previous.map((item) =>
                     Number(item.id) ===
@@ -274,6 +306,7 @@ const Notification = () => {
             );
 
             setUnreadCount((previous) => {
+
                 const wasUnread =
                     !(
                         notification.isRead ||
@@ -286,6 +319,7 @@ const Notification = () => {
             });
 
             if (action === "accept") {
+
                 setSuccess(
                     `You joined ${data.clubName ||
                     data.club_name ||
@@ -293,30 +327,37 @@ const Notification = () => {
                     }.`
                 );
 
-                // If the notification contains a club ID,
-                // open that club after accepting.
                 const clubId =
                     data.clubId ??
                     data.club_id;
 
                 if (clubId) {
+
                     setTimeout(() => {
+
                         navigate(
                             `/clubs/${clubId}`
                         );
+
                     }, 500);
                 }
+
             } else {
+
                 setSuccess(
                     "Club invitation declined."
                 );
             }
+
         } catch (err) {
+
             setError(
                 err.message ||
                 `Unable to ${action} invitation.`
             );
+
         } finally {
+
             setActionId(null);
         }
     };
@@ -328,6 +369,7 @@ const Notification = () => {
     const handleNotificationClick = async (
         notification
     ) => {
+
         const wasUnread =
             !(
                 notification.isRead ||
@@ -335,9 +377,7 @@ const Notification = () => {
             );
 
         if (wasUnread) {
-            await markAsRead(
-                notification
-            );
+            await markAsRead(notification);
         }
 
         const type =
@@ -346,18 +386,57 @@ const Notification = () => {
             notification.notification_type ||
             "";
 
+        const normalizedType =
+            String(type).toUpperCase();
+
         const data =
             notification.data || {};
+
+        // -----------------------------------------------------
+        // ORGANIZER APPLICATION
+        // -----------------------------------------------------
+
+        if (
+            normalizedType ===
+            "ORGANIZER_APPLICATION"
+        ) {
+
+            const applicationId =
+                data.applicationId ??
+                data.application_id ??
+                notification.referenceId ??
+                notification.reference_id;
+
+            if (applicationId) {
+
+                navigate(
+                    `/admin/organizers/${applicationId}`
+                );
+
+            } else {
+
+                setError(
+                    "This organizer application notification is missing its application ID."
+                );
+            }
+
+            return;
+        }
+
+        // -----------------------------------------------------
+        // CLUB
+        // -----------------------------------------------------
 
         const clubId =
             data.clubId ??
             data.club_id;
 
-        // Club-related notifications
         if (
-            type === "CLUB_INVITE" &&
+            normalizedType ===
+            "CLUB_INVITE" &&
             clubId
         ) {
+
             navigate(
                 `/clubs/${clubId}`
             );
@@ -366,9 +445,11 @@ const Notification = () => {
         }
 
         if (
-            type === "CLUB" &&
+            normalizedType ===
+            "CLUB" &&
             clubId
         ) {
+
             navigate(
                 `/clubs/${clubId}`
             );
@@ -376,26 +457,39 @@ const Notification = () => {
             return;
         }
 
-        // Friend requests
+        // -----------------------------------------------------
+        // FRIEND REQUEST
+        // -----------------------------------------------------
+
         if (
-            type === "FRIEND_REQUEST" ||
-            type === "FRIEND_ACCEPTED"
+            normalizedType ===
+            "FRIEND_REQUEST" ||
+            normalizedType ===
+            "FRIEND_ACCEPTED"
         ) {
+
             navigate("/friends");
 
             return;
         }
 
-        // Tournament-related notifications
+        // -----------------------------------------------------
+        // TOURNAMENT
+        // -----------------------------------------------------
+
         if (
-            type === "TOURNAMENT_INVITE" ||
-            type === "TOURNAMENT"
+            normalizedType ===
+            "TOURNAMENT_INVITE" ||
+            normalizedType ===
+            "TOURNAMENT"
         ) {
+
             const tournamentId =
                 data.tournamentId ??
                 data.tournament_id;
 
             if (tournamentId) {
+
                 navigate(
                     `/competitions/${tournamentId}`
                 );
@@ -411,7 +505,9 @@ const Notification = () => {
 
     const filteredNotifications =
         useMemo(() => {
+
             if (filter === "unread") {
+
                 return notifications.filter(
                     (notification) =>
                         !(
@@ -422,6 +518,7 @@ const Notification = () => {
             }
 
             return notifications;
+
         }, [
             notifications,
             filter,
@@ -433,6 +530,7 @@ const Notification = () => {
 
     const groupedNotifications =
         useMemo(() => {
+
             const groups = [];
 
             const today = new Date();
@@ -444,11 +542,13 @@ const Notification = () => {
 
             filteredNotifications.forEach(
                 (notification) => {
+
                     const dateValue =
                         notification.createdAt ||
                         notification.created_at;
 
                     if (!dateValue) {
+
                         const existing =
                             groups.find(
                                 (group) =>
@@ -457,10 +557,13 @@ const Notification = () => {
                             );
 
                         if (existing) {
+
                             existing.items.push(
                                 notification
                             );
+
                         } else {
+
                             groups.push({
                                 label: "Earlier",
                                 items: [
@@ -472,21 +575,24 @@ const Notification = () => {
                         return;
                     }
 
-                    const date = new Date(
-                        dateValue
-                    );
+                    const date =
+                        new Date(dateValue);
 
-                    let label = "Earlier";
+                    let label =
+                        "Earlier";
 
                     if (
                         date.toDateString() ===
                         today.toDateString()
                     ) {
+
                         label = "Today";
+
                     } else if (
                         date.toDateString() ===
                         yesterday.toDateString()
                     ) {
+
                         label = "Yesterday";
                     }
 
@@ -498,10 +604,13 @@ const Notification = () => {
                         );
 
                     if (existing) {
+
                         existing.items.push(
                             notification
                         );
+
                     } else {
+
                         groups.push({
                             label,
                             items: [
@@ -513,6 +622,7 @@ const Notification = () => {
             );
 
             return groups;
+
         }, [
             filteredNotifications,
         ]);
@@ -524,6 +634,7 @@ const Notification = () => {
     const getNotificationType = (
         notification
     ) => {
+
         return (
             notification.type ||
             notification.notificationType ||
@@ -535,6 +646,7 @@ const Notification = () => {
     const getNotificationTitle = (
         notification
     ) => {
+
         return (
             notification.title ||
             "Notification"
@@ -544,6 +656,7 @@ const Notification = () => {
     const getNotificationMessage = (
         notification
     ) => {
+
         return (
             notification.message ||
             "You have a new notification."
@@ -553,12 +666,14 @@ const Notification = () => {
     const getNotificationData = (
         notification
     ) => {
+
         return notification?.data || {};
     };
 
     const isUnread = (
         notification
     ) => {
+
         return !(
             notification.isRead ||
             notification.is_read
@@ -566,9 +681,13 @@ const Notification = () => {
     };
 
     const formatTime = (dateValue) => {
-        if (!dateValue) return "";
+
+        if (!dateValue) {
+            return "";
+        }
 
         try {
+
             return new Date(
                 dateValue
             ).toLocaleTimeString(
@@ -578,18 +697,26 @@ const Notification = () => {
                     minute: "2-digit",
                 }
             );
+
         } catch {
+
             return "";
         }
     };
 
+    // =========================================================
+    // ICON
+    // =========================================================
+
     const getIcon = (notification) => {
+
         const type =
             getNotificationType(
                 notification
             );
 
         switch (type) {
+
             case "CLUB_INVITE":
                 return (
                     <Users size={19} />
@@ -620,11 +747,14 @@ const Notification = () => {
                     <Crown size={19} />
                 );
 
+            case "ORGANIZER_APPLICATION":
+                return (
+                    <Shield size={19} />
+                );
+
             case "SYSTEM":
                 return (
-                    <CircleAlert
-                        size={19}
-                    />
+                    <CircleAlert size={19} />
                 );
 
             default:
@@ -639,9 +769,12 @@ const Notification = () => {
     // =========================================================
 
     if (loading) {
+
         return (
             <div className="min-h-screen bg-white flex items-center justify-center">
+
                 <div className="flex items-center gap-3 text-neutral-500">
+
                     <Loader2
                         size={21}
                         className="animate-spin"
@@ -650,7 +783,9 @@ const Notification = () => {
                     <span className="text-sm">
                         Loading notifications...
                     </span>
+
                 </div>
+
             </div>
         );
     }
@@ -660,22 +795,29 @@ const Notification = () => {
     // =========================================================
 
     return (
+
         <div className="min-h-screen bg-white text-neutral-900">
+
             <main className="max-w-5xl mx-auto px-5 sm:px-8 py-8">
+
                 {/* =================================================
                     HEADER
                 ================================================= */}
 
                 <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-5">
+
                     <div>
+
                         <div className="flex items-center gap-3">
+
                             <div className="w-10 h-10 rounded-xl bg-black text-white flex items-center justify-center">
-                                <Bell
-                                    size={19}
-                                />
+
+                                <Bell size={19} />
+
                             </div>
 
                             <div>
+
                                 <h1 className="text-2xl font-bold tracking-tight text-black">
                                     Notifications
                                 </h1>
@@ -684,22 +826,23 @@ const Notification = () => {
                                     Stay updated with
                                     your SYNCO activity.
                                 </p>
+
                             </div>
+
                         </div>
+
                     </div>
 
                     <div className="flex items-center gap-2">
+
                         <button
                             onClick={() =>
-                                loadNotifications(
-                                    true
-                                )
+                                loadNotifications(true)
                             }
-                            disabled={
-                                refreshing
-                            }
+                            disabled={refreshing}
                             className="inline-flex items-center gap-2 rounded-lg border border-neutral-200 px-3.5 py-2.5 text-sm font-medium text-neutral-700 hover:bg-neutral-50 transition disabled:opacity-50"
                         >
+
                             <RefreshCw
                                 size={16}
                                 className={
@@ -710,38 +853,42 @@ const Notification = () => {
                             />
 
                             Refresh
+
                         </button>
 
-                        {unreadCount >
-                            0 && (
-                                <button
-                                    onClick={
-                                        markAllAsRead
-                                    }
-                                    disabled={
-                                        markingAll
-                                    }
-                                    className="inline-flex items-center gap-2 rounded-lg bg-black px-3.5 py-2.5 text-sm font-semibold text-white hover:bg-neutral-800 transition disabled:opacity-50"
-                                >
-                                    {markingAll ? (
-                                        <Loader2
-                                            size={
-                                                16
-                                            }
-                                            className="animate-spin"
-                                        />
-                                    ) : (
-                                        <CheckCheck
-                                            size={
-                                                16
-                                            }
-                                        />
-                                    )}
+                        {unreadCount > 0 && (
 
-                                    Mark all read
-                                </button>
-                            )}
+                            <button
+                                onClick={
+                                    markAllAsRead
+                                }
+                                disabled={markingAll}
+                                className="inline-flex items-center gap-2 rounded-lg bg-black px-3.5 py-2.5 text-sm font-semibold text-white hover:bg-neutral-800 transition disabled:opacity-50"
+                            >
+
+                                {markingAll ? (
+
+                                    <Loader2
+                                        size={16}
+                                        className="animate-spin"
+                                    />
+
+                                ) : (
+
+                                    <CheckCheck
+                                        size={16}
+                                    />
+
+                                )}
+
+                                Mark all read
+
+                            </button>
+
+                        )}
+
                     </div>
+
                 </div>
 
                 {/* =================================================
@@ -749,8 +896,11 @@ const Notification = () => {
                 ================================================= */}
 
                 {error && (
+
                     <div className="mt-6 rounded-xl border border-red-200 bg-red-50 px-4 py-3">
+
                         <div className="flex items-center justify-between gap-4">
+
                             <p className="text-sm text-red-700">
                                 {error}
                             </p>
@@ -761,34 +911,39 @@ const Notification = () => {
                                 }
                                 className="text-red-500 hover:text-red-700"
                             >
-                                <X
-                                    size={16}
-                                />
+
+                                <X size={16} />
+
                             </button>
+
                         </div>
+
                     </div>
                 )}
 
                 {success && (
+
                     <div className="mt-6 rounded-xl border border-green-200 bg-green-50 px-4 py-3">
+
                         <div className="flex items-center justify-between gap-4">
+
                             <p className="text-sm text-green-700">
                                 {success}
                             </p>
 
                             <button
                                 onClick={() =>
-                                    setSuccess(
-                                        ""
-                                    )
+                                    setSuccess("")
                                 }
                                 className="text-green-600 hover:text-green-800"
                             >
-                                <X
-                                    size={16}
-                                />
+
+                                <X size={16} />
+
                             </button>
+
                         </div>
+
                     </div>
                 )}
 
@@ -797,29 +952,31 @@ const Notification = () => {
                 ================================================= */}
 
                 <div className="mt-7 grid grid-cols-2 gap-3 sm:max-w-md">
+
                     <div className="rounded-xl border border-neutral-200 bg-neutral-50 px-4 py-4">
+
                         <p className="text-xs font-medium uppercase tracking-wider text-neutral-400">
                             Total
                         </p>
 
                         <p className="mt-1 text-xl font-bold text-black">
-                            {
-                                notifications.length
-                            }
+                            {notifications.length}
                         </p>
+
                     </div>
 
                     <div className="rounded-xl border border-neutral-200 bg-neutral-50 px-4 py-4">
+
                         <p className="text-xs font-medium uppercase tracking-wider text-neutral-400">
                             Unread
                         </p>
 
                         <p className="mt-1 text-xl font-bold text-black">
-                            {
-                                unreadCount
-                            }
+                            {unreadCount}
                         </p>
+
                     </div>
+
                 </div>
 
                 {/* =================================================
@@ -827,13 +984,14 @@ const Notification = () => {
                 ================================================= */}
 
                 <div className="mt-8 flex items-center gap-2 border-b border-neutral-200 pb-3">
+
                     <button
                         onClick={() =>
                             setFilter("all")
                         }
                         className={`rounded-lg px-3.5 py-2 text-sm font-semibold transition ${filter === "all"
-                            ? "bg-black text-white"
-                            : "text-neutral-500 hover:bg-neutral-100 hover:text-black"
+                                ? "bg-black text-white"
+                                : "text-neutral-500 hover:bg-neutral-100 hover:text-black"
                             }`}
                     >
                         All
@@ -843,80 +1001,90 @@ const Notification = () => {
                         onClick={() =>
                             setFilter("unread")
                         }
-                        className={`rounded-lg px-3.5 py-2 text-sm font-semibold transition ${filter ===
-                            "unread"
-                            ? "bg-black text-white"
-                            : "text-neutral-500 hover:bg-neutral-100 hover:text-black"
+                        className={`rounded-lg px-3.5 py-2 text-sm font-semibold transition ${filter === "unread"
+                                ? "bg-black text-white"
+                                : "text-neutral-500 hover:bg-neutral-100 hover:text-black"
                             }`}
                     >
                         Unread
-                        {unreadCount >
-                            0 && (
-                                <span className="ml-2">
-                                    {unreadCount}
-                                </span>
-                            )}
+
+                        {unreadCount > 0 && (
+                            <span className="ml-2">
+                                {unreadCount}
+                            </span>
+                        )}
+
                     </button>
+
                 </div>
 
                 {/* =================================================
-                    EMPTY STATE
+                    EMPTY
                 ================================================= */}
 
-                {filteredNotifications.length ===
-                    0 && (
-                        <div className="py-24 text-center">
-                            <div className="mx-auto w-14 h-14 rounded-2xl bg-neutral-100 flex items-center justify-center">
-                                <Bell
-                                    size={25}
-                                    className="text-neutral-400"
-                                />
-                            </div>
+                {filteredNotifications.length === 0 && (
 
-                            <h2 className="mt-5 text-base font-semibold text-black">
-                                {filter ===
-                                    "unread"
-                                    ? "You're all caught up"
-                                    : "No notifications yet"}
-                            </h2>
+                    <div className="py-24 text-center">
 
-                            <p className="mt-2 max-w-sm mx-auto text-sm leading-6 text-neutral-500">
-                                {filter ===
-                                    "unread"
-                                    ? "You don't have any unread notifications."
-                                    : "Notifications about clubs, friends, tournaments and other SYNCO activity will appear here."}
-                            </p>
+                        <div className="mx-auto w-14 h-14 rounded-2xl bg-neutral-100 flex items-center justify-center">
+
+                            <Bell
+                                size={25}
+                                className="text-neutral-400"
+                            />
+
                         </div>
-                    )}
+
+                        <h2 className="mt-5 text-base font-semibold text-black">
+
+                            {filter === "unread"
+                                ? "You're all caught up"
+                                : "No notifications yet"}
+
+                        </h2>
+
+                        <p className="mt-2 max-w-sm mx-auto text-sm leading-6 text-neutral-500">
+
+                            {filter === "unread"
+                                ? "You don't have any unread notifications."
+                                : "Notifications about clubs, friends, tournaments and other SYNCO activity will appear here."}
+
+                        </p>
+
+                    </div>
+                )}
 
                 {/* =================================================
-                    NOTIFICATION GROUPS
+                    GROUPS
                 ================================================= */}
 
                 <div className="mt-7 space-y-8">
+
                     {groupedNotifications.map(
                         (group) => (
+
                             <section
-                                key={
-                                    group.label
-                                }
+                                key={group.label}
                             >
+
                                 <div className="flex items-center gap-3 mb-3">
+
                                     <h2 className="text-xs font-bold uppercase tracking-widest text-neutral-400">
-                                        {
-                                            group.label
-                                        }
+                                        {group.label}
                                     </h2>
 
                                     <div className="h-px flex-1 bg-neutral-200" />
+
                                 </div>
 
                                 <div className="rounded-xl border border-neutral-200 overflow-hidden">
+
                                     {group.items.map(
                                         (
                                             notification,
                                             index
                                         ) => {
+
                                             const unread =
                                                 isUnread(
                                                     notification
@@ -945,6 +1113,10 @@ const Notification = () => {
                                                 notification.referenceId ??
                                                 notification.reference_id;
 
+                                            const isOrganizerApplication =
+                                                type ===
+                                                "ORGANIZER_APPLICATION";
+
                                             const acceptLoading =
                                                 actionId ===
                                                 `accept-${notificationId}`;
@@ -958,37 +1130,42 @@ const Notification = () => {
                                                 declineLoading;
 
                                             return (
+
                                                 <div
                                                     key={
                                                         notificationId ??
                                                         index
                                                     }
                                                     className={`relative ${index !==
-                                                        group
-                                                            .items
-                                                            .length -
-                                                        1
-                                                        ? "border-b border-neutral-200"
-                                                        : ""
+                                                            group.items.length - 1
+                                                            ? "border-b border-neutral-200"
+                                                            : ""
                                                         }`}
                                                 >
+
                                                     {/* Unread indicator */}
+
                                                     {unread && (
+
                                                         <div className="absolute left-0 top-0 bottom-0 w-1 bg-black" />
+
                                                     )}
 
                                                     <div
                                                         className={`p-4 sm:p-5 transition ${unread
-                                                            ? "bg-neutral-50"
-                                                            : "bg-white"
+                                                                ? "bg-neutral-50"
+                                                                : "bg-white"
                                                             }`}
                                                     >
+
                                                         <div className="flex items-start gap-4">
+
                                                             {/* Icon */}
+
                                                             <div
                                                                 className={`w-10 h-10 rounded-xl flex items-center justify-center shrink-0 ${unread
-                                                                    ? "bg-black text-white"
-                                                                    : "bg-neutral-100 text-neutral-500"
+                                                                        ? "bg-black text-white"
+                                                                        : "bg-neutral-100 text-neutral-500"
                                                                     }`}
                                                             >
                                                                 {getIcon(
@@ -997,7 +1174,9 @@ const Notification = () => {
                                                             </div>
 
                                                             {/* Content */}
+
                                                             <div className="flex-1 min-w-0">
+
                                                                 <button
                                                                     onClick={() =>
                                                                         handleNotificationClick(
@@ -1006,12 +1185,15 @@ const Notification = () => {
                                                                     }
                                                                     className="w-full text-left"
                                                                 >
+
                                                                     <div className="flex items-start justify-between gap-4">
+
                                                                         <div className="min-w-0">
+
                                                                             <h3
                                                                                 className={`text-sm ${unread
-                                                                                    ? "font-bold text-black"
-                                                                                    : "font-semibold text-neutral-800"
+                                                                                        ? "font-bold text-black"
+                                                                                        : "font-semibold text-neutral-800"
                                                                                     }`}
                                                                             >
                                                                                 {
@@ -1028,41 +1210,86 @@ const Notification = () => {
                                                                                     )
                                                                                 }
                                                                             </p>
+
                                                                         </div>
 
                                                                         <ChevronRight
-                                                                            size={
-                                                                                17
-                                                                            }
+                                                                            size={17}
                                                                             className="mt-0.5 shrink-0 text-neutral-300"
                                                                         />
+
                                                                     </div>
+
                                                                 </button>
 
                                                                 {/* Meta */}
+
                                                                 <div className="mt-3 flex flex-wrap items-center gap-x-3 gap-y-2">
+
                                                                     <span className="inline-flex items-center gap-1.5 text-xs text-neutral-400">
-                                                                        <Clock
-                                                                            size={
-                                                                                13
-                                                                            }
-                                                                        />
+
+                                                                        <Clock size={13} />
 
                                                                         {formatTime(
                                                                             notification.createdAt ||
                                                                             notification.created_at
                                                                         )}
+
                                                                     </span>
 
                                                                     {type && (
+
                                                                         <span className="rounded-md bg-neutral-100 px-2 py-1 text-[10px] font-semibold uppercase tracking-wider text-neutral-500">
+
                                                                             {type.replace(
                                                                                 /_/g,
                                                                                 " "
                                                                             )}
+
                                                                         </span>
+
                                                                     )}
+
                                                                 </div>
+
+                                                                {/* =================================================
+                                                                    ORGANIZER APPLICATION
+                                                                ================================================= */}
+
+                                                                {isOrganizerApplication && (
+
+                                                                    <div className="mt-4 rounded-lg border border-neutral-200 bg-white px-4 py-3">
+
+                                                                        <div className="flex items-center justify-between gap-4">
+
+                                                                            <div>
+
+                                                                                <p className="text-xs font-semibold text-black">
+                                                                                    Organizer application
+                                                                                </p>
+
+                                                                                <p className="mt-1 text-[11px] text-neutral-500">
+                                                                                    {data.organizationName ||
+                                                                                        "Application awaiting admin review"}
+                                                                                </p>
+
+                                                                            </div>
+
+                                                                            <span className="inline-flex items-center gap-1.5 rounded-md bg-neutral-100 px-2.5 py-1.5 text-[10px] font-semibold uppercase tracking-wider text-neutral-600">
+
+                                                                                Review
+
+                                                                                <ChevronRight
+                                                                                    size={13}
+                                                                                />
+
+                                                                            </span>
+
+                                                                        </div>
+
+                                                                    </div>
+
+                                                                )}
 
                                                                 {/* =================================================
                                                                     CLUB INVITE ACTIONS
@@ -1070,7 +1297,9 @@ const Notification = () => {
 
                                                                 {isInvite &&
                                                                     inviteId && (
+
                                                                         <div className="mt-4 flex flex-wrap gap-2">
+
                                                                             <button
                                                                                 onClick={() =>
                                                                                     handleClubInvite(
@@ -1083,22 +1312,24 @@ const Notification = () => {
                                                                                 }
                                                                                 className="inline-flex items-center gap-2 rounded-lg bg-black px-4 py-2.5 text-xs font-semibold text-white hover:bg-neutral-800 transition disabled:opacity-50"
                                                                             >
+
                                                                                 {acceptLoading ? (
+
                                                                                     <Loader2
-                                                                                        size={
-                                                                                            14
-                                                                                        }
+                                                                                        size={14}
                                                                                         className="animate-spin"
                                                                                     />
+
                                                                                 ) : (
+
                                                                                     <Check
-                                                                                        size={
-                                                                                            14
-                                                                                        }
+                                                                                        size={14}
                                                                                     />
+
                                                                                 )}
 
                                                                                 Accept
+
                                                                             </button>
 
                                                                             <button
@@ -1113,42 +1344,55 @@ const Notification = () => {
                                                                                 }
                                                                                 className="inline-flex items-center gap-2 rounded-lg border border-neutral-300 px-4 py-2.5 text-xs font-semibold text-neutral-700 hover:bg-neutral-100 transition disabled:opacity-50"
                                                                             >
+
                                                                                 {declineLoading ? (
+
                                                                                     <Loader2
-                                                                                        size={
-                                                                                            14
-                                                                                        }
+                                                                                        size={14}
                                                                                         className="animate-spin"
                                                                                     />
+
                                                                                 ) : (
+
                                                                                     <X
-                                                                                        size={
-                                                                                            14
-                                                                                        }
+                                                                                        size={14}
                                                                                     />
+
                                                                                 )}
 
                                                                                 Decline
+
                                                                             </button>
+
                                                                         </div>
+
                                                                     )}
 
-                                                                {/* Club info */}
+                                                                {/* =================================================
+                                                                    CLUB INFO
+                                                                ================================================= */}
+
                                                                 {isInvite &&
-                                                                    (data.clubName ||
-                                                                        data.clubTag) && (
+                                                                    (
+                                                                        data.clubName ||
+                                                                        data.clubTag
+                                                                    ) && (
+
                                                                         <div className="mt-4 rounded-lg border border-neutral-200 bg-white px-3.5 py-3">
+
                                                                             <div className="flex items-center gap-3">
+
                                                                                 <div className="w-8 h-8 rounded-lg bg-neutral-100 flex items-center justify-center">
+
                                                                                     <Users
-                                                                                        size={
-                                                                                            15
-                                                                                        }
+                                                                                        size={15}
                                                                                         className="text-neutral-500"
                                                                                     />
+
                                                                                 </div>
 
                                                                                 <div>
+
                                                                                     {data.clubName && (
                                                                                         <p className="text-xs font-semibold text-black">
                                                                                             {
@@ -1164,28 +1408,44 @@ const Notification = () => {
                                                                                             }
                                                                                         </p>
                                                                                     )}
+
                                                                                 </div>
+
                                                                             </div>
+
                                                                         </div>
+
                                                                     )}
+
                                                             </div>
 
                                                             {/* Unread dot */}
+
                                                             {unread && (
+
                                                                 <div className="w-2 h-2 rounded-full bg-black shrink-0 mt-2" />
+
                                                             )}
+
                                                         </div>
+
                                                     </div>
+
                                                 </div>
                                             );
                                         }
                                     )}
+
                                 </div>
+
                             </section>
                         )
                     )}
+
                 </div>
+
             </main>
+
         </div>
     );
 };

@@ -7,7 +7,10 @@ import {
 } from 'react-router-dom';
 
 import { AuthProvider, useAuth } from './context/AuthContext';
+
 import OrganizerRegister from "./pages/OrganizerRegister";
+import OrganizerAdmin from "./pages/OrganizerAdmin";
+
 import HybridLayout from './components/HybridLayout';
 import CreateCompetition from './pages/CreateCompetition';
 import LandingPage from './pages/LandingPage';
@@ -31,10 +34,6 @@ import Reward from './pages/Reward';
 import AddFriends from './pages/AddFriends';
 import Notification from './pages/notification';
 
-// =========================================================
-// SEARCH
-// =========================================================
-
 import Search from './components/Search';
 
 
@@ -43,9 +42,12 @@ import Search from './components/Search';
 // =========================================================
 
 const IndexRoute = () => {
-  const { isAuthenticated, loading } = useAuth();
 
-  // Wait until authentication has been checked.
+  const {
+    isAuthenticated,
+    loading,
+  } = useAuth();
+
   if (loading) {
     return null;
   }
@@ -59,26 +61,68 @@ const IndexRoute = () => {
 // =========================================================
 // PROTECTED ROUTE
 // =========================================================
-// Everything inside this route requires authentication.
-//
-// This prevents the deployed site from rendering the
-// authenticated dashboard while the user is actually logged out.
-// =========================================================
 
 const ProtectedRoute = () => {
+
   const {
     isAuthenticated,
     loading,
   } = useAuth();
 
-  // Do not render anything while /api/auth/me is being checked.
   if (loading) {
     return null;
   }
 
-  // User is not logged in.
   if (!isAuthenticated) {
-    return <Navigate to="/login" replace />;
+    return (
+      <Navigate
+        to="/login"
+        replace
+      />
+    );
+  }
+
+  return <Outlet />;
+};
+
+
+// =========================================================
+// ADMIN ROUTE
+// =========================================================
+
+const AdminRoute = () => {
+
+  const {
+    user,
+    loading,
+  } = useAuth();
+
+  if (loading) {
+    return null;
+  }
+
+  if (!user) {
+
+    return (
+      <Navigate
+        to="/login"
+        replace
+      />
+    );
+  }
+
+  const accountRole =
+    user.accountRole ??
+    user.account_role;
+
+  if (accountRole !== "admin") {
+
+    return (
+      <Navigate
+        to="/"
+        replace
+      />
+    );
   }
 
   return <Outlet />;
@@ -87,9 +131,6 @@ const ProtectedRoute = () => {
 
 // =========================================================
 // AUTH LAYOUT
-// =========================================================
-// Login / Register / Forgot Password / Reset Password
-// have no Navbar, Sidebar or Footer.
 // =========================================================
 
 const AuthLayout = () => {
@@ -102,7 +143,9 @@ const AuthLayout = () => {
 // =========================================================
 
 function App() {
+
   return (
+
     <AuthProvider>
 
       <Router>
@@ -274,10 +317,35 @@ function App() {
                 path="/settings"
                 element={<ProfileSettings />}
               />
+
+
+              {/* -------------------------------------------------
+                  ORGANIZER REGISTRATION
+                  ------------------------------------------------- */}
+
               <Route
                 path="/organizer/register"
                 element={<OrganizerRegister />}
               />
+
+
+              {/* -------------------------------------------------
+                  ADMIN
+                  ------------------------------------------------- */}
+
+              <Route element={<AdminRoute />}>
+
+                <Route
+                  path="/admin/organizers"
+                  element={<OrganizerAdmin />}
+                />
+
+                <Route
+                  path="/admin/organizers/:applicationId"
+                  element={<OrganizerAdmin />}
+                />
+
+              </Route>
 
 
               {/* -------------------------------------------------
@@ -290,6 +358,12 @@ function App() {
               />
 
             </Route>
+
+
+            {/* -------------------------------------------------
+                CREATE COMPETITION
+                ------------------------------------------------- */}
+
             <Route
               path="/competitions/create"
               element={<CreateCompetition />}
@@ -298,14 +372,18 @@ function App() {
           </Route>
 
 
-
           {/* =================================================
               FALLBACK
               ================================================= */}
 
           <Route
             path="*"
-            element={<Navigate to="/" replace />}
+            element={
+              <Navigate
+                to="/"
+                replace
+              />
+            }
           />
 
         </Routes>
