@@ -617,6 +617,49 @@ const OrganizerAdmin = () => {
                 "status"
             );
 
+
+        // =====================================================
+        // STATUS DROPDOWN
+        // =====================================================
+
+        const handleStatusChange = (nextStatus) => {
+
+            if (!nextStatus || nextStatus === status) {
+                return;
+            }
+
+            setError("");
+            setSuccess("");
+
+            if (nextStatus === "under_review") {
+                performAction("review");
+                return;
+            }
+
+            if (nextStatus === "approved") {
+                performAction("approve");
+                return;
+            }
+
+            if (nextStatus === "rejected") {
+                setShowSuspend(false);
+                setShowReject(true);
+                setRejectReason("");
+                return;
+            }
+
+            if (nextStatus === "suspended") {
+                if (status !== "approved") {
+                    setError("An organizer can only be suspended after the application is approved.");
+                    return;
+                }
+
+                setShowReject(false);
+                setShowSuspend(true);
+                setSuspendReason("");
+            }
+        };
+
         const organizationName =
             getValue(
                 application,
@@ -998,6 +1041,84 @@ const OrganizerAdmin = () => {
                                     </button>
 
                                 )}
+
+                            </div>
+
+                            <div className="mt-3 flex flex-col sm:flex-row sm:items-center sm:justify-end gap-2">
+
+                                <label
+                                    htmlFor="organizer-status"
+                                    className="text-xs font-bold uppercase tracking-widest text-neutral-400"
+                                >
+                                    Update Status
+                                </label>
+
+                                <select
+                                    id="organizer-status"
+                                    value={status || ""}
+                                    onChange={(event) =>
+                                        handleStatusChange(
+                                            event.target.value
+                                        )
+                                    }
+                                    disabled={Boolean(actionLoading)}
+                                    className="w-full sm:w-60 rounded-lg border border-neutral-200 bg-white px-3.5 py-2.5 text-sm font-semibold text-neutral-700 outline-none transition focus:border-neutral-400 disabled:opacity-50"
+                                >
+
+                                    {status === "pending" && (
+                                        <>
+                                            <option value="pending">
+                                                Pending
+                                            </option>
+                                            <option value="under_review">
+                                                Under Review
+                                            </option>
+                                            <option value="approved">
+                                                Approved
+                                            </option>
+                                            <option value="rejected">
+                                                Rejected
+                                            </option>
+                                        </>
+                                    )}
+
+                                    {status === "under_review" && (
+                                        <>
+                                            <option value="under_review">
+                                                Under Review
+                                            </option>
+                                            <option value="approved">
+                                                Approved
+                                            </option>
+                                            <option value="rejected">
+                                                Rejected
+                                            </option>
+                                        </>
+                                    )}
+
+                                    {status === "approved" && (
+                                        <>
+                                            <option value="approved">
+                                                Approved
+                                            </option>
+                                            <option value="suspended">
+                                                Suspended
+                                            </option>
+                                        </>
+                                    )}
+
+                                    {status === "rejected" && (
+                                        <option value="rejected">
+                                            Rejected
+                                        </option>
+                                    )}
+
+                                    {status === "suspended" && (
+                                        <option value="suspended">
+                                            Suspended
+                                        </option>
+                                    )}
+                                </select>
 
                             </div>
 
