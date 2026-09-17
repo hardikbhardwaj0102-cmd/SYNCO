@@ -711,6 +711,7 @@ export default function OrganizerRegister() {
 
     if (existingApplication && !success) {
         const status = existingApplication.status || "pending";
+        const rejected = status === "rejected";
         const suspended = status === "suspended";
 
         return (
@@ -726,15 +727,19 @@ export default function OrganizerRegister() {
                         </p>
 
                         <h1 className="mt-3 text-3xl font-black tracking-tight text-neutral-950">
-                            {suspended
-                                ? "Your application is suspended"
-                                : "Application already submitted"}
+                            {rejected
+                                ? "Your application was rejected"
+                                : suspended
+                                    ? "Your organizer access is suspended"
+                                    : "Application already submitted"}
                         </h1>
 
                         <p className="mt-4 text-sm leading-6 text-neutral-500">
-                            {suspended
-                                ? "Your previous organizer access was suspended. You can review and submit the application again for a new review."
-                                : "Your organizer application is already in the SYNCO review process."}
+                            {rejected
+                                ? "Your previous organizer application was not approved. Review the feedback below, make any necessary changes, and submit the application again."
+                                : suspended
+                                    ? "Your organizer access has been suspended. This application cannot be resubmitted."
+                                    : "Your organizer application is already in the SYNCO review process."}
                         </p>
 
                         <div className="mt-8 rounded-2xl border border-neutral-200 bg-neutral-50 p-5">
@@ -759,13 +764,13 @@ export default function OrganizerRegister() {
                             )}
                         </div>
 
-                        {suspended && (
+                        {rejected && (
                             <div className="mt-5 rounded-2xl border border-neutral-200 bg-white p-5">
                                 <p className="text-xs font-bold uppercase tracking-[0.16em] text-neutral-500">
                                     Reapplication
                                 </p>
                                 <p className="mt-2 text-sm leading-6 text-neutral-700">
-                                    Your previous application details will be pre-filled. You can update them before sending the application back to the SYNCO review queue.
+                                    Your previous application details will be pre-filled. You can update them before submitting the application again for a new review.
                                 </p>
 
                                 <button

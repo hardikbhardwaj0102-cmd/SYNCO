@@ -215,16 +215,26 @@ def submit_application():
         user_id=user.id
     ).first()
 
-    # Suspended organizer applications can be submitted again.
+    # ONLY rejected applications may be submitted again.
+    # Suspended organizer access is permanent and must NOT be
+    # reactivated through the organizer application flow.
     # The existing application row is reused because user_id is unique.
     is_reapplication = bool(
-        existing and existing.status == "suspended"
+        existing and existing.status == "rejected"
     )
+
+    if existing and existing.status == "suspended":
+        return jsonify({
+            "error": "Organizer access has been suspended. You cannot submit another organizer application.",
+            "application": existing.to_dict(),
+            "canReapply": False,
+        }), 403
 
     if existing and not is_reapplication:
         return jsonify({
             "error": "You already have an organizer application.",
             "application": existing.to_dict(),
+            "canReapply": False,
         }), 409
 
     data = request.get_json(silent=True) or {}
@@ -503,9 +513,11 @@ def my_application():
         user_id=user.id
     ).first()
 
+    # ONLY rejected applications can be resubmitted.
+    # Suspended applications must remain permanently ineligible.
     can_reapply = bool(
         application
-        and application.status == "suspended"
+        and application.status == "rejected"
         and user.account_role == "player"
     )
 
