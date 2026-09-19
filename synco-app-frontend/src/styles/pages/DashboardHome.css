@@ -1,18 +1,19 @@
-/* Dashboard layout */
+/* =========================================
+   GLOBAL & DASHBOARD WRAPPER
+========================================= */
 html {
   scroll-behavior: smooth;
 }
 
 .bento-dashboard-wrapper {
   position: relative;
-  width: 100vw;
-  /* Switched to a minimum height but allowed it to grow */
+  width: 100%; /* Prevents horizontal bleed-out */
   min-height: calc(100dvh - 4rem);
   margin: 0; 
   box-sizing: border-box;
   display: grid;
-  /* Fluid Grid: 3 columns on large screens, collapsing on smaller ones */
-  grid-template-columns: minmax(300px, 1fr) minmax(400px, 2fr) 70px;
+  /* Fluid Grid: 3 columns on large screens */
+  grid-template-columns: minmax(300px, 1fr) minmax(350px, 1.2fr) 70px;
   gap: clamp(1rem, 2vw, 1.5rem);
   padding: clamp(1rem, 2vw, 1.5rem);
   color: #fff;
@@ -24,6 +25,9 @@ html {
   box-sizing: border-box;
 }
 
+/* =========================================
+   BASE CARD STYLES
+========================================= */
 .bento-card,
 .wire-block {
   border: 1px solid rgba(255, 255, 255, 0.08);
@@ -43,13 +47,16 @@ html {
   flex-direction: column;
 }
 
-/* Main columns */
+/* =========================================
+   MAIN COLUMNS
+========================================= */
 .col-main-left,
 .col-main-right {
   display: flex;
   flex-direction: column;
   gap: clamp(1rem, 2vw, 1.5rem);
   height: 100%;
+  min-width: 0; /* CRITICAL: Prevents grid track blowout from large flex children */
 }
 
 .col-main-left {
@@ -70,7 +77,9 @@ html {
   height: 100%;
 }
 
-/* Fluid Pills */
+/* =========================================
+   HEADER PILLS
+========================================= */
 .greetings-pill,
 .premium-banner-pill {
   min-height: 60px;
@@ -90,24 +99,30 @@ html {
   color: #d6c98a;
 }
 
-/* Flexible Cards */
+/* =========================================
+   TOURNAMENTS HERO CARD
+========================================= */
 .tournaments-card {
   position: relative;
-  /* Fluid sizing instead of hard 300px */
-  flex: 1 1 min(300px, 100%);
-  min-height: 250px;
+  flex: 1 1 auto;
+  min-height: 280px;
   display: flex;
   flex-direction: column;
   justify-content: center;
-  overflow: hidden; /* Prevent 135% character render from breaking layout */
   padding: clamp(1.5rem, 3vw, 2rem);
+  overflow: hidden; /* Contains the character render */
   background: linear-gradient(135deg, rgba(20, 20, 20, 0.9), rgba(139, 21, 37, 0.4));
+}
+
+.tournaments-card-content {
+  position: relative;
+  z-index: 2;
+  max-width: 55%; /* Keeps text constrained to the left */
 }
 
 .block-title {
   margin: 0 0 0.5rem;
   font-family: 'Super Brigade', sans-serif;
-  /* Fluid Typography */
   font-size: clamp(1.5rem, 3vw, 2.2rem);
   line-height: 1.1;
   text-transform: uppercase;
@@ -123,8 +138,13 @@ html {
   position: absolute;
   right: -5%;
   bottom: 0;
-  z-index: 10;
-  height: clamp(100%, 120%, 135%);
+  z-index: 1;
+  height: auto;
+  width: auto;
+  max-height: 110%; /* Prevents vertical distortion */
+  max-width: 55%;   /* Prevents horizontal overlap with text */
+  object-fit: contain;
+  object-position: bottom right;
   pointer-events: none;
   filter: drop-shadow(-10px 0 20px rgba(0, 0, 0, 0.5));
 }
@@ -164,14 +184,15 @@ html {
   cursor: pointer;
 }
 
-/* Auto-fitting grid for inner rows */
+/* =========================================
+   MIDDLE GRID (GAMES & PROMO)
+========================================= */
 .mid-grid-row {
   display: grid;
-  flex: 1 1 min(260px, 100%);
-  /* Fluid columns: will stack if narrower than 200px */
-  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-  gap: clamp(0.8rem, 1.5vw, 1rem);
-  min-height: 200px;
+  flex: 0 0 auto;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: clamp(0.8rem, 1.5vw, 1.5rem);
+  min-height: 220px;
 }
 
 .game-selector-card {
@@ -240,13 +261,16 @@ html {
   text-align: center;
 }
 
-/* Highlights coverflow */
+/* =========================================
+   HIGHLIGHTS COVERFLOW
+========================================= */
 .highlights-section {
   display: flex;
-  flex: 2 1 400px; /* Allow it to grow dynamically */
+  flex: 1 1 350px; 
   flex-direction: column;
   position: relative;
   min-height: 350px;
+  min-width: 0; /* Prevents layout blowout from clip cards */
 }
 
 .section-label {
@@ -264,7 +288,8 @@ html {
   align-items: center;
   justify-content: center;
   position: relative;
-  min-height: 0;
+  width: 100%;
+  height: 100%;
   margin-top: 1rem;
 }
 
@@ -296,17 +321,21 @@ html {
 
 .clip-card {
   position: absolute;
-  top: 10%;
+  top: 50%;
   left: 50%;
-  width: clamp(250px, 45%, 400px); /* Fluid width bound by max/min limits */
-  height: 90%;
+  transform: translate(-50%, -50%); 
+  aspect-ratio: 9 / 16; /* Fixes video distortion by enforcing vertical aspect */
+  height: 90%; 
+  max-height: 400px;
+  width: auto; 
   overflow: hidden;
   border-radius: 1rem;
   background: #000;
   transition: all 0.6s ease;
 }
 
-.clip-card video {
+.clip-card video,
+.clip-card img {
   width: 100%;
   height: 100%;
   object-fit: cover;
@@ -314,29 +343,194 @@ html {
 
 .clip-center {
   z-index: 10;
-  transform: translateX(-50%) scale(1);
+  transform: translate(-50%, -50%) scale(1);
   opacity: 1;
   border: 1px solid rgba(255, 255, 255, 0.2);
   box-shadow: 0 20px 40px rgba(0, 0, 0, 0.8);
 }
 
 .clip-left {
-  left: 10%;
+  left: 15%;
   z-index: 5;
-  transform: translateX(-50%) scale(0.8);
-  opacity: 0.2;
+  transform: translate(-50%, -50%) scale(0.8);
+  opacity: 0.3;
   filter: blur(4px);
 }
 
 .clip-right {
-  left: 90%;
+  left: 85%;
   z-index: 5;
-  transform: translateX(-50%) scale(0.8);
-  opacity: 0.2;
+  transform: translate(-50%, -50%) scale(0.8);
+  opacity: 0.3;
   filter: blur(4px);
 }
 
-/* Stat Panel Updates */
+.clip-hidden {
+  z-index: 0;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.coverflow-left-overlay,
+.coverflow-right-overlay {
+  position: absolute;
+  top: 50%;
+  z-index: 20;
+  transform: translateY(-50%);
+}
+
+.coverflow-left-overlay {
+  left: 0;
+  width: 25%;
+  pointer-events: none;
+}
+
+.coverflow-right-overlay {
+  right: 1rem;
+  width: 25%;
+  height: 85%;
+}
+
+.clip-title-massive {
+  margin: 1rem 0 1rem 0;
+  font-family: 'Super Brigade', sans-serif;
+  font-size: 1.5rem;
+  line-height: 1;
+  text-transform: uppercase;
+}
+
+.clip-author {
+  margin-bottom: 1.5rem;
+  color: #d6c98a;
+  font-size: 0.55rem;
+  font-weight: 800;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
+.clip-actions {
+  display: flex;
+  gap: 1rem;
+  pointer-events: auto;
+}
+
+.clip-actions button {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 0.5rem 1rem;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.1);
+  color: #fff;
+  cursor: pointer;
+}
+
+.play-overlay {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(0, 0, 0, 0.3);
+  opacity: 0;
+  cursor: pointer;
+}
+
+.clip-center:hover .play-overlay {
+  opacity: 1;
+}
+
+/* =========================================
+   COMMENTS & NAVIGATION
+========================================= */
+.comments-panel {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  padding: 0;
+  background: transparent;
+}
+
+.comments-header {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin: 0 0 1rem;
+  padding-bottom: 0.5rem;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+  color: rgba(255, 255, 255, 0.5);
+  font-size: 0.7rem;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
+.comments-list {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  gap: 0.8rem;
+  overflow-y: auto;
+}
+
+.comment-item {
+  color: rgba(255, 255, 255, 0.8);
+  font-size: 0.8rem;
+  line-height: 1.4;
+}
+
+.comment-user {
+  color: #d6c98a;
+  font-weight: 800;
+}
+
+.empty-comms {
+  color: rgba(255, 255, 255, 0.3);
+  font-size: 0.75rem;
+  font-style: italic;
+}
+
+.comment-input {
+  margin-top: 1rem;
+  padding: 0.5rem;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 30px;
+  outline: none;
+  background: rgba(255, 255, 255, 0.05);
+  color: #fff;
+  font-size: 13px;
+  text-align: center;
+}
+
+.nav-btn {
+  position: absolute;
+  bottom: -10px;
+  z-index: 30;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.1);
+  color: #fff;
+  cursor: pointer;
+}
+
+.prev-btn {
+  left: 40%;
+  transform: translateX(-50%);
+}
+
+.next-btn {
+  right: 40%;
+  transform: translateX(50%);
+}
+
+/* =========================================
+   STAT METER
+========================================= */
 .stat-meter-card {
   display: flex;
   flex: 1 1 250px;
@@ -369,7 +563,7 @@ html {
 .stat-glowing-blob {
   position: absolute;
   width: clamp(120px, 15vw, 160px);
-  aspect-ratio: 1; /* Ensures it stays a perfect circle/blob regardless of width */
+  aspect-ratio: 1; 
   border-radius: 40% 60% 70% 30% / 40% 50% 60% 50%;
   background: radial-gradient(circle, rgba(214, 201, 138, 0.2), rgba(214, 201, 138, 0.05) 50%, transparent 80%);
   box-shadow: 0 0 50px rgba(214, 201, 138, 0.15);
@@ -387,7 +581,7 @@ html {
   position: relative;
   z-index: 2;
   font-family: 'Super Brigade', sans-serif;
-  font-size: clamp(2.5rem, 5vw, 4rem); /* Fluid text scaling */
+  font-size: clamp(2.5rem, 5vw, 4rem);
   text-shadow: 0 0 30px rgba(214, 201, 138, 0.5);
 }
 
@@ -410,7 +604,25 @@ html {
   background: rgba(255, 255, 255, 0.03);
 }
 
-/* Far-right bars */
+.stat-pill .label {
+  color: rgba(255, 255, 255, 0.4);
+  font-size: 0.55rem;
+  text-transform: uppercase;
+}
+
+.stat-pill .value {
+  font-size: 0.9rem;
+  font-weight: 700;
+  text-align: center;
+}
+
+.text-emerald {
+  color: #34d399;
+}
+
+/* =========================================
+   FAR RIGHT BARS (SOCIAL)
+========================================= */
 .social-bar-top,
 .social-bar-bottom {
   flex: 1;
@@ -429,52 +641,43 @@ html {
   text-transform: uppercase;
 }
 
-/* -----------------------------
+/* =========================================
    RESPONSIVE MEDIA QUERIES 
------------------------------- */
-
-/* Tablets and smaller laptops */
+========================================= */
 @media (max-width: 1200px) {
   .bento-dashboard-wrapper {
-    /* Collapse the rightmost social bar */
     grid-template-columns: minmax(0, 1fr) minmax(350px, 1.5fr); 
   }
-
   .col-far-right {
-    display: none; /* Hide or move the 70px bar on smaller screens */
+    display: none; 
   }
-
-  .coverflow-left-overlay {
-    width: 25%;
-  }
-
+  .coverflow-left-overlay,
   .coverflow-right-overlay {
     width: 25%;
   }
 }
 
-/* Mobile & Small Tablets */
 @media (max-width: 900px) {
   .bento-dashboard-wrapper {
-    /* Stack layout entirely into 1 column */
     grid-template-columns: 1fr; 
     padding: 1rem;
     margin: 0;
   }
-
   .col-main-right {
     grid-column: 1;
-    grid-row: 2; /* Moves the right column below the left column */
+    grid-row: 2; 
   }
-
   .tournaments-card {
     min-height: auto; 
   }
-
+  .tournaments-card-content {
+    max-width: 100%; /* Release constraint on mobile */
+  }
   .hero-character-render {
     position: relative;
     right: 0;
     height: 200px;
+    max-width: 100%;
     margin-top: 1rem;
   }
 }
