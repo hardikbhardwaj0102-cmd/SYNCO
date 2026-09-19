@@ -99,3 +99,474 @@
     gap: 0.75rem;
   }
 }
+/* 1. Base Wrapper: Strictly Edge-to-Edge */
+.comp-engine-wrapper {
+  position: relative;
+  width: calc(100% + 90px);
+  flex-shrink: 0;
+  min-height: 100vh;
+  margin: 0 0 0 -90px;
+  padding: 0; /* Removed the 2rem padding causing the gap */
+  max-width: none; /* Removed the max-width restriction */
+  background: transparent;
+  box-sizing: border-box;
+  overflow-x: clip;
+  display: flex;
+  flex-direction: column;
+}
+
+.comp-engine-wrapper > * {
+  position: relative;
+  z-index: 1;
+}
+
+.comp-engine-wrapper > .comp-hero-section {
+  z-index: 0;
+  position: sticky;
+  top: 0;
+}
+
+.comp-engine-wrapper > .post-hero-content {
+  z-index: 1;
+}
+
+.post-hero-content {
+  position: relative;
+  min-height: 100vh;
+  padding-left: 90px;
+  box-sizing: border-box;
+  background: #0a0a0a url('../../assets/roster-comp-bg.png') center top / cover fixed no-repeat;
+}
+
+.competition-sticky-header {
+  position: sticky;
+  top: 0;
+  height: 25vh;
+  min-height: 220px;
+  max-height: 280px;
+  z-index: 50;
+  overflow: hidden;
+  background: rgba(10, 10, 10, 0.42);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+  backdrop-filter: blur(18px) saturate(115%);
+  -webkit-backdrop-filter: blur(18px) saturate(115%);
+}
+
+/* 2. Hero Section: Full Bleed */
+.comp-hero-section {
+  position: relative;
+  width: 100%;
+  height: 100vh;
+  min-height: 650px;
+  position: sticky;
+  top: 0;
+  border-radius: 0; /* Removed rounded corners to sit flush */
+  margin: 0;
+  border: none; /* Removed the outer border */
+  overflow: hidden;
+  padding-left: 90px;
+  box-sizing: border-box;
+  z-index: 2;
+  background: #0a0a0a url('../../assets/comp-bg.jpg') center / cover no-repeat;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+}
+
+/* Layer 1: Background Typography */
+.hero-bg-layer {
+  position: absolute;
+  top: 0;
+  left: 90px;
+  width: calc(100% - 90px);
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  z-index: 1;
+  pointer-events: none;
+}
+
+.repeating-text-row {
+  display: flex;
+  gap: 3rem;
+  margin-top: 3rem;
+  font-size: 0.85rem;
+  font-weight: 700;
+  letter-spacing: 0.3em;
+  color: rgba(255, 255, 255, 0.2);
+}
+
+.massive-bg-text {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  margin: 0;
+  padding-top: 12vh;
+  color: rgba(255, 255, 255, 0.08);
+  font-family: 'Super Brigade', sans-serif;
+  font-size: clamp(5rem, 10vw, 10rem);
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  line-height: 0.72;
+  text-align: center;
+  white-space: nowrap;
+}
+
+/* Layer 2: Single Character */
+.compHero-img {
+  position: absolute;
+  bottom: 0; /* Anchored directly to the bottom edge of the hero */
+  left: calc(61% + 90px);
+  height: 88%;
+  object-fit: contain;
+  z-index: 2;
+  transform: translateX(-50%);
+  transform-origin: bottom center;
+  pointer-events: none;
+  filter: drop-shadow(0 15px 25px rgba(0,0,0,0.6));
+}
+
+/* Layer 3: Left CTA */
+.comp-hero-foreground {
+  position: absolute;
+  left: calc(clamp(2rem, 7vw, 7rem) + 90px);
+  bottom: 13%;
+  max-width: min(25vw, 19rem);
+  z-index: 3;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 1.25rem;
+}
+
+.hero-copy {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  color: #fff;
+  text-shadow: 0 4px 18px rgba(0, 0, 0, 0.9);
+}
+
+.hero-copy span {
+  font-size: 1rem;
+  font-weight: 800;
+  letter-spacing: 0.18em;
+}
+
+.hero-copy strong {
+  font-family: 'Super Brigade', sans-serif;
+  font-size: clamp(2rem, 3.4vw, 3.5rem);
+  line-height: 0.9;
+  letter-spacing: 0.03em;
+}
+
+.hero-cta-btn {
+  padding: 1.1rem 2.6rem;
+  background: #ff4655;
+  color: white;
+  font-weight: 800;
+  font-size: 0.85rem;
+  letter-spacing: 0.15em;
+  border: none;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  clip-path: polygon(8% 0, 100% 0, 92% 100%, 0% 100%);
+}
+
+.hero-cta-btn:hover {
+  background: #ff5e6b;
+  transform: scale(1.05);
+}
+/* 2. Free-Floating Roster Section (No background block) */
+.floating-roster-section {
+  width: 100%;
+  position: relative;
+  padding: 0.5rem 0 0;
+  background: transparent;
+}
+
+.competition-sticky-header .comp-tabs-container {
+  margin: 0 4rem 0.35rem 7.5rem;
+}
+
+/* Headers */
+.roster-header {
+  text-align: center;
+  margin-bottom: 0.25rem;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.2rem;
+}
+
+.roster-title {
+  font-family: 'Super Brigade', sans-serif;
+  font-size: clamp(1.35rem, 2.2vw, 1.8rem);
+  color: #ffffff;
+  margin: 0;
+  letter-spacing: 0.05em;
+  text-shadow: 0 4px 20px rgba(0,0,0,0.5);
+}
+
+.roster-subtitle {
+  font-size: 0.65rem;
+  font-weight: 700;
+  color: rgba(255, 255, 255, 0.5);
+  letter-spacing: 0.3em;
+  text-transform: uppercase;
+  margin: 0;
+}
+
+/* 3. Main Content Area */
+.comp-main-content {
+  width: 100%;
+  max-width: 1400px;
+  margin: 0 auto;
+  padding: 3rem 4rem;
+  box-sizing: border-box;
+}
+
+.tournament-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 1.25rem;
+}
+
+.tournament-section-title {
+  margin: 0;
+  color: rgba(255, 255, 255, 0.75);
+  font-family: 'Super Brigade', sans-serif;
+  font-size: 1.35rem;
+  letter-spacing: 0.08em;
+}
+
+.tournament-view-toggle {
+  display: inline-flex;
+  gap: 0.25rem;
+  padding: 0.25rem;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 999px;
+  background: rgba(15, 15, 15, 0.35);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+}
+
+.tournament-view-toggle button,
+.coverflow-arrow {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid transparent;
+  color: rgba(255, 255, 255, 0.55);
+  background: transparent;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.tournament-view-toggle button {
+  width: 34px;
+  height: 30px;
+  border-radius: 999px;
+}
+
+.tournament-view-toggle button:hover,
+.tournament-view-toggle button.active {
+  color: #d6c98a;
+  border-color: rgba(214, 201, 138, 0.35);
+  background: rgba(214, 201, 138, 0.14);
+}
+
+.tournament-coverflow {
+  position: relative;
+  height: 480px;
+  overflow: hidden;
+}
+
+.tournament-coverflow .portrait-roster-card {
+  position: absolute;
+  top: 0;
+  left: 50%;
+  width: min(28vw, 340px);
+  height: 430px;
+  opacity: 0;
+  pointer-events: none;
+  transform: translateX(-50%) scale(0.78);
+  transition: transform 0.45s ease, opacity 0.45s ease;
+}
+
+.tournament-coverflow .coverflow-position-0 {
+  z-index: 3;
+  opacity: 1;
+  pointer-events: auto;
+  transform: translateX(-50%) scale(1);
+}
+
+.tournament-coverflow .coverflow-position--1 {
+  z-index: 2;
+  opacity: 0.55;
+  transform: translateX(calc(-50% - min(20vw, 330px))) scale(0.82);
+}
+
+.tournament-coverflow .coverflow-position-1 {
+  z-index: 2;
+  opacity: 0.55;
+  transform: translateX(calc(-50% + min(20vw, 330px))) scale(0.82);
+}
+
+.tournament-coverflow .coverflow-position-2 {
+  display: none;
+}
+
+.coverflow-arrow {
+  position: absolute;
+  top: 45%;
+  z-index: 5;
+  width: 42px;
+  height: 42px;
+  border-color: rgba(255, 255, 255, 0.18);
+  border-radius: 50%;
+  background: rgba(15, 15, 15, 0.42);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+}
+
+.coverflow-arrow:hover {
+  color: #d6c98a;
+  border-color: rgba(214, 201, 138, 0.55);
+  background: rgba(214, 201, 138, 0.14);
+}
+
+.coverflow-arrow-prev { left: 1rem; }
+.coverflow-arrow-next { right: 1rem; }
+
+/* Navigation Tabs */
+.comp-tabs-container {
+  display: flex;
+  gap: 1rem;
+  margin-bottom: 3rem;
+  background: rgba(255, 255, 255, 0.02);
+  padding: 0.5rem;
+  border-radius: 8px;
+  border: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.comp-tab-btn {
+  flex: 1;
+  padding: 0.4rem 0.5rem;
+  background: transparent;
+  color: rgba(255, 255, 255, 0.4);
+  font-weight: 800;
+  font-size: 0.85rem;
+  letter-spacing: 0.1em;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.comp-tab-btn:hover {
+  color: white;
+  background: rgba(255, 255, 255, 0.05);
+}
+
+.comp-tab-btn.active {
+  background: rgba(214, 201, 138, 0.1);
+  color: #D6C98A;
+  border: 1px solid rgba(214, 201, 138, 0.3);
+}
+
+/* 4. Tournament Grid (Reference match) */
+.tournament-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 1.5rem;
+}
+
+.portrait-roster-card {
+  position: relative;
+  height: 450px;
+  border-radius: 12px;
+  overflow: hidden;
+  background: #111;
+  border: 1px solid rgba(255, 255, 255, 0.05);
+  cursor: pointer;
+  transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1), 
+              box-shadow 0.3s ease, 
+              border-color 0.3s ease;
+}
+
+.card-bg-image {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: center top;
+  transition: transform 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.portrait-roster-card:hover {
+  transform: scale(1.05) translateY(-5px);
+  border-color: rgba(214, 201, 138, 0.6);
+  box-shadow: 0 15px 35px rgba(214, 201, 138, 0.15), 
+              0 0 15px rgba(214, 201, 138, 0.1);
+  z-index: 10;
+}
+
+.portrait-roster-card:hover .card-bg-image {
+  transform: scale(1.08);
+}
+
+.card-gradient-overlay {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  width: 100%;
+  padding: 4rem 1.5rem 1.5rem;
+  background: linear-gradient(to top, rgba(10,10,10, 0.95) 0%, rgba(10,10,10, 0) 100%);
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+  pointer-events: none;
+}
+
+.card-title {
+  font-family: 'Super Brigade', sans-serif;
+  font-size: 1.2rem;
+  margin: 0;
+  color: #fff;
+  text-shadow: 0 2px 4px rgba(0,0,0,0.8);
+}
+
+.card-subtitle {
+  font-size: 0.8rem;
+  color: rgba(255,255,255,0.6);
+  margin: 0.25rem 0 0;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+}
+
+.tournament-coverflow .coverflow-position-0:hover {
+  transform: translateX(-50%) scale(1.02) translateY(-4px);
+}
+
+.tournament-coverflow .coverflow-position--1:hover {
+  transform: translateX(calc(-50% - min(20vw, 330px))) scale(0.86) translateY(-3px);
+}
+
+.tournament-coverflow .coverflow-position-1:hover {
+  transform: translateX(calc(-50% + min(20vw, 330px))) scale(0.86) translateY(-3px);
+}
+
+@media (max-width: 900px) {
+  .tournament-grid { grid-template-columns: repeat(2, 1fr); }
+}
+
+@media (max-width: 900px) {
+  .comp-hero-section { height: 70vh; min-height: 560px; }
+  .compHero-img { left: calc(64% + 45px); height: 78%; }
+  .comp-hero-foreground { left: calc(2rem + 45px); bottom: 10%; }
+  .hero-bg-layer { left: 45px; width: calc(100% - 45px); }
+  .massive-bg-text { font-size: clamp(4rem, 14vw, 7rem); padding-top: 10vh; }
+}

@@ -2,11 +2,11 @@
 .carousel-mask-wrapper {
   width: 100%;
   background: transparent; /* Ensures no back div */
-
+  
   /* Creates the transparent fade on the left AND right edges */
   -webkit-mask-image: linear-gradient(to right, transparent 0%, black 15%, black 85%, transparent 100%);
   mask-image: linear-gradient(to right, transparent 0%, black 15%, black 85%, transparent 100%);
-
+  
   padding: 0;
 }
 
@@ -18,16 +18,11 @@
   gap: 1.5rem;
   /* Push items slightly inward so the first/last items sit inside the solid part of the mask initially */
   padding: 0 max(10%, calc((100% - 240px) / 2));
-  scrollbar-width: none;
+  scrollbar-width: none; 
   -ms-overflow-style: none;
   background: transparent; /* Ensures no back div */
 }
 
-.carousel-container::-webkit-scrollbar {
-  display: none;
-}
-
-/* Cardless variant (showCardBackground={false}) */
 .carousel-container.cardless .carousel-glass-btn {
   background: transparent;
   backdrop-filter: none;
@@ -40,6 +35,14 @@
   background: transparent;
   border-color: transparent;
   box-shadow: none;
+}
+
+.carousel-container.cardless .carousel-status-bar {
+  border-top-color: transparent;
+}
+
+.carousel-container::-webkit-scrollbar {
+  display: none;
 }
 
 /* The Game Cards */
@@ -65,7 +68,7 @@
   border-color: rgba(255, 255, 255, 0.15);
 }
 
-/* Active State (orange border) */
+/* Active State (Matches the orange border in your screenshot) */
 .carousel-glass-btn.active {
   background: rgba(20, 20, 20, 1);
   border-color: #F59E0B; /* Orange glow */
@@ -96,21 +99,22 @@
   transform: scale(1.1);
 }
 
-/* Text label for games that have no logo in GAME_LOGOS */
-.carousel-name-fallback {
-  color: rgba(255, 255, 255, 0.55);
-  font-size: 0.8rem;
+.carousel-status-bar {
+  width: 100%;
+  display: flex;
+  justify-content: center;
+  padding-top: 1rem;
+  border-top: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.status-text {
+  font-size: 0.75rem;
   font-weight: 800;
-  letter-spacing: 0.1em;
-  text-transform: uppercase;
-  white-space: nowrap;
+  letter-spacing: 0.2em;
+  color: rgba(255, 255, 255, 0.2);
   transition: color 0.3s ease;
 }
 
-.carousel-glass-btn:hover .carousel-name-fallback {
-  color: #fff;
-}
-
-.carousel-glass-btn.active .carousel-name-fallback {
+.carousel-glass-btn.active .status-text {
   color: #F59E0B; /* Matches the active border */
 }
