@@ -355,7 +355,7 @@ html {
   transform: translateY(-50%);
 }
 
-<<<<<<< HEAD
+HEAD
 .comments-panel { display: flex; flex-direction: column; padding: 0; background: transparent; }
 .comments-header { display: flex; align-items: center; gap: 0.5rem; margin: 0 0 1rem; padding-bottom: 0.5rem; border-bottom: 1px solid rgba(255, 255, 255, 0.1); color: rgba(255, 255, 255, 0.5); font-size: 0.7rem; letter-spacing: 0.1em; text-transform: uppercase; }
 .comments-list { display: flex; flex: 1; flex-direction: column; gap: 0.8rem; overflow-y: auto; }
@@ -363,13 +363,13 @@ html {
 .comment-user { color: #d6c98a; font-weight: 800; }
 .empty-comms { color: rgba(255, 255, 255, 0.3); font-size: 0.75rem; font-style: italic; }
 .comment-input { margin-top: 1rem; padding: 0.1rem; border: 1px solid rgba(255, 255, 255, 0.1); border-radius: 30px; outline: none; background: rgba(255, 255, 255, 0.05); color: #fff; font-size: 13px; text-align: center; }
-=======
+
 .coverflow-left-overlay {
   left: 0;
   width: 30%;
   pointer-events: none;
 }
->>>>>>> 90f109ee7b757aeab913c0c2e4ca9926fcc4b00b
+
 
 .coverflow-right-overlay {
   right: 1rem;
@@ -602,9 +602,9 @@ html {
 }
 
 /* Far-right bars */
-<<<<<<< HEAD
+
 .col-far-right { display: flex; flex-direction: column; gap: 1.5rem; min-height: 0; }
-=======
+
 .col-far-right {
   display: flex;
   flex-direction: column;
@@ -613,7 +613,7 @@ html {
   height: 100%;
 }
 
->>>>>>> 90f109ee7b757aeab913c0c2e4ca9926fcc4b00b
+
 .social-bar-top,
 .social-bar-bottom {
   flex: 1;
