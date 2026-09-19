@@ -6,10 +6,10 @@
 .public-profile-wrapper {
   /* Force the container to break out of the white layout and fill the screen */
   position: fixed; 
-  top: 0;
-  left: 0;
+  inset: 0;
   width: 100vw;
   height: 100vh;
+  box-sizing: border-box;
   overflow: hidden;
   background: #0b0e14 url('../../assets/global-dash-bg.png') center / cover fixed;
   color: #ffffff;
