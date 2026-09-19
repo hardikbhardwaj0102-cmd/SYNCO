@@ -8,7 +8,7 @@
   margin: 0 0 0 calc(50% - 50vw);
   padding: 0; /* Removed the 2rem padding causing the gap */
   max-width: none; /* Removed the max-width restriction */
-  background: transparent;
+  background: #0a0a0a;
   box-sizing: border-box;
   overflow-x: clip;
   display: flex;
@@ -45,7 +45,8 @@
   min-height: 220px;
   max-height: 280px;
   z-index: 50;
-  overflow: hidden;
+  overflow-x: hidden;
+  overflow-y: visible;
   background: rgba(10, 10, 10, 0.42);
   border-bottom: 1px solid rgba(255, 255, 255, 0.1);
   backdrop-filter: blur(18px) saturate(115%);

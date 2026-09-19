@@ -91,6 +91,11 @@ const GameCarousel = ({
       <div
         ref={carouselRef}
         className={`carousel-container ${showCardBackground ? 'with-card-background' : 'cardless'}`}
+        onWheel={(event) => {
+          if (Math.abs(event.deltaY) > Math.abs(event.deltaX)) {
+            event.currentTarget.scrollLeft += event.deltaY;
+          }
+        }}
       >
         {games.map((game) => {
           const logoUrl = GAME_LOGOS[game.id];
