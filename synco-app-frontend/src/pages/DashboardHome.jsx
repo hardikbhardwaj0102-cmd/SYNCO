@@ -265,7 +265,7 @@ const DashboardHome = () => {
       if (!video) return;
 
       if (index === activeClipIndex) {
-        video.play().catch(() => {});
+        video.play().catch(() => { });
       } else {
         video.pause();
       }
@@ -281,7 +281,7 @@ const DashboardHome = () => {
     if (!video) return;
 
     if (video.paused) {
-      video.play().catch(() => {});
+      video.play().catch(() => { });
     } else {
       video.pause();
     }

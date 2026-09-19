@@ -2,8 +2,10 @@
 
 
 .hybrid-auth-container {
+  --sidebar-width: 90px;
   @apply flex h-screen overflow-hidden;
   position: relative;
+  padding-left: var(--sidebar-width);
   overscroll-behavior: none;
   background: #0b0e14 url('../../assets/global-dash-bg.png') center / cover fixed;
 }
@@ -19,6 +21,8 @@
 
 .hybrid-auth-main {
   @apply flex-1 overflow-y-auto w-full;
+  width: calc(100% - var(--sidebar-width));
+  min-width: 0;
   overflow-x: hidden;
   position: relative;
   z-index: 1;
@@ -30,7 +34,11 @@
 }
 
 .hybrid-auth-content {
-  @apply max-w-7xl mx-auto p-8;
+  width: min(1280px, calc(100vw - 150px));
+  max-width: calc(100vw - 150px);
+  margin: 0 auto;
+  padding: 2rem;
+  min-width: 0;
 }
 
 .hybrid-public-container {
