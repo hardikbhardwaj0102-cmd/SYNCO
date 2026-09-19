@@ -1,19 +1,24 @@
 @reference "../global.css";
 
 /* =========================================
-   IMMERSIVE LOBBY CONTAINER (Full Screen)
+   IMMERSIVE LOBBY CONTAINER
 ========================================= */
 .public-profile-wrapper {
+  /* Force the container to break out of the white layout and fill the screen */
   position: fixed; 
   top: 0;
   left: 0;
   width: 100vw;
   height: 100vh;
   overflow: hidden;
-  background-color: #050505;
+  background: #0b0e14 url('../../assets/global-dash-bg.png') center / cover fixed;
   color: #ffffff;
   font-family: system-ui, -apple-system, sans-serif;
-  padding-left: 90px; /* Offset for Sidebar */
+  
+  /* Pushes the content past your sidebar so it doesn't overlap */
+  padding-left: 90px; 
+  
+  /* Set a low z-index so your sidebar still hovers over it! */
   z-index: 0; 
 }
 
@@ -27,18 +32,10 @@
   height: 100%;
   object-fit: cover;
   object-position: center top;
-  z-index: -1;
+  z-index: 1;
+  /* Darkens it slightly so the UI pops */
   filter: brightness(0.65) contrast(1.1); 
 }
-
-.lobby-vignette {
-  position: absolute;
-  inset: 0;
-  background: radial-gradient(circle at center, transparent 30%, rgba(0,0,0,0.8) 100%);
-  z-index: 0;
-  pointer-events: none;
-}
-
 /* =========================================
    HUD LAYER & GLASS CLASSES
 ========================================= */
