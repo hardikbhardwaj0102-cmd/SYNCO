@@ -1,20 +1,19 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import {
+  ChevronLeft,
+  ChevronRight,
   Crown,
-  TrendingUp,
-  Crosshair,
-  Trophy,
-  ChevronDown,
-  ArrowRight,
-  X,
   Heart,
-  MessageCircle
+  MessageSquare,
+  Play,
+  Target,
+  Zap,
 } from 'lucide-react';
 
 import '../styles/pages/DashboardHome.css';
-import VideoClip from '../components/VideoClip';
 import AdminDashboard from './AdminDashboard';
 import { useAuth } from '../context/AuthContext';
+import killjoyRender from '../assets/killjoy-render.png';
 
 
 // =========================================================
@@ -22,6 +21,25 @@ import { useAuth } from '../context/AuthContext';
 // =========================================================
 
 const API_URL = 'https://synco-backend-vi7b.onrender.com';
+
+
+// =========================================================
+// HELPERS
+// =========================================================
+
+const compactNumber = new Intl.NumberFormat('en', { notation: 'compact' });
+
+const formatCount = (value) => compactNumber.format(value || 0);
+
+const showValue = (value) =>
+  value === undefined || value === null || value === '' ? '--' : value;
+
+const getGreeting = () => {
+  const hour = new Date().getHours();
+  if (hour < 12) return 'Good morning';
+  if (hour < 17) return 'Good afternoon';
+  return 'Good evening';
+};
 
 
 // =========================================================
@@ -38,16 +56,24 @@ const DashboardHome = () => {
 
   const isAdmin = accountRole === 'admin';
 
+  const gametag = user?.gametag || user?.username || 'PLAYER';
+
   const [gameCatalog, setGameCatalog] = useState([]);
   const [profileGames, setProfileGames] = useState([]);
   const [selectedGame, setSelectedGame] = useState('');
   const [clips, setClips] = useState([]);
-  const [statsViewState, setStatsViewState] = useState('banner');
-  const [commentsClip, setCommentsClip] = useState(null);
+  const [activeClipIndex, setActiveClipIndex] = useState(0);
   const [comments, setComments] = useState([]);
   const [commentText, setCommentText] = useState('');
   const [commentsLoading, setCommentsLoading] = useState(false);
   const [commentError, setCommentError] = useState('');
+
+  const videoRefs = useRef({});
+  const activeClipIdRef = useRef(null);
+
+  const activeClip = clips[activeClipIndex] ?? null;
+  const activeClipId = activeClip?.id ?? null;
+  activeClipIdRef.current = activeClipId;
 
 
   // =========================================================
@@ -94,51 +120,28 @@ const DashboardHome = () => {
         ]);
 
 
-        // ===================================================
         // GAME CATALOG
-        // ===================================================
 
         if (catalogResponse?.ok) {
-
-          const catalogData =
-            await catalogResponse.json();
-
-          setGameCatalog(
-            catalogData.games || []
-          );
-
+          const catalogData = await catalogResponse.json();
+          setGameCatalog(catalogData.games || []);
         }
 
 
-        // ===================================================
         // PROFILE GAMES
-        // ===================================================
 
         if (profileResponse?.ok) {
-
-          const profileData =
-            await profileResponse.json();
-
-          setProfileGames(
-            profileData.games || []
-          );
-
+          const profileData = await profileResponse.json();
+          setProfileGames(profileData.games || []);
         }
 
 
-        // ===================================================
         // CLIPS
-        // ===================================================
 
         if (clipsResponse?.ok) {
-
-          const clipsData =
-            await clipsResponse.json();
-
-          setClips(
-            clipsData.clips || []
-          );
-
+          const clipsData = await clipsResponse.json();
+          setClips(clipsData.clips || []);
+          setActiveClipIndex(0);
         }
 
       } catch (error) {
@@ -159,28 +162,143 @@ const DashboardHome = () => {
 
 
   // =========================================================
-  // DEFAULT SELECTED GAME
+  // GAME LIST + DEFAULT SELECTED GAME
+  // "Your Games" = games on the player's profile; falls back to
+  // the full catalog when the profile has none yet.
+  // =========================================================
+
+  const gameOptions = useMemo(
+    () =>
+      profileGames.length
+        ? profileGames.map((game) => game.gameName)
+        : gameCatalog.map((game) => game.name),
+    [profileGames, gameCatalog]
+  );
+
+  useEffect(() => {
+
+    if (!selectedGame && gameOptions.length) {
+      setSelectedGame(gameOptions[0]);
+    }
+
+  }, [gameOptions, selectedGame]);
+
+  const selectedStats = profileGames.find(
+    (game) => game.gameName === selectedGame
+  );
+
+
+  // =========================================================
+  // COMMENTS FOR THE ACTIVE CLIP
   // =========================================================
 
   useEffect(() => {
 
-    if (
-      !selectedGame &&
-      gameCatalog.length
-    ) {
-
-      setSelectedGame(
-        profileGames[0]?.gameName ||
-        gameCatalog[0].name
-      );
-
+    if (!activeClipId) {
+      setComments([]);
+      return undefined;
     }
 
-  }, [
-    gameCatalog,
-    profileGames,
-    selectedGame
-  ]);
+    let cancelled = false;
+
+    const loadComments = async () => {
+
+      setComments([]);
+      setCommentText('');
+      setCommentError('');
+      setCommentsLoading(true);
+
+      try {
+
+        const response = await fetch(
+          `${API_URL}/api/profile/clips/${activeClipId}/comments`,
+          { credentials: 'include', headers: { Accept: 'application/json' } }
+        );
+        const data = await response.json();
+
+        if (!response.ok) {
+          throw new Error(data.message || 'Unable to load comments.');
+        }
+
+        if (!cancelled) {
+          setComments(data.comments || []);
+        }
+
+      } catch (error) {
+
+        if (!cancelled) {
+          setCommentError(error.message || 'Unable to load comments.');
+        }
+
+      } finally {
+
+        if (!cancelled) {
+          setCommentsLoading(false);
+        }
+
+      }
+
+    };
+
+    loadComments();
+
+    return () => {
+      cancelled = true;
+    };
+
+  }, [activeClipId]);
+
+
+  // =========================================================
+  // VIDEO PLAYBACK — only the centered clip plays
+  // =========================================================
+
+  useEffect(() => {
+
+    clips.forEach((clip, index) => {
+
+      const video = videoRefs.current[clip.id];
+
+      if (!video) return;
+
+      if (index === activeClipIndex) {
+        video.play().catch(() => {});
+      } else {
+        video.pause();
+      }
+
+    });
+
+  }, [clips, activeClipIndex]);
+
+  const togglePlayback = (clipId) => {
+
+    const video = videoRefs.current[clipId];
+
+    if (!video) return;
+
+    if (video.paused) {
+      video.play().catch(() => {});
+    } else {
+      video.pause();
+    }
+
+  };
+
+
+  // =========================================================
+  // COVERFLOW NAVIGATION
+  // =========================================================
+
+  const nextClip = () => {
+    if (!clips.length) return;
+    setActiveClipIndex((prev) => (prev + 1) % clips.length);
+  };
+
+  const prevClip = () => {
+    if (!clips.length) return;
+    setActiveClipIndex((prev) => (prev - 1 + clips.length) % clips.length);
+  };
 
 
   // =========================================================
@@ -215,40 +333,20 @@ const DashboardHome = () => {
     }
   };
 
-  const openComments = async (clip) => {
-    setCommentsClip(clip);
-    setComments([]);
-    setCommentText('');
-    setCommentError('');
-    setCommentsLoading(true);
+
+  // =========================================================
+  // POST COMMENT
+  // =========================================================
+
+  const submitComment = async () => {
+
+    if (!activeClip || !commentText.trim()) return;
+
+    const clipId = activeClip.id;
 
     try {
       const response = await fetch(
-        `${API_URL}/api/profile/clips/${clip.id}/comments`,
-        { credentials: 'include', headers: { Accept: 'application/json' } }
-      );
-      const data = await response.json();
-
-      if (!response.ok) {
-        throw new Error(data.message || 'Unable to load comments.');
-      }
-
-      setComments(data.comments || []);
-    } catch (error) {
-      setCommentError(error.message || 'Unable to load comments.');
-    } finally {
-      setCommentsLoading(false);
-    }
-  };
-
-  const submitComment = async (event) => {
-    event.preventDefault();
-
-    if (!commentsClip || !commentText.trim()) return;
-
-    try {
-      const response = await fetch(
-        `${API_URL}/api/profile/clips/${commentsClip.id}/comments`,
+        `${API_URL}/api/profile/clips/${clipId}/comments`,
         {
           method: 'POST',
           credentials: 'include',
@@ -265,17 +363,33 @@ const DashboardHome = () => {
         throw new Error(data.message || 'Unable to post comment.');
       }
 
-      setComments((currentComments) => [...currentComments, data]);
-      setCommentText('');
       setClips((prevClips) =>
         prevClips.map((clip) =>
-          clip.id === commentsClip.id
+          clip.id === clipId
             ? { ...clip, comments: (clip.comments || 0) + 1 }
             : clip
         )
       );
+
+      // Only touch the visible list if the user is still on the same clip
+      if (activeClipIdRef.current === clipId) {
+        setComments((currentComments) => [...currentComments, data]);
+        setCommentText('');
+        setCommentError('');
+      }
     } catch (error) {
       setCommentError(error.message || 'Unable to post comment.');
+    }
+  };
+
+  const handleCommentKeyDown = (event) => {
+    if (
+      event.key === 'Enter' &&
+      !event.shiftKey &&
+      !event.nativeEvent.isComposing
+    ) {
+      event.preventDefault();
+      submitComment();
     }
   };
 
@@ -294,712 +408,245 @@ const DashboardHome = () => {
   // =========================================================
 
   return (
+    <div className="bento-dashboard-wrapper">
 
-    <div className="dashboard-wrapper">
 
+      {/* =========================================
+          COLUMN 2: MAIN LEFT
+          ========================================= */}
+      <div className="col-main-left">
 
-      {/* =====================================================
-          PREMIUM UPGRADE BANNER
-          ===================================================== */}
-
-      <div className="premium-banner">
-
-        <div className="premium-banner-left">
-
-          <div className="premium-banner-icon-box">
-
-            <Crown size={24} />
-
-          </div>
-
-          <div>
-
-            <h2 className="premium-banner-title font-super-brigade">
-              Upgrade to SYNCO Premium
-            </h2>
-
-            <p className="premium-banner-subtitle">
-              Unlock advanced analytics, priority tournament
-              registration, and custom profile badges.
-            </p>
-
-          </div>
-
+        {/* Greetings Pill */}
+        <div className="wire-block greetings-pill">
+          <h2 style={{ fontSize: '1.1rem', margin: 0 }}>
+            {getGreeting()}, <span className="text-highlight font-bold">{gametag}</span>
+          </h2>
         </div>
 
-        <button className="premium-banner-btn">
-          Go Premium
-        </button>
+        {/* Featured Tournaments (with popup render) */}
+        <div className="wire-block tournaments-card">
+          <span className="live-badge"><span className="dot"></span> LIVE NOW</span>
+          <h1 className="block-title">SYNCO<br />Summer Cup</h1>
+          <p className="hero-comp-sub">Prize Pool: 50,000 CR</p>
+          <button className="join-btn">Register Roster</button>
 
+          <img src={killjoyRender} alt="Character Popup" className="hero-character-render" />
+        </div>
+
+        {/* Coverflow Highlights Section */}
+        <div className="bento-card highlights-section">
+          <h3 className="section-label">SYNCO MOMENTS</h3>
+
+          <div className="coverflow-container">
+
+            {activeClip ? (
+              <>
+                {/* Left Overlay: Title & Details */}
+                <div className="coverflow-left-overlay">
+                  <h2 className="clip-title-massive">{activeClip.title}</h2>
+                  <div className="clip-author">
+                    Description: {activeClip.description || 'No description provided.'}
+                  </div>
+                  <div className="clip-actions">
+                    <button
+                      type="button"
+                      onClick={() => handleLikeClip(activeClip.id)}
+                      aria-pressed={Boolean(activeClip.isLiked)}
+                      aria-label="Like this clip"
+                    >
+                      <Heart
+                        size={18}
+                        fill={activeClip.isLiked ? '#ff4655' : 'none'}
+                        color={activeClip.isLiked ? '#ff4655' : 'currentColor'}
+                      />
+                      {formatCount(activeClip.likes)}
+                    </button>
+                  </div>
+                </div>
+
+                {/* The Videos */}
+                <div className="clip-game-tag">{activeClip.game || 'Unspecified'}</div>
+                <div className="coverflow-track">
+                  {clips.map((clip, index) => {
+                    let positionClass = 'clip-hidden';
+                    if (index === activeClipIndex) positionClass = 'clip-center';
+                    else if (index === (activeClipIndex - 1 + clips.length) % clips.length) positionClass = 'clip-left';
+                    else if (index === (activeClipIndex + 1) % clips.length) positionClass = 'clip-right';
+
+                    const isCenter = index === activeClipIndex;
+
+                    return (
+                      <div key={clip.id} className={`clip-card ${positionClass}`}>
+                        <video
+                          ref={(element) => {
+                            if (element) {
+                              videoRefs.current[clip.id] = element;
+                            } else {
+                              delete videoRefs.current[clip.id];
+                            }
+                          }}
+                          src={clip.url}
+                          muted
+                          loop
+                          playsInline
+                          preload={isCenter ? 'auto' : 'metadata'}
+                        />
+                        {isCenter && (
+                          <div
+                            className="play-overlay"
+                            onClick={() => togglePlayback(clip.id)}
+                          >
+                            <Play size={32} />
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
+
+                {/* Right Overlay: Comments */}
+                <div className="coverflow-right-overlay comments-panel">
+                  <h4 className="comments-header">
+                    <MessageSquare size={14} /> Comments ({activeClip.comments || 0})
+                  </h4>
+                  <div className="comments-list">
+                    {commentsLoading && (
+                      <p className="empty-comms">Loading comments...</p>
+                    )}
+                    {!commentsLoading && !commentError && comments.length === 0 && (
+                      <p className="empty-comms">No comments yet</p>
+                    )}
+                    {comments.map((comment) => (
+                      <div key={comment.id} className="comment-item">
+                        <span className="comment-user">{comment.author}:</span> {comment.content}
+                      </div>
+                    ))}
+                    {commentError && (
+                      <p className="empty-comms" style={{ color: '#ff4655' }}>
+                        {commentError}
+                      </p>
+                    )}
+                  </div>
+                  <input
+                    type="text"
+                    placeholder="Add a comment"
+                    className="comment-input"
+                    value={commentText}
+                    maxLength={1000}
+                    onChange={(event) => setCommentText(event.target.value)}
+                    onKeyDown={handleCommentKeyDown}
+                  />
+                </div>
+
+                {/* Navigation Controls */}
+                {clips.length > 1 && (
+                  <>
+                    <button type="button" className="nav-btn prev-btn" onClick={prevClip} aria-label="Previous clip">
+                      <ChevronLeft />
+                    </button>
+                    <button type="button" className="nav-btn next-btn" onClick={nextClip} aria-label="Next clip">
+                      <ChevronRight />
+                    </button>
+                  </>
+                )}
+              </>
+            ) : (
+              <p className="empty-comms" style={{ textAlign: 'center' }}>
+                No clips yet. Add clips to your showcase and they will show up here.
+              </p>
+            )}
+
+          </div>
+        </div>
       </div>
 
 
-      {/* =====================================================
-          DASHBOARD MAIN GRID
-          ===================================================== */}
-
-      <div className="dashboard-main-grid">
-
-
-        {/* ===================================================
-            LEFT COLUMN
-            =================================================== */}
-
-        <div className="dashboard-left-column">
-
-
-          {/* =================================================
-              TOP ROW
-              ================================================= */}
-
-          <div className="dashboard-top-row">
-
-
-            {/* ===============================================
-                COMPETITIVE PROFILE
-                =============================================== */}
-
-            <div className="competitive-profile-card group">
-
-              <div className="competitive-profile-content">
-
-                <span className="competitive-eyebrow">
-                  PLAYER IDENTITY
-                </span>
-
-                <h3 className="competitive-title font-super-brigade">
-
-                  View
-                  <br />
-
-                  Competitive
-                  <br />
-
-                  <span>Profile</span>
-
-                </h3>
-
-                <button className="competitive-action-btn mt-auto">
-
-                  <span>
-                    Explore Stats
-                  </span>
-
-                  <ArrowRight
-                    size={16}
-                    className="group-hover:translate-x-1 transition-transform"
-                  />
-
-                </button>
-
-              </div>
-
-            </div>
-
-
-            {/* ===============================================
-                IDENTITY STACK
-                =============================================== */}
-
-            <div className="identity-stack">
-
-
-              {/* RATING */}
-
-              <div className="identity-card">
-
-                <div className="identity-card-gradient-top"></div>
-
-                <span className="identity-eyebrow">
-                  RATING
-                </span>
-
-                <h3 className="identity-title font-super-brigade">
-                  SKILL LEVEL
-                </h3>
-
-                <div className="identity-badge">
-                  Calculating...
-                </div>
-
-              </div>
-
-
-              {/* GAMETAG */}
-
-              <div className="identity-card">
-
-                <div className="identity-card-gradient-bottom"></div>
-
-                <span className="identity-eyebrow">
-                  SYNCO ID
-                </span>
-
-                <h3 className="identity-title font-super-brigade">
-                  GAMETAG
-                </h3>
-
-                <div className="identity-value">
-                  FROAKAI
-                </div>
-
-              </div>
-
-            </div>
-
-          </div>
-
-
-          {/* =================================================
-              PERFORMANCE STATS
-              ================================================= */}
-
-          <div className="stats-module-container">
-
-
-            {/* ===============================================
-                STATE 1: BANNER
-                =============================================== */}
-
-            {statsViewState === 'banner' && (
-
-              <button
-                className="stats-banner-horizontal group"
-                onClick={() =>
-                  setStatsViewState('selecting')
-                }
-              >
-
-                <div className="stats-banner-left">
-
-                  <span className="stats-entry-eyebrow">
-                    SYNCO ANALYTICS
-                  </span>
-
-                  <h2 className="stats-banner-title font-super-brigade">
-
-                    TRACK. ANALYZE.
-                    <span> IMPROVE.</span>
-
-                  </h2>
-
-                </div>
-
-
-                <div className="stats-banner-right">
-
-                  <div className="stats-entry-action">
-
-                    <span>
-                      View Stats
-                    </span>
-
-                    <ArrowRight
-                      size={16}
-                      className="group-hover:translate-x-1 transition-transform"
-                    />
-
-                  </div>
-
-                  <span className="stats-entry-footer-text">
-                    Engine designed to make gameplay matter
-                  </span>
-
-                </div>
-
-              </button>
-
-            )}
-
-
-            {/* ===============================================
-                STATE 2: SELECT GAME
-                =============================================== */}
-
-            {statsViewState === 'selecting' && (
-
-              <div className="stats-selecting-container animate-in fade-in zoom-in-95 duration-200">
-
-
-                <div className="stats-selecting-header">
-
-                  <h3 className="stats-selecting-title">
-                    Select Title
-                  </h3>
-
-                  <button
-                    onClick={() =>
-                      setStatsViewState('banner')
-                    }
-                    className="stats-close-btn"
-                  >
-
-                    <X size={16} />
-
-                  </button>
-
-                </div>
-
-
-                <div className="stats-game-list">
-
-                  {gameCatalog.map((game) => (
-
-                    <button
-                      key={game.id}
-                      className="stats-game-option-btn group"
-
-                      onClick={() => {
-
-                        setSelectedGame(
-                          game.name
-                        );
-
-                        setStatsViewState(
-                          'viewing'
-                        );
-
-                      }}
-                    >
-
-                      <span className="stats-game-option-title font-super-brigade">
-
-                        {game.name}
-
-                      </span>
-
-                      <span className="stats-game-option-sub">
-
-                        {game.shortName ||
-                          'ACTIVE'}
-
-                      </span>
-
-                    </button>
-
-                  ))}
-
-                </div>
-
-              </div>
-
-            )}
-
-
-            {/* ===============================================
-                STATE 3: ACTIVE STATS
-                =============================================== */}
-
-            {statsViewState === 'viewing' && (
-
-              <div className="stats-active-container animate-in fade-in slide-in-from-bottom-4 duration-300">
-
-
-                <div className="stats-active-header">
-
-                  <button
-                    className="stats-active-header-btn"
-
-                    onClick={() =>
-                      setStatsViewState(
-                        'selecting'
-                      )
-                    }
-                  >
-
-                    <span className="stats-active-game-title font-super-brigade">
-
-                      {selectedGame ||
-                        'SELECT GAME'}
-
-                    </span>
-
-                    <ChevronDown
-                      size={18}
-                      className="text-[#D6C98A]"
-                    />
-
-                  </button>
-
-                </div>
-
-
-                <div className="stats-active-grid">
-
-
-                  {/* CURRENT RANK */}
-
-                  <div className="stat-box-dark">
-
-                    <div className="stat-icon-wrapper-dark">
-
-                      <TrendingUp
-                        size={18}
-                      />
-
-                    </div>
-
-                    <div className="stat-text">
-
-                      <span className="stat-label-dark">
-                        Current Rank
-                      </span>
-
-                      <span className="stat-value-dark">
-
-                        {profileGames.find(
-                          g =>
-                            g.gameName ===
-                            selectedGame
-                        )?.rank || '--'}
-
-                      </span>
-
-                    </div>
-
-                  </div>
-
-
-                  {/* K/D */}
-
-                  <div className="stat-box-dark">
-
-                    <div className="stat-icon-wrapper-dark">
-
-                      <Crosshair
-                        size={18}
-                      />
-
-                    </div>
-
-                    <div className="stat-text">
-
-                      <span className="stat-label-dark">
-                        K/D Ratio
-                      </span>
-
-                      <span className="stat-value-dark">
-
-                        {profileGames.find(
-                          g =>
-                            g.gameName ===
-                            selectedGame
-                        )?.kd || '--'}
-
-                      </span>
-
-                    </div>
-
-                  </div>
-
-
-                  {/* WIN RATE */}
-
-                  <div className="stat-box-dark">
-
-                    <div className="stat-icon-wrapper-dark">
-
-                      <Trophy
-                        size={18}
-                      />
-
-                    </div>
-
-                    <div className="stat-text">
-
-                      <span className="stat-label-dark">
-                        Win Rate
-                      </span>
-
-                      <span className="stat-value-dark">
-
-                        {profileGames.find(
-                          g =>
-                            g.gameName ===
-                            selectedGame
-                        )?.winRate || '--'}
-
-                      </span>
-
-                    </div>
-
-                  </div>
-
-                </div>
-
-
-                {!profileGames.find(
-                  g =>
-                    g.gameName ===
-                    selectedGame
-                ) && (
-
-                    <p className="stats-empty-message">
-
-                      No matches recorded yet for{' '}
-                      {selectedGame}.
-
-                    </p>
-
-                  )}
-
-              </div>
-
-            )}
-
-          </div>
-
+      {/* =========================================
+          COLUMN 3: MAIN RIGHT
+          ========================================= */}
+      <div className="col-main-right">
+
+        {/* Premium Banner */}
+        <div className="wire-block premium-banner-pill">
+          <span style={{ fontWeight: 800, textTransform: 'uppercase', fontSize: '0.9rem' }}>
+            Upgrade to SYNCO Premium
+          </span>
+          <Crown size={20} className="text-highlight" />
         </div>
 
-
-        {/* ===================================================
-            RIGHT COLUMN
-            =================================================== */}
-
-        <div className="dashboard-right-column">
-
-          <div className="reels-outer-card">
-
-
-            {/* =================================================
-                HEADER
-                ================================================= */}
-
-            <div className="reels-header">
-
-              <span className="font-super-brigade text-[#D6C98A] text-2xl tracking-widest lowercase">
-                synco
-              </span>
-
-            </div>
-
-
-            {/* =================================================
-                REELS VIEWPORT
-                ================================================= */}
-
-            <div className="reels-scroll-viewport">
-
-
-              {clips.length ? (
-
-                clips.map((clip) => (
-
-                  /* Individual Reel Page */
-
-                  <div
-                    key={clip.id}
-                    className="reel-page"
+        {/* Mid Row: Games + Promo */}
+        <div className="mid-grid-row">
+          <div className="bento-card game-selector-card">
+            <h3 className="section-label">Your Games</h3>
+            <div className="game-list">
+              {gameOptions.length ? (
+                gameOptions.map((game) => (
+                  <button
+                    type="button"
+                    key={game}
+                    className={`game-option ${selectedGame === game ? 'active' : ''}`}
+                    onClick={() => setSelectedGame(game)}
                   >
-
-
-                    {/* =========================================
-                        TAGS
-                        ========================================= */}
-
-                    <div className="reel-tags-row">
-
-                      <span className="reel-tag">
-                        {clip.game ||
-                          'UNSPECIFIED'}
-                      </span>
-
-                      <span className="reel-tag">
-                        {clip.skillTag ||
-                          'SKILL UNSPECIFIED'}
-                      </span>
-
-                      <span className="reel-tag">
-                        {clip.roleTag ||
-                          'ROLE UNSPECIFIED'}
-                      </span>
-
-                    </div>
-
-
-                    {/* =========================================
-                        VIDEO
-                        ========================================= */}
-
-                    <div className="reel-video-container">
-
-                      <VideoClip
-                        id={clip.id}
-                        url={clip.url}
-                        title={clip.title}
-                        description={clip.description}
-                        game={clip.game}
-                        hideOverlay={true}
-                      />
-
-                    </div>
-
-
-                    {/* =========================================
-                        INTERACTIONS
-                        ========================================= */}
-
-                    <div className="reel-interactions">
-
-
-                      {/* LIKE */}
-
-                      <button
-                        onClick={() =>
-                          handleLikeClip(
-                            clip.id
-                          )
-                        }
-                        className="flex items-center gap-2 group outline-none"
-                      >
-
-                        <Heart
-                          size={32}
-
-                          className={`cursor-pointer transition-transform group-hover:scale-110 ${clip.isLiked
-                            ? 'fill-[#D32F2F] text-[#D32F2F]'
-                            : 'text-[#D32F2F]'
-                            }`}
-                        />
-
-                        <span className="text-black font-bold text-sm">
-                          {clip.likes || 0}
-                        </span>
-
-                      </button>
-
-
-                      {/* COMMENTS */}
-
-                      <button
-                        onClick={() => openComments(clip)}
-                        className="flex items-center gap-2 group outline-none ml-4"
-                      >
-
-                        <MessageCircle
-                          size={32}
-                          className="fill-[#D32F2F] text-[#D32F2F] cursor-pointer transition-transform group-hover:scale-110"
-                        />
-
-                        <span className="text-black font-bold text-sm">
-                          {clip.comments || 0}
-                        </span>
-
-                      </button>
-
-                    </div>
-
-
-                    {/* =========================================
-                        DESCRIPTION
-                        ========================================= */}
-
-                    <div className="reel-description">
-
-                      DESCRIPTION:
-
-                      <span className="font-normal text-gray-600 ml-2">
-
-                        {clip.description ||
-                          'NO DESCRIPTION PROVIDED.'}
-
-                      </span>
-
-                    </div>
-
-                  </div>
-
+                    <Target size={16} />
+                    <span>{game}</span>
+                  </button>
                 ))
-
               ) : (
-
-                <div className="h-full w-full flex items-center justify-center">
-
-                  <span className="text-gray-400 text-xs font-bold uppercase tracking-widest">
-
-                    No Clips Available
-
-                  </span>
-
-                </div>
-
+                <p className="empty-comms">No games yet</p>
               )}
-
             </div>
-
           </div>
-
+          <div className="wire-block synco-promo-card">
+            <h3 style={{ fontSize: '1rem', textTransform: 'uppercase', lineHeight: '1.4' }}>
+              synco<br />promotional<br />banner
+            </h3>
+          </div>
         </div>
 
-        {commentsClip && (
-          <div
-            className="comments-modal-overlay"
-            onClick={(event) => {
-              if (event.target === event.currentTarget) {
-                setCommentsClip(null);
-              }
-            }}
-          >
-            <div className="comments-modal">
-              <div className="comments-modal-header">
-                <div>
-                  <span className="comments-modal-eyebrow">Community</span>
-                  <h3>Comments</h3>
-                </div>
-                <button
-                  type="button"
-                  className="comments-close-btn"
-                  onClick={() => setCommentsClip(null)}
-                  aria-label="Close comments"
-                >
-                  <X size={18} />
-                </button>
-              </div>
+        {/* Visual Statistics Meter */}
+        <div className="bento-card stat-meter-card">
+          <div className="stat-header-row">
+            <h3 className="section-label">SYNCO Rating</h3>
+            <Zap size={16} className="stat-icon" />
+          </div>
 
-              <div className="comments-list">
-                {commentsLoading && (
-                  <p className="comments-empty">Loading comments...</p>
-                )}
-                {!commentsLoading && comments.length === 0 && (
-                  <p className="comments-empty">Be the first to share a thought.</p>
-                )}
-                {comments.map((comment) => (
-                  <div className="comment-row" key={comment.id}>
-                    <div className="comment-avatar">
-                      {comment.author?.slice(0, 1).toUpperCase()}
-                    </div>
-                    <div>
-                      <strong>{comment.author}</strong>
-                      <p>{comment.content}</p>
-                    </div>
-                  </div>
-                ))}
-              </div>
+          <div className="stat-meter-container">
+            <div className="stat-glowing-blob"></div>
+            <div className="rating-number">{showValue(selectedStats?.rating)}</div>
+          </div>
 
-              {commentError && <p className="comment-error">{commentError}</p>}
-
-              <form className="comment-form" onSubmit={submitComment}>
-                <input
-                  value={commentText}
-                  onChange={(event) => setCommentText(event.target.value)}
-                  placeholder="Add a comment..."
-                  maxLength={1000}
-                />
-                <button type="submit" disabled={!commentText.trim()}>
-                  Post
-                </button>
-              </form>
+          <div className="stat-breakdown">
+            <div className="stat-pill">
+              <span className="label">Class</span>
+              <span className="value">{showValue(selectedStats?.rank)}</span>
+            </div>
+            <div className="stat-pill">
+              <span className="label">Win R.</span>
+              <span className="value text-emerald">{showValue(selectedStats?.winRate)}</span>
+            </div>
+            <div className="stat-pill">
+              <span className="label">K/D</span>
+              <span className="value">{showValue(selectedStats?.kd)}</span>
             </div>
           </div>
-        )}
+        </div>
+      </div>
 
+
+      {/* =========================================
+          COLUMN 4: FAR RIGHT SIDEBAR
+          ========================================= */}
+      <div className="col-far-right">
+        <div className="wire-block social-bar-top">
+          <span className="vertical-text">social right bar</span>
+        </div>
+        <div className="wire-block social-bar-bottom">
+          <span className="vertical-text">discord right bar</span>
+        </div>
       </div>
 
     </div>
-
   );
-
 };
-
 
 export default DashboardHome;

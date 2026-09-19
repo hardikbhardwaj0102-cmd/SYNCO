@@ -1,301 +1,209 @@
-@reference "../global.css";
-
-/* =========================================
-   DASHBOARD HOME STYLES
-   ========================================= */
-
-/* --- Typography --- */
-.font-super-brigade {
-  font-family: 'Super Brigade', sans-serif;
-  font-weight: normal;
-}
-
-/* --- Main Layout (Locked to Screen, No Scrolling) --- */
-.dashboard-wrapper {
-  @apply w-full max-w-[1600px] mx-auto p-4 flex flex-col gap-4;
-  height: calc(100vh - 20px); /* Adjust this calculation based on your navbar height */
+/* Dashboard layout */
+.bento-dashboard-wrapper {
+  position: fixed;
+  inset: 0;
+  width: 100vw;
+  height: 100vh;
   overflow: hidden;
-}
-
-.dashboard-main-grid {
-  @apply w-full flex-1 min-h-0 grid grid-cols-1 lg:grid-cols-12 gap-4 pb-2;
-}
-
-.dashboard-left-column {
-  @apply lg:col-span-7 flex flex-col gap-4 min-h-0 h-full;
-}
-
-.dashboard-top-row {
-  @apply grid grid-cols-1 md:grid-cols-2 gap-4 flex-[3] min-h-0;
-}
-
-.dashboard-right-column {
-  @apply lg:col-span-5 h-full min-h-0;
-}
-
-/* --- Premium Banner --- */
-.premium-banner {
-  @apply bg-black rounded-2xl p-4 md:p-6 flex flex-col md:flex-row items-center justify-between shadow-lg border border-white/10 flex-shrink-0;
-}
-
-.premium-banner-left {
-  @apply flex items-center gap-4 mb-4 md:mb-0;
-}
-
-.premium-banner-icon-box {
-  @apply w-12 h-12 bg-[#D6C98A]/10 rounded-full flex items-center justify-center border border-[#D6C98A]/30 text-[#D6C98A] flex-shrink-0;
-}
-
-.premium-banner-title {
-  @apply text-xl text-white tracking-wide uppercase mb-1;
-}
-
-.premium-banner-subtitle {
-  @apply text-white/50 text-xs;
-}
-
-.premium-banner-btn {
-  @apply bg-[#D6C98A] text-black font-bold uppercase px-6 py-2.5 rounded-xl hover:bg-white transition-colors whitespace-nowrap shadow-sm text-xs tracking-widest;
-}
-
-/* --- Competitive Profile Card --- */
-.competitive-profile-card {
-  @apply w-full h-full flex flex-col justify-between bg-black rounded-2xl relative overflow-hidden transition-all duration-300 hover:scale-[1.01] text-left p-6 shadow-lg border border-white/5 cursor-pointer min-h-0;
-}
-
-.competitive-profile-card::before {
-  content: '';
-  @apply absolute inset-0 bg-gradient-to-br from-white/10 to-transparent pointer-events-none;
-}
-
-.competitive-profile-content {
-  @apply relative z-10 flex flex-col h-full justify-between items-start text-left;
-}
-
-.competitive-eyebrow {
-  @apply text-[#D6C98A] text-[10px] font-bold uppercase tracking-[0.3em] block;
-}
-
-.competitive-title {
-  @apply text-white uppercase leading-[1.1] my-3 text-3xl;
-}
-
-.competitive-title span {
-  @apply text-[#D6C98A] block mt-1;
-}
-
-.competitive-action-btn {
-  @apply inline-flex items-center gap-2 text-black bg-[#D6C98A] hover:bg-white text-xs font-bold uppercase tracking-widest px-5 py-2.5 rounded-xl transition-colors w-max shadow-sm mt-auto;
-}
-
-/* --- Identity Stack (Skill & Gametag) --- */
-.identity-stack {
-  @apply flex flex-col gap-4 h-full min-h-0;
-}
-
-.identity-card {
-  @apply bg-black rounded-2xl p-4 border border-white/5 flex flex-col justify-center items-center text-center flex-1 relative overflow-hidden shadow-lg;
-}
-
-.identity-card-gradient-top {
-  @apply absolute inset-0 bg-gradient-to-b from-white/5 to-transparent pointer-events-none;
-}
-
-.identity-card-gradient-bottom {
-  @apply absolute inset-0 bg-gradient-to-t from-[#D6C98A]/5 to-transparent pointer-events-none;
-}
-
-.identity-eyebrow {
-  @apply text-[#D6C98A] text-[10px] font-bold uppercase tracking-[0.3em] mb-1 relative z-10;
-}
-
-.identity-title {
-  @apply text-white text-xl uppercase tracking-wider relative z-10;
-}
-
-.identity-badge {
-  @apply mt-2 bg-white/10 px-3 py-1 rounded-full text-white text-[10px] tracking-widest uppercase font-bold border border-white/20 relative z-10;
-}
-
-.identity-value {
-  @apply mt-1 text-[#D6C98A] text-sm tracking-widest uppercase font-bold relative z-10;
-}
-
-/* --- Stats Module Container --- */
-.stats-module-container {
-  @apply w-full flex-[2] min-h-0 flex flex-col relative transition-all duration-300;
-}
-
-/* State 1: Horizontal Banner */
-.stats-banner-horizontal {
-  @apply w-full h-full flex flex-row items-center justify-between bg-black rounded-2xl relative overflow-hidden transition-transform duration-300 hover:scale-[1.01] px-8 shadow-lg border border-white/5 cursor-pointer;
-}
-
-.stats-banner-horizontal::before {
-  @apply absolute inset-0 bg-gradient-to-r from-white/10 to-transparent pointer-events-none content-[''];
-}
-
-.stats-banner-left {
-  @apply flex flex-col justify-center items-start text-left h-full relative z-10;
-}
-
-.stats-entry-eyebrow {
-  @apply text-[#D6C98A] text-[10px] font-bold uppercase tracking-[0.3em] mb-1 block;
-}
-
-.stats-banner-title {
-  @apply text-white text-3xl uppercase leading-tight;
-}
-
-.stats-banner-title span {
-  @apply text-[#D6C98A];
-}
-
-.stats-banner-right {
-  @apply flex flex-col items-end justify-center h-full gap-3 relative z-10;
-}
-
-.stats-entry-action {
-  @apply inline-flex items-center gap-2 text-black bg-[#D6C98A] hover:bg-white text-xs font-bold uppercase tracking-widest px-6 py-3 rounded-xl transition-colors w-max shadow-sm;
-}
-
-.stats-entry-footer-text {
-  @apply text-white/40 text-[9px] font-bold uppercase tracking-widest text-right;
-}
-
-/* State 2: Game Selecting Container */
-.stats-selecting-container {
-  @apply flex flex-col w-full h-full bg-white rounded-2xl p-4 shadow-sm border border-gray-200;
-}
-
-.stats-selecting-header {
-  @apply flex items-center justify-between mb-4 px-2;
-}
-
-.stats-selecting-title {
-  @apply text-xs font-bold text-gray-400 uppercase tracking-widest;
-}
-
-.stats-close-btn {
-  @apply text-gray-400 hover:text-black transition-colors;
-}
-
-.stats-game-list {
-  @apply flex flex-col gap-2 overflow-y-auto pr-2 flex-1 scrollbar-thin;
-  scrollbar-color: #c1a87d transparent;
-}
-
-.stats-game-option-btn {
-  @apply w-full flex items-center justify-between p-4 rounded-xl bg-gray-50 hover:bg-black hover:text-white border border-gray-100 hover:border-black transition-all text-left cursor-pointer flex-shrink-0;
-}
-
-.stats-game-option-title {
-  @apply text-black group-hover:text-[#D6C98A] transition-colors uppercase tracking-wide flex-1 pr-4 whitespace-nowrap text-xl;
-}
-
-.stats-game-option-sub {
-  @apply text-[10px] font-bold text-gray-400 group-hover:text-white/60 uppercase tracking-widest;
-}
-
-/* State 3: Active Stats Container */
-.stats-active-container {
-  @apply flex flex-col w-full h-full bg-black rounded-2xl p-6 relative overflow-hidden text-white shadow-lg border border-white/5;
-}
-
-.stats-active-header {
-  @apply flex items-center justify-center mb-6 border-b border-white/10 pb-4;
-}
-
-.stats-active-header-btn {
-  @apply flex items-center justify-center w-full hover:opacity-80 transition-opacity gap-3;
-}
-
-.stats-active-game-title {
-  @apply text-white uppercase tracking-wide text-center text-3xl;
-}
-
-.stats-active-grid {
-  @apply grid grid-cols-3 gap-4 flex-1;
-}
-
-.stat-box-dark {
-  @apply flex flex-col items-center justify-center p-4 bg-white/5 rounded-xl border border-white/10 transition-all hover:bg-white/10 gap-2 h-full;
-}
-
-.stat-icon-wrapper-dark {
-  @apply w-10 h-10 bg-black border border-white/20 rounded-lg flex items-center justify-center text-[#D6C98A] shadow-sm flex-shrink-0;
-}
-
-.stat-text {
-  @apply flex flex-col items-center gap-1 text-center;
-}
-
-.stat-label-dark {
-  @apply text-[10px] font-bold text-white/50 uppercase tracking-widest;
-}
-
-.stat-value-dark {
-  @apply text-xl font-bold text-white uppercase tracking-wider;
-}
-
-.stats-empty-message {
-  @apply text-[10px] font-bold text-white/50 uppercase tracking-widest text-center pt-4;
-}
-
-/* =========================================
-   SYNCO MEDIA REELS CARD (Exact Match)
-   ========================================= */
-
-.reels-outer-card {
-  @apply h-full w-full bg-black rounded-[32px] flex flex-col relative shadow-xl overflow-hidden border-2 border-white/5 min-h-0;
-}
-
-.reels-header {
-  @apply w-full flex items-center justify-center py-4 flex-shrink-0;
-}
-
-/* The White Area that handles the actual scrolling */
-.reels-scroll-viewport {
-  @apply bg-[#F4F5F7] flex-1 w-full rounded-t-[32px] flex flex-col overflow-y-auto overflow-x-hidden min-h-0 snap-y snap-mandatory;
-  /* Hide scrollbar for native reels feel */
-  scrollbar-width: none; 
-  -ms-overflow-style: none;
-}
-
-.reels-scroll-viewport::-webkit-scrollbar {
-  display: none;
-}
-
-/* Individual Reel Page - Locks to full height of viewport */
-.reel-page {
-  @apply w-full h-full min-h-full flex-shrink-0 snap-center snap-always flex flex-col p-6;
-}
-
-/* Heavy black borders for the nested look */
-.reel-tags-row {
-  @apply flex gap-3 mb-4 flex-shrink-0;
-}
-
-.reel-tag {
-  @apply border-[2px] border-black bg-white text-black text-[10px] font-bold uppercase tracking-wide px-4 py-2 flex items-center justify-center min-w-[80px];
-}
-
-/* Video Wrapper */
-.reel-video-container {
-  @apply flex-1 w-full bg-[#1A1A1A] border-[2px] border-black relative overflow-hidden flex items-center justify-center min-h-0 mb-4;
-}
-
-/* Forces the nested custom video player to stretch without its own rounded corners */
-.reel-video-container .custom-video-container {
-  @apply w-full h-full max-w-none min-w-0 border-none rounded-none m-0;
-}
-
-/* Interactions */
-.reel-interactions {
-  @apply flex items-center gap-4 mb-4 flex-shrink-0;
-}
-
-/* Description Box */
-.reel-description {
-  @apply w-full border-[2px] border-black bg-white text-black text-[10px] font-bold uppercase p-4 text-left flex-shrink-0 overflow-hidden text-ellipsis whitespace-nowrap;
+  box-sizing: border-box;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(500px, 560px) 70px;
+  gap: 1.5rem;
+  padding: 1.5rem;
+  color: #fff;
+  font-family: 'Inter', system-ui, sans-serif;
+}
+
+.bento-dashboard-wrapper * { box-sizing: border-box; }
+
+.bento-card,
+.wire-block {
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 2rem;
+  background: rgba(20, 20, 20, 0.35);
+  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.5);
+}
+
+.bento-card {
+  padding: 1.5rem;
+  backdrop-filter: blur(25px);
+  -webkit-backdrop-filter: blur(25px);
+}
+
+.wire-block { display: flex; flex-direction: column; }
+
+/* Main columns */
+.col-main-left{
+    margin-left: 70px;
+}
+.col-main-left,
+.col-main-right {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+  min-height: 0;
+  height: 100%;
+  min-width: 0;
+}
+
+.col-main-left { grid-column: 1; }
+.col-main-right { grid-column: 2; grid-row: 1; }
+.col-far-right { grid-column: 3; grid-row: 1; }
+
+.greetings-pill{
+    max-width: 240px;
+    
+}
+.greetings-pill,
+.premium-banner-pill {
+  min-height: 60px;
+  flex-shrink: 0;
+  align-items: center;
+  padding: 0 1.5rem;
+}
+
+.greetings-pill { width: 60%; }
+.premium-banner-pill {
+  justify-content: space-between;
+  background: linear-gradient(90deg, rgba(214, 201, 138, 0.15), #141414);
+  border-color: rgba(214, 201, 138, 0.3);
+}
+
+.text-highlight { color: #d6c98a; }
+
+.tournaments-card {
+  position: relative;
+  max-width: 750px;
+  flex: 0 0 300px;
+  min-height: 300px;
+  justify-content: center;
+  
+  overflow: visible;
+  padding: 2rem;
+  background: linear-gradient(135deg, rgba(20, 20, 20, 0.9), rgba(139, 21, 37, 0.4));
+}
+
+.block-title {
+  margin: 0 0 0.5rem;
+  font-family: 'Super Brigade', sans-serif;
+  font-size: 2.2rem;
+  line-height: 1.1;
+  text-transform: uppercase;
+}
+
+.hero-comp-sub { margin: 0 0 1.5rem; color: #d6c98a; font-size: 0.8rem; }
+
+.hero-character-render {
+  position: absolute;
+  right: -5%;
+  bottom: 0;
+  z-index: 10;
+  height: 135%;
+  pointer-events: none;
+  filter: drop-shadow(-10px 0 20px rgba(0, 0, 0, 0.5));
+}
+
+.live-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  width: fit-content;
+  margin-bottom: 1rem;
+  padding: 4px 10px;
+  border-radius: 20px;
+  background: rgba(255, 255, 255, 0.1);
+  color: #ff4655;
+  font-size: 0.6rem;
+  font-weight: 800;
+  letter-spacing: 0.1em;
+}
+
+.live-badge .dot { width: 6px; height: 6px; border-radius: 50%; background: #ff4655; box-shadow: 0 0 10px #ff4655; }
+.join-btn { max-width: 250px; min-height: 50px; border: 0; border-radius: 10px; background: #fff; color: #000; font-weight: 800; cursor: pointer; }
+
+/* Game selector and promo */
+.mid-grid-row { display: grid; flex: 0 0 260px; grid-template-columns: 1fr 1fr; gap: 1rem; min-height: 0; }
+.game-selector-card { display: flex; flex-direction: column; }
+.game-list { display: flex; flex-direction: column; gap: 0.5rem; margin-top: 0.5rem; overflow-y: auto; }
+
+.game-option {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 0.8rem 1rem;
+  border: 1px solid transparent;
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.03);
+  color: rgba(255, 255, 255, 0.5);
+  font: inherit;
+  font-size: 0.85rem;
+  font-weight: 600;
+  text-align: left;
+  cursor: pointer;
+}
+
+.game-option:hover { background: rgba(255, 255, 255, 0.08); color: #fff; }
+.game-option.active { background: rgba(214, 201, 138, 0.1); border-color: rgba(214, 201, 138, 0.3); color: #d6c98a; }
+.synco-promo-card { align-items: center; justify-content: center; padding: 1.5rem; text-align: center; }
+
+/* Highlights coverflow */
+.highlights-section { display: flex; flex: 1 1 0; flex-direction: column; min-height: 0; overflow: hidden; position: relative; }
+.section-label { margin: 0 0 1rem; color: rgba(255, 255, 255, 0.4); font-size: 0.65rem; font-weight: 800; letter-spacing: 0.15em; text-transform: uppercase; }
+.coverflow-container { display: flex; flex: 1; align-items: center; justify-content: center; position: relative; min-height: 0; margin-top: 1rem; }
+.clip-game-tag { position: absolute; top: -2.75rem; left: 50%; z-index: 25; padding: 0.45rem 1.4rem; border: 1px solid rgba(214, 201, 138, 0.45); border-radius: 999px; background: rgba(20, 20, 20, 0.8); color: #d6c98a; font-family: 'Super Brigade', sans-serif; font-size: 1.25rem; letter-spacing: 0.08em; text-transform: uppercase; transform: translateX(-50%); }
+.coverflow-track { display: flex; align-items: center; justify-content: center; position: relative; width: 100%; height: 100%; }
+.clip-card { position: absolute; top: 10%; left: 50%; width: 42%; height: 90%; overflow: hidden; border-radius: 1rem; background: #000; transition: all 0.6s ease; }
+.clip-card video { width: 100%; height: 100%; object-fit: cover; }
+.clip-center { z-index: 10; transform: translateX(-50%) scale(1); opacity: 1; border: 1px solid rgba(255, 255, 255, 0.2); box-shadow: 0 20px 40px rgba(0, 0, 0, 0.8); }
+.clip-left { left: 10%; z-index: 5; transform: translateX(-50%) scale(0.8); opacity: 0.2; filter: blur(4px); }
+.clip-right { left: 90%; z-index: 5; transform: translateX(-50%) scale(0.8); opacity: 0.2; filter: blur(4px); }
+.clip-hidden { z-index: 0; opacity: 0; pointer-events: none; }
+
+.coverflow-left-overlay,
+.coverflow-right-overlay { position: absolute; top: 50%; z-index: 20; transform: translateY(-50%); }
+.coverflow-left-overlay { left: 0; width: 30%; pointer-events: none; }
+.coverflow-right-overlay { right: 1rem; width: 24%; height: 85%; }
+.clip-title-massive { margin: 1rem 0 1rem 0; font-family: 'Super Brigade', sans-serif; font-size: 1.5rem; line-height: 1; text-transform: uppercase; }
+.clip-author { margin-bottom: 1.5rem; color: #d6c98a; font-size: 0.55rem; font-weight: 800; letter-spacing: 0.1em; text-transform: uppercase; }
+.clip-actions { display: flex; gap: 1rem; pointer-events: auto; }
+.clip-actions button { display: flex; align-items: center; gap: 8px; padding: 0.5rem 1rem; border: 1px solid rgba(255, 255, 255, 0.2); border-radius: 8px; background: rgba(255, 255, 255, 0.1); color: #fff; cursor: pointer; }
+.play-overlay { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; background: rgba(0, 0, 0, 0.3); opacity: 0; cursor: pointer; }
+.clip-center:hover .play-overlay { opacity: 1; }
+
+.comments-panel { display: flex; flex-direction: column; height: 100%; padding: 0; background: transparent; }
+.comments-header { display: flex; align-items: center; gap: 0.5rem; margin: 0 0 1rem; padding-bottom: 0.5rem; border-bottom: 1px solid rgba(255, 255, 255, 0.1); color: rgba(255, 255, 255, 0.5); font-size: 0.7rem; letter-spacing: 0.1em; text-transform: uppercase; }
+.comments-list { display: flex; flex: 1; flex-direction: column; gap: 0.8rem; overflow-y: auto; }
+.comment-item { color: rgba(255, 255, 255, 0.8); font-size: 0.8rem; line-height: 1.4; }
+.comment-user { color: #d6c98a; font-weight: 800; }
+.empty-comms { color: rgba(255, 255, 255, 0.3); font-size: 0.75rem; font-style: italic; }
+.comment-input { margin-top: 1rem; padding: 0.1rem; border: 1px solid rgba(255, 255, 255, 0.1); border-radius: 30px; outline: none; background: rgba(255, 255, 255, 0.05); color: #fff; font-size: 13px; text-align: center; }
+
+.nav-btn { position: absolute; bottom: -10px; z-index: 30; display: flex; align-items: center; justify-content: center; width: 40px; height: 40px; border: 1px solid rgba(255, 255, 255, 0.2); border-radius: 50%; background: rgba(255, 255, 255, 0.1); color: #fff; cursor: pointer; }
+.prev-btn { left: 40%; transform: translateX(-50%); }
+.next-btn { right: 40%; transform: translateX(50%); }
+
+/* Stats */
+.stat-meter-card { display: flex; flex: 1 1 0; flex-direction: column; align-items: center; min-height: 0; }
+.stat-header-row { display: flex; align-items: center; justify-content: space-between; width: 100%; }
+.stat-icon { color: #d6c98a; }
+.stat-meter-container { display: flex; flex: 1; align-items: center; justify-content: center; position: relative; width: 100%; min-height: 200px; }
+.stat-glowing-blob { position: absolute; width: 160px; height: 160px; border-radius: 40% 60% 70% 30% / 40% 50% 60% 50%; background: radial-gradient(circle, rgba(214, 201, 138, 0.2), rgba(214, 201, 138, 0.05) 50%, transparent 80%); box-shadow: 0 0 50px rgba(214, 201, 138, 0.15); animation: blob-morph 8s ease-in-out infinite alternate; }
+@keyframes blob-morph { to { border-radius: 60% 40% 30% 70% / 60% 30% 70% 40%; transform: rotate(15deg) scale(1.05); } }
+.rating-number { position: relative; z-index: 2; font-family: 'Super Brigade', sans-serif; font-size: 4rem; text-shadow: 0 0 30px rgba(214, 201, 138, 0.5); }
+.stat-breakdown { display: flex; width: 100%; gap: 0.5rem; margin-top: auto; }
+.stat-pill { display: flex; flex: 1; flex-direction: column; align-items: center; gap: 0.3rem; padding: 0.8rem; border: 1px solid rgba(255, 255, 255, 0.05); border-radius: 12px; background: rgba(255, 255, 255, 0.03); }
+.stat-pill .label { color: rgba(255, 255, 255, 0.4); font-size: 0.55rem; text-transform: uppercase; }
+.stat-pill .value { font-size: 0.9rem; font-weight: 700; text-align: center; }
+.text-emerald { color: #34d399; }
+
+/* Far-right bars */
+.col-far-right { display: flex; flex-direction: column; gap: 1.5rem; min-height: 0; height: 100%; }
+.social-bar-top,
+.social-bar-bottom { flex: 1; align-items: center; justify-content: center; padding: 1.5rem 0.5rem; }
+.vertical-text { writing-mode: vertical-rl; transform: rotate(180deg); color: rgba(255, 255, 255, 0.4); font-size: 0.75rem; font-weight: 800; letter-spacing: 0.2em; text-transform: uppercase; }
+
+@media (max-width: 1100px) {
+  .bento-dashboard-wrapper { grid-template-columns: minmax(0, 1fr) 360px 58px; gap: 1rem; padding: 1rem; }
+  .coverflow-left-overlay { width: 32%; }
+  .coverflow-right-overlay { width: 30%; }
 }
