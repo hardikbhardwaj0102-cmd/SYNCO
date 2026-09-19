@@ -1,11 +1,32 @@
 @reference "../global.css";
 
+
 .hybrid-auth-container {
-  @apply flex h-screen overflow-hidden bg-transparent;
+  @apply flex h-screen overflow-hidden;
+  position: relative;
+  overscroll-behavior: none;
+  background: #0b0e14 url('../../assets/global-dash-bg.png') center / cover fixed;
+}
+
+.hybrid-auth-container::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  background: radial-gradient(circle at center, transparent 30%, rgba(0, 0, 0, 0.8) 100%);
 }
 
 .hybrid-auth-main {
   @apply flex-1 overflow-y-auto w-full;
+  overflow-x: hidden;
+  position: relative;
+  z-index: 1;
+}
+
+.competition-auth-content {
+  max-width: none;
+  padding: 0;
 }
 
 .hybrid-auth-content {
