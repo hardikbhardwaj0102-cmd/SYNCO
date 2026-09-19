@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import '../../styles/components/GameCarousel.css';
 import '../../styles/components/GameLogos.css';
 
@@ -18,8 +18,14 @@ const GAME_LOGOS = {
 const GameCarousel = ({
   activeGameId,
   onSelectGame,
+  showCardBackground = true,
 }) => {
   const [games, setGames] = useState([]);
+  const carouselRef = useRef(null);
+
+  /* =====================================================
+     LOAD GAMES
+  ===================================================== */
 
   useEffect(() => {
     const loadGames = async () => {
@@ -62,64 +68,69 @@ const GameCarousel = ({
     loadGames();
   }, []);
 
+  /* =====================================================
+     CENTER THE ACTIVE GAME
+     (re-runs when games finish loading so the first
+     selection is centered too)
+  ===================================================== */
+
+  useEffect(() => {
+    const carousel = carouselRef.current;
+    const activeButton = carousel?.querySelector(`[data-game="${activeGameId}"]`);
+    if (!carousel || !activeButton) return;
+
+    carousel.scrollTo({
+      left: activeButton.offsetLeft - (carousel.clientWidth - activeButton.offsetWidth) / 2,
+      behavior: 'smooth'
+    });
+  }, [activeGameId, games]);
+
   return (
-    <div className="carousel-container">
+    // Mask wrapper creates the fade on the left and right edges
+    <div className="carousel-mask-wrapper">
+      <div
+        ref={carouselRef}
+        className={`carousel-container ${showCardBackground ? 'with-card-background' : 'cardless'}`}
+      >
+        {games.map((game) => {
+          const logoUrl = GAME_LOGOS[game.id];
 
-      {games.map((game) => {
-        const logoUrl = GAME_LOGOS[game.id];
-
-        return (
-          <button
-            key={game.id}
-            type="button"
-            onClick={() =>
-              onSelectGame(game.id)
-            }
-            className={`carousel-btn ${activeGameId === game.id
-                ? 'carousel-btn-active'
-                : ''
-              }`}
-          >
-
-            <div className="carousel-logo">
-
-              {logoUrl ? (
-                <img
-                  src={logoUrl}
-                  alt={`${game.name} Logo`}
-                  className={`game-logo ${game.id === 'cr'
+          return (
+            <button
+              key={game.id}
+              type="button"
+              onClick={() => onSelectGame(game.id)}
+              className={`carousel-glass-btn ${activeGameId === game.id ? 'active' : ''}`}
+              data-game={game.id}
+            >
+              <div className="carousel-img-wrapper">
+                {logoUrl ? (
+                  <img
+                    src={logoUrl}
+                    alt={`${game.name} Logo`}
+                    className={`game-logo ${game.id === 'cr'
                       ? 'game-logo--clash-royale'
                       : `game-logo--${game.id}`
-                    }`}
-                  onError={(event) => {
-                    console.error(
-                      `Failed to load game logo: ${logoUrl}`
-                    );
+                      }`}
+                    onError={(event) => {
+                      console.error(
+                        `Failed to load game logo: ${logoUrl}`
+                      );
 
-                    event.currentTarget.style.display =
-                      'none';
-                  }}
-                />
-              ) : (
-                <span>
-                  {game.name}
-                </span>
-              )}
-
-            </div>
-
-            <span className="carousel-status carousel-status-active">
-              AVAILABLE
-            </span>
-
-            {activeGameId === game.id && (
-              <div className="carousel-indicator" />
-            )}
-
-          </button>
-        );
-      })}
-
+                      // Avoid a broken-image icon if the path is wrong
+                      event.currentTarget.style.display = 'none';
+                    }}
+                  />
+                ) : (
+                  <span className="carousel-name-fallback">
+                    {game.name}
+                  </span>
+                )}
+              </div>
+            </button>
+          );
+        })}
+      </div>
     </div>
   );
 };

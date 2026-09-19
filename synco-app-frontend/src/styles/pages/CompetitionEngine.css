@@ -1,136 +1,101 @@
-@reference "../global.css";
+/* =========================================================
+   ADDITIONS FOR LIVE DATA
+   Paste at the bottom of styles/pages/CompetitionEngine.css
+   ========================================================= */
 
-.comp-engine-container {
-  @apply w-full max-w-[1200px] mx-auto bg-white rounded-2xl shadow-sm border border-synco-border p-8 min-h-[800px];
+/* Toolbar: Create Competition + view toggle */
+.tournament-toolbar-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
 }
-
-/* =====================================================
-   HEADER
-===================================================== */
-
-.comp-header-box {
-  @apply mb-8;
-}
-
-.comp-header-content {
-  @apply flex items-center justify-between gap-6;
-}
-
-.comp-header-text {
-  @apply min-w-0;
-}
-
-.comp-title {
-  @apply font-header text-4xl font-bold text-black mb-2 tracking-wide uppercase;
-}
-
-.comp-subtitle {
-  @apply text-synco-textMuted text-sm;
-}
-
-/* =====================================================
-   CREATE COMPETITION BUTTON
-===================================================== */
 
 .create-competition-btn {
-  @apply flex items-center justify-center gap-2 shrink-0 h-11 px-5 rounded-xl text-xs font-bold transition-all duration-200;
-
-  background-color: #d6c98a;
-  color: #0b0e14;
-  border: 1px solid #d6c98a;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  height: 38px;
+  padding: 0 1rem;
+  border: 1px solid rgba(214, 201, 138, 0.35);
+  border-radius: 999px;
+  background: rgba(214, 201, 138, 0.14);
+  color: #d6c98a;
+  font-size: 0.75rem;
+  font-weight: 800;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  cursor: pointer;
+  transition: all 0.2s ease;
 }
 
 .create-competition-btn:hover {
-  background-color: #c9bc79;
-  border-color: #c9bc79;
+  border-color: rgba(214, 201, 138, 0.6);
+  background: rgba(214, 201, 138, 0.24);
 }
 
-.create-competition-btn:active {
-  transform: scale(0.98);
-}
-
-/* =====================================================
-   TABS
-===================================================== */
-
-.comp-tabs-container {
-  @apply flex gap-2 mb-10;
-}
-
-.comp-tab-btn {
-  @apply flex-1 py-3 rounded-xl text-xs font-bold transition-all;
-}
-
-.comp-tab-btn-active {
-  @apply bg-synco-dark text-white;
-}
-
-.comp-tab-btn-inactive {
-  @apply bg-synco-light text-synco-textMuted hover:bg-gray-200;
-}
-
-/* =====================================================
-   STATE
-===================================================== */
-
+/* Loading / error / empty states */
 .comp-state-box {
-  @apply flex flex-col items-center justify-center min-h-[280px] rounded-2xl border border-synco-border bg-synco-light text-center p-8;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  min-height: 260px;
+  padding: 2rem;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 12px;
+  background: rgba(15, 15, 15, 0.35);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  color: rgba(255, 255, 255, 0.6);
+  text-align: center;
 }
 
 .comp-state-box h3 {
-  @apply text-lg font-bold text-black mb-2;
+  margin: 0;
+  color: #fff;
+  font-family: 'Super Brigade', sans-serif;
+  font-size: 1.1rem;
+  letter-spacing: 0.05em;
 }
 
 .comp-state-box p {
-  @apply text-sm text-synco-textMuted;
+  margin: 0;
+  max-width: 420px;
+  font-size: 0.85rem;
+  line-height: 1.5;
 }
 
 .comp-error-box {
-  @apply border-red-200 bg-red-50;
+  border-color: rgba(255, 70, 85, 0.35);
+}
+
+.comp-error-box p {
+  color: #ff4655;
 }
 
 .comp-retry-btn {
-  @apply mt-5 px-5 py-2.5 rounded-xl bg-synco-dark text-white text-xs font-bold transition-all;
+  margin-top: 0.5rem;
+  padding: 0.5rem 1.4rem;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: 999px;
+  background: transparent;
+  color: #fff;
+  font-size: 0.75rem;
+  font-weight: 800;
+  letter-spacing: 0.1em;
+  cursor: pointer;
+  transition: all 0.2s ease;
 }
 
 .comp-retry-btn:hover {
-  @apply bg-black;
+  border-color: #d6c98a;
+  color: #d6c98a;
 }
 
-/* =====================================================
-   COMPETITION LIST
-===================================================== */
-
-.comp-list {
-  @apply flex flex-col gap-4;
-}
-
-/* =====================================================
-   RESPONSIVE
-===================================================== */
-
-@media (max-width: 700px) {
-  .comp-engine-container {
-    @apply p-5;
-  }
-
-  .comp-header-content {
-    @apply flex-col items-start;
-  }
-
-  .create-competition-btn {
-    @apply w-full;
-  }
-
-  .comp-title {
-    @apply text-3xl;
-  }
-
-  .comp-tabs-container {
-    @apply flex-col;
-  }
-
-  .comp-tab-btn {
-    @apply flex-none;
+@media (max-width: 900px) {
+  .tournament-toolbar {
+    flex-wrap: wrap;
+    gap: 0.75rem;
   }
 }
