@@ -1,4 +1,8 @@
 /* Dashboard layout */
+html {
+  scroll-behavior: smooth;
+}
+
 .bento-dashboard-wrapper {
   position: fixed;
   inset: 0;
@@ -124,7 +128,32 @@
 /* Game selector and promo */
 .mid-grid-row { display: grid; flex: 0 0 260px; grid-template-columns: 1fr 1fr; gap: 1rem; min-height: 0; }
 .game-selector-card { display: flex; flex-direction: column; }
-.game-list { display: flex; flex-direction: column; gap: 0.5rem; margin-top: 0.5rem; overflow-y: auto; }
+.game-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  margin-top: 0.5rem;
+  max-height: 240px;
+  overflow-y: auto;
+  overflow-x: hidden;
+  scroll-behavior: smooth;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(214, 201, 138, 0.5) rgba(255, 255, 255, 0.05);
+}
+
+.game-list::-webkit-scrollbar {
+  width: 8px;
+}
+
+.game-list::-webkit-scrollbar-thumb {
+  border-radius: 999px;
+  background: rgba(214, 201, 138, 0.5);
+}
+
+.game-list::-webkit-scrollbar-track {
+  background: rgba(255, 255, 255, 0.05);
+  border-radius: 999px;
+}
 
 .game-option {
   display: flex;

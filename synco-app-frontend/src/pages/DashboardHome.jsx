@@ -163,25 +163,28 @@ const DashboardHome = () => {
 
   // =========================================================
   // GAME LIST + DEFAULT SELECTED GAME
-  // "Your Games" = games on the player's profile; falls back to
-  // the full catalog when the profile has none yet.
+  // "Your Games" = only the games on the player's profile.
+  // If the profile has no games, we should not fall back to the
+  // global catalog because that incorrectly shows all games.
   // =========================================================
 
   const gameOptions = useMemo(
-    () =>
-      profileGames.length
-        ? profileGames.map((game) => game.gameName)
-        : gameCatalog.map((game) => game.name),
-    [profileGames, gameCatalog]
+    () => profileGames.map((game) => game.gameName),
+    [profileGames]
   );
 
   useEffect(() => {
 
-    if (!selectedGame && gameOptions.length) {
-      setSelectedGame(gameOptions[0]);
+    if (!profileGames.length) {
+      setSelectedGame('');
+      return;
     }
 
-  }, [gameOptions, selectedGame]);
+    if (!selectedGame || !profileGames.some((game) => game.gameName === selectedGame)) {
+      setSelectedGame(profileGames[0].gameName);
+    }
+
+  }, [profileGames, selectedGame]);
 
   const selectedStats = profileGames.find(
     (game) => game.gameName === selectedGame
