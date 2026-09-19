@@ -1,104 +1,4 @@
-/* =========================================================
-   ADDITIONS FOR LIVE DATA
-   Paste at the bottom of styles/pages/CompetitionEngine.css
-   ========================================================= */
 
-/* Toolbar: Create Competition + view toggle */
-.tournament-toolbar-actions {
-  display: flex;
-  align-items: center;
-  gap: 0.75rem;
-}
-
-.create-competition-btn {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.4rem;
-  height: 38px;
-  padding: 0 1rem;
-  border: 1px solid rgba(214, 201, 138, 0.35);
-  border-radius: 999px;
-  background: rgba(214, 201, 138, 0.14);
-  color: #d6c98a;
-  font-size: 0.75rem;
-  font-weight: 800;
-  letter-spacing: 0.1em;
-  text-transform: uppercase;
-  cursor: pointer;
-  transition: all 0.2s ease;
-}
-
-.create-competition-btn:hover {
-  border-color: rgba(214, 201, 138, 0.6);
-  background: rgba(214, 201, 138, 0.24);
-}
-
-/* Loading / error / empty states */
-.comp-state-box {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  gap: 0.5rem;
-  min-height: 260px;
-  padding: 2rem;
-  border: 1px solid rgba(255, 255, 255, 0.08);
-  border-radius: 12px;
-  background: rgba(15, 15, 15, 0.35);
-  backdrop-filter: blur(12px);
-  -webkit-backdrop-filter: blur(12px);
-  color: rgba(255, 255, 255, 0.6);
-  text-align: center;
-}
-
-.comp-state-box h3 {
-  margin: 0;
-  color: #fff;
-  font-family: 'Super Brigade', sans-serif;
-  font-size: 1.1rem;
-  letter-spacing: 0.05em;
-}
-
-.comp-state-box p {
-  margin: 0;
-  max-width: 420px;
-  font-size: 0.85rem;
-  line-height: 1.5;
-}
-
-.comp-error-box {
-  border-color: rgba(255, 70, 85, 0.35);
-}
-
-.comp-error-box p {
-  color: #ff4655;
-}
-
-.comp-retry-btn {
-  margin-top: 0.5rem;
-  padding: 0.5rem 1.4rem;
-  border: 1px solid rgba(255, 255, 255, 0.2);
-  border-radius: 999px;
-  background: transparent;
-  color: #fff;
-  font-size: 0.75rem;
-  font-weight: 800;
-  letter-spacing: 0.1em;
-  cursor: pointer;
-  transition: all 0.2s ease;
-}
-
-.comp-retry-btn:hover {
-  border-color: #d6c98a;
-  color: #d6c98a;
-}
-
-@media (max-width: 900px) {
-  .tournament-toolbar {
-    flex-wrap: wrap;
-    gap: 0.75rem;
-  }
-}
 /* 1. Base Wrapper: Strictly Edge-to-Edge */
 .comp-engine-wrapper {
   position: relative;
@@ -569,4 +469,107 @@
   .comp-hero-foreground { left: calc(2rem + 45px); bottom: 10%; }
   .hero-bg-layer { left: 45px; width: calc(100% - 45px); }
   .massive-bg-text { font-size: clamp(4rem, 14vw, 7rem); padding-top: 10vh; }
+}
+
+
+/* =========================================================
+   ADDITIONS FOR LIVE DATA
+   Paste at the bottom of styles/pages/CompetitionEngine.css
+   ========================================================= */
+
+/* Toolbar: Create Competition + view toggle */
+.tournament-toolbar-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.create-competition-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  height: 38px;
+  padding: 0 1rem;
+  border: 1px solid rgba(214, 201, 138, 0.35);
+  border-radius: 999px;
+  background: rgba(214, 201, 138, 0.14);
+  color: #d6c98a;
+  font-size: 0.75rem;
+  font-weight: 800;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.create-competition-btn:hover {
+  border-color: rgba(214, 201, 138, 0.6);
+  background: rgba(214, 201, 138, 0.24);
+}
+
+/* Loading / error / empty states */
+.comp-state-box {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  min-height: 260px;
+  padding: 2rem;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 12px;
+  background: rgba(15, 15, 15, 0.35);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  color: rgba(255, 255, 255, 0.6);
+  text-align: center;
+}
+
+.comp-state-box h3 {
+  margin: 0;
+  color: #fff;
+  font-family: 'Super Brigade', sans-serif;
+  font-size: 1.1rem;
+  letter-spacing: 0.05em;
+}
+
+.comp-state-box p {
+  margin: 0;
+  max-width: 420px;
+  font-size: 0.85rem;
+  line-height: 1.5;
+}
+
+.comp-error-box {
+  border-color: rgba(255, 70, 85, 0.35);
+}
+
+.comp-error-box p {
+  color: #ff4655;
+}
+
+.comp-retry-btn {
+  margin-top: 0.5rem;
+  padding: 0.5rem 1.4rem;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: 999px;
+  background: transparent;
+  color: #fff;
+  font-size: 0.75rem;
+  font-weight: 800;
+  letter-spacing: 0.1em;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.comp-retry-btn:hover {
+  border-color: #d6c98a;
+  color: #d6c98a;
+}
+
+@media (max-width: 900px) {
+  .tournament-toolbar {
+    flex-wrap: wrap;
+    gap: 0.75rem;
+  }
 }
