@@ -4,11 +4,13 @@ html {
 }
 
 .bento-dashboard-wrapper {
-  position: fixed;
-  inset: 0;
+  position: relative;
   width: 100vw;
-  height: 100vh;
-  overflow: hidden;
+  min-height: calc(100dvh - 4rem);
+  height: auto;
+  margin: -2rem 0;
+  margin-left: calc(50% - 50vw);
+  overflow: visible;
   box-sizing: border-box;
   display: grid;
   grid-template-columns: minmax(0, 1fr) minmax(500px, 560px) 70px;
@@ -46,7 +48,7 @@ html {
   flex-direction: column;
   gap: 1.5rem;
   min-height: 0;
-  height: 100%;
+  height: auto;
   min-width: 0;
 }
 
@@ -199,7 +201,7 @@ html {
 .play-overlay { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; background: rgba(0, 0, 0, 0.3); opacity: 0; cursor: pointer; }
 .clip-center:hover .play-overlay { opacity: 1; }
 
-.comments-panel { display: flex; flex-direction: column; height: 100%; padding: 0; background: transparent; }
+.comments-panel { display: flex; flex-direction: column; padding: 0; background: transparent; }
 .comments-header { display: flex; align-items: center; gap: 0.5rem; margin: 0 0 1rem; padding-bottom: 0.5rem; border-bottom: 1px solid rgba(255, 255, 255, 0.1); color: rgba(255, 255, 255, 0.5); font-size: 0.7rem; letter-spacing: 0.1em; text-transform: uppercase; }
 .comments-list { display: flex; flex: 1; flex-direction: column; gap: 0.8rem; overflow-y: auto; }
 .comment-item { color: rgba(255, 255, 255, 0.8); font-size: 0.8rem; line-height: 1.4; }
@@ -226,7 +228,7 @@ html {
 .text-emerald { color: #34d399; }
 
 /* Far-right bars */
-.col-far-right { display: flex; flex-direction: column; gap: 1.5rem; min-height: 0; height: 100%; }
+.col-far-right { display: flex; flex-direction: column; gap: 1.5rem; min-height: 0; }
 .social-bar-top,
 .social-bar-bottom { flex: 1; align-items: center; justify-content: center; padding: 1.5rem 0.5rem; }
 .vertical-text { writing-mode: vertical-rl; transform: rotate(180deg); color: rgba(255, 255, 255, 0.4); font-size: 0.75rem; font-weight: 800; letter-spacing: 0.2em; text-transform: uppercase; }
