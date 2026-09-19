@@ -93,7 +93,9 @@ const GameCarousel = ({
         className={`carousel-container ${showCardBackground ? 'with-card-background' : 'cardless'}`}
         onWheel={(event) => {
           if (Math.abs(event.deltaY) > Math.abs(event.deltaX)) {
-            event.currentTarget.scrollLeft += event.deltaY;
+            event.preventDefault();
+            event.stopPropagation();
+            event.currentTarget.scrollLeft += event.deltaY * 0.45;
           }
         }}
       >
