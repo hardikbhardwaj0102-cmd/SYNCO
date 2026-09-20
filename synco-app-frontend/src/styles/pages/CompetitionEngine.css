@@ -1,4 +1,13 @@
-/* 1. Base Wrapper: Strictly Edge-to-Edge */
+/* =========================================================
+   SYNCO — COMPETITION ENGINE
+   FULL-BLEED / EDGE-TO-EDGE PAGE SYSTEM
+   ========================================================= */
+
+
+/* =========================================================
+   1. PAGE SHELL
+   ========================================================= */
+
 .comp-engine-wrapper {
   position: relative;
 
@@ -10,35 +19,31 @@
 
   min-width: 0;
   min-height: 100dvh;
-  margin: -2rem 0;
-  margin-left: calc(50% - 50vw);
-  padding: 0;
-  /* Removed the 2rem padding causing the gap */
-  max-width: none;
-  /* Removed the max-width restriction */
-  background: #0a0a0a;
+
   box-sizing: border-box;
 
   display: flex;
   flex-direction: column;
+
+  background: #0a0a0a;
+
+  overflow-x: clip;
+  overflow-y: visible;
+
+  isolation: isolate;
 }
+
+
+/*
+   The Competition Engine owns its visual canvas.
+
+   The left sidebar should NOT be compensated for here.
+   No 90px padding.
+   No calc(100% - 90px).
+   No viewport-width negative-margin tricks.
+*/
 
 .comp-engine-wrapper>* {
-  position: relative;
-  z-index: 1;
-}
-
-.comp-engine-wrapper>.comp-hero-section {
-  z-index: 0;
-  position: relative;
-  top: 0;
-}
-
-.comp-engine-wrapper>.post-hero-content {
-  z-index: 1;
-}
-
-.post-hero-content {
   position: relative;
 }
 
@@ -63,16 +68,10 @@
   min-height: clamp(540px, 88dvh, 860px);
 
   height: auto;
-  min-height: clamp(560px, 100dvh, 900px);
-  position: relative;
-  top: 0;
-  border-radius: 0;
-  /* Removed rounded corners to sit flush */
+
   margin: 0;
-  border: none;
-  /* Removed the outer border */
-  overflow: hidden;
-  padding-left: 90px;
+  padding: 0;
+
   box-sizing: border-box;
 
   border: none;
@@ -169,9 +168,10 @@
 
 .compHero-img {
   position: absolute;
+
+  left: 61%;
   bottom: 0;
-  /* Anchored directly to the bottom edge of the hero */
-  left: calc(61% + 90px);
+
   height: 88%;
   width: auto;
 
@@ -183,10 +183,18 @@
   transform-origin: bottom center;
 
   pointer-events: none;
-  filter: drop-shadow(0 15px 25px rgba(0, 0, 0, 0.6));
+
+  filter:
+    drop-shadow(0 15px 25px rgba(0, 0, 0, 0.6));
+
+  z-index: 2;
 }
 
-/* Layer 3: Left CTA */
+
+/* =========================================================
+   5. HERO CTA
+   ========================================================= */
+
 .comp-hero-foreground {
   position: absolute;
 
@@ -274,8 +282,14 @@
   transform: scale(1.05);
 }
 
-/* 2. Free-Floating Roster Section (No background block) */
-.floating-roster-section {
+
+/* =========================================================
+   6. POST-HERO CONTENT
+   ========================================================= */
+
+.post-hero-content {
+  position: relative;
+
   width: 100%;
   min-width: 0;
 
@@ -403,7 +417,9 @@
       1.8rem);
 
   letter-spacing: 0.05em;
-  text-shadow: 0 4px 20px rgba(0, 0, 0, 0.5);
+
+  text-shadow:
+    0 4px 20px rgba(0, 0, 0, 0.5);
 }
 
 
@@ -802,47 +818,16 @@
   left: 1rem;
 }
 
+
 .coverflow-arrow-next {
   right: 1rem;
 }
 
-/* Navigation Tabs */
-.comp-tabs-container {
-  display: flex;
-  gap: 1rem;
-  margin-bottom: 3rem;
-  background: rgba(255, 255, 255, 0.02);
-  padding: 0.5rem;
-  border-radius: 8px;
-  border: 1px solid rgba(255, 255, 255, 0.05);
-}
 
-.comp-tab-btn {
-  flex: 1;
-  padding: 0.4rem 0.5rem;
-  background: transparent;
-  color: rgba(255, 255, 255, 0.4);
-  font-weight: 800;
-  font-size: 0.85rem;
-  letter-spacing: 0.1em;
-  border: none;
-  border-radius: 4px;
-  cursor: pointer;
-  transition: all 0.3s ease;
-}
+/* =========================================================
+   15. TOURNAMENT GRID
+   ========================================================= */
 
-.comp-tab-btn:hover {
-  color: white;
-  background: rgba(255, 255, 255, 0.05);
-}
-
-.comp-tab-btn.active {
-  background: rgba(214, 201, 138, 0.1);
-  color: #D6C98A;
-  border: 1px solid rgba(214, 201, 138, 0.3);
-}
-
-/* 4. Tournament Grid (Reference match) */
 .tournament-grid {
   display: grid;
 
@@ -873,7 +858,9 @@
     1px solid rgba(255, 255, 255, 0.05);
 
   cursor: pointer;
-  transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1),
+
+  transition:
+    transform 0.3s cubic-bezier(0.4, 0, 0.2, 1),
     box-shadow 0.3s ease,
     border-color 0.3s ease;
 }
@@ -895,10 +882,16 @@
 
 
 .portrait-roster-card:hover {
-  transform: scale(1.05) translateY(-5px);
-  border-color: rgba(214, 201, 138, 0.6);
-  box-shadow: 0 15px 35px rgba(214, 201, 138, 0.15),
+  transform:
+    scale(1.05) translateY(-5px);
+
+  border-color:
+    rgba(214, 201, 138, 0.6);
+
+  box-shadow:
+    0 15px 35px rgba(214, 201, 138, 0.15),
     0 0 15px rgba(214, 201, 138, 0.1);
+
   z-index: 10;
 }
 
@@ -915,8 +908,17 @@
   bottom: 0;
 
   width: 100%;
-  padding: 4rem 1.5rem 1.5rem;
-  background: linear-gradient(to top, rgba(10, 10, 10, 0.95) 0%, rgba(10, 10, 10, 0) 100%);
+
+  padding:
+    4rem 1.5rem 1.5rem;
+
+  box-sizing: border-box;
+
+  background:
+    linear-gradient(to top,
+      rgba(10, 10, 10, 0.95) 0%,
+      rgba(10, 10, 10, 0) 100%);
+
   display: flex;
   flex-direction: column;
   justify-content: flex-end;
@@ -929,7 +931,13 @@
   margin: 0;
 
   color: #fff;
-  text-shadow: 0 2px 4px rgba(0, 0, 0, 0.8);
+
+  font-family: 'Super Brigade', sans-serif;
+
+  font-size: 1.2rem;
+
+  text-shadow:
+    0 2px 4px rgba(0, 0, 0, 0.8);
 }
 
 
@@ -941,8 +949,7 @@
     rgba(255, 255, 255, 0.6);
 
   font-size: 0.8rem;
-  color: rgba(255, 255, 255, 0.6);
-  margin: 0.25rem 0 0;
+
   font-weight: 700;
 
   letter-spacing: 0.1em;
@@ -966,40 +973,8 @@
 
 
 .tournament-coverflow .coverflow-position-1:hover {
-  transform: translateX(calc(-50% + min(20vw, 330px))) scale(0.86) translateY(-3px);
-}
-
-@media (max-width: 900px) {
-  .tournament-grid {
-    grid-template-columns: repeat(2, 1fr);
-  }
-}
-
-@media (max-width: 900px) {
-  .comp-hero-section {
-    height: 70vh;
-    min-height: 560px;
-  }
-
-  .compHero-img {
-    left: calc(64% + 45px);
-    height: 78%;
-  }
-
-  .comp-hero-foreground {
-    left: calc(2rem + 45px);
-    bottom: 10%;
-  }
-
-  .hero-bg-layer {
-    left: 45px;
-    width: calc(100% - 45px);
-  }
-
-  .massive-bg-text {
-    font-size: clamp(4rem, 14vw, 7rem);
-    padding-top: 10vh;
-  }
+  transform:
+    translateX(calc(-50% + min(20vw, 330px))) scale(0.86) translateY(-3px);
 }
 
 
@@ -1428,43 +1403,4 @@
     justify-content: space-between;
   }
 
-}
-
-/* =========================================================
-   LIVE TOURNAMENT CARD
-========================================================= */
-
-.portrait-roster-card {
-  border: 0;
-  padding: 0;
-  margin: 0;
-  font: inherit;
-  color: inherit;
-  cursor: pointer;
-  text-align: left;
-  background: transparent;
-}
-
-.portrait-roster-card:focus-visible {
-  outline: 2px solid #111;
-  outline-offset: 4px;
-}
-
-.card-open-label {
-  display: block;
-  margin-top: 10px;
-  font-size: 9px;
-  font-weight: 800;
-  letter-spacing: 0.14em;
-  opacity: 0;
-  transform: translateY(4px);
-  transition:
-    opacity 0.2s ease,
-    transform 0.2s ease;
-}
-
-.portrait-roster-card:hover .card-open-label,
-.active-tournament-card .card-open-label {
-  opacity: 1;
-  transform: translateY(0);
 }
