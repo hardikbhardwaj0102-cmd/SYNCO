@@ -5,9 +5,12 @@ import {
   Crown,
   Heart,
   MessageSquare,
+  Pause,
   Play,
   Target,
-  Zap, Pause, Volume2, VolumeX
+  Volume2,
+  VolumeX,
+  Zap,
 } from 'lucide-react';
 
 import '../styles/pages/DashboardHome.css';
@@ -36,8 +39,8 @@ const formatCount = (value) =>
 
 const showValue = (value) =>
   value === undefined ||
-    value === null ||
-    value === ''
+  value === null ||
+  value === ''
     ? '--'
     : value;
 
@@ -67,23 +70,11 @@ const getGreeting = () => {
 // =========================================================
 // CLIP GAME NAME RESOLUTION
 // =========================================================
-//
-// The dashboard supports both the new backend structure:
-//
-//   clip.game.name
-//   clip.gameName
-//   clip.gameId
-//
-// and older/alternate naming styles.
-//
-// If only gameId is returned, resolve it against /api/games.
-// =========================================================
 
 const resolveClipGameName = (
   clip,
   games = []
 ) => {
-
   const directName = firstDefined(
     clip?.gameName,
     clip?.game_name,
@@ -102,7 +93,6 @@ const resolveClipGameName = (
   );
 
   if (gameId) {
-
     const matchedGame = games.find(
       (game) =>
         String(game?.id) ===
@@ -132,7 +122,6 @@ const normalizeClip = (
   clip,
   games = []
 ) => {
-
   if (!clip) {
     return clip;
   }
@@ -169,7 +158,7 @@ const normalizeClip = (
 
     description:
       description !== undefined &&
-        description !== null
+      description !== null
         ? String(description)
         : '',
 
@@ -188,7 +177,6 @@ const normalizeClip = (
 // =========================================================
 
 const DashboardHome = () => {
-
   const { user } = useAuth();
 
   const accountRole =
@@ -205,6 +193,7 @@ const DashboardHome = () => {
   const [gameCatalog, setGameCatalog] = useState([]);
   const [profileGames, setProfileGames] = useState([]);
   const [selectedGame, setSelectedGame] = useState('');
+
   const [clips, setClips] = useState([]);
   const [activeClipIndex, setActiveClipIndex] = useState(0);
 
@@ -234,21 +223,17 @@ const DashboardHome = () => {
   // =========================================================
 
   useEffect(() => {
-
     if (isAdmin) {
       return;
     }
 
     const loadDashboardData = async () => {
-
       try {
-
         const [
           catalogResponse,
           profileResponse,
           clipsResponse,
         ] = await Promise.all([
-
           fetch(
             `${API_URL}/api/games`,
             {
@@ -278,7 +263,6 @@ const DashboardHome = () => {
           ).catch(() => ({
             ok: false,
           })),
-
         ]);
 
         // =====================================================
@@ -288,7 +272,6 @@ const DashboardHome = () => {
         let loadedGameCatalog = [];
 
         if (catalogResponse?.ok) {
-
           const catalogData =
             await catalogResponse.json();
 
@@ -305,7 +288,6 @@ const DashboardHome = () => {
         // =====================================================
 
         if (profileResponse?.ok) {
-
           const profileData =
             await profileResponse.json();
 
@@ -319,7 +301,6 @@ const DashboardHome = () => {
         // =====================================================
 
         if (clipsResponse?.ok) {
-
           const clipsData =
             await clipsResponse.json();
 
@@ -338,20 +319,15 @@ const DashboardHome = () => {
 
           setActiveClipIndex(0);
         }
-
       } catch (error) {
-
         console.error(
           'Failed to load dashboard data:',
           error
         );
-
       }
-
     };
 
     loadDashboardData();
-
   }, [isAdmin]);
 
 
@@ -360,14 +336,12 @@ const DashboardHome = () => {
   // =========================================================
 
   useEffect(() => {
-
     if (!gameCatalog.length || !clips.length) {
       return;
     }
 
     setClips((previousClips) =>
       previousClips.map((clip) => {
-
         const resolvedGameName =
           resolveClipGameName(
             clip,
@@ -387,13 +361,11 @@ const DashboardHome = () => {
         };
       })
     );
-
   }, [gameCatalog]);
 
 
   // =========================================================
   // GAME LIST + DEFAULT SELECTED GAME
-  // "Your Games" = only the games on the player's profile.
   // =========================================================
 
   const gameOptions = useMemo(
@@ -406,11 +378,8 @@ const DashboardHome = () => {
 
 
   useEffect(() => {
-
     if (!profileGames.length) {
-
       setSelectedGame('');
-
       return;
     }
 
@@ -421,12 +390,10 @@ const DashboardHome = () => {
           game.gameName === selectedGame
       )
     ) {
-
       setSelectedGame(
         profileGames[0].gameName
       );
     }
-
   }, [
     profileGames,
     selectedGame,
@@ -441,32 +408,24 @@ const DashboardHome = () => {
 
 
   // =========================================================
-  // COMMENTS FOR THE ACTIVE CLIP
+  // COMMENTS FOR ACTIVE CLIP
   // =========================================================
 
   useEffect(() => {
-
     if (!activeClipId) {
-
       setComments([]);
-
       return undefined;
     }
 
     let cancelled = false;
 
     const loadComments = async () => {
-
       setComments([]);
-
       setCommentText('');
-
       setCommentError('');
-
       setCommentsLoading(true);
 
       try {
-
         const response =
           await fetch(
             `${API_URL}/api/profile/clips/${activeClipId}/comments`,
@@ -482,7 +441,6 @@ const DashboardHome = () => {
           await response.json();
 
         if (!response.ok) {
-
           throw new Error(
             data.message ||
             'Unable to load comments.'
@@ -490,42 +448,29 @@ const DashboardHome = () => {
         }
 
         if (!cancelled) {
-
           setComments(
             data.comments || []
           );
         }
-
       } catch (error) {
-
         if (!cancelled) {
-
           setCommentError(
             error.message ||
             'Unable to load comments.'
           );
         }
-
       } finally {
-
         if (!cancelled) {
-
-          setCommentsLoading(
-            false
-          );
+          setCommentsLoading(false);
         }
-
       }
-
     };
 
     loadComments();
 
     return () => {
-
       cancelled = true;
     };
-
   }, [activeClipId]);
 
 
@@ -534,14 +479,10 @@ const DashboardHome = () => {
   // =========================================================
 
   useEffect(() => {
-
     clips.forEach(
       (clip, index) => {
-
         const video =
-          videoRefs.current[
-          clip.id
-          ];
+          videoRefs.current[clip.id];
 
         if (!video) {
           return;
@@ -550,77 +491,77 @@ const DashboardHome = () => {
         if (
           index === activeClipIndex
         ) {
-
           video
             .play()
-            .catch(() => { });
-
+            .catch(() => {
+              setPlayingStates((prev) => ({
+                ...prev,
+                [clip.id]: false,
+              }));
+            });
         } else {
-
           video.pause();
         }
-
       }
     );
-
   }, [
     clips,
     activeClipIndex,
   ]);
 
 
+  // =========================================================
+  // TOGGLE PLAYBACK
+  // =========================================================
+
   const togglePlayback = (
     clipId
   ) => {
-
     const video =
-      videoRefs.current[
-      clipId
-      ];
+      videoRefs.current[clipId];
 
     if (!video) {
       return;
     }
 
     if (video.paused) {
-
       video
         .play()
-        .catch(() => { });
-
+        .catch(() => {});
     } else {
-
       video.pause();
     }
   };
 
+
+  // =========================================================
+  // TOGGLE MUTE
+  // =========================================================
+
   const toggleMute = (
-  clipId
-) => {
+    clipId
+  ) => {
+    const video =
+      videoRefs.current[clipId];
 
-  const video =
-    videoRefs.current[
-      clipId
-    ];
+    if (!video) {
+      return;
+    }
 
-  if (!video) {
-    return;
-  }
+    const nextMuted =
+      !video.muted;
 
-  const nextMuted =
-    !video.muted;
+    video.muted =
+      nextMuted;
 
-  video.muted =
-    nextMuted;
-
-  setMutedStates(
-    (prev) => ({
-      ...prev,
-      [clipId]:
-        nextMuted,
-    })
-  );
-};
+    setMutedStates(
+      (prev) => ({
+        ...prev,
+        [clipId]:
+          nextMuted,
+      })
+    );
+  };
 
 
   // =========================================================
@@ -628,7 +569,6 @@ const DashboardHome = () => {
   // =========================================================
 
   const nextClip = () => {
-
     if (!clips.length) {
       return;
     }
@@ -643,7 +583,6 @@ const DashboardHome = () => {
 
 
   const prevClip = () => {
-
     if (!clips.length) {
       return;
     }
@@ -664,9 +603,7 @@ const DashboardHome = () => {
   const handleLikeClip = async (
     clipId
   ) => {
-
     try {
-
       const response =
         await fetch(
           `${API_URL}/api/profile/clips/${clipId}/like`,
@@ -683,7 +620,6 @@ const DashboardHome = () => {
         await response.json();
 
       if (!response.ok) {
-
         throw new Error(
           data.message ||
           'Unable to like this clip.'
@@ -696,22 +632,20 @@ const DashboardHome = () => {
             (clip) =>
               clip.id === clipId
                 ? {
-                  ...clip,
+                    ...clip,
 
-                  isLiked:
-                    Boolean(
-                      data.liked
-                    ),
+                    isLiked:
+                      Boolean(
+                        data.liked
+                      ),
 
-                  likes:
-                    data.likes,
-                }
+                    likes:
+                      data.likes,
+                  }
                 : clip
           )
       );
-
     } catch (error) {
-
       console.error(
         'Like failed:',
         error
@@ -725,12 +659,10 @@ const DashboardHome = () => {
   // =========================================================
 
   const submitComment = async () => {
-
     if (
       !activeClip ||
       !commentText.trim()
     ) {
-
       return;
     }
 
@@ -738,7 +670,6 @@ const DashboardHome = () => {
       activeClip.id;
 
     try {
-
       const response =
         await fetch(
           `${API_URL}/api/profile/clips/${clipId}/comments`,
@@ -764,7 +695,6 @@ const DashboardHome = () => {
         await response.json();
 
       if (!response.ok) {
-
         throw new Error(
           data.message ||
           'Unable to post comment.'
@@ -777,14 +707,14 @@ const DashboardHome = () => {
             (clip) =>
               clip.id === clipId
                 ? {
-                  ...clip,
+                    ...clip,
 
-                  comments:
-                    (
-                      clip.comments ||
-                      0
-                    ) + 1,
-                }
+                    comments:
+                      (
+                        clip.comments ||
+                        0
+                      ) + 1,
+                  }
                 : clip
           )
       );
@@ -793,7 +723,6 @@ const DashboardHome = () => {
         activeClipIdRef.current ===
         clipId
       ) {
-
         setComments(
           (currentComments) => [
             ...currentComments,
@@ -802,12 +731,9 @@ const DashboardHome = () => {
         );
 
         setCommentText('');
-
         setCommentError('');
       }
-
     } catch (error) {
-
       setCommentError(
         error.message ||
         'Unable to post comment.'
@@ -819,13 +745,11 @@ const DashboardHome = () => {
   const handleCommentKeyDown = (
     event
   ) => {
-
     if (
       event.key === 'Enter' &&
       !event.shiftKey &&
       !event.nativeEvent.isComposing
     ) {
-
       event.preventDefault();
 
       submitComment();
@@ -838,7 +762,6 @@ const DashboardHome = () => {
   // =========================================================
 
   if (isAdmin) {
-
     return (
       <AdminDashboard />
     );
@@ -850,18 +773,17 @@ const DashboardHome = () => {
   // =========================================================
 
   return (
-
     <div className="bento-dashboard-wrapper">
 
-      {/* =========================================
-          COLUMN 2: MAIN LEFT
-          ========================================= */}
+      {/* =====================================================
+          COLUMN 1: MAIN LEFT
+          ===================================================== */}
 
       <div className="col-main-left">
 
-        {/* =========================================
+        {/* ===================================================
             GREETINGS
-            ========================================= */}
+            =================================================== */}
 
         <div className="wire-block greetings-pill">
 
@@ -871,21 +793,19 @@ const DashboardHome = () => {
               margin: 0,
             }}
           >
-
             {getGreeting()},{' '}
 
             <span className="text-highlight font-bold">
               {gametag}
             </span>
-
           </h2>
 
         </div>
 
 
-        {/* =========================================
+        {/* ===================================================
             FEATURED TOURNAMENT
-            ========================================= */}
+            =================================================== */}
 
         <div className="wire-block tournaments-card">
 
@@ -911,10 +831,11 @@ const DashboardHome = () => {
 
           </p>
 
-          <button className="join-btn">
-
+          <button
+            type="button"
+            className="join-btn"
+          >
             Register Roster
-
           </button>
 
           <img
@@ -926,9 +847,9 @@ const DashboardHome = () => {
         </div>
 
 
-        {/* =========================================
+        {/* ===================================================
             SYNCO MOMENTS
-            ========================================= */}
+            =================================================== */}
 
         <div className="bento-card highlights-section">
 
@@ -938,15 +859,43 @@ const DashboardHome = () => {
 
           </h3>
 
+
+          {/* =================================================
+              GAME TAG
+
+              IMPORTANT:
+              This is deliberately outside the coverflow
+              container so it does not sit on top of the video.
+              ================================================= */}
+
+          {activeClip && (
+            <div className="clip-game-tag">
+
+              {
+                resolveClipGameName(
+                  activeClip,
+                  gameCatalog
+                ) ||
+                'Unspecified'
+              }
+
+            </div>
+          )}
+
+
+          {/* =================================================
+              COVERFLOW
+              ================================================= */}
+
           <div className="coverflow-container">
 
             {activeClip ? (
 
               <>
 
-                {/* =====================================
-                    LEFT OVERLAY
-                    ===================================== */}
+                {/* =============================================
+                    LEFT INFORMATION OVERLAY
+                    ============================================= */}
 
                 <div className="coverflow-left-overlay">
 
@@ -956,7 +905,8 @@ const DashboardHome = () => {
 
                   </h2>
 
-                  <div className="clip-author">
+
+                  <div className="clip-description">
 
                     Description:{' '}
 
@@ -967,20 +917,23 @@ const DashboardHome = () => {
 
                   </div>
 
-                  {/* =================================
+
+                  {/* =========================================
                       LIKE BUTTON
-                      ================================= */}
+                      ========================================= */}
 
                   <div className="clip-actions">
 
                     <button
                       type="button"
 
-                      onClick={() =>
+                      onClick={(event) => {
+                        event.stopPropagation();
+
                         handleLikeClip(
                           activeClip.id
-                        )
-                      }
+                        );
+                      }}
 
                       aria-pressed={
                         Boolean(
@@ -1022,26 +975,9 @@ const DashboardHome = () => {
                 </div>
 
 
-                {/* =====================================
-                    GAME TAG
-                    ===================================== */}
-
-                <div className="clip-game-tag">
-
-                  {
-                    resolveClipGameName(
-                      activeClip,
-                      gameCatalog
-                    ) ||
-                    'Unspecified'
-                  }
-
-                </div>
-
-
-                {/* =====================================
-                    VIDEOS
-                    ===================================== */}
+                {/* =============================================
+                    VIDEO COVERFLOW
+                    ============================================= */}
 
                 <div className="coverflow-track">
 
@@ -1051,14 +987,13 @@ const DashboardHome = () => {
                       let positionClass =
                         'clip-hidden';
 
+
                       if (
                         index ===
                         activeClipIndex
                       ) {
-
                         positionClass =
                           'clip-center';
-
                       } else if (
                         index ===
                         (
@@ -1068,10 +1003,8 @@ const DashboardHome = () => {
                         ) %
                         clips.length
                       ) {
-
                         positionClass =
                           'clip-left';
-
                       } else if (
                         index ===
                         (
@@ -1080,83 +1013,156 @@ const DashboardHome = () => {
                         ) %
                         clips.length
                       ) {
-
                         positionClass =
                           'clip-right';
                       }
+
 
                       const isCenter =
                         index ===
                         activeClipIndex;
 
+
                       return (
+                        <div
+                          key={clip.id}
+                          className={`clip-card ${positionClass}`}
+                        >
 
-                          <div
-                            key={clip.id}
-                            className={`clip-card ${positionClass}`}
-                          >
-                            <video
-                              ref={(element) => {
-                                if (element) {
-                                  videoRefs.current[clip.id] = element;
-                                } else {
-                                  delete videoRefs.current[clip.id];
+                          <video
+                            ref={(element) => {
+                              if (element) {
+                                videoRefs.current[
+                                  clip.id
+                                ] = element;
+                              } else {
+                                delete videoRefs.current[
+                                  clip.id
+                                ];
+                              }
+                            }}
+
+                            src={clip.url}
+
+                            muted={
+                              mutedStates[
+                                clip.id
+                              ] ?? true
+                            }
+
+                            loop
+                            playsInline
+
+                            preload={
+                              isCenter
+                                ? 'auto'
+                                : 'metadata'
+                            }
+
+                            onPlay={() => {
+                              setPlayingStates(
+                                (prev) => ({
+                                  ...prev,
+                                  [clip.id]:
+                                    true,
+                                })
+                              );
+                            }}
+
+                            onPause={() => {
+                              setPlayingStates(
+                                (prev) => ({
+                                  ...prev,
+                                  [clip.id]:
+                                    false,
+                                })
+                              );
+                            }}
+                          />
+
+
+                          {/* =================================
+                              ACTIVE VIDEO CONTROLS
+                              ================================= */}
+
+                          {isCenter && (
+                            <>
+
+                              {/* PLAY / PAUSE */}
+
+                              <button
+                                type="button"
+                                className="video-control play-control"
+
+                                onClick={(event) => {
+                                  event.stopPropagation();
+
+                                  togglePlayback(
+                                    clip.id
+                                  );
+                                }}
+
+                                aria-label={
+                                  playingStates[
+                                    clip.id
+                                  ]
+                                    ? 'Pause video'
+                                    : 'Play video'
                                 }
-                              }}
-                              src={clip.url}
-                              muted={mutedStates[clip.id] ?? true}
-                              loop
-                              playsInline
-                              preload={isCenter ? 'auto' : 'metadata'}
-                            />
+                              >
 
-                            {isCenter && (
-                              <>
-                                {/* Play / Pause */}
-                                <button
-                                  type="button"
-                                  className="video-control play-control"
-                                  onClick={(e) => {
-                                    e.stopPropagation();
-                                    togglePlayback(clip.id);
-                                  }}
-                                  aria-label={
-                                    playingStates[clip.id]
-                                      ? 'Pause video'
-                                      : 'Play video'
-                                  }
-                                >
-                                  {playingStates[clip.id] ? (
+                                {
+                                  playingStates[
+                                    clip.id
+                                  ] ? (
                                     <Pause size={28} />
                                   ) : (
                                     <Play size={28} />
-                                  )}
-                                </button>
+                                  )
+                                }
 
-                                {/* Mute / Unmute */}
-                                <button
-                                  type="button"
-                                  className="video-control mute-control"
-                                  onClick={(e) => {
-                                    e.stopPropagation();
-                                    toggleMute(clip.id);
-                                  }}
-                                  aria-label={
-                                    mutedStates[clip.id]
-                                      ? 'Unmute video'
-                                      : 'Mute video'
-                                  }
-                                >
-                                  {mutedStates[clip.id] ? (
+                              </button>
+
+
+                              {/* MUTE / UNMUTE */}
+
+                              <button
+                                type="button"
+                                className="video-control mute-control"
+
+                                onClick={(event) => {
+                                  event.stopPropagation();
+
+                                  toggleMute(
+                                    clip.id
+                                  );
+                                }}
+
+                                aria-label={
+                                  mutedStates[
+                                    clip.id
+                                  ]
+                                    ? 'Unmute video'
+                                    : 'Mute video'
+                                }
+                              >
+
+                                {
+                                  mutedStates[
+                                    clip.id
+                                  ] ? (
                                     <VolumeX size={17} />
                                   ) : (
                                     <Volume2 size={17} />
-                                  )}
-                                </button>
-                              </>
-                            )}
-                          </div>
+                                  )
+                                }
 
+                              </button>
+
+                            </>
+                          )}
+
+                        </div>
                       );
                     }
                   )}
@@ -1164,9 +1170,9 @@ const DashboardHome = () => {
                 </div>
 
 
-                {/* =====================================
-                    RIGHT OVERLAY — COMMENTS
-                    ===================================== */}
+                {/* =============================================
+                    RIGHT COMMENTS PANEL
+                    ============================================= */}
 
                 <div className="coverflow-right-overlay comments-panel">
 
@@ -1174,39 +1180,35 @@ const DashboardHome = () => {
 
                     <MessageSquare size={14} />
 
-                    Comments (
-                    {activeClip.comments || 0}
-                    )
+                    <span>
+                      Comments (
+                      {activeClip.comments || 0}
+                      )
+                    </span>
 
                   </h4>
+
 
                   <div className="comments-list">
 
                     {commentsLoading && (
-
                       <p className="empty-comms">
-
                         Loading comments...
-
                       </p>
-
                     )}
+
 
                     {!commentsLoading &&
                       !commentError &&
                       comments.length === 0 && (
-
                         <p className="empty-comms">
-
                           No comments yet
-
                         </p>
-
                       )}
+
 
                     {comments.map(
                       (comment) => (
-
                         <div
                           key={comment.id}
                           className="comment-item"
@@ -1221,33 +1223,35 @@ const DashboardHome = () => {
                           {comment.content}
 
                         </div>
-
                       )
                     )}
 
-                    {commentError && (
 
+                    {commentError && (
                       <p
                         className="empty-comms"
-
                         style={{
                           color: '#ff4655',
                         }}
                       >
-
                         {commentError}
-
                       </p>
-
                     )}
 
                   </div>
+
+
+                  {/* COMMENT INPUT */}
 
                   <input
                     type="text"
                     placeholder="Add a comment"
                     className="comment-input"
-                    value={commentText}
+
+                    value={
+                      commentText
+                    }
+
                     maxLength={1000}
 
                     onChange={(event) =>
@@ -1259,43 +1263,56 @@ const DashboardHome = () => {
                     onKeyDown={
                       handleCommentKeyDown
                     }
+
+                    onClick={(event) =>
+                      event.stopPropagation()
+                    }
                   />
 
                 </div>
 
 
-                {/* =====================================
-                    NAVIGATION
-                    ===================================== */}
+                {/* =============================================
+                    PREVIOUS / NEXT
+                    ============================================= */}
 
                 {clips.length > 1 && (
-
                   <>
 
                     <button
                       type="button"
                       className="nav-btn prev-btn"
-                      onClick={prevClip}
+
+                      onClick={(event) => {
+                        event.stopPropagation();
+                        prevClip();
+                      }}
+
                       aria-label="Previous clip"
                     >
 
-                      <ChevronLeft />
+                      <ChevronLeft size={22} />
 
                     </button>
+
 
                     <button
                       type="button"
                       className="nav-btn next-btn"
-                      onClick={nextClip}
+
+                      onClick={(event) => {
+                        event.stopPropagation();
+                        nextClip();
+                      }}
+
                       aria-label="Next clip"
                     >
 
-                      <ChevronRight />
+                      <ChevronRight size={22} />
 
                     </button>
 
                   </>
-
                 )}
 
               </>
@@ -1324,15 +1341,15 @@ const DashboardHome = () => {
       </div>
 
 
-      {/* =========================================
-          COLUMN 3: MAIN RIGHT
-          ========================================= */}
+      {/* =====================================================
+          COLUMN 2: MAIN RIGHT
+          ===================================================== */}
 
       <div className="col-main-right">
 
-        {/* =========================================
+        {/* ===================================================
             PREMIUM BANNER
-            ========================================= */}
+            =================================================== */}
 
         <div className="wire-block premium-banner-pill">
 
@@ -1356,11 +1373,15 @@ const DashboardHome = () => {
         </div>
 
 
-        {/* =========================================
+        {/* ===================================================
             GAMES + PROMO
-            ========================================= */}
+            =================================================== */}
 
         <div className="mid-grid-row">
+
+          {/* ===============================================
+              YOUR GAMES
+              =============================================== */}
 
           <div className="bento-card game-selector-card">
 
@@ -1369,6 +1390,7 @@ const DashboardHome = () => {
               Your Games
 
             </h3>
+
 
             <div className="game-list">
 
@@ -1379,12 +1401,14 @@ const DashboardHome = () => {
 
                     <button
                       type="button"
+
                       key={game}
 
-                      className={`game-option ${selectedGame === game
-                        ? 'active'
-                        : ''
-                        }`}
+                      className={`game-option ${
+                        selectedGame === game
+                          ? 'active'
+                          : ''
+                      }`}
 
                       onClick={() =>
                         setSelectedGame(
@@ -1418,6 +1442,11 @@ const DashboardHome = () => {
 
           </div>
 
+
+          {/* ===============================================
+              PROMOTIONAL BANNER
+              =============================================== */}
+
           <div className="wire-block synco-promo-card">
 
             <h3
@@ -1441,9 +1470,9 @@ const DashboardHome = () => {
         </div>
 
 
-        {/* =========================================
+        {/* ===================================================
             SYNCO RATING
-            ========================================= */}
+            =================================================== */}
 
         <div className="bento-card stat-meter-card">
 
@@ -1462,6 +1491,7 @@ const DashboardHome = () => {
 
           </div>
 
+
           <div className="stat-meter-container">
 
             <div className="stat-glowing-blob"></div>
@@ -1476,14 +1506,13 @@ const DashboardHome = () => {
 
           </div>
 
+
           <div className="stat-breakdown">
 
             <div className="stat-pill">
 
               <span className="label">
-
                 Class
-
               </span>
 
               <span className="value">
@@ -1496,12 +1525,11 @@ const DashboardHome = () => {
 
             </div>
 
+
             <div className="stat-pill">
 
               <span className="label">
-
                 Win R.
-
               </span>
 
               <span className="value text-emerald">
@@ -1514,12 +1542,11 @@ const DashboardHome = () => {
 
             </div>
 
+
             <div className="stat-pill">
 
               <span className="label">
-
                 K/D
-
               </span>
 
               <span className="value">
@@ -1539,9 +1566,9 @@ const DashboardHome = () => {
       </div>
 
 
-      {/* =========================================
-          COLUMN 4: FAR RIGHT SIDEBAR
-          ========================================= */}
+      {/* =====================================================
+          COLUMN 3: FAR RIGHT SIDEBAR
+          ===================================================== */}
 
       <div className="col-far-right">
 
@@ -1554,6 +1581,7 @@ const DashboardHome = () => {
           </span>
 
         </div>
+
 
         <div className="wire-block social-bar-bottom">
 
@@ -1568,7 +1596,6 @@ const DashboardHome = () => {
       </div>
 
     </div>
-
   );
 };
 
