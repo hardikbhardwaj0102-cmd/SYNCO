@@ -102,22 +102,40 @@ html {
 
 
 /* =========================================================
-   SHARED CARD SYSTEM
+   SHARED CARD SYSTEM — FROSTED GLASS
    ========================================================= */
 
 .bento-card,
 .wire-block {
   border:
-    1px solid rgba(255, 255, 255, 0.08);
+    1px solid rgba(255, 255, 255, 0.10);
 
   border-radius:
     clamp(1rem, 2vw, 2rem);
 
-  background: rgba(20, 20, 20, 0.35);
+  /*
+   * Frosted glass surface:
+   * opaque enough to feel like a card,
+   * transparent enough to retain the background.
+   */
+  background:
+    linear-gradient(
+      135deg,
+      rgba(255, 255, 255, 0.075),
+      rgba(255, 255, 255, 0.025)
+    ),
+    rgba(18, 18, 18, 0.58);
+
+  backdrop-filter:
+    blur(20px) saturate(135%);
+
+  -webkit-backdrop-filter:
+    blur(20px) saturate(135%);
 
   box-shadow:
-    0 18px 50px rgba(0, 0, 0, 0.18),
-    inset 0 1px 0 rgba(255, 255, 255, 0.025);
+    0 18px 50px rgba(0, 0, 0, 0.24),
+    inset 0 1px 0 rgba(255, 255, 255, 0.075),
+    inset 0 -1px 0 rgba(0, 0, 0, 0.16);
 
   min-width: 0;
 }
@@ -140,11 +158,11 @@ html {
    MAIN COLUMNS
    ========================================================= */
 
-.col-main-left,
-.col-main-right,
-.col-far-right {
+.bento-dashboard-wrapper > *,
+.col-main-left > *,
+.col-main-right > *,
+.col-far-right > * {
   min-width: 0;
-  min-height: 0;
 }
 
 .col-main-left,
@@ -179,16 +197,12 @@ html {
   grid-row: 1;
 
   display: flex;
-
   flex-direction: column;
 
-  gap:
-    clamp(1rem, 1.35vw, 1.5rem);
+  gap: clamp(1rem, 1.35vw, 1.5rem);
 
   min-width: 0;
   min-height: 0;
-
-  height: auto;
 }
 
 
@@ -196,7 +210,20 @@ html {
    TOP GREETING / PREMIUM
    ========================================================= */
 
-.greetings-pill,
+.greeting-pill {
+  width: fit-content;
+  max-width: clamp(220px, 25vw, 360px);
+  min-height: clamp(52px, 5vw, 68px);
+  flex: 0 0 auto;
+  display: flex;
+
+  align-items: center;
+
+  padding-inline:
+    clamp(1rem, 1.8vw, 1.5rem);
+
+  min-width: 0;
+}
 .premium-banner-pill {
   width: 100%;
 
@@ -326,7 +353,7 @@ html {
   /*
     The image scales relative to its responsive parent.
   */
-  height: 135%;
+  height: 155%;
 
   width: auto;
 

@@ -6,36 +6,54 @@
 .synco-friends-column {
   position: relative;
   z-index: 80;
+
   display: flex;
   flex-direction: column;
+
   gap: clamp(0.5rem, 0.7vw, 0.75rem);
+
   min-width: 0;
   min-height: 0;
-  height: 100%;
+
 }
 
 
 /* =========================================================
-   FRIENDS SOCIAL BLOCK
+   FRIENDS SOCIAL BLOCK — TOP 50%
    ========================================================= */
 
 .synco-social-friends-corner {
   position: relative;
+  z-index: 90;
+
   flex: 1 1 0 !important;
+
   min-width: 0;
   min-height: 0 !important;
-  height: 0 !important;
+
+  /*
+   * IMPORTANT:
+   * Do not force height: 0 here.
+   * Let flexbox allocate half of the parent.
+   */
   border-radius: 16px;
   overflow: visible !important;
-  z-index: 90;
 }
 
 
+/* =========================================================
+   DISCORD / SOCIAL BAR — BOTTOM 50%
+   ========================================================= */
+
 .synco-friends-column > .social-bar-bottom {
   flex: 1 1 0 !important;
+
   min-width: 0;
   min-height: 0 !important;
-  height: 0 !important;
+
+  /*
+   * Let flexbox allocate the second half.
+   */
 }
 
 
@@ -45,7 +63,6 @@
 
 .synco-friends-sidebar {
   position: absolute;
-
   top: 0;
   right: 0;
   bottom: 0;
@@ -54,8 +71,7 @@
 
   z-index: 120;
 
-  overflow: hidden;
-
+  overflow: visible;
   box-sizing: border-box;
 
   border: 1px solid rgba(255, 255, 255, 0.10);
@@ -80,12 +96,9 @@
 
 .synco-friends-sidebar.is-open {
   width: clamp(220px, 22vw, 320px);
-
   border-radius: clamp(14px, 1vw, 18px);
-
-  overflow: hidden;
+  overflow: visible;
 }
-
 
 /* =========================================================
    TOGGLE
@@ -900,15 +913,12 @@
    ========================================================= */
 
 .synco-friends-column > .social-bar-bottom {
-  flex: 0 0 clamp(46px, 4vw, 58px) !important;
-
-  height: clamp(46px, 4vw, 58px) !important;
-
-  min-height: clamp(46px, 4vw, 58px) !important;
-
+  flex: 1 1 0 !important;
+  min-width: 0;
+  min-height: 0 !important;
+  height: auto !important;
   overflow: hidden;
 }
-
 
 /* =========================================================
    REMOVE OLD VIEWPORT-LOCKING BEHAVIOR
