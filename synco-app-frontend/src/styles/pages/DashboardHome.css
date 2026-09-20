@@ -994,75 +994,88 @@ html {
 .nav-btn {
   position: absolute;
 
-  top: 50%;
+  /*
+    Responsive overlap.
+    Scales with the container but stays within safe limits.
+  */
+  bottom: clamp(-24px, -2vw, -14px);
 
   z-index: 80;
 
   display: flex;
-
   align-items: center;
   justify-content: center;
 
-  width: clamp(38px, 3vw, 48px);
-
-  height: clamp(38px, 3vw, 48px);
+  width: clamp(40px, 3.5vw, 48px);
+  height: clamp(40px, 3.5vw, 48px);
 
   padding: 0;
 
-  border:
-    1px solid rgba(255, 255, 255, 0.18);
+  border: 1px solid rgba(255, 255, 255, 0.15);
 
   border-radius: 50%;
 
-  background:
-    rgba(8, 8, 8, 0.78);
-
+  background: #1a1a1a;
   color: #fff;
 
-  backdrop-filter: blur(12px);
-  -webkit-backdrop-filter: blur(12px);
-
   box-shadow:
-    0 8px 24px rgba(0, 0, 0, 0.3);
-
-  transform: translateY(-50%);
+    0 4px 14px rgba(0, 0, 0, 0.5);
 
   cursor: pointer;
 
+  box-sizing: border-box;
+
   transition:
     background 0.2s ease,
-    border-color 0.2s ease,
-    transform 0.2s ease;
+    transform 0.2s ease,
+    border-color 0.2s ease;
 }
 
 .prev-btn {
-  left: clamp(0.5rem, 8%, 5rem);
+  left: 38%;
+
+  transform: translateX(-50%);
 }
 
 .next-btn {
-  right: clamp(0.5rem, 8%, 5rem);
+  right: 38%;
+
+  transform: translateX(50%);
 }
 
-.prev-btn:hover,
-.next-btn:hover {
-  background:
-    rgba(255, 255, 255, 0.14);
+.prev-btn:hover {
+  background: #2a2a2a;
 
   border-color:
-    rgba(255, 255, 255, 0.35);
+    rgba(255, 255, 255, 0.3);
 
   transform:
-    translateY(-50%)
+    translateX(-50%)
     scale(1.05);
 }
 
-.prev-btn:active,
-.next-btn:active {
+.next-btn:hover {
+  background: #2a2a2a;
+
+  border-color:
+    rgba(255, 255, 255, 0.3);
+
   transform:
-    translateY(-50%)
+    translateX(50%)
+    scale(1.05);
+}
+
+.prev-btn:active {
+  transform:
+    translateX(-50%)
     scale(0.95);
 }
 
+.next-btn:active {
+  transform:
+    translateX(50%)
+    scale(0.95);
+}
 
 /* =========================================================
    VIDEO CONTROLS
