@@ -1,4 +1,4 @@
-from datetime import datetime
+from datetime import datetime, timedelta
 
 from flask import (
     Blueprint,
@@ -30,6 +30,95 @@ friends_bp = Blueprint(
 
 
 # =========================================================
+# ONLINE PRESENCE
+# =========================================================
+#
+# Presence is kept in a separate table so the existing users
+# table does not need to be changed just to support online
+# status. A player is considered online only while their
+# heartbeat is recent.
+#
+# Frontend heartbeat interval: ~20 seconds
+# Online timeout: 45 seconds
+# =========================================================
+
+ONLINE_TIMEOUT_SECONDS = 45
+
+
+class UserPresence(db.Model):
+
+    __tablename__ = "user_presence"
+
+    user_id = db.Column(
+        db.Integer,
+        db.ForeignKey("users.id", ondelete="CASCADE"),
+        primary_key=True
+    )
+
+    is_online = db.Column(
+        db.Boolean,
+        nullable=False,
+        default=False,
+        index=True
+    )
+
+    last_seen_at = db.Column(
+        db.DateTime,
+        nullable=False,
+        default=datetime.utcnow,
+        index=True
+    )
+
+
+def presence_state(presence, now=None):
+
+    now = now or datetime.utcnow()
+
+    if not presence or not presence.last_seen_at:
+        return False
+
+    age = now - presence.last_seen_at
+
+    return bool(
+        presence.is_online
+        and age <= timedelta(
+            seconds=ONLINE_TIMEOUT_SECONDS
+        )
+    )
+
+
+def get_presence_map(user_ids):
+
+    if not user_ids:
+        return {}
+
+    rows = (
+        UserPresence.query
+        .filter(
+            UserPresence.user_id.in_(user_ids)
+        )
+        .all()
+    )
+
+    now = datetime.utcnow()
+
+    return {
+        row.user_id: {
+            "isOnline": presence_state(
+                row,
+                now
+            ),
+            "lastSeenAt": (
+                row.last_seen_at.isoformat()
+                if row.last_seen_at
+                else None
+            ),
+        }
+        for row in rows
+    }
+
+
+# =========================================================
 # CURRENT USER HELPER
 # =========================================================
 
@@ -55,9 +144,9 @@ def get_current_user():
 # PUBLIC PLAYER SERIALIZATION
 # =========================================================
 
-def player_to_dict(user):
+def player_to_dict(user, presence=None):
 
-    return {
+    result = {
         "id": user.id,
         "uid": user.uid,
         "username": user.username,
@@ -66,6 +155,19 @@ def player_to_dict(user):
         "level": user.level,
         "xp": user.xp
     }
+
+    if presence is not None:
+        result["isOnline"] = bool(
+            presence.get("isOnline")
+        )
+        result["online"] = bool(
+            presence.get("isOnline")
+        )
+        result["lastSeenAt"] = presence.get(
+            "lastSeenAt"
+        )
+
+    return result
 
 
 # =========================================================
@@ -112,6 +214,55 @@ def get_pending_request(user_id, other_user_id):
 
 
 # =========================================================
+# PRESENCE HEARTBEAT
+# =========================================================
+
+@friends_bp.route(
+    "/presence/heartbeat",
+    methods=["POST"]
+)
+def presence_heartbeat():
+
+    current_user = get_current_user()
+
+    if not current_user:
+        return jsonify({
+            "success": False,
+            "message": "Authentication required"
+        }), 401
+
+    now = datetime.utcnow()
+
+    presence = db.session.get(
+        UserPresence,
+        current_user.id
+    )
+
+    if not presence:
+
+        presence = UserPresence(
+            user_id=current_user.id,
+            is_online=True,
+            last_seen_at=now
+        )
+
+        db.session.add(presence)
+
+    else:
+
+        presence.is_online = True
+        presence.last_seen_at = now
+
+    db.session.commit()
+
+    return jsonify({
+        "success": True,
+        "isOnline": True,
+        "lastSeenAt": now.isoformat()
+    })
+
+
+# =========================================================
 # SEARCH PLAYERS
 # =========================================================
 
@@ -153,6 +304,10 @@ def search_players():
         )
     ).limit(20).all()
 
+    presence_map = get_presence_map(
+        [user.id for user in users]
+    )
+
     results = []
 
     for user in users:
@@ -189,7 +344,10 @@ def search_players():
 
                     request_direction = "RECEIVED"
 
-        player_data = player_to_dict(user)
+        player_data = player_to_dict(
+            user,
+            presence_map.get(user.id)
+        )
 
         player_data["friendStatus"] = request_status
         player_data["requestDirection"] = request_direction
@@ -764,15 +922,57 @@ def get_friends():
         Friendship.created_at.desc()
     ).all()
 
-    friends = [
-        friendship.to_dict()
+    friend_ids = [
+        friendship.friend_id
         for friendship in friendships
     ]
+
+    presence_map = get_presence_map(
+        friend_ids
+    )
+
+    friends = []
+
+    for friendship in friendships:
+
+        data = friendship.to_dict()
+
+        friend = data.get("friend")
+
+        presence = presence_map.get(
+            friendship.friend_id,
+            {
+                "isOnline": False,
+                "lastSeenAt": None,
+            }
+        )
+
+        if friend:
+            friend["isOnline"] = bool(
+                presence.get("isOnline")
+            )
+            friend["online"] = bool(
+                presence.get("isOnline")
+            )
+            friend["lastSeenAt"] = presence.get(
+                "lastSeenAt"
+            )
+
+        friends.append(data)
+
+    online_count = sum(
+        1
+        for item in friends
+        if item.get("friend", {}).get(
+            "isOnline", False
+        )
+    )
 
     return jsonify({
         "success": True,
         "friends": friends,
-        "count": len(friends)
+        "count": len(friends),
+        "onlineCount": online_count
     })
 
 

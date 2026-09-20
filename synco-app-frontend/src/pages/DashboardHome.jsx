@@ -7,13 +7,17 @@ import {
   MessageSquare,
   Pause,
   Play,
+  Search,
   Target,
+  UserPlus,
   Volume2,
   VolumeX,
+  X,
   Zap,
 } from 'lucide-react';
 
 import '../styles/pages/DashboardHome.css';
+import '../styles/pages/DashboardFriends.css';
 import AdminDashboard from './AdminDashboard';
 import { useAuth } from '../context/AuthContext';
 import killjoyRender from '../assets/killjoy-render.png';
@@ -39,8 +43,8 @@ const formatCount = (value) =>
 
 const showValue = (value) =>
   value === undefined ||
-  value === null ||
-  value === ''
+    value === null ||
+    value === ''
     ? '--'
     : value;
 
@@ -70,11 +74,23 @@ const getGreeting = () => {
 // =========================================================
 // CLIP GAME NAME RESOLUTION
 // =========================================================
+//
+// The dashboard supports both the new backend structure:
+//
+//   clip.game.name
+//   clip.gameName
+//   clip.gameId
+//
+// and older/alternate naming styles.
+//
+// If only gameId is returned, resolve it against /api/games.
+// =========================================================
 
 const resolveClipGameName = (
   clip,
   games = []
 ) => {
+
   const directName = firstDefined(
     clip?.gameName,
     clip?.game_name,
@@ -93,10 +109,11 @@ const resolveClipGameName = (
   );
 
   if (gameId) {
+
     const matchedGame = games.find(
       (game) =>
         String(game?.id) ===
-        String(gameId)
+          String(gameId)
     );
 
     const catalogName = firstDefined(
@@ -122,6 +139,7 @@ const normalizeClip = (
   clip,
   games = []
 ) => {
+
   if (!clip) {
     return clip;
   }
@@ -177,6 +195,7 @@ const normalizeClip = (
 // =========================================================
 
 const DashboardHome = () => {
+
   const { user } = useAuth();
 
   const accountRole =
@@ -193,7 +212,6 @@ const DashboardHome = () => {
   const [gameCatalog, setGameCatalog] = useState([]);
   const [profileGames, setProfileGames] = useState([]);
   const [selectedGame, setSelectedGame] = useState('');
-
   const [clips, setClips] = useState([]);
   const [activeClipIndex, setActiveClipIndex] = useState(0);
 
@@ -201,9 +219,24 @@ const DashboardHome = () => {
   const [commentText, setCommentText] = useState('');
   const [commentsLoading, setCommentsLoading] = useState(false);
   const [commentError, setCommentError] = useState('');
-
   const [playingStates, setPlayingStates] = useState({});
   const [mutedStates, setMutedStates] = useState({});
+
+  // =========================================================
+  // FRIENDS + PRESENCE
+  // =========================================================
+
+  const [friends, setFriends] = useState([]);
+  const [friendsLoading, setFriendsLoading] = useState(false);
+  const [friendsSidebarOpen, setFriendsSidebarOpen] = useState(false);
+  const [addFriendOpen, setAddFriendOpen] = useState(false);
+  const [friendSearch, setFriendSearch] = useState('');
+  const [friendSearchResults, setFriendSearchResults] = useState([]);
+  const [friendSearchLoading, setFriendSearchLoading] = useState(false);
+  const [friendActionLoading, setFriendActionLoading] = useState(null);
+  const [friendError, setFriendError] = useState('');
+  const [friendSuccess, setFriendSuccess] = useState('');
+  const [onlineCount, setOnlineCount] = useState(0);
 
   const videoRefs = useRef({});
   const activeClipIdRef = useRef(null);
@@ -219,21 +252,363 @@ const DashboardHome = () => {
 
 
   // =========================================================
+  // FRIEND HELPERS
+  // =========================================================
+
+  const getFriendFromItem = (item) =>
+    item?.friend || item || {};
+
+  const getFriendName = (friend) =>
+    firstDefined(
+      friend?.username,
+      friend?.name,
+      'PLAYER'
+    );
+
+  const getFriendInitial = (friend) =>
+    String(
+      getFriendName(friend)
+    )
+      .trim()
+      .charAt(0)
+      .toUpperCase() || 'P';
+
+  const isFriendOnline = (friend) =>
+    Boolean(
+      friend?.isOnline ??
+      friend?.online ??
+      false
+    );
+
+  const loadFriends = async () => {
+
+    try {
+
+      setFriendsLoading(true);
+
+      const response = await fetch(
+        `${API_URL}/api/friends`,
+        {
+          method: 'GET',
+          credentials: 'include',
+          headers: {
+            Accept: 'application/json',
+          },
+        }
+      );
+
+      const data = await response.json().catch(
+        () => ({})
+      );
+
+      if (!response.ok) {
+        throw new Error(
+          data.message ||
+          'Unable to load friends.'
+        );
+      }
+
+      setFriends(data.friends || []);
+      setOnlineCount(
+        Number(data.onlineCount || 0)
+      );
+
+      setFriendError('');
+
+    } catch (error) {
+
+      console.error(
+        'Failed to load friends:',
+        error
+      );
+
+      setFriendError(
+        error.message ||
+        'Unable to load friends.'
+      );
+
+    } finally {
+
+      setFriendsLoading(false);
+
+    }
+  };
+
+
+  const sendPresenceHeartbeat = async () => {
+
+    try {
+
+      await fetch(
+        `${API_URL}/api/friends/presence/heartbeat`,
+        {
+          method: 'POST',
+          credentials: 'include',
+          headers: {
+            Accept: 'application/json',
+          },
+        }
+      );
+
+    } catch (error) {
+
+      console.debug(
+        'Presence heartbeat failed:',
+        error
+      );
+
+    }
+  };
+
+
+  const searchPlayers = async (query) => {
+
+    const trimmed = String(query || '').trim();
+
+    if (trimmed.length < 2) {
+      setFriendSearchResults([]);
+      setFriendSearchLoading(false);
+      return;
+    }
+
+    try {
+
+      setFriendSearchLoading(true);
+      setFriendError('');
+
+      const response = await fetch(
+        `${API_URL}/api/friends/search?q=${encodeURIComponent(trimmed)}`,
+        {
+          method: 'GET',
+          credentials: 'include',
+          headers: {
+            Accept: 'application/json',
+          },
+        }
+      );
+
+      const data = await response.json().catch(
+        () => ({})
+      );
+
+      if (!response.ok) {
+        throw new Error(
+          data.message ||
+          'Unable to search players.'
+        );
+      }
+
+      setFriendSearchResults(
+        data.players || []
+      );
+
+    } catch (error) {
+
+      console.error(
+        'Friend search failed:',
+        error
+      );
+
+      setFriendSearchResults([]);
+      setFriendError(
+        error.message ||
+        'Unable to search players.'
+      );
+
+    } finally {
+
+      setFriendSearchLoading(false);
+
+    }
+  };
+
+
+  const sendFriendRequest = async (player) => {
+
+    if (!player?.id) {
+      return;
+    }
+
+    try {
+
+      setFriendActionLoading(
+        player.id
+      );
+
+      setFriendError('');
+      setFriendSuccess('');
+
+      const response = await fetch(
+        `${API_URL}/api/friends/request`,
+        {
+          method: 'POST',
+          credentials: 'include',
+          headers: {
+            'Content-Type': 'application/json',
+            Accept: 'application/json',
+          },
+          body: JSON.stringify({
+            uid: player.uid,
+          }),
+        }
+      );
+
+      const data = await response.json().catch(
+        () => ({})
+      );
+
+      if (!response.ok) {
+        throw new Error(
+          data.message ||
+          'Unable to send friend request.'
+        );
+      }
+
+      setFriendSearchResults((previous) =>
+        previous.map((item) =>
+          item.id === player.id
+            ? {
+                ...item,
+                friendStatus: 'PENDING',
+                requestDirection: 'SENT',
+              }
+            : item
+        )
+      );
+
+      setFriendSuccess(
+        `Friend request sent to ${
+          getFriendName(player)
+        }.`
+      );
+
+    } catch (error) {
+
+      console.error(
+        'Send friend request failed:',
+        error
+      );
+
+      setFriendError(
+        error.message ||
+        'Unable to send friend request.'
+      );
+
+    } finally {
+
+      setFriendActionLoading(null);
+
+    }
+  };
+
+
+  // =========================================================
+  // FRIEND PRESENCE
+  // =========================================================
+
+  useEffect(() => {
+
+    if (isAdmin) {
+      return undefined;
+    }
+
+    let cancelled = false;
+
+    const refresh = async () => {
+
+      await Promise.all([
+        sendPresenceHeartbeat(),
+        loadFriends(),
+      ]);
+
+      if (cancelled) {
+        return;
+      }
+    };
+
+    refresh();
+
+    const interval = setInterval(
+      refresh,
+      15000
+    );
+
+    const handleVisibilityChange = () => {
+
+      if (
+        document.visibilityState === 'visible'
+      ) {
+        sendPresenceHeartbeat();
+        loadFriends();
+      }
+
+    };
+
+    document.addEventListener(
+      'visibilitychange',
+      handleVisibilityChange
+    );
+
+    return () => {
+
+      cancelled = true;
+      clearInterval(interval);
+
+      document.removeEventListener(
+        'visibilitychange',
+        handleVisibilityChange
+      );
+
+    };
+
+  }, [isAdmin]);
+
+
+  // =========================================================
+  // FRIEND SEARCH DEBOUNCE
+  // =========================================================
+
+  useEffect(() => {
+
+    if (!addFriendOpen) {
+      setFriendSearchResults([]);
+      return undefined;
+    }
+
+    const timer = setTimeout(() => {
+      searchPlayers(friendSearch);
+    }, 300);
+
+    return () => {
+      clearTimeout(timer);
+    };
+
+  }, [
+    addFriendOpen,
+    friendSearch,
+  ]);
+
+
+  // =========================================================
   // LOAD DASHBOARD DATA
   // =========================================================
 
   useEffect(() => {
+
     if (isAdmin) {
       return;
     }
 
     const loadDashboardData = async () => {
+
       try {
+
         const [
           catalogResponse,
           profileResponse,
           clipsResponse,
         ] = await Promise.all([
+
           fetch(
             `${API_URL}/api/games`,
             {
@@ -263,6 +638,7 @@ const DashboardHome = () => {
           ).catch(() => ({
             ok: false,
           })),
+
         ]);
 
         // =====================================================
@@ -272,6 +648,7 @@ const DashboardHome = () => {
         let loadedGameCatalog = [];
 
         if (catalogResponse?.ok) {
+
           const catalogData =
             await catalogResponse.json();
 
@@ -288,6 +665,7 @@ const DashboardHome = () => {
         // =====================================================
 
         if (profileResponse?.ok) {
+
           const profileData =
             await profileResponse.json();
 
@@ -301,6 +679,7 @@ const DashboardHome = () => {
         // =====================================================
 
         if (clipsResponse?.ok) {
+
           const clipsData =
             await clipsResponse.json();
 
@@ -319,15 +698,20 @@ const DashboardHome = () => {
 
           setActiveClipIndex(0);
         }
+
       } catch (error) {
+
         console.error(
           'Failed to load dashboard data:',
           error
         );
+
       }
+
     };
 
     loadDashboardData();
+
   }, [isAdmin]);
 
 
@@ -336,12 +720,14 @@ const DashboardHome = () => {
   // =========================================================
 
   useEffect(() => {
+
     if (!gameCatalog.length || !clips.length) {
       return;
     }
 
     setClips((previousClips) =>
       previousClips.map((clip) => {
+
         const resolvedGameName =
           resolveClipGameName(
             clip,
@@ -361,11 +747,13 @@ const DashboardHome = () => {
         };
       })
     );
+
   }, [gameCatalog]);
 
 
   // =========================================================
   // GAME LIST + DEFAULT SELECTED GAME
+  // "Your Games" = only the games on the player's profile.
   // =========================================================
 
   const gameOptions = useMemo(
@@ -378,8 +766,11 @@ const DashboardHome = () => {
 
 
   useEffect(() => {
+
     if (!profileGames.length) {
+
       setSelectedGame('');
+
       return;
     }
 
@@ -390,10 +781,12 @@ const DashboardHome = () => {
           game.gameName === selectedGame
       )
     ) {
+
       setSelectedGame(
         profileGames[0].gameName
       );
     }
+
   }, [
     profileGames,
     selectedGame,
@@ -408,24 +801,32 @@ const DashboardHome = () => {
 
 
   // =========================================================
-  // COMMENTS FOR ACTIVE CLIP
+  // COMMENTS FOR THE ACTIVE CLIP
   // =========================================================
 
   useEffect(() => {
+
     if (!activeClipId) {
+
       setComments([]);
+
       return undefined;
     }
 
     let cancelled = false;
 
     const loadComments = async () => {
+
       setComments([]);
+
       setCommentText('');
+
       setCommentError('');
+
       setCommentsLoading(true);
 
       try {
+
         const response =
           await fetch(
             `${API_URL}/api/profile/clips/${activeClipId}/comments`,
@@ -441,6 +842,7 @@ const DashboardHome = () => {
           await response.json();
 
         if (!response.ok) {
+
           throw new Error(
             data.message ||
             'Unable to load comments.'
@@ -448,29 +850,42 @@ const DashboardHome = () => {
         }
 
         if (!cancelled) {
+
           setComments(
             data.comments || []
           );
         }
+
       } catch (error) {
+
         if (!cancelled) {
+
           setCommentError(
             error.message ||
             'Unable to load comments.'
           );
         }
+
       } finally {
+
         if (!cancelled) {
-          setCommentsLoading(false);
+
+          setCommentsLoading(
+            false
+          );
         }
+
       }
+
     };
 
     loadComments();
 
     return () => {
+
       cancelled = true;
     };
+
   }, [activeClipId]);
 
 
@@ -479,10 +894,14 @@ const DashboardHome = () => {
   // =========================================================
 
   useEffect(() => {
+
     clips.forEach(
       (clip, index) => {
+
         const video =
-          videoRefs.current[clip.id];
+          videoRefs.current[
+          clip.id
+          ];
 
         if (!video) {
           return;
@@ -491,58 +910,69 @@ const DashboardHome = () => {
         if (
           index === activeClipIndex
         ) {
+
           video
             .play()
             .catch(() => {
-              setPlayingStates((prev) => ({
-                ...prev,
+              setPlayingStates((previous) => ({
+                ...previous,
                 [clip.id]: false,
               }));
             });
+
         } else {
+
           video.pause();
+
+          setPlayingStates((previous) => ({
+            ...previous,
+            [clip.id]: false,
+          }));
         }
+
       }
     );
+
   }, [
     clips,
     activeClipIndex,
   ]);
 
 
-  // =========================================================
-  // TOGGLE PLAYBACK
-  // =========================================================
-
   const togglePlayback = (
     clipId
   ) => {
+
     const video =
-      videoRefs.current[clipId];
+      videoRefs.current[
+      clipId
+      ];
 
     if (!video) {
       return;
     }
 
     if (video.paused) {
+
       video
         .play()
-        .catch(() => {});
+        .catch(() => { });
+
     } else {
+
       video.pause();
     }
   };
 
 
-  // =========================================================
-  // TOGGLE MUTE
-  // =========================================================
-
   const toggleMute = (
     clipId
   ) => {
+
     const video =
-      videoRefs.current[clipId];
+      videoRefs.current[
+      clipId
+      ];
 
     if (!video) {
       return;
@@ -551,16 +981,12 @@ const DashboardHome = () => {
     const nextMuted =
       !video.muted;
 
-    video.muted =
-      nextMuted;
+    video.muted = nextMuted;
 
-    setMutedStates(
-      (prev) => ({
-        ...prev,
-        [clipId]:
-          nextMuted,
-      })
-    );
+    setMutedStates((previous) => ({
+      ...previous,
+      [clipId]: nextMuted,
+    }));
   };
 
 
@@ -569,6 +995,7 @@ const DashboardHome = () => {
   // =========================================================
 
   const nextClip = () => {
+
     if (!clips.length) {
       return;
     }
@@ -583,6 +1010,7 @@ const DashboardHome = () => {
 
 
   const prevClip = () => {
+
     if (!clips.length) {
       return;
     }
@@ -603,7 +1031,9 @@ const DashboardHome = () => {
   const handleLikeClip = async (
     clipId
   ) => {
+
     try {
+
       const response =
         await fetch(
           `${API_URL}/api/profile/clips/${clipId}/like`,
@@ -620,6 +1050,7 @@ const DashboardHome = () => {
         await response.json();
 
       if (!response.ok) {
+
         throw new Error(
           data.message ||
           'Unable to like this clip.'
@@ -632,20 +1063,22 @@ const DashboardHome = () => {
             (clip) =>
               clip.id === clipId
                 ? {
-                    ...clip,
+                  ...clip,
 
-                    isLiked:
-                      Boolean(
-                        data.liked
-                      ),
+                  isLiked:
+                    Boolean(
+                      data.liked
+                    ),
 
-                    likes:
-                      data.likes,
-                  }
+                  likes:
+                    data.likes,
+                }
                 : clip
           )
       );
+
     } catch (error) {
+
       console.error(
         'Like failed:',
         error
@@ -659,10 +1092,12 @@ const DashboardHome = () => {
   // =========================================================
 
   const submitComment = async () => {
+
     if (
       !activeClip ||
       !commentText.trim()
     ) {
+
       return;
     }
 
@@ -670,6 +1105,7 @@ const DashboardHome = () => {
       activeClip.id;
 
     try {
+
       const response =
         await fetch(
           `${API_URL}/api/profile/clips/${clipId}/comments`,
@@ -695,6 +1131,7 @@ const DashboardHome = () => {
         await response.json();
 
       if (!response.ok) {
+
         throw new Error(
           data.message ||
           'Unable to post comment.'
@@ -707,14 +1144,14 @@ const DashboardHome = () => {
             (clip) =>
               clip.id === clipId
                 ? {
-                    ...clip,
+                  ...clip,
 
-                    comments:
-                      (
-                        clip.comments ||
-                        0
-                      ) + 1,
-                  }
+                  comments:
+                    (
+                      clip.comments ||
+                      0
+                    ) + 1,
+                }
                 : clip
           )
       );
@@ -723,6 +1160,7 @@ const DashboardHome = () => {
         activeClipIdRef.current ===
         clipId
       ) {
+
         setComments(
           (currentComments) => [
             ...currentComments,
@@ -731,9 +1169,12 @@ const DashboardHome = () => {
         );
 
         setCommentText('');
+
         setCommentError('');
       }
+
     } catch (error) {
+
       setCommentError(
         error.message ||
         'Unable to post comment.'
@@ -745,11 +1186,13 @@ const DashboardHome = () => {
   const handleCommentKeyDown = (
     event
   ) => {
+
     if (
       event.key === 'Enter' &&
       !event.shiftKey &&
       !event.nativeEvent.isComposing
     ) {
+
       event.preventDefault();
 
       submitComment();
@@ -762,6 +1205,7 @@ const DashboardHome = () => {
   // =========================================================
 
   if (isAdmin) {
+
     return (
       <AdminDashboard />
     );
@@ -773,17 +1217,18 @@ const DashboardHome = () => {
   // =========================================================
 
   return (
+
     <div className="bento-dashboard-wrapper">
 
-      {/* =====================================================
-          COLUMN 1: MAIN LEFT
-          ===================================================== */}
+      {/* =========================================
+          COLUMN 2: MAIN LEFT
+          ========================================= */}
 
       <div className="col-main-left">
 
-        {/* ===================================================
+        {/* =========================================
             GREETINGS
-            =================================================== */}
+            ========================================= */}
 
         <div className="wire-block greetings-pill">
 
@@ -793,19 +1238,21 @@ const DashboardHome = () => {
               margin: 0,
             }}
           >
+
             {getGreeting()},{' '}
 
             <span className="text-highlight font-bold">
               {gametag}
             </span>
+
           </h2>
 
         </div>
 
 
-        {/* ===================================================
+        {/* =========================================
             FEATURED TOURNAMENT
-            =================================================== */}
+            ========================================= */}
 
         <div className="wire-block tournaments-card">
 
@@ -831,11 +1278,10 @@ const DashboardHome = () => {
 
           </p>
 
-          <button
-            type="button"
-            className="join-btn"
-          >
+          <button className="join-btn">
+
             Register Roster
+
           </button>
 
           <img
@@ -847,9 +1293,9 @@ const DashboardHome = () => {
         </div>
 
 
-        {/* ===================================================
+        {/* =========================================
             SYNCO MOMENTS
-            =================================================== */}
+            ========================================= */}
 
         <div className="bento-card highlights-section">
 
@@ -859,16 +1305,8 @@ const DashboardHome = () => {
 
           </h3>
 
-
-          {/* =================================================
-              GAME TAG
-
-              IMPORTANT:
-              This is deliberately outside the coverflow
-              container so it does not sit on top of the video.
-              ================================================= */}
-
           {activeClip && (
+
             <div className="clip-game-tag">
 
               {
@@ -880,12 +1318,8 @@ const DashboardHome = () => {
               }
 
             </div>
+
           )}
-
-
-          {/* =================================================
-              COVERFLOW
-              ================================================= */}
 
           <div className="coverflow-container">
 
@@ -893,9 +1327,9 @@ const DashboardHome = () => {
 
               <>
 
-                {/* =============================================
-                    LEFT INFORMATION OVERLAY
-                    ============================================= */}
+                {/* =====================================
+                    LEFT OVERLAY
+                    ===================================== */}
 
                 <div className="coverflow-left-overlay">
 
@@ -904,7 +1338,6 @@ const DashboardHome = () => {
                     {activeClip.title}
 
                   </h2>
-
 
                   <div className="clip-description">
 
@@ -917,10 +1350,9 @@ const DashboardHome = () => {
 
                   </div>
 
-
-                  {/* =========================================
+                  {/* =================================
                       LIKE BUTTON
-                      ========================================= */}
+                      ================================= */}
 
                   <div className="clip-actions">
 
@@ -929,7 +1361,6 @@ const DashboardHome = () => {
 
                       onClick={(event) => {
                         event.stopPropagation();
-
                         handleLikeClip(
                           activeClip.id
                         );
@@ -975,9 +1406,10 @@ const DashboardHome = () => {
                 </div>
 
 
-                {/* =============================================
-                    VIDEO COVERFLOW
-                    ============================================= */}
+
+                {/* =====================================
+                    VIDEOS
+                    ===================================== */}
 
                 <div className="coverflow-track">
 
@@ -987,13 +1419,14 @@ const DashboardHome = () => {
                       let positionClass =
                         'clip-hidden';
 
-
                       if (
                         index ===
                         activeClipIndex
                       ) {
+
                         positionClass =
                           'clip-center';
+
                       } else if (
                         index ===
                         (
@@ -1003,8 +1436,10 @@ const DashboardHome = () => {
                         ) %
                         clips.length
                       ) {
+
                         positionClass =
                           'clip-left';
+
                       } else if (
                         index ===
                         (
@@ -1013,17 +1448,17 @@ const DashboardHome = () => {
                         ) %
                         clips.length
                       ) {
+
                         positionClass =
                           'clip-right';
                       }
-
 
                       const isCenter =
                         index ===
                         activeClipIndex;
 
-
                       return (
+
                         <div
                           key={clip.id}
                           className={`clip-card ${positionClass}`}
@@ -1031,15 +1466,20 @@ const DashboardHome = () => {
 
                           <video
                             ref={(element) => {
+
                               if (element) {
+
                                 videoRefs.current[
                                   clip.id
                                 ] = element;
+
                               } else {
+
                                 delete videoRefs.current[
                                   clip.id
                                 ];
                               }
+
                             }}
 
                             src={clip.url}
@@ -1051,6 +1491,7 @@ const DashboardHome = () => {
                             }
 
                             loop
+
                             playsInline
 
                             preload={
@@ -1061,47 +1502,36 @@ const DashboardHome = () => {
 
                             onPlay={() => {
                               setPlayingStates(
-                                (prev) => ({
-                                  ...prev,
-                                  [clip.id]:
-                                    true,
+                                (previous) => ({
+                                  ...previous,
+                                  [clip.id]: true,
                                 })
                               );
                             }}
 
                             onPause={() => {
                               setPlayingStates(
-                                (prev) => ({
-                                  ...prev,
-                                  [clip.id]:
-                                    false,
+                                (previous) => ({
+                                  ...previous,
+                                  [clip.id]: false,
                                 })
                               );
                             }}
                           />
 
-
-                          {/* =================================
-                              ACTIVE VIDEO CONTROLS
-                              ================================= */}
-
                           {isCenter && (
-                            <>
 
-                              {/* PLAY / PAUSE */}
+                            <>
 
                               <button
                                 type="button"
                                 className="video-control play-control"
-
                                 onClick={(event) => {
                                   event.stopPropagation();
-
                                   togglePlayback(
                                     clip.id
                                   );
                                 }}
-
                                 aria-label={
                                   playingStates[
                                     clip.id
@@ -1111,33 +1541,25 @@ const DashboardHome = () => {
                                 }
                               >
 
-                                {
-                                  playingStates[
-                                    clip.id
-                                  ] ? (
-                                    <Pause size={28} />
-                                  ) : (
-                                    <Play size={28} />
-                                  )
-                                }
+                                {playingStates[
+                                  clip.id
+                                ] ? (
+                                  <Pause size={28} />
+                                ) : (
+                                  <Play size={28} />
+                                )}
 
                               </button>
-
-
-                              {/* MUTE / UNMUTE */}
 
                               <button
                                 type="button"
                                 className="video-control mute-control"
-
                                 onClick={(event) => {
                                   event.stopPropagation();
-
                                   toggleMute(
                                     clip.id
                                   );
                                 }}
-
                                 aria-label={
                                   mutedStates[
                                     clip.id
@@ -1147,22 +1569,22 @@ const DashboardHome = () => {
                                 }
                               >
 
-                                {
-                                  mutedStates[
-                                    clip.id
-                                  ] ? (
-                                    <VolumeX size={17} />
-                                  ) : (
-                                    <Volume2 size={17} />
-                                  )
-                                }
+                                {mutedStates[
+                                  clip.id
+                                ] ? (
+                                  <VolumeX size={17} />
+                                ) : (
+                                  <Volume2 size={17} />
+                                )}
 
                               </button>
 
                             </>
+
                           )}
 
                         </div>
+
                       );
                     }
                   )}
@@ -1170,9 +1592,9 @@ const DashboardHome = () => {
                 </div>
 
 
-                {/* =============================================
-                    RIGHT COMMENTS PANEL
-                    ============================================= */}
+                {/* =====================================
+                    RIGHT OVERLAY — COMMENTS
+                    ===================================== */}
 
                 <div className="coverflow-right-overlay comments-panel">
 
@@ -1180,35 +1602,39 @@ const DashboardHome = () => {
 
                     <MessageSquare size={14} />
 
-                    <span>
-                      Comments (
-                      {activeClip.comments || 0}
-                      )
-                    </span>
+                    Comments (
+                    {activeClip.comments || 0}
+                    )
 
                   </h4>
-
 
                   <div className="comments-list">
 
                     {commentsLoading && (
-                      <p className="empty-comms">
-                        Loading comments...
-                      </p>
-                    )}
 
+                      <p className="empty-comms">
+
+                        Loading comments...
+
+                      </p>
+
+                    )}
 
                     {!commentsLoading &&
                       !commentError &&
                       comments.length === 0 && (
-                        <p className="empty-comms">
-                          No comments yet
-                        </p>
-                      )}
 
+                        <p className="empty-comms">
+
+                          No comments yet
+
+                        </p>
+
+                      )}
 
                     {comments.map(
                       (comment) => (
+
                         <div
                           key={comment.id}
                           className="comment-item"
@@ -1223,35 +1649,33 @@ const DashboardHome = () => {
                           {comment.content}
 
                         </div>
+
                       )
                     )}
 
-
                     {commentError && (
+
                       <p
                         className="empty-comms"
+
                         style={{
                           color: '#ff4655',
                         }}
                       >
+
                         {commentError}
+
                       </p>
+
                     )}
 
                   </div>
-
-
-                  {/* COMMENT INPUT */}
 
                   <input
                     type="text"
                     placeholder="Add a comment"
                     className="comment-input"
-
-                    value={
-                      commentText
-                    }
-
+                    value={commentText}
                     maxLength={1000}
 
                     onChange={(event) =>
@@ -1263,7 +1687,6 @@ const DashboardHome = () => {
                     onKeyDown={
                       handleCommentKeyDown
                     }
-
                     onClick={(event) =>
                       event.stopPropagation()
                     }
@@ -1272,22 +1695,21 @@ const DashboardHome = () => {
                 </div>
 
 
-                {/* =============================================
-                    PREVIOUS / NEXT
-                    ============================================= */}
+                {/* =====================================
+                    NAVIGATION
+                    ===================================== */}
 
                 {clips.length > 1 && (
+
                   <>
 
                     <button
                       type="button"
                       className="nav-btn prev-btn"
-
                       onClick={(event) => {
                         event.stopPropagation();
                         prevClip();
                       }}
-
                       aria-label="Previous clip"
                     >
 
@@ -1295,16 +1717,13 @@ const DashboardHome = () => {
 
                     </button>
 
-
                     <button
                       type="button"
                       className="nav-btn next-btn"
-
                       onClick={(event) => {
                         event.stopPropagation();
                         nextClip();
                       }}
-
                       aria-label="Next clip"
                     >
 
@@ -1313,6 +1732,7 @@ const DashboardHome = () => {
                     </button>
 
                   </>
+
                 )}
 
               </>
@@ -1341,15 +1761,15 @@ const DashboardHome = () => {
       </div>
 
 
-      {/* =====================================================
-          COLUMN 2: MAIN RIGHT
-          ===================================================== */}
+      {/* =========================================
+          COLUMN 3: MAIN RIGHT
+          ========================================= */}
 
       <div className="col-main-right">
 
-        {/* ===================================================
+        {/* =========================================
             PREMIUM BANNER
-            =================================================== */}
+            ========================================= */}
 
         <div className="wire-block premium-banner-pill">
 
@@ -1373,15 +1793,11 @@ const DashboardHome = () => {
         </div>
 
 
-        {/* ===================================================
+        {/* =========================================
             GAMES + PROMO
-            =================================================== */}
+            ========================================= */}
 
         <div className="mid-grid-row">
-
-          {/* ===============================================
-              YOUR GAMES
-              =============================================== */}
 
           <div className="bento-card game-selector-card">
 
@@ -1390,7 +1806,6 @@ const DashboardHome = () => {
               Your Games
 
             </h3>
-
 
             <div className="game-list">
 
@@ -1401,14 +1816,12 @@ const DashboardHome = () => {
 
                     <button
                       type="button"
-
                       key={game}
 
-                      className={`game-option ${
-                        selectedGame === game
+                      className={`game-option ${selectedGame === game
                           ? 'active'
                           : ''
-                      }`}
+                        }`}
 
                       onClick={() =>
                         setSelectedGame(
@@ -1442,11 +1855,6 @@ const DashboardHome = () => {
 
           </div>
 
-
-          {/* ===============================================
-              PROMOTIONAL BANNER
-              =============================================== */}
-
           <div className="wire-block synco-promo-card">
 
             <h3
@@ -1470,9 +1878,9 @@ const DashboardHome = () => {
         </div>
 
 
-        {/* ===================================================
+        {/* =========================================
             SYNCO RATING
-            =================================================== */}
+            ========================================= */}
 
         <div className="bento-card stat-meter-card">
 
@@ -1491,7 +1899,6 @@ const DashboardHome = () => {
 
           </div>
 
-
           <div className="stat-meter-container">
 
             <div className="stat-glowing-blob"></div>
@@ -1506,13 +1913,14 @@ const DashboardHome = () => {
 
           </div>
 
-
           <div className="stat-breakdown">
 
             <div className="stat-pill">
 
               <span className="label">
+
                 Class
+
               </span>
 
               <span className="value">
@@ -1525,11 +1933,12 @@ const DashboardHome = () => {
 
             </div>
 
-
             <div className="stat-pill">
 
               <span className="label">
+
                 Win R.
+
               </span>
 
               <span className="value text-emerald">
@@ -1542,11 +1951,12 @@ const DashboardHome = () => {
 
             </div>
 
-
             <div className="stat-pill">
 
               <span className="label">
+
                 K/D
+
               </span>
 
               <span className="value">
@@ -1566,36 +1976,464 @@ const DashboardHome = () => {
       </div>
 
 
-      {/* =====================================================
-          COLUMN 3: FAR RIGHT SIDEBAR
-          ===================================================== */}
+      {/* =========================================
+          COLUMN 4: FRIENDS / SOCIAL RIGHT SIDEBAR
+          ========================================= */}
 
-      <div className="col-far-right">
+      <div className="col-far-right synco-friends-anchor">
 
-        <div className="wire-block social-bar-top">
+        <aside
+          className={`synco-friends-sidebar ${
+            friendsSidebarOpen
+              ? 'is-open'
+              : 'is-collapsed'
+          }`}
+        >
 
-          <span className="vertical-text">
+          {/* ---------------------------------------------------
+              TOGGLE
+          --------------------------------------------------- */}
 
-            social right bar
+          <button
+            type="button"
+            className="synco-friends-toggle"
+            onClick={() =>
+              setFriendsSidebarOpen(
+                (previous) => !previous
+              )
+            }
+            aria-label={
+              friendsSidebarOpen
+                ? 'Collapse friends sidebar'
+                : 'Open friends sidebar'
+            }
+          >
 
-          </span>
+            {friendsSidebarOpen ? (
+              <ChevronRight size={16} />
+            ) : (
+              <ChevronLeft size={16} />
+            )}
 
-        </div>
+          </button>
 
 
-        <div className="wire-block social-bar-bottom">
+          {/* ---------------------------------------------------
+              COLLAPSED RAIL
+          --------------------------------------------------- */}
 
-          <span className="vertical-text">
+          {!friendsSidebarOpen && (
 
-            discord right bar
+            <div className="synco-friends-collapsed">
 
-          </span>
+              <div className="synco-friends-collapsed-header">
+                <span
+                  className="synco-friends-online-count"
+                  title={`${onlineCount} online`}
+                >
+                  {onlineCount}
+                </span>
+              </div>
 
-        </div>
+              <div className="synco-friends-avatar-stack">
+
+                {friends.slice(0, 8).map((item) => {
+
+                  const friend =
+                    getFriendFromItem(item);
+
+                  const online =
+                    isFriendOnline(friend);
+
+                  const name =
+                    getFriendName(friend);
+
+                  return (
+
+                    <div
+                      key={
+                        friend.id ??
+                        item.id
+                      }
+                      className="synco-friend-mini"
+                      title={`${name} · ${online ? 'Online' : 'Offline'}`}
+                    >
+
+                      <div className="synco-friend-mini-avatar">
+
+                        {friend.avatar ? (
+
+                          <img
+                            src={friend.avatar}
+                            alt={name}
+                          />
+
+                        ) : (
+
+                          <span>
+                            {getFriendInitial(
+                              friend
+                            )}
+                          </span>
+
+                        )}
+
+                      </div>
+
+                      <span
+                        className={`synco-presence-dot ${
+                          online
+                            ? 'online'
+                            : 'offline'
+                        }`}
+                      />
+
+                    </div>
+
+                  );
+                })}
+
+              </div>
+
+              <button
+                type="button"
+                className="synco-add-friend-mini"
+                onClick={() => {
+                  setFriendsSidebarOpen(true);
+                  setAddFriendOpen(true);
+                  setFriendError('');
+                  setFriendSuccess('');
+                }}
+                aria-label="Add friend"
+                title="Add friend"
+              >
+                <UserPlus size={16} />
+              </button>
+
+            </div>
+
+          )}
+
+
+          {/* ---------------------------------------------------
+              OPEN SIDEBAR
+          --------------------------------------------------- */}
+
+          {friendsSidebarOpen && (
+
+            <div className="synco-friends-open">
+
+              <div className="synco-friends-panel-header">
+
+                <div>
+
+                  <p className="synco-friends-kicker">
+                    SOCIAL
+                  </p>
+
+                  <h3>
+                    Friends
+                  </h3>
+
+                  <p className="synco-friends-meta">
+                    {onlineCount} online · {friends.length} total
+                  </p>
+
+                </div>
+
+                <button
+                  type="button"
+                  className="synco-friends-close-button"
+                  onClick={() =>
+                    setFriendsSidebarOpen(false)
+                  }
+                  aria-label="Close friends sidebar"
+                >
+                  <X size={16} />
+                </button>
+
+              </div>
+
+
+              <button
+                type="button"
+                className={`synco-add-friend-button ${
+                  addFriendOpen
+                    ? 'active'
+                    : ''
+                }`}
+                onClick={() => {
+                  setAddFriendOpen(
+                    (previous) => !previous
+                  );
+                  setFriendError('');
+                  setFriendSuccess('');
+                }}
+              >
+
+                <UserPlus size={15} />
+
+                <span>
+                  Add Friend
+                </span>
+
+              </button>
+
+
+              {addFriendOpen && (
+
+                <div className="synco-add-friend-section">
+
+                  <div className="synco-friend-search-wrap">
+
+                    <Search size={15} />
+
+                    <input
+                      type="text"
+                      value={friendSearch}
+                      onChange={(event) =>
+                        setFriendSearch(
+                          event.target.value
+                        )
+                      }
+                      placeholder="Username or SYNCO UID"
+                      autoComplete="off"
+                    />
+
+                  </div>
+
+                  {friendSearchLoading && (
+                    <p className="synco-friends-status-text">
+                      Searching players...
+                    </p>
+                  )}
+
+                  {!friendSearchLoading &&
+                    friendSearch.trim().length >= 2 &&
+                    friendSearchResults.length === 0 && (
+                      <p className="synco-friends-status-text">
+                        No players found.
+                      </p>
+                    )}
+
+                  {friendSearchResults.length > 0 && (
+
+                    <div className="synco-friend-search-results">
+
+                      {friendSearchResults.map((player) => {
+
+                        const playerName =
+                          getFriendName(player);
+
+                        const playerOnline =
+                          isFriendOnline(player);
+
+                        const status =
+                          player.friendStatus;
+
+                        const isSending =
+                          friendActionLoading ===
+                          player.id;
+
+                        return (
+
+                          <div
+                            key={player.id}
+                            className="synco-friend-search-result"
+                          >
+
+                            <div className="synco-friend-search-avatar">
+
+                              {player.avatar ? (
+                                <img
+                                  src={player.avatar}
+                                  alt={playerName}
+                                />
+                              ) : (
+                                <span>
+                                  {getFriendInitial(player)}
+                                </span>
+                              )}
+
+                            </div>
+
+                            <div className="synco-friend-search-info">
+
+                              <p>
+                                {playerName}
+                              </p>
+
+                              <span>
+                                {player.uid || 'SYNCO PLAYER'}
+                              </span>
+
+                            </div>
+
+                            <button
+                              type="button"
+                              className="synco-friend-search-action"
+                              disabled={
+                                isSending ||
+                                status === 'FRIENDS' ||
+                                (
+                                  status === 'PENDING' &&
+                                  player.requestDirection === 'SENT'
+                                )
+                              }
+                              onClick={() =>
+                                sendFriendRequest(player)
+                              }
+                            >
+                              {isSending
+                                ? '...'
+                                : status === 'FRIENDS'
+                                  ? 'Friends'
+                                  : status === 'PENDING'
+                                    ? player.requestDirection === 'RECEIVED'
+                                      ? 'Pending'
+                                      : 'Sent'
+                                    : 'Add'}
+                            </button>
+
+                          </div>
+
+                        );
+                      })}
+
+                    </div>
+
+                  )}
+
+                  {friendError && (
+                    <p className="synco-friends-message error">
+                      {friendError}
+                    </p>
+                  )}
+
+                  {friendSuccess && (
+                    <p className="synco-friends-message success">
+                      {friendSuccess}
+                    </p>
+                  )}
+
+                </div>
+
+              )}
+
+
+              <div className="synco-friends-list-header">
+
+                <span>
+                  Your Friends
+                </span>
+
+                {friendsLoading && (
+                  <span className="synco-friends-refreshing">
+                    Updating...
+                  </span>
+                )}
+
+              </div>
+
+
+              <div className="synco-friends-list">
+
+                {friends.length === 0 && !friendsLoading && (
+
+                  <div className="synco-friends-empty">
+
+                    <div className="synco-friends-empty-icon">
+                      <UserPlus size={17} />
+                    </div>
+
+                    <p>
+                      No friends yet
+                    </p>
+
+                    <span>
+                      Add players using their username or SYNCO UID.
+                    </span>
+
+                  </div>
+
+                )}
+
+                {friends.map((item) => {
+
+                  const friend =
+                    getFriendFromItem(item);
+
+                  const online =
+                    isFriendOnline(friend);
+
+                  const name =
+                    getFriendName(friend);
+
+                  return (
+
+                    <div
+                      key={friend.id ?? item.id}
+                      className="synco-friend-row"
+                    >
+
+                      <div className="synco-friend-avatar">
+
+                        {friend.avatar ? (
+
+                          <img
+                            src={friend.avatar}
+                            alt={name}
+                          />
+
+                        ) : (
+
+                          <span>
+                            {getFriendInitial(friend)}
+                          </span>
+
+                        )}
+
+                        <span
+                          className={`synco-presence-dot large ${
+                            online
+                              ? 'online'
+                              : 'offline'
+                          }`}
+                        />
+
+                      </div>
+
+                      <div className="synco-friend-details">
+
+                        <p>
+                          {name}
+                        </p>
+
+                        <span>
+                          {online
+                            ? 'Online now'
+                            : 'Offline'}
+                        </span>
+
+                      </div>
+
+                    </div>
+
+                  );
+                })}
+
+              </div>
+
+            </div>
+
+          )}
+
+        </aside>
 
       </div>
 
     </div>
+
   );
 };
 
