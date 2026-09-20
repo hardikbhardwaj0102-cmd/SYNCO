@@ -1,21 +1,30 @@
 /* =========================================================
-   DASHBOARD ROOT
+   SYNCO DASHBOARD HOME
+   EDGE-TO-EDGE RESPONSIVE LAYOUT
    ========================================================= */
 
 html {
   scroll-behavior: smooth;
 }
 
+
+/* =========================================================
+   DASHBOARD ROOT
+   ========================================================= */
+
 .bento-dashboard-wrapper {
   position: relative;
+
   width: 100%;
   max-width: none;
   margin: 0;
+
   padding: clamp(1rem, 1.35vw, 1.5rem);
 
   box-sizing: border-box;
 
   display: grid;
+
   grid-template-columns:
     minmax(0, 1.3fr)
     minmax(0, 1fr)
@@ -27,17 +36,27 @@ html {
   min-height: 0;
 
   color: #fff;
-  font-family: "Inter", system-ui, sans-serif;
+
+  font-family:
+    "Inter",
+    system-ui,
+    sans-serif;
 
   overflow-x: hidden;
   overflow-y: visible;
 }
+
+
+/* Global box sizing */
 
 .bento-dashboard-wrapper *,
 .bento-dashboard-wrapper *::before,
 .bento-dashboard-wrapper *::after {
   box-sizing: border-box;
 }
+
+
+/* Prevent children from forcing grid width */
 
 .bento-dashboard-wrapper > *,
 .col-main-left > *,
@@ -48,13 +67,15 @@ html {
 
 
 /* =========================================================
-   COMMON CARDS
+   SHARED CARD SYSTEM
    ========================================================= */
 
 .bento-card,
 .wire-block {
   border: 1px solid rgba(255, 255, 255, 0.08);
-  border-radius: clamp(1rem, 2vw, 2rem);
+
+  border-radius:
+    clamp(1rem, 2vw, 2rem);
 
   background: rgba(20, 20, 20, 0.35);
 
@@ -66,7 +87,8 @@ html {
 }
 
 .bento-card {
-  padding: clamp(1rem, 1.8vw, 1.5rem);
+  padding:
+    clamp(1rem, 1.8vw, 1.5rem);
 
   backdrop-filter: blur(16px);
   -webkit-backdrop-filter: blur(16px);
@@ -79,7 +101,7 @@ html {
 
 
 /* =========================================================
-   COLUMNS
+   MAIN COLUMNS
    ========================================================= */
 
 .col-main-left,
@@ -94,7 +116,8 @@ html {
   display: flex;
   flex-direction: column;
 
-  gap: clamp(1rem, 1.35vw, 1.5rem);
+  gap:
+    clamp(1rem, 1.35vw, 1.5rem);
 
   height: auto;
 }
@@ -116,29 +139,34 @@ html {
   display: flex;
   flex-direction: column;
 
-  gap: clamp(1rem, 1.35vw, 1.5rem);
+  gap:
+    clamp(1rem, 1.35vw, 1.5rem);
 
   min-width: 0;
   min-height: 0;
+
   height: auto;
 }
 
 
 /* =========================================================
-   GREETING / PREMIUM
+   TOP GREETING / PREMIUM
    ========================================================= */
 
 .greetings-pill,
 .premium-banner-pill {
   width: 100%;
-  min-height: clamp(52px, 5vw, 68px);
+
+  min-height:
+    clamp(52px, 5vw, 68px);
 
   flex: 0 0 auto;
 
   display: flex;
   align-items: center;
 
-  padding-inline: clamp(1rem, 1.8vw, 1.5rem);
+  padding-inline:
+    clamp(1rem, 1.8vw, 1.5rem);
 
   min-width: 0;
 }
@@ -159,15 +187,18 @@ html {
 .tournaments-card {
   position: relative;
 
-  flex: 0 1 clamp(260px, 34vh, 360px);
+  flex:
+    0 1 clamp(260px, 34vh, 360px);
 
-  min-height: clamp(260px, 34vh, 360px);
+  min-height:
+    clamp(260px, 34vh, 360px);
 
   display: flex;
   flex-direction: column;
   justify-content: center;
 
-  padding: clamp(1.5rem, 2.5vw, 2rem);
+  padding:
+    clamp(1.5rem, 2.5vw, 2rem);
 
   overflow: visible;
 
@@ -191,26 +222,33 @@ html {
 }
 
 .block-title {
-  margin: 0 0 0.5rem;
+  margin:
+    0 0 0.5rem;
 
-  font-family: "Super Brigade", sans-serif;
+  font-family:
+    "Super Brigade",
+    sans-serif;
 
-  font-size: clamp(1.2rem, 2.3vw, 2rem);
+  font-size:
+    clamp(1.2rem, 2.3vw, 2rem);
 
   line-height: 1.1;
 
   text-transform: uppercase;
 
   white-space: normal;
+
   overflow-wrap: anywhere;
 }
 
 .hero-comp-sub {
-  margin: 0 0 clamp(1rem, 1.7vw, 1.5rem);
+  margin:
+    0 0 clamp(1rem, 1.7vw, 1.5rem);
 
   color: #d6c98a;
 
-  font-size: clamp(0.75rem, 1vw, 0.85rem);
+  font-size:
+    clamp(0.75rem, 1vw, 0.85rem);
 
   line-height: 1.4;
 }
@@ -229,7 +267,9 @@ html {
   max-width: 55%;
 
   object-fit: contain;
-  object-position: bottom right;
+
+  object-position:
+    bottom right;
 
   pointer-events: none;
 
@@ -243,9 +283,11 @@ html {
   width: fit-content;
   max-width: 100%;
 
-  margin-bottom: clamp(0.7rem, 1.3vw, 1rem);
+  margin-bottom:
+    clamp(0.7rem, 1.3vw, 1rem);
 
-  padding: 4px 10px;
+  padding:
+    4px 10px;
 
   border-radius: 20px;
 
@@ -263,7 +305,8 @@ html {
   width: 6px;
   height: 6px;
 
-  flex: 0 0 6px;
+  flex:
+    0 0 6px;
 
   border-radius: 50%;
 }
@@ -292,78 +335,34 @@ html {
   display: flex;
   flex-direction: column;
 
-  flex: 1 1 0;
+  flex:
+    1 1 0;
+
+  width: 100%;
 
   min-width: 0;
-  min-height: clamp(320px, 36vh, 420px);
+
+  min-height:
+    clamp(320px, 36vh, 420px);
 
   overflow: hidden;
 }
 
+
+/* =========================================================
+   SECTION LABEL
+   ========================================================= */
+
 .section-label {
   min-width: 0;
-
-  margin: 0;
 
   font-size: 0.65rem;
 
   line-height: 1.2;
 
   letter-spacing: 0.08em;
-}
 
-
-/* =========================================================
-   GAME TAG
-   IMPORTANT:
-   This is now OUTSIDE the video area.
-   ========================================================= */
-
-.clip-game-tag {
-  position: relative;
-
-  align-self: center;
-
-  z-index: 20;
-
-  display: inline-flex;
-
-  align-items: center;
-  justify-content: center;
-
-  width: fit-content;
-
-  max-width: min(80%, 420px);
-
-  margin: 0.55rem auto 0;
-
-  padding: 0.4rem 1.1rem;
-
-  border: 1px solid rgba(255, 255, 255, 0.12);
-
-  border-radius: 999px;
-
-  background: rgba(10, 10, 10, 0.7);
-
-  backdrop-filter: blur(12px);
-  -webkit-backdrop-filter: blur(12px);
-
-  color: #d6c98a;
-
-  font-size: clamp(0.65rem, 0.8vw, 0.8rem);
-
-  font-weight: 800;
-
-  letter-spacing: 0.12em;
-
-  text-transform: uppercase;
-
-  white-space: nowrap;
-
-  overflow: hidden;
-  text-overflow: ellipsis;
-
-  pointer-events: none;
+  flex-shrink: 0;
 }
 
 
@@ -375,23 +374,86 @@ html {
   position: relative;
 
   display: flex;
+
   align-items: center;
   justify-content: center;
 
   width: 100%;
 
-  flex: 1 1 auto;
+  /*
+    The Coverflow itself takes all remaining space
+    underneath the section label.
+  */
+  flex: 1 1 0;
 
   height: auto;
 
   min-width: 0;
   min-height: 0;
 
-  margin-top: 0.75rem;
+  margin-top: 1rem;
 
   overflow: hidden;
 
   isolation: isolate;
+}
+
+
+/* =========================================================
+   GAME TAG
+   ========================================================= */
+
+.clip-game-tag {
+  position: absolute;
+
+  top: 0.75rem;
+  left: 50%;
+
+  z-index: 40;
+
+  transform:
+    translateX(-50%);
+
+  display: inline-flex;
+
+  align-items: center;
+  justify-content: center;
+
+  max-width:
+    min(80%, 420px);
+
+  padding:
+    0.45rem 1.25rem;
+
+  border:
+    1px solid rgba(255, 255, 255, 0.12);
+
+  border-radius: 999px;
+
+  background:
+    rgba(10, 10, 10, 0.72);
+
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+
+  color: #d6c98a;
+
+  font-size:
+    clamp(0.7rem, 0.8vw, 0.85rem);
+
+  font-weight: 800;
+
+  letter-spacing: 0.12em;
+
+  text-transform: uppercase;
+
+  white-space: nowrap;
+
+  overflow: hidden;
+
+  text-overflow: ellipsis;
+
+  pointer-events: none;
 }
 
 
@@ -403,6 +465,7 @@ html {
   position: relative;
 
   display: flex;
+
   align-items: center;
   justify-content: center;
 
@@ -412,13 +475,20 @@ html {
   min-width: 0;
   min-height: 0;
 
-  overflow: visible;
+  overflow: hidden;
+
+  /*
+    Keeps the side cards visually clipped
+    to the Coverflow area.
+  */
+  isolation: isolate;
 }
 
 
 /* =========================================================
-   VIDEO CARD
-   DO NOT CHANGE THIS GEOMETRY
+   CLIP CARDS
+   IMPORTANT:
+   KEEP THIS 5:4 GEOMETRY
    ========================================================= */
 
 .clip-card {
@@ -427,17 +497,22 @@ html {
   top: 50%;
   left: 50%;
 
-  width: clamp(180px, 20vw, 320px);
+  width:
+    clamp(180px, 20vw, 320px);
 
-  aspect-ratio: 5 / 4;
+  aspect-ratio:
+    5 / 4;
 
   height: auto;
+
+  overflow: hidden;
 
   border-radius: 1rem;
 
   background: #000;
 
-  transform: translate(-50%, -50%);
+  transform:
+    translate(-50%, -50%);
 
   transition:
     transform 0.6s ease,
@@ -448,11 +523,10 @@ html {
 
   min-width: 0;
 
-  max-width: calc(100% - 2rem);
+  max-width:
+    calc(100% - 2rem);
 
   isolation: isolate;
-
-  overflow: hidden;
 }
 
 .clip-card video,
@@ -462,6 +536,9 @@ html {
   width: 100%;
   height: 100%;
 
+  min-width: 100%;
+  min-height: 100%;
+
   max-width: 100%;
   max-height: 100%;
 
@@ -469,13 +546,11 @@ html {
 
   border: 0;
   outline: none;
-
-  border-radius: inherit;
 }
 
 
 /* =========================================================
-   COVERFLOW POSITIONS
+   CENTER / SIDE CARDS
    ========================================================= */
 
 .clip-center {
@@ -489,7 +564,7 @@ html {
 
   filter: none;
 
-  z-index: 10;
+  z-index: 20;
 }
 
 .clip-left {
@@ -501,7 +576,8 @@ html {
 
   opacity: 0.3;
 
-  filter: blur(4px);
+  filter:
+    blur(4px);
 
   z-index: 5;
 }
@@ -515,7 +591,8 @@ html {
 
   opacity: 0.3;
 
-  filter: blur(4px);
+  filter:
+    blur(4px);
 
   z-index: 5;
 }
@@ -530,33 +607,59 @@ html {
 
 
 /* =========================================================
-   LEFT INFORMATION PANEL
+   COVERFLOW INFORMATION OVERLAYS
    ========================================================= */
 
-.coverflow-left-overlay {
+.coverflow-left-overlay,
+.coverflow-right-overlay {
   position: absolute;
 
-  left: 0;
   top: 50%;
 
   z-index: 35;
 
-  transform: translateY(-50%);
-
-  width: clamp(135px, 24%, 220px);
-
-  max-height: calc(100% - 1.5rem);
+  transform:
+    translateY(-50%);
 
   min-width: 0;
 
-  display: flex;
-  flex-direction: column;
+  min-height: 0;
+}
 
-  justify-content: center;
+.coverflow-left-overlay {
+  left: 0;
 
-  padding: 0.5rem 0;
+  width:
+    clamp(135px, 24%, 220px);
 
   pointer-events: none;
+}
+
+.coverflow-right-overlay {
+  right:
+    clamp(0.5rem, 1vw, 1rem);
+
+  width:
+    clamp(135px, 24%, 220px);
+
+  height: 82%;
+
+  min-height: 0;
+
+  pointer-events: auto;
+}
+
+
+/* =========================================================
+   CLIP INFORMATION
+   ========================================================= */
+
+.clip-info-panel {
+  width: 100%;
+
+  min-width: 0;
+
+  pointer-events: auto;
 }
 
 .clip-title-massive {
@@ -564,18 +667,48 @@ html {
 
   min-width: 0;
 
-  margin: 0 0 0.75rem;
+  margin:
+    1rem 0 0.75rem;
 
-  font-family: "Super Brigade", sans-serif;
+  font-family:
+    "Super Brigade",
+    sans-serif;
 
-  font-size: clamp(1.15rem, 1.7vw, 1.5rem);
+  font-size:
+    clamp(1.15rem, 1.7vw, 1.5rem);
 
   line-height: 1.15;
 
   text-transform: uppercase;
 
   overflow-wrap: anywhere;
+
   word-break: break-word;
+}
+
+.clip-author {
+  width: 100%;
+
+  min-width: 0;
+
+  margin-bottom: 1rem;
+
+  color: #d6c98a;
+
+  font-size:
+    clamp(0.5rem, 0.6vw, 0.65rem);
+
+  font-weight: 800;
+
+  letter-spacing: 0.1em;
+
+  text-transform: uppercase;
+
+  overflow: hidden;
+
+  text-overflow: ellipsis;
+
+  white-space: nowrap;
 }
 
 .clip-description {
@@ -585,9 +718,11 @@ html {
 
   margin-bottom: 1rem;
 
-  color: rgba(255, 255, 255, 0.65);
+  color:
+    rgba(255, 255, 255, 0.65);
 
-  font-size: clamp(0.65rem, 0.75vw, 0.78rem);
+  font-size:
+    clamp(0.65rem, 0.75vw, 0.78rem);
 
   line-height: 1.5;
 
@@ -596,12 +731,18 @@ html {
   word-break: break-word;
 }
 
+
+/* =========================================================
+   CLIP ACTIONS
+   ========================================================= */
+
 .clip-actions {
   display: flex;
 
   align-items: center;
 
-  gap: clamp(0.5rem, 0.9vw, 1rem);
+  gap:
+    clamp(0.5rem, 0.9vw, 1rem);
 
   width: 100%;
 
@@ -622,17 +763,21 @@ html {
 
   min-width: 0;
 
-  padding: 0.5rem 0.8rem;
+  padding:
+    0.5rem 0.8rem;
 
-  border: 1px solid rgba(255, 255, 255, 0.2);
+  border:
+    1px solid rgba(255, 255, 255, 0.2);
 
   border-radius: 8px;
 
-  background: rgba(255, 255, 255, 0.1);
+  background:
+    rgba(255, 255, 255, 0.1);
 
   color: #fff;
 
-  font-size: clamp(0.65rem, 0.75vw, 0.8rem);
+  font-size:
+    clamp(0.65rem, 0.75vw, 0.8rem);
 
   white-space: nowrap;
 
@@ -645,37 +790,274 @@ html {
 }
 
 .clip-actions button:hover {
-  background: rgba(255, 255, 255, 0.18);
+  background:
+    rgba(255, 255, 255, 0.16);
 
-  border-color: rgba(255, 255, 255, 0.35);
+  border-color:
+    rgba(255, 255, 255, 0.3);
 
-  transform: translateY(-1px);
+  transform:
+    translateY(-1px);
 }
 
 
 /* =========================================================
-   RIGHT COMMENTS PANEL
+   PREVIOUS / NEXT NAVIGATION
    ========================================================= */
 
-.coverflow-right-overlay {
+.prev-btn,
+.next-btn {
   position: absolute;
 
-  right: 0;
   top: 50%;
 
-  z-index: 35;
+  z-index: 70;
 
-  transform: translateY(-50%);
+  display: flex;
 
-  width: clamp(135px, 24%, 220px);
+  align-items: center;
+  justify-content: center;
 
-  height: 82%;
+  width:
+    clamp(38px, 3vw, 48px);
 
-  min-width: 0;
-  min-height: 0;
+  height:
+    clamp(38px, 3vw, 48px);
+
+  min-width:
+    clamp(38px, 3vw, 48px);
+
+  min-height:
+    clamp(38px, 3vw, 48px);
+
+  padding: 0;
+
+  border:
+    1px solid rgba(255, 255, 255, 0.2);
+
+  border-radius: 50%;
+
+  background:
+    rgba(8, 8, 8, 0.78);
+
+  color: #fff;
+
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+
+  box-shadow:
+    0 8px 24px rgba(0, 0, 0, 0.35);
+
+  transform:
+    translateY(-50%);
+
+  cursor: pointer;
+
+  transition:
+    background 0.2s ease,
+    border-color 0.2s ease,
+    transform 0.2s ease;
 
   pointer-events: auto;
 }
+
+.prev-btn {
+  left:
+    clamp(0.5rem, 1.5vw, 1.5rem);
+}
+
+.next-btn {
+  right:
+    clamp(0.5rem, 1.5vw, 1.5rem);
+}
+
+.prev-btn:hover,
+.next-btn:hover {
+  background:
+    rgba(20, 20, 20, 0.95);
+
+  border-color:
+    rgba(214, 201, 138, 0.6);
+
+  transform:
+    translateY(-50%)
+    scale(1.08);
+}
+
+.prev-btn:active,
+.next-btn:active {
+  transform:
+    translateY(-50%)
+    scale(0.96);
+}
+
+
+/*
+  If nav-btn is also present on the JSX buttons,
+  it must NOT override the positioning above.
+*/
+
+.nav-btn {
+  position: absolute;
+
+  top: 50%;
+  bottom: auto;
+
+  z-index: 70;
+
+  display: flex;
+
+  align-items: center;
+  justify-content: center;
+
+  border-radius: 50%;
+
+  transform:
+    translateY(-50%);
+}
+
+
+/* =========================================================
+   VIDEO CONTROLS
+   ========================================================= */
+
+.video-control {
+  position: absolute;
+
+  z-index: 60;
+
+  display: flex;
+
+  align-items: center;
+  justify-content: center;
+
+  padding: 0;
+
+  border:
+    1px solid rgba(255, 255, 255, 0.25);
+
+  border-radius: 50%;
+
+  background:
+    rgba(0, 0, 0, 0.68);
+
+  color: #fff;
+
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+
+  cursor: pointer;
+
+  opacity: 1;
+
+  visibility: visible;
+
+  transition:
+    background 0.2s ease,
+    border-color 0.2s ease,
+    transform 0.2s ease,
+    opacity 0.2s ease;
+
+  pointer-events: auto;
+}
+
+
+/* Main play / pause button */
+
+.play-control {
+  top: 50%;
+  left: 50%;
+
+  width: 54px;
+  height: 54px;
+
+  transform:
+    translate(-50%, -50%);
+}
+
+.play-control:hover {
+  background:
+    rgba(0, 0, 0, 0.85);
+
+  border-color:
+    rgba(255, 255, 255, 0.4);
+
+  transform:
+    translate(-50%, -50%)
+    scale(1.08);
+}
+
+
+/* Mute button */
+
+.mute-control {
+  right: 0.75rem;
+  bottom: 0.75rem;
+
+  width: 38px;
+  height: 38px;
+}
+
+.mute-control:hover {
+  background:
+    rgba(0, 0, 0, 0.85);
+
+  border-color:
+    rgba(255, 255, 255, 0.4);
+
+  transform:
+    scale(1.08);
+}
+
+
+/*
+  Keep controls above video content.
+*/
+
+.clip-center .video-control {
+  visibility: visible;
+
+  pointer-events: auto;
+}
+
+
+/* =========================================================
+   VIDEO PLAY OVERLAY
+   ========================================================= */
+
+.play-overlay {
+  position: absolute;
+
+  inset: 0;
+
+  z-index: 25;
+
+  display: flex;
+
+  align-items: center;
+  justify-content: center;
+
+  background:
+    rgba(0, 0, 0, 0.2);
+
+  opacity: 0;
+
+  cursor: pointer;
+
+  transition:
+    opacity 0.2s ease;
+
+  pointer-events: none;
+}
+
+.clip-center:hover .play-overlay {
+  opacity: 1;
+}
+
+
+/* =========================================================
+   COMMENTS PANEL
+   ========================================================= */
 
 .comments-panel {
   display: flex;
@@ -688,13 +1070,16 @@ html {
   min-width: 0;
   min-height: 0;
 
-  padding: 1rem;
+  padding:
+    clamp(0.75rem, 1vw, 1rem);
 
-  border: 1px solid rgba(255, 255, 255, 0.08);
+  border:
+    1px solid rgba(255, 255, 255, 0.08);
 
   border-radius: 1rem;
 
-  background: rgba(12, 12, 12, 0.45);
+  background:
+    rgba(12, 12, 12, 0.55);
 
   backdrop-filter: blur(14px);
   -webkit-backdrop-filter: blur(14px);
@@ -704,53 +1089,57 @@ html {
   box-sizing: border-box;
 }
 
+
+/* Comments header */
+
 .comments-header {
   display: flex;
 
   align-items: center;
-  justify-content: flex-start;
+  justify-content: space-between;
 
-  gap: 0.4rem;
+  gap: 0.5rem;
 
   width: 100%;
 
   min-width: 0;
 
-  margin: 0 0 0.75rem;
+  margin:
+    0 0 0.75rem;
 
-  padding-bottom: 0.6rem;
+  padding-bottom:
+    0.6rem;
 
-  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+  border-bottom:
+    1px solid rgba(255, 255, 255, 0.1);
 
-  color: rgba(255, 255, 255, 0.55);
+  color:
+    rgba(255, 255, 255, 0.55);
 
-  font-size: clamp(0.6rem, 0.7vw, 0.75rem);
+  font-size:
+    clamp(0.6rem, 0.7vw, 0.75rem);
 
   letter-spacing: 0.1em;
 
   text-transform: uppercase;
 
-  flex-shrink: 0;
+  flex:
+    0 0 auto;
 }
 
-.comments-header span {
-  min-width: 0;
 
-  overflow: hidden;
-
-  text-overflow: ellipsis;
-
-  white-space: nowrap;
-}
+/* Scrollable comments */
 
 .comments-list {
   display: flex;
 
-  flex: 1 1 0;
+  flex:
+    1 1 0;
 
   flex-direction: column;
 
-  gap: clamp(0.5rem, 0.8vw, 0.8rem);
+  gap:
+    clamp(0.5rem, 0.8vw, 0.8rem);
 
   width: 100%;
 
@@ -780,37 +1169,49 @@ html {
 }
 
 .comments-list::-webkit-scrollbar-thumb {
-  background: rgba(255, 255, 255, 0.18);
+  background:
+    rgba(255, 255, 255, 0.18);
 
   border-radius: 999px;
 }
 
 .comments-list::-webkit-scrollbar-thumb:hover {
-  background: rgba(255, 255, 255, 0.3);
+  background:
+    rgba(214, 201, 138, 0.65);
 }
+
+
+/* Individual comment */
 
 .comment-item {
   width: 100%;
 
   min-width: 0;
 
-  padding-bottom: 0.5rem;
+  padding-bottom:
+    0.5rem;
 
-  color: rgba(255, 255, 255, 0.8);
+  color:
+    rgba(255, 255, 255, 0.8);
 
-  font-size: clamp(0.7rem, 0.8vw, 0.8rem);
+  font-size:
+    clamp(0.7rem, 0.8vw, 0.8rem);
 
   line-height: 1.4;
 
   overflow-wrap: anywhere;
 
   word-break: break-word;
+
+  flex:
+    0 0 auto;
 }
 
 .comment-user {
   display: block;
 
-  margin-bottom: 0.15rem;
+  margin-bottom:
+    0.15rem;
 
   color: #d6c98a;
 
@@ -819,8 +1220,13 @@ html {
   overflow-wrap: anywhere;
 }
 
+
+/* Comment input */
+
 .comment-input {
-  display: block;
+  display: flex;
+
+  align-items: center;
 
   width: 100%;
 
@@ -828,43 +1234,50 @@ html {
 
   height: 38px;
 
-  margin-top: 0.75rem;
+  margin-top:
+    0.75rem;
 
-  padding: 0.5rem 0.75rem;
+  padding:
+    0.5rem 0.75rem;
 
-  border: 1px solid rgba(255, 255, 255, 0.1);
+  border:
+    1px solid rgba(255, 255, 255, 0.1);
 
   border-radius: 30px;
 
   outline: none;
 
-  background: rgba(255, 255, 255, 0.05);
+  background:
+    rgba(255, 255, 255, 0.05);
 
   color: #fff;
 
-  font-size: clamp(0.7rem, 0.8vw, 0.8rem);
+  font-size:
+    clamp(0.7rem, 0.8vw, 0.8rem);
 
   box-sizing: border-box;
 
-  flex-shrink: 0;
-}
-
-.comment-input::placeholder {
-  color: rgba(255, 255, 255, 0.35);
+  flex:
+    0 0 38px;
 }
 
 .comment-input:focus {
-  border-color: rgba(244, 211, 94, 0.45);
+  border-color:
+    rgba(214, 201, 138, 0.4);
 
-  background: rgba(255, 255, 255, 0.08);
+  background:
+    rgba(255, 255, 255, 0.07);
 }
 
 .empty-comms {
-  margin: 1rem 0;
+  margin:
+    auto 0;
 
-  color: rgba(255, 255, 255, 0.3);
+  color:
+    rgba(255, 255, 255, 0.3);
 
-  font-size: clamp(0.65rem, 0.75vw, 0.75rem);
+  font-size:
+    clamp(0.65rem, 0.75vw, 0.75rem);
 
   font-style: italic;
 
@@ -873,177 +1286,7 @@ html {
 
 
 /* =========================================================
-   NAVIGATION BUTTONS
-   ========================================================= */
-
-.nav-btn {
-  position: absolute;
-
-  top: 50%;
-
-  z-index: 80;
-
-  display: flex;
-
-  align-items: center;
-  justify-content: center;
-
-  width: clamp(38px, 3vw, 48px);
-
-  height: clamp(38px, 3vw, 48px);
-
-  padding: 0;
-
-  border: 1px solid rgba(255, 255, 255, 0.18);
-
-  border-radius: 50%;
-
-  background: rgba(8, 8, 8, 0.78);
-
-  color: #fff;
-
-  backdrop-filter: blur(12px);
-  -webkit-backdrop-filter: blur(12px);
-
-  box-shadow:
-    0 8px 24px rgba(0, 0, 0, 0.3);
-
-  transform: translateY(-50%);
-
-  cursor: pointer;
-
-  transition:
-    background 0.2s ease,
-    border-color 0.2s ease,
-    transform 0.2s ease;
-}
-
-.prev-btn {
-  left: clamp(0.5rem, 8%, 5rem);
-}
-
-.next-btn {
-  right: clamp(0.5rem, 8%, 5rem);
-}
-
-.prev-btn:hover,
-.next-btn:hover {
-  background: rgba(255, 255, 255, 0.14);
-
-  border-color: rgba(255, 255, 255, 0.35);
-
-  transform:
-    translateY(-50%)
-    scale(1.05);
-}
-
-.prev-btn:active,
-.next-btn:active {
-  transform:
-    translateY(-50%)
-    scale(0.95);
-}
-
-
-/* =========================================================
-   VIDEO CONTROLS
-   ========================================================= */
-
-.video-control {
-  position: absolute;
-
-  z-index: 90;
-
-  display: flex;
-
-  align-items: center;
-  justify-content: center;
-
-  padding: 0;
-
-  border: 1px solid rgba(255, 255, 255, 0.2);
-
-  border-radius: 50%;
-
-  background: rgba(0, 0, 0, 0.68);
-
-  color: #fff;
-
-  backdrop-filter: blur(10px);
-  -webkit-backdrop-filter: blur(10px);
-
-  cursor: pointer;
-
-  opacity: 1;
-
-  transition:
-    background 0.2s ease,
-    border-color 0.2s ease,
-    transform 0.2s ease;
-}
-
-.play-control {
-  top: 50%;
-  left: 50%;
-
-  width: 54px;
-  height: 54px;
-
-  transform: translate(-50%, -50%);
-}
-
-.mute-control {
-  right: 0.75rem;
-  bottom: 0.75rem;
-
-  width: 38px;
-  height: 38px;
-}
-
-.video-control:hover {
-  background: rgba(0, 0, 0, 0.86);
-
-  border-color: rgba(255, 255, 255, 0.4);
-}
-
-.play-control:hover {
-  transform:
-    translate(-50%, -50%)
-    scale(1.06);
-}
-
-.mute-control:hover {
-  transform: scale(1.06);
-}
-
-
-/* =========================================================
-   EMPTY MOMENTS
-   ========================================================= */
-
-.empty-moments {
-  width: 100%;
-  height: 100%;
-
-  min-height: 220px;
-
-  display: flex;
-
-  align-items: center;
-  justify-content: center;
-
-  color: rgba(255, 255, 255, 0.3);
-
-  font-size: 0.8rem;
-
-  text-transform: uppercase;
-
-  letter-spacing: 0.08em;
-}
-
-
-/* =========================================================
-   GAME SELECTOR
+   RIGHT SIDE MINI GRID
    ========================================================= */
 
 .mid-grid-row {
@@ -1052,20 +1295,33 @@ html {
   grid-template-columns:
     repeat(2, minmax(0, 1fr));
 
-  gap: clamp(0.8rem, 1.35vw, 1.5rem);
+  gap:
+    clamp(0.8rem, 1.35vw, 1.5rem);
 
   width: 100%;
 
   min-width: 0;
 
-  height: clamp(220px, 28vh, 300px);
+  /*
+    Responsive definite height so the game selector
+    itself does not grow indefinitely.
+  */
+
+  height:
+    clamp(220px, 28vh, 300px);
 
   min-height: 220px;
 
   max-height: 300px;
 
-  flex: 0 0 auto;
+  flex:
+    0 0 auto;
 }
+
+
+/* =========================================================
+   GAME SELECTOR
+   ========================================================= */
 
 .game-selector-card {
   display: flex;
@@ -1078,22 +1334,43 @@ html {
   min-width: 0;
   min-height: 0;
 
-  padding: clamp(1rem, 1.8vw, 1.5rem);
+  padding:
+    clamp(1rem, 1.8vw, 1.5rem);
 
   box-sizing: border-box;
 
   overflow: hidden;
 }
 
+
+/* Game list */
+
 .game-list {
-  flex: 1 1 0;
+  display: flex;
+
+  flex-direction: column;
+
+  gap: 0.5rem;
+
+  margin-top:
+    0.5rem;
+
+  width: 100%;
 
   min-width: 0;
   min-height: 0;
 
+  flex:
+    1 1 0;
+
   overflow-y: auto;
 
-  padding-right: 0.25rem;
+  overflow-x: hidden;
+
+  padding-right:
+    0.35rem;
+
+  box-sizing: border-box;
 
   scrollbar-width: thin;
 
@@ -1103,7 +1380,7 @@ html {
 }
 
 .game-list::-webkit-scrollbar {
-  width: 4px;
+  width: 5px;
 }
 
 .game-list::-webkit-scrollbar-track {
@@ -1111,159 +1388,523 @@ html {
 }
 
 .game-list::-webkit-scrollbar-thumb {
-  background: rgba(255, 255, 255, 0.18);
+  background:
+    rgba(255, 255, 255, 0.18);
 
   border-radius: 999px;
 }
 
 .game-list::-webkit-scrollbar-thumb:hover {
-  background: rgba(255, 255, 255, 0.3);
+  background:
+    rgba(214, 201, 138, 0.65);
 }
 
+
+/* Game option */
+
 .game-option {
+  width: 100%;
+
+  min-width: 0;
+
+  flex:
+    0 0 auto;
+
+  display: flex;
+
+  align-items: center;
+
+  gap: 10px;
+
+  padding:
+    0.8rem 1rem;
+
+  border:
+    1px solid rgba(255, 255, 255, 0.08);
+
+  border-radius:
+    0.75rem;
+
+  background:
+    rgba(255, 255, 255, 0.03);
+
+  color:
+    rgba(255, 255, 255, 0.75);
+
+  font-size:
+    clamp(0.75rem, 1vw, 0.85rem);
+
+  box-sizing: border-box;
+
+  overflow: hidden;
+
   cursor: pointer;
+
+  pointer-events: auto;
 
   transition:
     background 0.2s ease,
     border-color 0.2s ease,
-    transform 0.2s ease;
+    color 0.2s ease;
 }
 
 .game-option:hover {
-  background: rgba(255, 255, 255, 0.08);
+  background:
+    rgba(255, 255, 255, 0.08);
 
-  border-color: rgba(255, 255, 255, 0.18);
-
-  transform: translateX(2px);
+  color: #fff;
 }
 
 .game-option.active {
-  border-color: rgba(244, 211, 94, 0.35);
+  background:
+    rgba(214, 201, 138, 0.1);
 
-  background: rgba(244, 211, 94, 0.08);
+  border-color:
+    rgba(214, 201, 138, 0.3);
+
+  color:
+    #d6c98a;
+}
+
+.game-option span {
+  min-width: 0;
+
+  flex:
+    1 1 auto;
+
+  overflow: hidden;
+
+  text-overflow: ellipsis;
+
+  white-space: nowrap;
 }
 
 
 /* =========================================================
-   RESPONSIVE
+   SYNCO PROMO CARD
    ========================================================= */
 
-/*
-   IMPORTANT:
-   Video card sizing is intentionally NOT changed here.
-   Your 5:4 card geometry remains the same.
-*/
+.synco-promo-card {
+  display: flex;
 
-@media (max-width: 900px) {
-  .clip-left {
-    left: 12%;
+  flex-direction: column;
+
+  align-items: center;
+
+  justify-content: center;
+
+  min-width: 0;
+  min-height: 0;
+
+  padding:
+    clamp(1rem, 1.8vw, 1.5rem);
+
+  text-align: center;
+}
+
+.synco-promo-card h3 {
+  max-width: 100%;
+
+  overflow-wrap: anywhere;
+}
+
+
+/* =========================================================
+   RATING CARD
+   ========================================================= */
+
+.stat-meter-card {
+  display: flex;
+
+  flex:
+    1 1 0;
+
+  flex-direction: column;
+
+  align-items: center;
+
+  justify-content: space-between;
+
+  width: 100%;
+
+  min-width: 0;
+
+  min-height:
+    clamp(300px, 38vh, 430px);
+}
+
+.stat-header-row {
+  width: 100%;
+
+  min-width: 0;
+}
+
+.stat-icon {
+  flex-shrink: 0;
+}
+
+.stat-meter-container {
+  position: relative;
+
+  display: flex;
+
+  flex:
+    1 1 0;
+
+  align-items: center;
+
+  justify-content: center;
+
+  width: 100%;
+
+  min-width: 0;
+
+  min-height:
+    clamp(130px, 18vh, 190px);
+}
+
+.stat-glowing-blob {
+  position: absolute;
+
+  width:
+    clamp(120px, 12vw, 170px);
+
+  aspect-ratio: 1;
+
+  max-width: 100%;
+}
+
+.rating-number {
+  position: relative;
+
+  z-index: 2;
+
+  min-width: 0;
+
+  font-size:
+    clamp(2.5rem, 4.5vw, 4rem);
+
+  line-height: 1;
+}
+
+.stat-breakdown {
+  display: flex;
+
+  width: 100%;
+
+  min-width: 0;
+
+  gap:
+    clamp(0.5rem, 0.9vw, 1rem);
+
+  margin-top: auto;
+}
+
+.stat-pill {
+  display: flex;
+
+  flex:
+    1 1 0;
+
+  flex-direction: column;
+
+  align-items: center;
+
+  min-width: 0;
+
+  gap: 0.3rem;
+
+  padding:
+    clamp(0.5rem, 1.2vw, 0.8rem);
+
+  overflow: hidden;
+}
+
+.stat-pill .label {
+  font-size: 0.55rem;
+
+  white-space: nowrap;
+}
+
+.stat-pill .value {
+  max-width: 100%;
+
+  font-size: 0.9rem;
+
+  overflow: hidden;
+
+  text-overflow: ellipsis;
+
+  white-space: nowrap;
+}
+
+
+/* =========================================================
+   SOCIAL RAIL
+   ========================================================= */
+
+.social-bar-top,
+.social-bar-bottom {
+  flex:
+    1 1 0;
+
+  display: flex;
+
+  align-items: center;
+
+  justify-content: center;
+
+  min-width: 0;
+  min-height: 0;
+
+  padding:
+    clamp(1rem, 2vw, 1.5rem)
+    0.4rem;
+}
+
+.vertical-text {
+  max-width: 100%;
+
+  font-size:
+    clamp(0.65rem, 0.75vw, 0.75rem);
+
+  writing-mode: vertical-rl;
+
+  text-orientation: mixed;
+
+  white-space: nowrap;
+}
+
+
+/* =========================================================
+   <= 1200px
+   TWO-COLUMN DASHBOARD
+   ========================================================= */
+
+@media (max-width: 1200px) {
+  .bento-dashboard-wrapper {
+    grid-template-columns:
+      minmax(0, 1fr)
+      minmax(0, 1.15fr);
   }
 
-  .clip-right {
-    left: 88%;
+  .col-far-right {
+    display: none;
+  }
+
+  .coverflow-left-overlay,
+  .coverflow-right-overlay {
+    width:
+      clamp(125px, 23%, 190px);
+  }
+
+  /*
+    IMPORTANT:
+    Do NOT shrink the clip-card here.
+    The 5:4 video card sizing is intentionally
+    preserved.
+  */
+}
+
+
+/* =========================================================
+   <= 900px
+   SINGLE COLUMN
+   ========================================================= */
+
+@media (max-width: 900px) {
+  .bento-dashboard-wrapper {
+    grid-template-columns:
+      minmax(0, 1fr);
+
+    gap: 1rem;
+
+    padding:
+      clamp(0.75rem, 2vw, 1rem);
+  }
+
+  .col-main-left {
+    grid-column: 1;
+    grid-row: 1;
+  }
+
+  .col-main-right {
+    grid-column: 1;
+    grid-row: 2;
+  }
+
+  .tournaments-card {
+    min-height:
+      clamp(280px, 45vw, 360px);
+  }
+
+  .tournaments-card-content {
+    max-width: 100%;
+  }
+
+  .hero-character-render {
+    position: relative;
+
+    right: auto;
+    bottom: auto;
+
+    width: auto;
+
+    height:
+      clamp(160px, 28vw, 220px);
+
+    max-width: 100%;
+
+    max-height: none;
+
+    margin-top: 1rem;
+
+    align-self: center;
+  }
+
+  .highlights-section {
+    min-height:
+      clamp(360px, 65vw, 480px);
+  }
+
+  .stat-meter-card {
+    min-height:
+      clamp(300px, 60vw, 430px);
   }
 
   .coverflow-left-overlay {
-    width: clamp(120px, 22%, 190px);
+    width:
+      clamp(110px, 20%, 170px);
   }
 
   .coverflow-right-overlay {
-    width: clamp(120px, 22%, 190px);
+    width:
+      clamp(110px, 20%, 170px);
   }
 
-  .nav-btn {
-    width: 42px;
-    height: 42px;
+  .prev-btn {
+    left: 0.5rem;
+  }
+
+  .next-btn {
+    right: 0.5rem;
   }
 }
 
 
+/* =========================================================
+   <= 650px
+   ========================================================= */
+
 @media (max-width: 650px) {
-  .bento-dashboard-wrapper {
-    grid-template-columns: minmax(0, 1fr);
-  }
-
-  .col-main-left,
-  .col-main-right,
-  .col-far-right {
-    grid-column: 1;
-    grid-row: auto;
-  }
-
-  .clip-left,
-  .clip-right {
-    opacity: 0;
-    pointer-events: none;
-  }
-
-  .coverflow-left-overlay {
-    width: 110px;
-  }
-
-  .coverflow-right-overlay {
-    width: 110px;
-  }
-
   .mid-grid-row {
     grid-template-columns:
       minmax(0, 1fr);
 
-    height: clamp(220px, 28vh, 300px);
+    /*
+      One-column mobile card stack should not
+      inherit an unnecessarily tall desktop row.
+    */
+    height: auto;
+
+    min-height: 0;
+
+    max-height: none;
   }
 
-  .tournaments-card-content {
-    max-width: 72%;
+  .game-selector-card {
+    min-height: 220px;
+
+    height: 220px;
   }
 
-  .hero-character-render {
-    max-width: 50%;
-  }
-}
-
-
-@media (max-width: 480px) {
-  .bento-dashboard-wrapper {
-    padding: 0.75rem;
+  .synco-promo-card {
+    min-height: 220px;
   }
 
-  .bento-card {
-    padding: 1rem;
-  }
-
-  .coverflow-left-overlay {
-    width: 95px;
-  }
-
+  .coverflow-left-overlay,
   .coverflow-right-overlay {
-    width: 95px;
-  }
-
-  .comments-panel {
-    padding: 0.7rem;
-  }
-
-  .nav-btn {
-    width: 38px;
-    height: 38px;
-  }
-
-  .prev-btn {
-    left: 0.4rem;
-  }
-
-  .next-btn {
-    right: 0.4rem;
+    width: 23%;
   }
 
   .clip-title-massive {
     font-size: 1rem;
   }
 
-  .clip-description {
-    font-size: 0.62rem;
+  .clip-actions {
+    flex-wrap: wrap;
   }
 
-  .clip-actions button {
-    padding: 0.4rem 0.6rem;
+  .clip-game-tag {
+    max-width: 65%;
+
+    font-size: 0.65rem;
+
+    padding-inline:
+      0.85rem;
+  }
+
+  .prev-btn,
+  .next-btn {
+    width: 40px;
+    height: 40px;
+
+    min-width: 40px;
+    min-height: 40px;
+  }
+}
+
+
+/* =========================================================
+   <= 420px
+   ========================================================= */
+
+@media (max-width: 420px) {
+  .bento-dashboard-wrapper {
+    padding: 0.65rem;
+  }
+
+  .coverflow-left-overlay,
+  .coverflow-right-overlay {
+    display: none;
+  }
+
+  .clip-card {
+    /*
+      Preserve 5:4 ratio while allowing
+      the card to fit small screens.
+    */
+    width:
+      min(48vw, 160px);
+  }
+
+  .clip-game-tag {
+    top: 0.5rem;
+
+    max-width: 70%;
+
+    font-size: 0.6rem;
+
+    padding:
+      0.4rem 0.75rem;
+  }
+
+  .prev-btn {
+    left:
+      calc(50% - 35px);
+  }
+
+  .next-btn {
+    right:
+      calc(50% - 35px);
+  }
+
+  .stat-breakdown {
+    gap: 0.35rem;
+  }
+
+  .stat-pill {
+    padding-inline:
+      0.35rem;
   }
 }
