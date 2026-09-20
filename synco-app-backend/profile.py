@@ -10,6 +10,7 @@ from flask import (
     session,
 )
 
+from sqlalchemy import or_, text
 from supabase import create_client
 
 from rewards import process_synco_event
@@ -20,6 +21,7 @@ from models import (
     ProfileClipLike,
     ProfileClipComment,
     ProfileGame,
+    Game,
     User,
     UserProfile,
     discord_avatar_url,
@@ -303,18 +305,6 @@ def _clip_media_url(filename):
 # =========================================================
 # GET CLIP IDS LIKED BY CURRENT VIEWER
 # =========================================================
-#
-# IMPORTANT:
-# A clip belongs to one user, but the "liked" state belongs
-# to the person currently viewing the clip.
-#
-# Therefore we must calculate isLiked using:
-#
-#     ProfileClipLike.user_id == viewer_user_id
-#
-# and NOT using the clip owner.
-#
-# =========================================================
 
 def _liked_clip_ids_for_viewer(
     clip_ids,
@@ -340,15 +330,218 @@ def _liked_clip_ids_for_viewer(
 
 
 # =========================================================
+# CLIP METADATA
+# =========================================================
+#
+# The existing ProfileClip ORM model predates game/description
+# fields. The database migration adds those two columns, while
+# this module reads/writes them using SQL directly. This keeps
+# the rest of the large models.py file untouched and avoids
+# breaking the competition/club models.
+#
+# Returned shape:
+# {
+#     clip_id: {
+#         "description": ...,
+#         "gameId": ...,
+#         "gameName": ...,
+#         "game": {...} | None,
+#     }
+# }
+# =========================================================
+
+def _clip_metadata_by_user(user_id):
+
+    rows = db.session.execute(
+        text(
+            """
+            SELECT
+                pc.id AS clip_id,
+                pc.description AS clip_description,
+                pc.game_id AS clip_game_id,
+                g.id AS game_id,
+                g.name AS game_name,
+                g.short_name AS game_short_name,
+                g.slug AS game_slug,
+                g.description AS game_description,
+                g.logo_url AS game_logo_url,
+                g.is_active AS game_is_active
+            FROM profile_clips pc
+            LEFT JOIN games g
+                ON g.id = pc.game_id
+            WHERE pc.user_id = :user_id
+            """
+        ),
+        {
+            "user_id": user_id,
+        },
+    ).mappings().all()
+
+    metadata = {}
+
+    for row in rows:
+
+        game = None
+
+        if row["game_id"] is not None:
+
+            game = {
+                "id": row["game_id"],
+                "name": row["game_name"],
+                "shortName": row["game_short_name"],
+                "slug": row["game_slug"],
+                "description": row["game_description"],
+                "logoUrl": row["game_logo_url"],
+                "isActive": row["game_is_active"],
+            }
+
+        metadata[row["clip_id"]] = {
+            "description": row["clip_description"] or "",
+            "gameId": row["clip_game_id"],
+            "gameName": row["game_name"] or "",
+            "game": game,
+        }
+
+    # -----------------------------------------------------
+    # BACKWARD-COMPATIBILITY FOR OLD CLIPS
+    # -----------------------------------------------------
+    #
+    # Clips created before game_id was introduced have no
+    # persisted game. When the owner has exactly one profile
+    # game, we can safely infer that game for display.
+    #
+    # This does not invent a game when the player has multiple
+    # games, because there would be no reliable way to know
+    # which game the old clip belongs to.
+    # -----------------------------------------------------
+
+    missing_game_clip_ids = [
+        clip_id
+        for clip_id, item in metadata.items()
+        if not item.get("gameId")
+    ]
+
+    if missing_game_clip_ids:
+
+        profile_games = (
+            ProfileGame.query
+            .filter_by(user_id=user_id)
+            .all()
+        )
+
+        if len(profile_games) == 1:
+
+            inferred_name = (
+                profile_games[0].game_name or ""
+            ).strip()
+
+            if inferred_name:
+
+                inferred_game = (
+                    Game.query
+                    .filter(
+                        or_(
+                            Game.id == inferred_name,
+                            Game.slug.ilike(inferred_name),
+                            Game.name.ilike(inferred_name),
+                            Game.short_name.ilike(inferred_name),
+                        )
+                    )
+                    .first()
+                )
+
+                if inferred_game:
+
+                    inferred_data = {
+                        "id": inferred_game.id,
+                        "name": inferred_game.name,
+                        "shortName": inferred_game.short_name,
+                        "slug": inferred_game.slug,
+                        "description": inferred_game.description,
+                        "logoUrl": inferred_game.logo_url,
+                        "isActive": inferred_game.is_active,
+                    }
+
+                    for clip_id in missing_game_clip_ids:
+                        metadata[clip_id]["gameId"] = inferred_game.id
+                        metadata[clip_id]["gameName"] = inferred_game.name
+                        metadata[clip_id]["game"] = inferred_data
+
+    return metadata
+
+
+# =========================================================
+# RESOLVE CLIP GAME
+# =========================================================
+
+def _resolve_clip_game_id(
+    user,
+    raw_game_value=None,
+):
+    """
+    Resolve an uploaded clip's game to the canonical games.id.
+
+    Accepted input can be:
+        - games.id
+        - games.slug
+        - games.name
+        - games.short_name
+
+    When the uploader does not provide a game and has exactly one
+    ProfileGame entry, that game's name is used as a best-effort
+    fallback.
+    """
+
+    explicit = (
+        str(raw_game_value).strip()
+        if raw_game_value is not None
+        else ""
+    )
+
+    if not explicit:
+
+        profile_games = (
+            ProfileGame.query
+            .filter_by(user_id=user.id)
+            .all()
+        )
+
+        if len(profile_games) == 1:
+            explicit = (
+                profile_games[0].game_name or ""
+            ).strip()
+
+    if not explicit:
+        return None
+
+    game = (
+        Game.query
+        .filter(
+            or_(
+                Game.id == explicit,
+                Game.slug.ilike(explicit),
+                Game.name.ilike(explicit),
+                Game.short_name.ilike(explicit),
+            )
+        )
+        .first()
+    )
+
+    return game.id if game else None
+
+
+# =========================================================
 # CLIP SERIALIZER
 # =========================================================
 
 def _serialize_clip(
     clip,
     liked_clip_ids=None,
+    metadata_by_clip_id=None,
 ):
 
     liked_clip_ids = liked_clip_ids or set()
+    metadata_by_clip_id = metadata_by_clip_id or {}
 
     clip_data = clip.to_dict(
         _clip_media_url(
@@ -356,18 +549,28 @@ def _serialize_clip(
         )
     )
 
-    # -----------------------------------------------------
-    # THIS IS THE IMPORTANT PART
-    # -----------------------------------------------------
-    #
-    # The frontend uses:
-    #
-    #     clip.isLiked
-    #
-    # so always send it explicitly.
-    #
-    # -----------------------------------------------------
+    metadata = metadata_by_clip_id.get(
+        clip.id,
+        {},
+    )
 
+    clip_data["description"] = (
+        metadata.get("description") or ""
+    )
+
+    clip_data["gameId"] = metadata.get(
+        "gameId"
+    )
+
+    clip_data["gameName"] = (
+        metadata.get("gameName") or ""
+    )
+
+    clip_data["game"] = metadata.get(
+        "game"
+    )
+
+    # Frontend compatibility.
     clip_data["isLiked"] = (
         clip.id in liked_clip_ids
     )
@@ -396,10 +599,6 @@ def _public_profile(user):
         .all()
     )
 
-    # -----------------------------------------------------
-    # CURRENT VIEWER
-    # -----------------------------------------------------
-
     session_user = session.get("user")
 
     viewer_user_id = (
@@ -418,11 +617,11 @@ def _public_profile(user):
         viewer_user_id,
     )
 
-    return {
+    metadata_by_clip_id = _clip_metadata_by_user(
+        user.id
+    )
 
-        # -------------------------------------------------
-        # BASIC IDENTITY
-        # -------------------------------------------------
+    return {
 
         "id": user.id,
 
@@ -431,11 +630,6 @@ def _public_profile(user):
         "username": user.username or "",
 
         "name": user.name or "",
-
-
-        # -------------------------------------------------
-        # PROFILE
-        # -------------------------------------------------
 
         "avatarUrl": (
             _avatar_url(user)
@@ -455,48 +649,23 @@ def _public_profile(user):
             "",
         ),
 
-
-        # -------------------------------------------------
-        # SOCIALS
-        # -------------------------------------------------
-
         "socials": profile.socials or {},
 
-
-        # -------------------------------------------------
-        # GAMES
-        # -------------------------------------------------
-
         "games": [
-
             game.to_dict()
-
             for game in ProfileGame.query.filter_by(
                 user_id=user.id
             ).all()
-
         ],
 
-
-        # -------------------------------------------------
-        # CLIPS
-        # -------------------------------------------------
-
         "clips": [
-
             _serialize_clip(
                 clip,
                 liked_clip_ids,
+                metadata_by_clip_id,
             )
-
             for clip in clips
-
         ],
-
-
-        # -------------------------------------------------
-        # LINKED ACCOUNTS
-        # -------------------------------------------------
 
         "linkedStatus": {
 
@@ -514,19 +683,10 @@ def _public_profile(user):
 
         },
 
-
-        # -------------------------------------------------
-        # STATS
-        # -------------------------------------------------
-
         "stats": {
-
             "matches": 0,
-
             "winRate": 0,
-
             "trophies": 0,
-
         },
 
     }
@@ -552,30 +712,20 @@ def get_profile():
     avatar_url = _avatar_url(user)
 
     basic_data = {
-
         **(profile.basic_data or {}),
-
         "name": user.name or "",
-
         "username": user.username or "",
-
         "email": user.email or "",
-
         "avatarUrl": (
-
             avatar_url
-
             or (profile.basic_data or {}).get(
                 "avatarUrl",
                 "",
             )
-
         ),
-
     }
 
     linked_status = {
-
         "discord": bool(
             user.discord_verified
         ),
@@ -591,7 +741,6 @@ def get_profile():
         "email": bool(
             user.email_verified
         ),
-
     }
 
     clips = (
@@ -615,43 +764,31 @@ def get_profile():
         user.id,
     )
 
+    metadata_by_clip_id = _clip_metadata_by_user(
+        user.id
+    )
+
     return jsonify({
 
         "basicData": basic_data,
 
         "uid": user.uid,
 
-
-        # -------------------------------------------------
-        # GAMES
-        # -------------------------------------------------
-
         "games": [
-
             game.to_dict()
-
             for game in ProfileGame.query.filter_by(
                 user_id=user.id
             ).all()
-
         ],
 
-
-        # -------------------------------------------------
-        # CLIPS
-        # -------------------------------------------------
-
         "clips": [
-
             _serialize_clip(
                 clip,
                 liked_clip_ids,
+                metadata_by_clip_id,
             )
-
             for clip in clips
-
         ],
-
 
         "socials": profile.socials or {},
 
@@ -677,11 +814,8 @@ def get_public_profile(username):
     if user is None:
 
         return jsonify({
-
             "success": False,
-
             "message": "Profile not found",
-
         }), 404
 
     response = _public_profile(user)
@@ -689,11 +823,8 @@ def get_public_profile(username):
     session_user = session.get("user")
 
     response["isOwner"] = bool(
-
         session_user
-
         and session_user.get("id") == user.id
-
     )
 
     return jsonify(response)
@@ -731,124 +862,58 @@ def update_profile():
     )
 
     allowed_basic_fields = {
-
         "name",
-
         "username",
-
         "email",
-
         "gender",
-
         "dob",
-
         "region",
-
         "bio",
-
         "avatarUrl",
-
     }
 
     stored_basic = {
-
         **(profile.basic_data or {}),
-
         **{
-
             key: value
-
             for key, value in basic_data.items()
-
             if key in allowed_basic_fields
-
         },
-
     }
 
     profile.basic_data = stored_basic
-
-    profile.socials = dict(
-        socials
-    )
-
-
-    # -----------------------------------------------------
-    # NAME
-    # -----------------------------------------------------
+    profile.socials = dict(socials)
 
     if (
-
         "name" in basic_data
-
         and basic_data["name"]
-
     ):
-
         user.name = basic_data["name"]
 
-
-    # -----------------------------------------------------
-    # USERNAME
-    # -----------------------------------------------------
-
     if (
-
         "username" in basic_data
-
         and not user.discord_verified
-
     ):
-
         user.username = (
-
             basic_data["username"]
-
             or None
-
         )
-
-
-    # -----------------------------------------------------
-    # EMAIL
-    # -----------------------------------------------------
 
     if (
-
         "email" in basic_data
-
         and basic_data["email"]
-
     ):
-
         user.email = (
-
             basic_data["email"].lower()
-
         )
-
-
-    # -----------------------------------------------------
-    # AVATAR
-    # -----------------------------------------------------
 
     if "avatarUrl" in basic_data:
-
         user.avatar = (
-
             basic_data["avatarUrl"]
-
             or None
-
         )
 
-
     db.session.commit()
-
-
-    # =====================================================
-    # PROFILE COMPLETION REWARD
-    # =====================================================
 
     if _is_profile_complete(
         user,
@@ -856,26 +921,17 @@ def update_profile():
     ):
 
         _process_reward_event(
-
             user=user,
-
             event_type="PROFILE_COMPLETED",
-
             reference_id=user.id,
-
             metadata={
                 "source": "profile_update",
             },
-
         )
 
-
     return jsonify({
-
         "success": True,
-
         "message": "Profile updated successfully",
-
     })
 
 
@@ -898,11 +954,6 @@ def delete_account():
         user_id=user.id
     ).all()
 
-
-    # -----------------------------------------------------
-    # DELETE SUPABASE CLIPS
-    # -----------------------------------------------------
-
     if clips:
 
         try:
@@ -910,13 +961,9 @@ def delete_account():
             supabase = _get_supabase()
 
             storage_paths = [
-
                 clip.filename
-
                 for clip in clips
-
                 if clip.filename
-
             ]
 
             if storage_paths:
@@ -933,11 +980,6 @@ def delete_account():
                 "Failed to delete Supabase clips"
             )
 
-
-    # -----------------------------------------------------
-    # DELETE DATABASE DATA
-    # -----------------------------------------------------
-
     ProfileClip.query.filter_by(
         user_id=user.id
     ).delete()
@@ -950,11 +992,6 @@ def delete_account():
         user_id=user.id
     ).delete()
 
-
-    # -----------------------------------------------------
-    # DELETE USER
-    # -----------------------------------------------------
-
     db.session.delete(user)
 
     db.session.commit()
@@ -962,11 +999,8 @@ def delete_account():
     session.clear()
 
     return jsonify({
-
         "success": True,
-
         "message": "Account deleted successfully",
-
     })
 
 
@@ -990,123 +1024,83 @@ def add_game():
     ) or {}
 
     game_data = (
-
         data.get("newGame")
-
         if isinstance(
             data.get("newGame"),
             dict,
         )
-
         else data
-
     )
 
     required_fields = (
-
         "gameName",
-
         "ign",
-
         "uid",
-
     )
 
     if any(
-
         not str(
-
             game_data.get(
                 field,
                 "",
             )
-
         ).strip()
-
         for field in required_fields
-
     ):
 
         return jsonify({
-
             "success": False,
-
             "message": (
                 "gameName, ign, and uid "
                 "are required"
             ),
-
         }), 400
 
-
-    # =====================================================
-    # CREATE GAME
-    # =====================================================
-
     game = ProfileGame(
-
         user_id=user.id,
-
         game_name=str(
             game_data["gameName"]
         ).strip(),
-
         ign=str(
             game_data["ign"]
         ).strip(),
-
         uid=str(
             game_data["uid"]
         ).strip(),
-
         role=str(
             game_data.get(
                 "role",
                 "",
             )
         ).strip(),
-
         tier=str(
             game_data.get(
                 "tier",
                 "Semi-Pro",
             )
         ).strip(),
-
         experience=str(
             game_data.get(
                 "experience",
                 "",
             )
         ).strip(),
-
     )
 
     db.session.add(game)
 
     db.session.commit()
 
-
-    # =====================================================
-    # FIRST GAME REWARD
-    # =====================================================
-
     _process_reward_event(
-
         user=user,
-
         event_type="GAME_ADDED",
-
         reference_id=game.id,
-
         metadata={
             "game_id": game.id,
             "game_name": game.game_name,
             "source": "profile_game",
         },
-
     )
-
 
     return jsonify(
         game.to_dict()
@@ -1129,21 +1123,15 @@ def delete_game(game_id):
         return error
 
     game = ProfileGame.query.filter_by(
-
         id=game_id,
-
         user_id=user.id,
-
     ).first()
 
     if game is None:
 
         return jsonify({
-
             "success": False,
-
             "message": "Game not found",
-
         }), 404
 
     db.session.delete(game)
@@ -1151,25 +1139,13 @@ def delete_game(game_id):
     db.session.commit()
 
     return jsonify({
-
         "success": True,
-
         "message": "Game removed",
-
     })
 
 
 # =========================================================
 # GET CURRENT USER CLIPS
-# =========================================================
-#
-# DashboardHome uses:
-#
-#     GET /api/profile/clips
-#
-# This endpoint now also returns isLiked so the heart
-# correctly restores its state after refresh.
-#
 # =========================================================
 
 @profile_bp.route(
@@ -1204,21 +1180,20 @@ def get_my_clips():
         user.id,
     )
 
+    metadata_by_clip_id = _clip_metadata_by_user(
+        user.id
+    )
+
     return jsonify({
-
         "success": True,
-
         "clips": [
-
             _serialize_clip(
                 clip,
                 liked_clip_ids,
+                metadata_by_clip_id,
             )
-
             for clip in clips
-
         ],
-
     })
 
 
@@ -1237,56 +1212,35 @@ def upload_clip():
     if error:
         return error
 
-
-    # -----------------------------------------------------
-    # CHECK SUPABASE CONFIGURATION
-    # -----------------------------------------------------
-
     if not SUPABASE_URL:
 
         return jsonify({
-
             "success": False,
-
             "message": (
                 "SUPABASE_URL is not configured "
                 "on the backend."
             ),
-
         }), 500
-
 
     if not SUPABASE_SERVICE_ROLE_KEY:
 
         return jsonify({
-
             "success": False,
-
             "message": (
                 "SUPABASE_SERVICE_ROLE_KEY is not "
                 "configured on the backend."
             ),
-
         }), 500
-
 
     if not SUPABASE_CLIP_BUCKET:
 
         return jsonify({
-
             "success": False,
-
             "message": (
                 "SUPABASE_CLIP_BUCKET is not "
                 "configured on the backend."
             ),
-
         }), 500
-
-
-    # -----------------------------------------------------
-    # GET FILE
-    # -----------------------------------------------------
 
     clip_file = request.files.get(
         "clip"
@@ -1295,64 +1249,38 @@ def upload_clip():
     if clip_file is None:
 
         return jsonify({
-
             "success": False,
-
             "message": "Video file is required.",
-
         }), 400
-
 
     if not clip_file.filename:
 
         return jsonify({
-
             "success": False,
-
             "message": "Video file is required.",
-
         }), 400
 
-
-    # -----------------------------------------------------
-    # MIME TYPE
-    # -----------------------------------------------------
-
     mime_type = (
-
         clip_file.mimetype
-
         or "video/mp4"
-
     ).lower()
 
-
     allowed_mime_types = {
-
         "video/mp4",
-
         "video/webm",
-
         "video/quicktime",
-
         "video/x-matroska",
-
     }
-
 
     if mime_type not in allowed_mime_types:
 
         return jsonify({
-
             "success": False,
-
             "message": (
                 "Unsupported video format. "
                 "Please upload MP4, WebM, MOV, or MKV."
             ),
-
         }), 400
-
 
     # -----------------------------------------------------
     # TITLE
@@ -1363,24 +1291,66 @@ def upload_clip():
         "",
     ).strip()
 
-
     if not title:
-
         title = "Gameplay Clip"
-
 
     if len(title) > 160:
 
         return jsonify({
-
             "success": False,
-
             "message": (
                 "Title must be 160 characters or less."
             ),
-
         }), 400
 
+    # -----------------------------------------------------
+    # DESCRIPTION
+    # -----------------------------------------------------
+
+    description = (
+        request.form.get("description")
+        or request.form.get("desc")
+        or ""
+    ).strip()
+
+    if len(description) > 2000:
+
+        return jsonify({
+            "success": False,
+            "message": (
+                "Description must be 2000 characters or less."
+            ),
+        }), 400
+
+    # -----------------------------------------------------
+    # GAME
+    # -----------------------------------------------------
+
+    raw_game_value = (
+        request.form.get("gameId")
+        or request.form.get("game_id")
+        or request.form.get("gameSlug")
+        or request.form.get("game_slug")
+        or request.form.get("gameName")
+        or request.form.get("game_name")
+        or request.form.get("game")
+        or ""
+    ).strip()
+
+    resolved_game_id = _resolve_clip_game_id(
+        user,
+        raw_game_value,
+    )
+
+    if raw_game_value and not resolved_game_id:
+
+        return jsonify({
+            "success": False,
+            "message": (
+                "The selected game could not be found. "
+                "Please select a valid SYNCO game."
+            ),
+        }), 400
 
     # -----------------------------------------------------
     # VIDEO METADATA
@@ -1389,125 +1359,82 @@ def upload_clip():
     try:
 
         duration_seconds = float(
-
             request.form.get(
                 "durationSeconds",
                 0,
             )
-
             or 0
-
         )
 
     except (TypeError, ValueError):
-
         duration_seconds = 0
-
 
     try:
 
         width = int(
-
             request.form.get(
                 "width",
                 0,
             )
-
             or 0
-
         )
 
     except (TypeError, ValueError):
-
         width = 0
-
 
     try:
 
         height = int(
-
             request.form.get(
                 "height",
                 0,
             )
-
             or 0
-
         )
 
     except (TypeError, ValueError):
-
         height = 0
-
-
-    # -----------------------------------------------------
-    # VALIDATE DURATION
-    # -----------------------------------------------------
 
     if duration_seconds <= 0:
 
         return jsonify({
-
             "success": False,
-
             "message": "Invalid video duration.",
-
         }), 400
-
 
     if duration_seconds > 120:
 
         return jsonify({
-
             "success": False,
-
             "message": (
                 "Clips must be 120 seconds or shorter."
             ),
-
         }), 400
-
-
-    # -----------------------------------------------------
-    # VALIDATE RESOLUTION
-    # -----------------------------------------------------
 
     if width <= 0 or height <= 0:
 
         return jsonify({
-
             "success": False,
-
             "message": "Invalid video resolution.",
-
         }), 400
-
 
     if width < 720 or height < 720:
 
         return jsonify({
-
             "success": False,
-
             "message": (
                 "Minimum video resolution is 720p."
             ),
-
         }), 400
-
 
     if width > 1920 or height > 1920:
 
         return jsonify({
-
             "success": False,
-
             "message": (
                 "Maximum supported resolution is 1080p."
             ),
-
         }), 400
-
 
     # -----------------------------------------------------
     # READ VIDEO
@@ -1518,20 +1445,11 @@ def upload_clip():
     if not file_bytes:
 
         return jsonify({
-
             "success": False,
-
             "message": "Uploaded video is empty.",
-
         }), 400
 
-
     file_size = len(file_bytes)
-
-
-    # -----------------------------------------------------
-    # MAX FILE SIZE
-    # -----------------------------------------------------
 
     max_file_size = (
         250 * 1024 * 1024
@@ -1540,15 +1458,11 @@ def upload_clip():
     if file_size > max_file_size:
 
         return jsonify({
-
             "success": False,
-
             "message": (
                 "Video must be smaller than 250 MB."
             ),
-
         }), 400
-
 
     # -----------------------------------------------------
     # FILE EXTENSION
@@ -1558,45 +1472,27 @@ def upload_clip():
         clip_file.filename
     ).suffix.lower()
 
-
     extension_map = {
-
         "video/mp4": ".mp4",
-
         "video/webm": ".webm",
-
         "video/quicktime": ".mov",
-
         "video/x-matroska": ".mkv",
-
     }
 
-
     extension = (
-
-        extension_map.get(
-            mime_type
-        )
-
+        extension_map.get(mime_type)
         or original_extension
-
         or ".mp4"
-
     )
-
 
     # -----------------------------------------------------
     # SUPABASE STORAGE PATH
     # -----------------------------------------------------
 
     storage_path = (
-
         f"{user.id}/"
-
         f"{uuid.uuid4()}{extension}"
-
     )
-
 
     # -----------------------------------------------------
     # UPLOAD TO SUPABASE
@@ -1607,81 +1503,50 @@ def upload_clip():
         supabase = _get_supabase()
 
         current_app.logger.info(
-
             "Uploading SYNCO profile clip: "
-            "bucket=%s path=%s size=%s mime=%s",
-
+            "bucket=%s path=%s size=%s mime=%s game_id=%s",
             SUPABASE_CLIP_BUCKET,
-
             storage_path,
-
             file_size,
-
             mime_type,
-
+            resolved_game_id,
         )
-
 
         upload_result = (
-
             supabase
-
             .storage
-
             .from_(SUPABASE_CLIP_BUCKET)
-
             .upload(
-
                 storage_path,
-
                 file_bytes,
-
                 {
-
                     "content-type": mime_type,
-
                     "upsert": "false",
-
                 },
-
             )
-
         )
-
 
         current_app.logger.info(
-
             "Supabase clip upload successful: %s",
-
             upload_result,
-
         )
-
 
     except Exception as upload_error:
 
         current_app.logger.exception(
-
             "SUPABASE CLIP UPLOAD FAILED"
-
         )
 
         return jsonify({
-
             "success": False,
-
             "message": (
                 "Unable to upload video to storage."
             ),
-
             "error": str(
                 upload_error
             ),
-
             "bucket": SUPABASE_CLIP_BUCKET,
-
         }), 500
-
 
     # -----------------------------------------------------
     # SAVE DATABASE RECORD
@@ -1690,38 +1555,43 @@ def upload_clip():
     try:
 
         clip = ProfileClip(
-
             user_id=user.id,
-
             title=title,
-
             filename=storage_path,
-
             file_size=file_size,
-
             mime_type=mime_type,
-
             duration_seconds=duration_seconds,
-
             width=width,
-
             height=height,
-
         )
 
         db.session.add(clip)
+        db.session.flush()
+
+        # The two metadata columns are intentionally written
+        # using SQL so models.py does not need to be replaced.
+        db.session.execute(
+            text(
+                """
+                UPDATE profile_clips
+                SET
+                    description = :description,
+                    game_id = :game_id
+                WHERE id = :clip_id
+                """
+            ),
+            {
+                "description": description,
+                "game_id": resolved_game_id,
+                "clip_id": clip.id,
+            },
+        )
 
         db.session.commit()
-
 
     except Exception as database_error:
 
         db.session.rollback()
-
-
-        # -----------------------------------------------
-        # Roll back Supabase upload if DB fails.
-        # -----------------------------------------------
 
         try:
 
@@ -1732,82 +1602,52 @@ def upload_clip():
             ])
 
         except Exception:
-
             pass
 
-
         current_app.logger.exception(
-
             "PROFILE CLIP DATABASE INSERT FAILED"
-
         )
 
-
         return jsonify({
-
             "success": False,
-
             "message": (
                 "Video uploaded but could not be "
                 "saved to the profile."
             ),
-
             "error": str(
                 database_error
             ),
-
         }), 500
 
-
-    # =====================================================
-    # FIRST CLIP REWARD
-    # =====================================================
-
     _process_reward_event(
-
         user=user,
-
         event_type="CLIP_UPLOADED",
-
         reference_id=clip.id,
-
         metadata={
             "clip_id": clip.id,
             "title": clip.title,
+            "game_id": resolved_game_id,
+            "description": description,
             "source": "profile_clip",
         },
-
     )
-
-
-    # -----------------------------------------------------
-    # CREATE SIGNED URL
-    # -----------------------------------------------------
 
     media_url = _clip_media_url(
         clip.filename
     )
 
-
-    # -----------------------------------------------------
-    # RESPONSE
-    # -----------------------------------------------------
-    #
-    # A newly uploaded clip is not automatically liked.
-    #
-    # -----------------------------------------------------
+    metadata_by_clip_id = _clip_metadata_by_user(
+        user.id
+    )
 
     return jsonify({
-
         "success": True,
-
         "message": "Clip uploaded successfully.",
-
         "clip": _serialize_clip(
             clip,
             set(),
+            metadata_by_clip_id,
         ),
-
     }), 201
 
 
@@ -1827,27 +1667,16 @@ def delete_clip(clip_id):
         return error
 
     clip = ProfileClip.query.filter_by(
-
         id=clip_id,
-
         user_id=user.id,
-
     ).first()
 
     if clip is None:
 
         return jsonify({
-
             "success": False,
-
             "message": "Clip not found.",
-
         }), 404
-
-
-    # -----------------------------------------------------
-    # DELETE FROM SUPABASE
-    # -----------------------------------------------------
 
     if clip.filename:
 
@@ -1864,26 +1693,16 @@ def delete_clip(clip_id):
         except Exception:
 
             current_app.logger.exception(
-
                 "Failed to delete clip from Supabase"
-
             )
-
-
-    # -----------------------------------------------------
-    # DELETE DATABASE RECORD
-    # -----------------------------------------------------
 
     db.session.delete(clip)
 
     db.session.commit()
 
     return jsonify({
-
         "success": True,
-
         "message": "Clip deleted successfully.",
-
     })
 
 
@@ -1910,11 +1729,8 @@ def toggle_clip_like(clip_id):
     if clip is None:
 
         return jsonify({
-
             "success": False,
-
             "message": "Clip not found.",
-
         }), 404
 
     existing_like = (
@@ -1937,11 +1753,8 @@ def toggle_clip_like(clip_id):
     else:
 
         new_like = ProfileClipLike(
-
             clip_id=clip.id,
-
             user_id=user.id,
-
         )
 
         db.session.add(
@@ -1961,13 +1774,9 @@ def toggle_clip_like(clip_id):
     )
 
     return jsonify({
-
         "success": True,
-
         "liked": liked,
-
         "likes": likes_count,
-
     })
 
 
@@ -1989,41 +1798,27 @@ def get_clip_comments(clip_id):
     if clip is None:
 
         return jsonify({
-
             "success": False,
-
             "message": "Clip not found.",
-
         }), 404
 
     comments = (
-
         ProfileClipComment.query
-
         .filter_by(
             clip_id=clip.id
         )
-
         .order_by(
             ProfileClipComment.created_at.asc()
         )
-
         .all()
-
     )
 
     return jsonify({
-
         "success": True,
-
         "comments": [
-
             comment.to_dict()
-
             for comment in comments
-
         ],
-
     })
 
 
@@ -2050,11 +1845,8 @@ def add_clip_comment(clip_id):
     if clip is None:
 
         return jsonify({
-
             "success": False,
-
             "message": "Clip not found.",
-
         }), 404
 
     data = request.get_json(
@@ -2062,45 +1854,33 @@ def add_clip_comment(clip_id):
     ) or {}
 
     content = str(
-
         data.get(
             "content",
             "",
         )
-
     ).strip()
 
     if not content:
 
         return jsonify({
-
             "success": False,
-
             "message": "Comment cannot be empty.",
-
         }), 400
 
     if len(content) > 1000:
 
         return jsonify({
-
             "success": False,
-
             "message": (
                 "Comment must be 1000 characters "
                 "or less."
             ),
-
         }), 400
 
     comment = ProfileClipComment(
-
         clip_id=clip.id,
-
         user_id=user.id,
-
         content=content,
-
     )
 
     db.session.add(comment)

@@ -41,6 +41,14 @@ const showValue = (value) =>
     ? '--'
     : value;
 
+const firstDefined = (...values) =>
+  values.find(
+    (value) =>
+      value !== undefined &&
+      value !== null &&
+      String(value).trim() !== ''
+  );
+
 const getGreeting = () => {
   const hour = new Date().getHours();
 
@@ -57,26 +65,96 @@ const getGreeting = () => {
 
 
 // =========================================================
-// NORMALIZE CLIP
+// CLIP GAME NAME RESOLUTION
 // =========================================================
 //
-// The backend now sends:
+// The dashboard supports both the new backend structure:
 //
-//     isLiked: true / false
+//   clip.game.name
+//   clip.gameName
+//   clip.gameId
 //
-// We also support common alternate naming so the UI remains
-// safe if another endpoint returns snake_case.
+// and older/alternate naming styles.
 //
+// If only gameId is returned, resolve it against /api/games.
 // =========================================================
 
-const normalizeClip = (clip) => {
+const resolveClipGameName = (
+  clip,
+  games = []
+) => {
+
+  const directName = firstDefined(
+    clip?.gameName,
+    clip?.game_name,
+    clip?.game?.name,
+    clip?.game?.shortName,
+    clip?.game?.short_name
+  );
+
+  if (directName) {
+    return String(directName).trim();
+  }
+
+  const gameId = firstDefined(
+    clip?.gameId,
+    clip?.game_id
+  );
+
+  if (gameId) {
+
+    const matchedGame = games.find(
+      (game) =>
+        String(game?.id) ===
+        String(gameId)
+    );
+
+    const catalogName = firstDefined(
+      matchedGame?.name,
+      matchedGame?.shortName,
+      matchedGame?.short_name
+    );
+
+    if (catalogName) {
+      return String(catalogName).trim();
+    }
+  }
+
+  return '';
+};
+
+
+// =========================================================
+// NORMALIZE CLIP
+// =========================================================
+
+const normalizeClip = (
+  clip,
+  games = []
+) => {
 
   if (!clip) {
     return clip;
   }
 
+  const description = firstDefined(
+    clip.description,
+    clip.clipDescription,
+    clip.clip_description,
+    ''
+  );
+
+  const gameName = resolveClipGameName(
+    clip,
+    games
+  );
+
   return {
     ...clip,
+
+    // -----------------------------------------------------
+    // LIKE STATE
+    // -----------------------------------------------------
 
     isLiked: Boolean(
       clip.isLiked ??
@@ -84,6 +162,23 @@ const normalizeClip = (clip) => {
       clip.liked ??
       false
     ),
+
+    // -----------------------------------------------------
+    // DESCRIPTION
+    // -----------------------------------------------------
+
+    description:
+      description !== undefined &&
+        description !== null
+        ? String(description)
+        : '',
+
+    // -----------------------------------------------------
+    // GAME
+    // -----------------------------------------------------
+
+    gameName:
+      gameName || '',
   };
 };
 
@@ -183,21 +278,24 @@ const DashboardHome = () => {
 
         ]);
 
-
         // =====================================================
         // GAME CATALOG
         // =====================================================
+
+        let loadedGameCatalog = [];
 
         if (catalogResponse?.ok) {
 
           const catalogData =
             await catalogResponse.json();
 
+          loadedGameCatalog =
+            catalogData.games || [];
+
           setGameCatalog(
-            catalogData.games || []
+            loadedGameCatalog
           );
         }
-
 
         // =====================================================
         // PROFILE GAMES
@@ -213,7 +311,6 @@ const DashboardHome = () => {
           );
         }
 
-
         // =====================================================
         // CLIPS
         // =====================================================
@@ -225,7 +322,11 @@ const DashboardHome = () => {
 
           const loadedClips =
             (clipsData.clips || []).map(
-              normalizeClip
+              (clip) =>
+                normalizeClip(
+                  clip,
+                  loadedGameCatalog
+                )
             );
 
           setClips(
@@ -246,10 +347,45 @@ const DashboardHome = () => {
 
     };
 
-
     loadDashboardData();
 
   }, [isAdmin]);
+
+
+  // =========================================================
+  // REFRESH CLIP GAME NAMES WHEN CATALOG LOADS
+  // =========================================================
+
+  useEffect(() => {
+
+    if (!gameCatalog.length || !clips.length) {
+      return;
+    }
+
+    setClips((previousClips) =>
+      previousClips.map((clip) => {
+
+        const resolvedGameName =
+          resolveClipGameName(
+            clip,
+            gameCatalog
+          );
+
+        if (
+          !resolvedGameName ||
+          resolvedGameName === clip.gameName
+        ) {
+          return clip;
+        }
+
+        return {
+          ...clip,
+          gameName: resolvedGameName,
+        };
+      })
+    );
+
+  }, [gameCatalog]);
 
 
   // =========================================================
@@ -622,12 +758,6 @@ const DashboardHome = () => {
           )
       );
 
-
-      // -----------------------------------------------------
-      // Only update visible comments if user is still on
-      // the same clip.
-      // -----------------------------------------------------
-
       if (
         activeClipIdRef.current ===
         clipId
@@ -692,13 +822,11 @@ const DashboardHome = () => {
 
     <div className="bento-dashboard-wrapper">
 
-
       {/* =========================================
           COLUMN 2: MAIN LEFT
           ========================================= */}
 
       <div className="col-main-left">
-
 
         {/* =========================================
             GREETINGS
@@ -779,7 +907,6 @@ const DashboardHome = () => {
 
           </h3>
 
-
           <div className="coverflow-container">
 
             {activeClip ? (
@@ -803,12 +930,11 @@ const DashboardHome = () => {
                     Description:{' '}
 
                     {
-                      activeClip.description ||
+                      activeClip.description?.trim() ||
                       'No description provided.'
                     }
 
                   </div>
-
 
                   {/* =================================
                       LIKE BUTTON
@@ -872,7 +998,10 @@ const DashboardHome = () => {
                 <div className="clip-game-tag">
 
                   {
-                    activeClip.game ||
+                    resolveClipGameName(
+                      activeClip,
+                      gameCatalog
+                    ) ||
                     'Unspecified'
                   }
 
@@ -929,7 +1058,6 @@ const DashboardHome = () => {
                         index ===
                         activeClipIndex;
 
-
                       return (
 
                         <div
@@ -969,7 +1097,6 @@ const DashboardHome = () => {
                                 : 'metadata'
                             }
                           />
-
 
                           {isCenter && (
 
@@ -1014,7 +1141,6 @@ const DashboardHome = () => {
 
                   </h4>
 
-
                   <div className="comments-list">
 
                     {commentsLoading && (
@@ -1027,7 +1153,6 @@ const DashboardHome = () => {
 
                     )}
 
-
                     {!commentsLoading &&
                       !commentError &&
                       comments.length === 0 && (
@@ -1039,7 +1164,6 @@ const DashboardHome = () => {
                         </p>
 
                       )}
-
 
                     {comments.map(
                       (comment) => (
@@ -1062,7 +1186,6 @@ const DashboardHome = () => {
                       )
                     )}
 
-
                     {commentError && (
 
                       <p
@@ -1080,7 +1203,6 @@ const DashboardHome = () => {
                     )}
 
                   </div>
-
 
                   <input
                     type="text"
@@ -1121,7 +1243,6 @@ const DashboardHome = () => {
                       <ChevronLeft />
 
                     </button>
-
 
                     <button
                       type="button"
@@ -1170,7 +1291,6 @@ const DashboardHome = () => {
 
       <div className="col-main-right">
 
-
         {/* =========================================
             PREMIUM BANNER
             ========================================= */}
@@ -1203,7 +1323,6 @@ const DashboardHome = () => {
 
         <div className="mid-grid-row">
 
-
           <div className="bento-card game-selector-card">
 
             <h3 className="section-label">
@@ -1211,7 +1330,6 @@ const DashboardHome = () => {
               Your Games
 
             </h3>
-
 
             <div className="game-list">
 
@@ -1225,8 +1343,8 @@ const DashboardHome = () => {
                       key={game}
 
                       className={`game-option ${selectedGame === game
-                          ? 'active'
-                          : ''
+                        ? 'active'
+                        : ''
                         }`}
 
                       onClick={() =>
@@ -1260,7 +1378,6 @@ const DashboardHome = () => {
             </div>
 
           </div>
-
 
           <div className="wire-block synco-promo-card">
 
@@ -1306,7 +1423,6 @@ const DashboardHome = () => {
 
           </div>
 
-
           <div className="stat-meter-container">
 
             <div className="stat-glowing-blob"></div>
@@ -1320,7 +1436,6 @@ const DashboardHome = () => {
             </div>
 
           </div>
-
 
           <div className="stat-breakdown">
 
@@ -1342,7 +1457,6 @@ const DashboardHome = () => {
 
             </div>
 
-
             <div className="stat-pill">
 
               <span className="label">
@@ -1360,7 +1474,6 @@ const DashboardHome = () => {
               </span>
 
             </div>
-
 
             <div className="stat-pill">
 
@@ -1403,7 +1516,6 @@ const DashboardHome = () => {
 
         </div>
 
-
         <div className="wire-block social-bar-bottom">
 
           <span className="vertical-text">
@@ -1415,7 +1527,6 @@ const DashboardHome = () => {
         </div>
 
       </div>
-
 
     </div>
 
