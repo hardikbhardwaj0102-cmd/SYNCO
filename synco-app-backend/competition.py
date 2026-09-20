@@ -1328,12 +1328,14 @@ def create_competition():
     # Never rely on React route protection or a client-supplied
     # organizerId. The database-backed User.account_role is checked
     # before any competition data is processed or persisted.
-    user, authorization_error = organizer_account_required()
-
-    if authorization_error:
-        return authorization_error
+    creation_step = "organizer authorization"
 
     try:
+
+        user, authorization_error = organizer_account_required()
+
+        if authorization_error:
+            return authorization_error
 
         creation_step = "read request"
 
@@ -1699,12 +1701,34 @@ def create_competition():
             creation_step if "creation_step" in locals() else "unknown"
         )
 
+        error_text = str(exc).strip() or exc.__class__.__name__
+
         return jsonify({
             "success": False,
             "message": "Competition creation failed.",
             "step": creation_step if "creation_step" in locals() else "unknown",
-            "error": str(exc),
+            "error": error_text,
+            "errorType": exc.__class__.__name__,
         }), 500
+
+
+# =========================================================
+# COMPETITION BLUEPRINT ERROR HANDLER
+# =========================================================
+
+@competition_bp.errorhandler(Exception)
+def competition_unhandled_error(exc):
+
+    current_app.logger.exception(
+        "Unhandled competition blueprint error"
+    )
+
+    return jsonify({
+        "success": False,
+        "message": "Competition API error.",
+        "error": str(exc).strip() or exc.__class__.__name__,
+        "errorType": exc.__class__.__name__,
+    }), 500
 
 
 # =========================================================
