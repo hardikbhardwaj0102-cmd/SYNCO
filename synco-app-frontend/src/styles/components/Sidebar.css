@@ -1,163 +1,362 @@
-/* =========================================
-   SYNCO PILL SIDEBAR STYLES (DARK GLASS)
-========================================= */
+@reference "../global.css";
+
+/* =========================================================
+   SYNCO PILL SIDEBAR
+   RESPONSIVE / FIXED / NON-SCROLLABLE
+   ========================================================= */
+
+
+/* =========================================================
+   SIDEBAR CONTAINER
+   ========================================================= */
 
 .sidebar-container {
   position: fixed;
+
   top: 0;
   left: 0;
+
+  /*
+    Responsive width.
+
+    The sidebar gets slightly smaller on narrower screens
+    instead of remaining rigidly locked to 90px.
+  */
+  width: var(--synco-sidebar-width, clamp(72px, 6vw, 90px));
+
+  /*
+    Keep the sidebar attached to the viewport.
+  */
   height: 100vh;
-  width: 90px;
+  height: 100dvh;
+
   display: flex;
   flex-direction: column;
   align-items: center;
-  padding: 1.5rem 0;
-  gap: 1.25rem;
-  background-color: transparent;
-  z-index: 50;
+
+  /*
+    Responsive vertical spacing.
+  */
+  padding:
+    clamp(0.8rem, 2vh, 1.5rem)
+    0;
+
+  gap: clamp(0.65rem, 1.5vh, 1.25rem);
+
+  background: transparent;
+
+  /*
+    CRITICAL:
+
+    The sidebar never scrolls.
+
+    Its contents must fit inside the viewport.
+  */
+  overflow: hidden;
+
+  /*
+    Sidebar is an overlay above page backgrounds.
+  */
+  z-index: 1000;
+
+  /*
+    Do not allow the transparent outer container to
+    interfere with page interaction.
+  */
+  pointer-events: none;
+
+  box-sizing: border-box;
 }
 
-/* =========================================
-   TOP LOGO BUBBLE
-========================================= */
+
+/* =========================================================
+   LOGO BUBBLE
+   ========================================================= */
+
 .sidebar-logo-bubble {
-  width: 56px;
-  height: 56px;
+  width: clamp(46px, 4vw, 56px);
+  height: clamp(46px, 4vw, 56px);
+
+  flex: 0 0 auto;
+
   border-radius: 50%;
+
   background: rgba(15, 15, 15, 0.6);
+
   backdrop-filter: blur(12px);
   -webkit-backdrop-filter: blur(12px);
-  border: 1px solid rgba(255, 255, 255, 0.15); 
+
+  border: 1px solid rgba(255, 255, 255, 0.15);
+
   display: flex;
   align-items: center;
   justify-content: center;
-  color: #ffffff; /* Light icon */
-  box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.37);
-  transition: all 0.3s ease;
+
+  color: #ffffff;
+
+  box-shadow:
+    0 8px 32px rgba(0, 0, 0, 0.37);
+
+  transition:
+    border-color 0.3s ease,
+    box-shadow 0.3s ease,
+    color 0.3s ease;
+
   cursor: pointer;
+
+  /*
+    Restore interaction.
+  */
+  pointer-events: auto;
 }
 
 .sidebar-logo-bubble:hover {
-  border-color: #D6C98A; /* Golden accent */
-  box-shadow: 0 0 20px rgba(214, 201, 138, 0.3);
+  border-color: #D6C98A;
+
+  box-shadow:
+    0 0 20px rgba(214, 201, 138, 0.3);
+
   color: #D6C98A;
 }
 
-/* =========================================
+
+/* =========================================================
    MAIN NAVIGATION PILL
-========================================= */
+   ========================================================= */
+
 .sidebar-main-pill {
-  width: 64px;
-  flex: 1;
+  width: clamp(54px, 4.5vw, 64px);
+
+  /*
+    Fill available viewport height without exceeding it.
+  */
+  flex: 1 1 auto;
+
+  min-height: 0;
+
   background: rgba(15, 15, 15, 0.5);
+
   backdrop-filter: blur(16px);
   -webkit-backdrop-filter: blur(16px);
+
   border: 1px solid rgba(255, 255, 255, 0.1);
-  border-radius: 9999px; /* Pill shape */
+
+  border-radius: 9999px;
+
   display: flex;
   flex-direction: column;
+
   justify-content: space-between;
   align-items: center;
-  padding: 1.5rem 0 0.5rem 0;
-  box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.37);
+
+  /*
+    Responsive padding.
+  */
+  padding:
+    clamp(0.65rem, 2vh, 1.5rem)
+    0
+    clamp(0.35rem, 1vh, 0.5rem);
+
+  box-shadow:
+    0 8px 32px rgba(0, 0, 0, 0.37);
+
+  /*
+    Restore interaction.
+  */
+  pointer-events: auto;
+
+  /*
+    Never allow the pill itself to become a scrollbar.
+  */
+  overflow: hidden;
 }
 
-.sidebar-nav-top, .sidebar-nav-bottom {
+
+/* =========================================================
+   NAVIGATION GROUPS
+   ========================================================= */
+
+.sidebar-nav-top,
+.sidebar-nav-bottom {
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 1rem;
+
   width: 100%;
+
+  gap: clamp(0.35rem, 1.2vh, 1rem);
+
+  /*
+    Groups are allowed to shrink if the viewport is short.
+  */
+  min-height: 0;
 }
 
-/* =========================================
-   ICONS & INTERACTIONS
-========================================= */
+
+/* =========================================================
+   NAVIGATION ITEM WRAPPER
+   ========================================================= */
+
 .sidebar-item-wrapper {
   position: relative;
+
   display: flex;
   justify-content: center;
+
   width: 100%;
+
+  flex: 0 0 auto;
 }
 
+
+/* =========================================================
+   NAVIGATION LINK
+   ========================================================= */
+
 .sidebar-link {
-  width: 44px;
-  height: 44px;
+  width: clamp(38px, 3.2vw, 44px);
+  height: clamp(38px, 3.2vw, 44px);
+
+  flex: 0 0 auto;
+
   border-radius: 50%;
+
   display: flex;
   align-items: center;
   justify-content: center;
-  color: rgba(255, 255, 255, 0.5); /* Muted light gray for inactive */
-  transition: all 0.2s ease;
+
+  color: rgba(255, 255, 255, 0.5);
+
+  transition:
+    color 0.2s ease,
+    background-color 0.2s ease,
+    box-shadow 0.2s ease;
+
   position: relative;
+
   text-decoration: none;
 }
 
 .sidebar-link:hover {
-  color: #ffffff; /* White text on hover */
-  background-color: rgba(255, 255, 255, 0.1); /* Subtle glass hover background */
+  color: #ffffff;
+
+  background-color: rgba(255, 255, 255, 0.1);
 }
 
 .sidebar-link-active {
-  background-color: #D6C98A; /* Golden active state */
-  color: #000000; /* Dark icon on gold background for high contrast */
-  box-shadow: 0 0 15px rgba(214, 201, 138, 0.4);
+  background-color: #D6C98A;
+
+  color: #000000;
+
+  box-shadow:
+    0 0 15px rgba(214, 201, 138, 0.4);
 }
 
-/* =========================================
-   TOOLTIPS
-========================================= */
+
+/* =========================================================
+   TOOLTIP
+   ========================================================= */
+
 .sidebar-tooltip {
   position: absolute;
-  left: 60px;
+
+  left: clamp(56px, 5vw, 70px);
   top: 50%;
+
   transform: translateY(-50%);
+
   background: rgba(20, 20, 20, 0.85);
+
   backdrop-filter: blur(8px);
   -webkit-backdrop-filter: blur(8px);
+
   color: #ffffff;
-  padding: 0.35rem 0.75rem;
+
+  padding:
+    0.35rem
+    0.75rem;
+
   border-radius: 0.5rem;
-  font-size: 0.75rem;
+
+  font-size: clamp(0.68rem, 0.7vw, 0.75rem);
+
   font-weight: 600;
+
   white-space: nowrap;
+
   opacity: 0;
   visibility: hidden;
-  transition: all 0.2s ease;
+
+  transition:
+    opacity 0.2s ease,
+    visibility 0.2s ease,
+    left 0.2s ease;
+
   pointer-events: none;
+
   border: 1px solid rgba(255, 255, 255, 0.15);
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
-  z-index: 100;
+
+  box-shadow:
+    0 4px 12px rgba(0, 0, 0, 0.3);
+
+  z-index: 2000;
 }
 
 .sidebar-link:hover .sidebar-tooltip {
   opacity: 1;
+
   visibility: visible;
-  left: 70px; 
+
+  left: clamp(64px, 5.5vw, 70px);
 }
 
-/* =========================================
-   MORE & REWARDS SUBMENU
-========================================= */
+
+/* =========================================================
+   PLAY / GAMES SUBMENU
+   ========================================================= */
+
 .sidebar-submenu {
   position: absolute;
-  left: 70px;
+
+  left: clamp(58px, 5vw, 70px);
   top: 50%;
+
   transform: translateY(-50%);
+
   padding: 0.5rem;
+
   background: rgba(20, 20, 20, 0.9);
+
   backdrop-filter: blur(12px);
   -webkit-backdrop-filter: blur(12px);
+
   border: 1px solid rgba(255, 255, 255, 0.15);
+
   border-radius: 1rem;
-  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4);
+
+  box-shadow:
+    0 8px 24px rgba(0, 0, 0, 0.4);
+
   display: flex;
   flex-direction: column;
+
   gap: 0.5rem;
-  z-index: 1000;
+
+  z-index: 3000;
+
   opacity: 0;
   visibility: hidden;
-  transition: all 0.2s ease;
+
+  transition:
+    opacity 0.2s ease,
+    visibility 0.2s ease;
+
+  /*
+    Submenu itself can extend outside the sidebar.
+  */
+  overflow: visible;
+
+  pointer-events: auto;
 }
 
 .sidebar-item-wrapper:hover .sidebar-submenu {
@@ -165,52 +364,96 @@
   visibility: visible;
 }
 
+
+/* =========================================================
+   SUBMENU LINKS
+   ========================================================= */
+
 .sidebar-submenu-link {
   display: flex;
   align-items: center;
+
   gap: 0.75rem;
-  padding: 0.5rem 1rem;
+
+  padding:
+    0.5rem
+    1rem;
+
   color: rgba(255, 255, 255, 0.7);
+
   text-decoration: none;
+
   border-radius: 0.5rem;
+
   font-size: 0.875rem;
+
   font-weight: 600;
-  transition: all 0.2s ease;
+
+  transition:
+    background-color 0.2s ease,
+    color 0.2s ease;
 }
 
 .sidebar-submenu-link:hover {
   background-color: rgba(255, 255, 255, 0.1);
+
   color: #ffffff;
 }
 
-/* =========================================
-   BADGES & AVATARS
-========================================= */
+
+/* =========================================================
+   NOTIFICATION BADGE
+   ========================================================= */
+
 .sidebar-badge {
   position: absolute;
+
   top: -2px;
   right: -2px;
+
   min-width: 18px;
   height: 18px;
+
   padding: 0 4px;
+
   border-radius: 9999px;
-  background-color: #ef4444; 
+
+  background-color: #ef4444;
+
   color: #ffffff;
+
   font-size: 10px;
+
   font-weight: 700;
+
   display: flex;
   align-items: center;
   justify-content: center;
-  border: 2px solid rgba(15, 15, 15, 0.8); /* Matches dark pill background */
+
+  border: 2px solid rgba(15, 15, 15, 0.8);
+
+  pointer-events: none;
 }
 
+
+/* =========================================================
+   PROFILE AVATAR
+   ========================================================= */
+
 .sidebar-avatar {
-  width: 48px;
-  height: 48px;
+  width: clamp(40px, 3.5vw, 48px);
+  height: clamp(40px, 3.5vw, 48px);
+
+  flex: 0 0 auto;
+
   border-radius: 50%;
+
   object-fit: cover;
+
   border: 2px solid transparent;
-  transition: border-color 0.2s ease;
+
+  transition:
+    border-color 0.2s ease;
 }
 
 .sidebar-link-active .sidebar-avatar,
@@ -218,21 +461,177 @@
   border-color: #D6C98A;
 }
 
+
+/* =========================================================
+   PROFILE FALLBACK
+   ========================================================= */
+
 .sidebar-profile-fallback {
-  width: 48px;
-  height: 48px;
+  width: clamp(40px, 3.5vw, 48px);
+  height: clamp(40px, 3.5vw, 48px);
+
+  flex: 0 0 auto;
+
   border-radius: 50%;
+
   background-color: rgba(255, 255, 255, 0.1);
+
   display: flex;
   align-items: center;
   justify-content: center;
+
   color: rgba(255, 255, 255, 0.7);
+
   border: 2px solid transparent;
-  transition: border-color 0.2s ease;
+
+  transition:
+    border-color 0.2s ease,
+    color 0.2s ease;
 }
 
 .sidebar-link-active .sidebar-profile-fallback,
 .sidebar-link:hover .sidebar-profile-fallback {
   border-color: #D6C98A;
+
   color: #D6C98A;
+}
+
+
+/* =========================================================
+   SHORT VIEWPORTS
+   ========================================================= */
+
+@media (max-height: 760px) {
+
+  .sidebar-container {
+    padding:
+      0.65rem
+      0;
+  }
+
+  .sidebar-main-pill {
+    padding-top: 0.65rem;
+    padding-bottom: 0.35rem;
+  }
+
+  .sidebar-nav-top,
+  .sidebar-nav-bottom {
+    gap: 0.3rem;
+  }
+
+  .sidebar-link {
+    width: 38px;
+    height: 38px;
+  }
+
+  .sidebar-avatar,
+  .sidebar-profile-fallback {
+    width: 40px;
+    height: 40px;
+  }
+
+}
+
+
+/* =========================================================
+   VERY SHORT VIEWPORTS
+   ========================================================= */
+
+@media (max-height: 600px) {
+
+  .sidebar-logo-bubble {
+    width: 44px;
+    height: 44px;
+  }
+
+  .sidebar-main-pill {
+    padding-top: 0.4rem;
+    padding-bottom: 0.25rem;
+  }
+
+  .sidebar-nav-top,
+  .sidebar-nav-bottom {
+    gap: 0.2rem;
+  }
+
+  .sidebar-link {
+    width: 34px;
+    height: 34px;
+  }
+
+  .sidebar-avatar,
+  .sidebar-profile-fallback {
+    width: 36px;
+    height: 36px;
+  }
+
+}
+
+
+/* =========================================================
+   NARROW DESKTOP / TABLET
+   ========================================================= */
+
+@media (max-width: 1100px) {
+
+  .sidebar-container {
+    width: var(--synco-sidebar-width, 7vw);
+  }
+
+  .sidebar-main-pill {
+    width: clamp(52px, 5.5vw, 60px);
+  }
+
+}
+
+
+/* =========================================================
+   MOBILE
+   ========================================================= */
+
+@media (max-width: 768px) {
+
+  .sidebar-container {
+    width: 64px;
+
+    padding:
+      0.6rem
+      0;
+  }
+
+  .sidebar-logo-bubble {
+    width: 44px;
+    height: 44px;
+  }
+
+  .sidebar-main-pill {
+    width: 52px;
+
+    padding-top: 0.6rem;
+    padding-bottom: 0.35rem;
+  }
+
+  .sidebar-link {
+    width: 36px;
+    height: 36px;
+  }
+
+  .sidebar-avatar,
+  .sidebar-profile-fallback {
+    width: 38px;
+    height: 38px;
+  }
+
+  .sidebar-tooltip {
+    left: 52px;
+  }
+
+  .sidebar-link:hover .sidebar-tooltip {
+    left: 58px;
+  }
+
+  .sidebar-submenu {
+    left: 56px;
+  }
+
 }
