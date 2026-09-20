@@ -23,15 +23,18 @@
 
 .synco-social-friends-corner {
   position: relative;
-
   flex: 1 1 0;
   min-width: 0;
-  min-height: clamp(220px, 34vh, 420px);
-
+  min-height: 0;
   height: auto;
-
+  border-radius: 16px;
   overflow: visible !important;
   z-index: 90;
+}
+
+.social-bar-bottom {
+  flex: 1 1 0;
+  min-height: 0;
 }
 
 

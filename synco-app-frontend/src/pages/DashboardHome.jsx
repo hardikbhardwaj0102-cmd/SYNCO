@@ -1988,7 +1988,7 @@ const DashboardHome = () => {
             SOCIAL / FRIENDS CORNER
             ========================================= */}
 
-        <div className="wire-block social-bar-top synco-social-friends-corner">
+        <div className="synco-social-friends-corner">
 
           <aside
             className={`synco-friends-sidebar ${
