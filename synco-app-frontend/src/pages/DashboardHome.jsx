@@ -995,6 +995,7 @@ const DashboardHome = () => {
           GREETING + CHARACTER + PREMIUM
           ========================================= */}
       <div className="dashboard-top-row">
+
         <div className="wire-block greetings-pill">
           <h2
             style={{
@@ -1009,14 +1010,6 @@ const DashboardHome = () => {
           </h2>
         </div>
 
-        <div className="dashboard-character-slot">
-          <img
-            src={killjoyRender}
-            alt="Character Popup"
-            className="dashboard-character-render"
-          />
-        </div>
-
         <div className="wire-block premium-banner-pill">
           <span
             style={{
@@ -1027,12 +1020,13 @@ const DashboardHome = () => {
           >
             Upgrade to SYNCO Premium
           </span>
+
           <Crown
             size={20}
             className="text-highlight"
           />
         </div>
-      </div>
+    </div>
 
       {/* =========================================
           COLUMN 2: MAIN LEFT
@@ -1060,6 +1054,14 @@ const DashboardHome = () => {
           <button className="join-btn">
             Register Roster
           </button>
+
+           <div className="dashboard-character-slot">
+              <img
+                src={killjoyRender}
+                alt="Character Popup"
+                className="dashboard-character-render"
+              />
+            </div>
         </div>
 
         {/* =========================================
