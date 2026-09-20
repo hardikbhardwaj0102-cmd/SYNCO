@@ -604,7 +604,16 @@ html {
 /* =========================================================
    COVERFLOW INFORMATION OVERLAYS
    ========================================================= */
+.coverflow-right-overlay {
+ 
+  right: 0; 
 
+  width: clamp(135px, 24%, 220px);
+
+  height: 82%;
+
+  pointer-events: auto;
+}
 .coverflow-left-overlay,
 .coverflow-right-overlay {
   position: absolute;
@@ -630,19 +639,6 @@ html {
   pointer-events: none;
 }
 
-.coverflow-right-overlay {
-  right:
-    clamp(0.5rem, 1vw, 1rem);
-
-  width:
-    clamp(135px, 24%, 220px);
-
-  height: 82%;
-
-  min-height: 0;
-
-  pointer-events: auto;
-}
 
 
 /* =========================================================
