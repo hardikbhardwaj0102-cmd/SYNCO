@@ -463,9 +463,20 @@ html {
 
   padding: 0.45rem 1.4rem;
 
+  border: 1px solid rgba(255, 255, 255, 0.12);
   border-radius: 999px;
 
-  font-size: clamp(1rem, 1.8vw, 1.25rem);
+  background: rgba(10, 10, 10, 0.7);
+
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+
+  color: #d6c98a;
+
+  font-size: clamp(0.65rem, 0.8vw, 0.8rem);
+  font-weight: 800;
+
+  letter-spacing: 0.12em;
 
   transform: translateX(-50%);
 
