@@ -1,6 +1,20 @@
 @reference "../global.css";
 
 
+/* =========================================================
+   SYNCO — DASHBOARD LAYOUT
+
+   GLOBAL / EDGE-TO-EDGE / RESPONSIVE
+
+   The page background exists at viewport level so it can
+   visually continue underneath the fixed sidebar.
+   ========================================================= */
+
+
+/* =========================================================
+   1. GLOBAL VARIABLES
+   ========================================================= */
+
 :root {
 
   --synco-sidebar-width: 90px;
@@ -9,7 +23,7 @@
 
 
 /* =========================================================
-   GLOBAL LAYOUT
+   2. MAIN LAYOUT SHELL
    ========================================================= */
 
 .layout-container {
@@ -19,17 +33,101 @@
   display: flex;
 
   width: 100%;
-  min-width: 0;
-
   height: 100vh;
+
+  min-width: 0;
   min-height: 0;
 
   overflow: hidden;
 
-  background: #0b0e14;
+  /*
+    Do not paint an opaque background here.
+
+    The page-specific global background sits underneath
+    this entire shell.
+  */
+  background: transparent;
 
 }
 
+
+/* =========================================================
+   3. GLOBAL PAGE BACKGROUND
+   ========================================================= */
+
+/*
+  This is deliberately positioned at viewport level.
+
+  It covers:
+
+  - main content
+  - empty areas
+  - sidebar area
+  - area underneath the sidebar
+
+  The sidebar itself is transparent/glass, so the background
+  remains visually visible behind it.
+*/
+
+.global-page-background {
+
+  position: fixed;
+
+  top: 0;
+  left: 0;
+
+  width: 100vw;
+  height: 100vh;
+
+  min-width: 100%;
+  min-height: 100%;
+
+  pointer-events: none;
+
+  z-index: 0;
+
+  background-repeat: no-repeat;
+  background-position: center center;
+  background-size: cover;
+
+}
+
+
+/* =========================================================
+   4. COMPETITION ENGINE GLOBAL BACKGROUND
+   ========================================================= */
+
+.global-competition-background {
+
+  background-image:
+    url('../../assets/comp-bg.jpg');
+
+  background-position:
+    center center;
+
+  background-size:
+    cover;
+
+  background-repeat:
+    no-repeat;
+
+}
+
+
+/* =========================================================
+   5. COMPETITION PAGE SHELL
+   ========================================================= */
+
+.layout-container-competition {
+
+  background: transparent;
+
+}
+
+
+/* =========================================================
+   6. MAIN CONTENT AREA
+   ========================================================= */
 
 .layout-main {
 
@@ -42,17 +140,34 @@
   min-width: 0;
   min-height: 0;
 
-  margin-left: var(--synco-sidebar-width);
+  /*
+    Reserve the sidebar's horizontal space for the actual
+    content layout.
+
+    The global background still occupies the full viewport
+    underneath this area.
+  */
+  margin-left:
+    var(--synco-sidebar-width);
 
   overflow-y: auto;
   overflow-x: hidden;
 
+  background: transparent;
+
 }
 
 
+/* =========================================================
+   7. CONTENT WRAPPER
+   ========================================================= */
+
 .layout-content-wrapper {
 
+  position: relative;
+
   width: 100%;
+
   max-width: none;
 
   margin: 0;
@@ -61,8 +176,14 @@
   min-width: 0;
   min-height: 0;
 
+  background: transparent;
+
 }
 
+
+/* =========================================================
+   8. BOX SIZING
+   ========================================================= */
 
 .layout-main,
 .layout-content-wrapper {
@@ -81,107 +202,15 @@
 
 
 /* =========================================================
-   GLOBAL FULL-VIEWPORT PAGE BACKGROUND
-
-   This exists OUTSIDE layout-main.
-
-   Therefore it can occupy the complete viewport,
-   including the 90px area underneath the sidebar.
+   9. MOBILE / SMALL VIEWPORT SAFETY
    ========================================================= */
 
-.global-page-background {
+@media (max-width: 700px) {
 
-  position: fixed;
+  :root {
 
-  inset: 0;
+    --synco-sidebar-width: 76px;
 
-  width: 100vw;
-  height: 100vh;
-
-  pointer-events: none;
-
-  z-index: 0;
-
-  overflow: hidden;
-
-}
-
-
-/* =========================================================
-   COMPETITION ENGINE GLOBAL BACKGROUND CANVAS
-   ========================================================= */
-
-.global-competition-background {
-
-  background: #0a0a0a;
-
-}
-
-
-/* =========================================================
-   HERO BACKGROUND
-
-   This is the background visible behind the sidebar
-   during the Competition Engine hero section.
-   ========================================================= */
-
-.global-competition-hero-bg {
-
-  position: absolute;
-
-  top: 0;
-  left: 0;
-
-  width: 100%;
-  height: 100%;
-
-  background-image:
-    url('../../assets/comp-bg.jpg');
-
-  background-position: center center;
-
-  background-size: cover;
-
-  background-repeat: no-repeat;
-
-}
-
-
-/* =========================================================
-   LOWER COMPETITION BACKGROUND
-
-   The lower page artwork is also viewport-wide.
-
-   The layer begins below the hero through the
-   Competition Engine page background system.
-   ========================================================= */
-
-.global-competition-content-bg {
-
-  position: absolute;
-
-  top: 100vh;
-  left: 0;
-
-  width: 100%;
-  height: 100vh;
-
-  background:
-    #0a0a0a
-    url('../../assets/roster-comp-bg.png')
-    center top /
-    cover
-    no-repeat;
-
-}
-
-
-/* =========================================================
-   COMPETITION PAGE SHELL
-   ========================================================= */
-
-.layout-container-competition {
-
-  background: transparent;
+  }
 
 }

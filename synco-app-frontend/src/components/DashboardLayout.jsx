@@ -16,14 +16,15 @@ const Layout = () => {
           : ''
       }`}
     >
+
       {isCompetitionPage && (
         <div
-          className="global-page-background global-competition-background"
+          className="
+            global-page-background
+            global-competition-background
+          "
           aria-hidden="true"
-        >
-          <div className="global-competition-hero-bg" />
-          <div className="global-competition-content-bg" />
-        </div>
+        />
       )}
 
       <Sidebar />
@@ -33,6 +34,7 @@ const Layout = () => {
           <Outlet />
         </div>
       </main>
+
     </div>
   );
 };

@@ -1,8 +1,15 @@
 /* =========================================================
    SYNCO — COMPETITION ENGINE
 
-   FULL-BLEED / EDGE-TO-EDGE PAGE SYSTEM
+   FULL-BLEED / EDGE-TO-EDGE
    RESPONSIVE / VIEWPORT-SAFE
+
+   IMPORTANT:
+   The viewport-level competition background is owned by
+   DashboardLayout.css.
+
+   This page additionally paints its own hero and content
+   backgrounds so each section remains visually explicit.
    ========================================================= */
 
 
@@ -28,16 +35,19 @@
   display: flex;
   flex-direction: column;
 
+  /*
+    IMPORTANT:
+
+    Do not use an opaque page-wide background here.
+    The global competition background lives underneath
+    the entire layout.
+
+    Individual sections paint their own backgrounds.
+  */
   background: transparent;
 
-  /*
-    The global background belongs to Layout.jsx.
-
-    Do not create a local page-level clipping container
-    that would prevent the background system from reaching
-    behind the sidebar.
-  */
-  overflow: visible;
+  overflow-x: clip;
+  overflow-y: visible;
 
 }
 
@@ -54,11 +64,9 @@
   min-width: 0;
 
   /*
-    Keep the hero substantial on short laptop screens.
-
-    100svh represents the stable visible viewport.
-    The 560px floor prevents a short display from
-    crushing the composition.
+    Large enough to remain substantial on short laptop
+    displays without becoming absurdly tall on large
+    monitors.
   */
   min-height:
     clamp(
@@ -83,7 +91,16 @@
   align-items: center;
   justify-content: center;
 
-  background: transparent;
+  /*
+    EXPLICIT HERO BACKGROUND.
+
+    This guarantees the hero itself uses comp-bg.jpg.
+  */
+  background:
+    url('../../assets/comp-bg.jpg')
+    center center /
+    cover
+    no-repeat;
 
   z-index: 1;
 
@@ -248,7 +265,7 @@
 
 
 /* =========================================================
-   5. HERO FOREGROUND / CTA
+   5. HERO FOREGROUND
    ========================================================= */
 
 .comp-hero-foreground {
@@ -272,7 +289,10 @@
   width: auto;
 
   max-width:
-    min(28vw, 19rem);
+    min(
+      28vw,
+      19rem
+    );
 
   display: flex;
   flex-direction: column;
@@ -297,7 +317,7 @@
 
   gap: 0.35rem;
 
-  color: #fff;
+  color: #ffffff;
 
   text-shadow:
     0 4px 18px
@@ -342,15 +362,27 @@
 }
 
 
+/* =========================================================
+   6. HERO CTA
+   ========================================================= */
+
 .hero-cta-btn {
 
   padding:
-    clamp(0.85rem, 1.1vw, 1.1rem)
-    clamp(1.7rem, 2.6vw, 2.6rem);
+    clamp(
+      0.85rem,
+      1.1vw,
+      1.1rem
+    )
+    clamp(
+      1.7rem,
+      2.6vw,
+      2.6rem
+    );
 
   background: #ff4655;
 
-  color: white;
+  color: #ffffff;
 
   font-weight: 800;
 
@@ -393,7 +425,7 @@
 
 
 /* =========================================================
-   6. POST-HERO CONTENT
+   7. POST-HERO CONTENT
    ========================================================= */
 
 .post-hero-content {
@@ -401,18 +433,24 @@
   position: relative;
 
   width: 100%;
+
   min-width: 0;
 
-  /*
-    Let the content determine its own height.
-  */
   min-height: 0;
 
   padding: 0;
 
   box-sizing: border-box;
 
-  background: transparent;
+  /*
+    EXPLICIT LOWER SECTION BACKGROUND.
+  */
+  background:
+    #0a0a0a
+    url('../../assets/roster-comp-bg.png')
+    center top /
+    cover
+    no-repeat;
 
   overflow: visible;
 
@@ -421,12 +459,9 @@
 }
 
 
-/*
-  The lower background is supplied by the global page
-  background in Layout.jsx.
-
-  This local overlay only provides readability.
-*/
+/* =========================================================
+   8. LOWER CONTENT OVERLAY
+   ========================================================= */
 
 .post-hero-content::before {
 
@@ -460,7 +495,7 @@
 
 
 /* =========================================================
-   7. STICKY COMPETITION HEADER
+   9. STICKY COMPETITION HEADER
    ========================================================= */
 
 .competition-sticky-header {
@@ -471,12 +506,6 @@
 
   width: 100%;
 
-  /*
-    No rigid height.
-
-    Content determines the required height so shorter
-    viewports do not cause clipping or compression.
-  */
   min-height: 0;
 
   height: auto;
@@ -507,7 +536,7 @@
 
 
 /* =========================================================
-   8. GAME ROSTER
+   10. GAME ROSTER
    ========================================================= */
 
 .floating-roster-section {
@@ -517,7 +546,7 @@
   width: 100%;
 
   padding:
-    0.5rem 0 0;
+    0.75rem 0 0;
 
   background: transparent;
 
@@ -584,15 +613,19 @@
 
 
 /* =========================================================
-   9. NAVIGATION TABS
+   11. NAVIGATION TABS
    ========================================================= */
 
 .competition-sticky-header .comp-tabs-container {
 
   margin:
-    0.25rem
-    clamp(1rem, 4vw, 4rem)
-    0.35rem;
+    0.5rem
+    clamp(
+      1rem,
+      4vw,
+      4rem
+    )
+    0.75rem;
 
 }
 
@@ -607,8 +640,6 @@
       1vw,
       1rem
     );
-
-  margin-bottom: 3rem;
 
   padding: 0.5rem;
 
@@ -668,7 +699,7 @@
 
 .comp-tab-btn:hover {
 
-  color: white;
+  color: #ffffff;
 
   background:
     rgba(255, 255, 255, 0.05);
@@ -681,7 +712,7 @@
   background:
     rgba(214, 201, 138, 0.1);
 
-  color: #D6C98A;
+  color: #d6c98a;
 
   border:
     1px solid
@@ -691,7 +722,7 @@
 
 
 /* =========================================================
-   10. MAIN CONTENT
+   12. MAIN CONTENT
    ========================================================= */
 
 .comp-main-content {
@@ -764,7 +795,7 @@
 
 
 /* =========================================================
-   11. CREATE COMPETITION
+   13. CREATE COMPETITION
    ========================================================= */
 
 .create-competition-btn {
@@ -784,7 +815,11 @@
 
   padding:
     0
-    clamp(0.75rem, 1vw, 1rem);
+    clamp(
+      0.75rem,
+      1vw,
+      1rem
+    );
 
   border:
     1px solid
@@ -831,7 +866,7 @@
 
 
 /* =========================================================
-   12. VIEW TOGGLE
+   14. VIEW TOGGLE
    ========================================================= */
 
 .tournament-view-toggle {
@@ -911,7 +946,7 @@
 
 
 /* =========================================================
-   13. TOURNAMENT COVERFLOW
+   15. TOURNAMENT COVERFLOW
    ========================================================= */
 
 .tournament-coverflow {
@@ -940,7 +975,10 @@
   left: 50%;
 
   width:
-    min(28vw, 340px);
+    min(
+      28vw,
+      340px
+    );
 
   height:
     clamp(
@@ -1023,7 +1061,7 @@
 
 
 /* =========================================================
-   14. COVERFLOW ARROWS
+   16. COVERFLOW ARROWS
    ========================================================= */
 
 .coverflow-arrow {
@@ -1093,7 +1131,7 @@
 
 
 /* =========================================================
-   15. TOURNAMENT GRID
+   17. TOURNAMENT GRID
    ========================================================= */
 
 .tournament-grid {
@@ -1129,11 +1167,13 @@
       450px
     );
 
+  padding: 0;
+
   border-radius: 12px;
 
   overflow: hidden;
 
-  background: #111;
+  background: #111111;
 
   border:
     1px solid
@@ -1244,7 +1284,7 @@
 
   margin: 0;
 
-  color: #fff;
+  color: #ffffff;
 
   font-family:
     'Super Brigade',
@@ -1278,7 +1318,7 @@
 
 .card-open-label {
 
-  margin-top: 0.6rem;
+  margin-top: 0.75rem;
 
   color: #d6c98a;
 
@@ -1292,10 +1332,11 @@
 
 
 /* =========================================================
-   16. COVERFLOW HOVER
+   18. COVERFLOW HOVER
    ========================================================= */
 
-.tournament-coverflow .coverflow-position-0:hover {
+.tournament-coverflow
+.coverflow-position-0:hover {
 
   transform:
     translateX(-50%)
@@ -1305,7 +1346,8 @@
 }
 
 
-.tournament-coverflow .coverflow-position--1:hover {
+.tournament-coverflow
+.coverflow-position--1:hover {
 
   transform:
     translateX(
@@ -1320,7 +1362,8 @@
 }
 
 
-.tournament-coverflow .coverflow-position-1:hover {
+.tournament-coverflow
+.coverflow-position-1:hover {
 
   transform:
     translateX(
@@ -1336,7 +1379,7 @@
 
 
 /* =========================================================
-   17. LOADING / ERROR / EMPTY STATES
+   19. LOADING / ERROR / EMPTY STATES
    ========================================================= */
 
 .comp-state-box {
@@ -1383,7 +1426,7 @@
 
   margin: 0;
 
-  color: #fff;
+  color: #ffffff;
 
   font-family:
     'Super Brigade',
@@ -1439,7 +1482,7 @@
 
   background: transparent;
 
-  color: #fff;
+  color: #ffffff;
 
   font-size: 0.75rem;
 
@@ -1466,7 +1509,7 @@
 
 
 /* =========================================================
-   18. TABLET / MEDIUM DESKTOP
+   20. TABLET / MEDIUM DESKTOP
    ========================================================= */
 
 @media (max-width: 1200px) {
@@ -1542,7 +1585,7 @@
 
 
 /* =========================================================
-   19. SMALL DESKTOP / TABLET
+   21. SMALL DESKTOP / TABLET
    ========================================================= */
 
 @media (max-width: 900px) {
@@ -1580,14 +1623,10 @@
     bottom: 9%;
 
     max-width:
-      min(45vw, 19rem);
-
-  }
-
-
-  .hero-bg-layer {
-
-    width: 100%;
+      min(
+        45vw,
+        19rem
+      );
 
   }
 
@@ -1607,13 +1646,6 @@
         10vh,
         8rem
       );
-
-  }
-
-
-  .competition-sticky-header {
-
-    min-height: 0;
 
   }
 
@@ -1657,7 +1689,10 @@
   .portrait-roster-card {
 
     width:
-      min(42vw, 320px);
+      min(
+        42vw,
+        320px
+      );
 
     height: 400px;
 
@@ -1667,7 +1702,7 @@
 
 
 /* =========================================================
-   20. PHONE
+   22. PHONE
    ========================================================= */
 
 @media (max-width: 650px) {
@@ -1756,13 +1791,6 @@
         18vw,
         5.5rem
       );
-
-  }
-
-
-  .competition-sticky-header {
-
-    min-height: 0;
 
   }
 
@@ -1869,7 +1897,10 @@
   .portrait-roster-card {
 
     width:
-      min(62vw, 280px);
+      min(
+        62vw,
+        280px
+      );
 
     height: 380px;
 
@@ -1927,7 +1958,7 @@
 
 
 /* =========================================================
-   21. VERY SMALL PHONE
+   23. VERY SMALL PHONE
    ========================================================= */
 
 @media (max-width: 420px) {
@@ -1995,7 +2026,9 @@
 
     flex:
       1 1
-      calc(50% - 0.35rem);
+      calc(
+        50% - 0.35rem
+      );
 
   }
 
@@ -2012,7 +2045,7 @@
 
 
 /* =========================================================
-   22. SHORT VIEWPORT SAFETY
+   24. SHORT VIEWPORT SAFETY
    ========================================================= */
 
 @media (max-height: 760px) and (min-width: 651px) {
@@ -2049,7 +2082,7 @@
 
 
 /* =========================================================
-   23. VERY SHORT DESKTOP VIEWPORT
+   25. VERY SHORT DESKTOP VIEWPORT
    ========================================================= */
 
 @media (max-height: 620px) and (min-width: 901px) {
