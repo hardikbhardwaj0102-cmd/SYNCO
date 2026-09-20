@@ -282,10 +282,14 @@ const Notification = () => {
         const data = notification?.data || {};
 
         const backendStatus = String(
-            data.actionStatus ??
-            data.action_status ??
             notification.actionStatus ??
             notification.action_status ??
+            data.actionStatus ??
+            data.action_status ??
+            data.inviteStatus ??
+            data.invite_status ??
+            data.requestStatus ??
+            data.request_status ??
             ""
         ).toLowerCase();
 
@@ -689,8 +693,10 @@ const Notification = () => {
             data.club_id;
 
         if (
-            normalizedType ===
-            "CLUB_INVITE" &&
+            (normalizedType === "CLUB_INVITE" ||
+                normalizedType === "CLUB_INVITE_ACCEPTED" ||
+                normalizedType === "CLUB_INVITE_DECLINED" ||
+                normalizedType === "CLUB_INVITE_CANCELLED") &&
             clubId
         ) {
 
@@ -976,6 +982,9 @@ const Notification = () => {
         switch (type) {
 
             case "CLUB_INVITE":
+            case "CLUB_INVITE_ACCEPTED":
+            case "CLUB_INVITE_DECLINED":
+            case "CLUB_INVITE_CANCELLED":
                 return (
                     <Users size={19} />
                 );
