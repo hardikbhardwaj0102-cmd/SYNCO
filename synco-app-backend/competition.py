@@ -8,7 +8,7 @@ import math
 import random
 import re
 
-from flask import Blueprint, jsonify, request, session
+from flask import Blueprint, current_app, jsonify, request, session
 
 from models import (
     db,
@@ -793,7 +793,7 @@ def serialize_match(match):
 
         "status": match.status,
 
-        "metadata": getattr(match, "match_metadata", {}) or {},
+        "metadata": match.match_metadata or {},
 
         "sides": [
             serialize_side(side)
@@ -1333,340 +1333,378 @@ def create_competition():
     if authorization_error:
         return authorization_error
 
-    data = request.get_json(
-        silent=True
-    ) or {}
-
-    title = str(
-        data.get(
-            "title",
-            data.get("name", "")
-        )
-    ).strip()
-
-    if not title:
-
-        return jsonify({
-            "success": False,
-            "message": "Competition title is required."
-        }), 400
-
-    game_id = data.get(
-        "gameId",
-        data.get("game_id")
-    )
-
-    if not game_id:
-
-        return jsonify({
-            "success": False,
-            "message": "gameId is required."
-        }), 400
-
-    game = get_game(game_id)
-
-    if not game:
-
-        return jsonify({
-            "success": False,
-            "message": "Game not found."
-        }), 404
-
-    competition_type = str(
-        data.get(
-            "competitionType",
-            ""
-        )
-    ).upper()
-
-    game_mode = str(
-        data.get(
-            "gameMode",
-            ""
-        )
-    ).upper()
-
-    participant_type = str(
-        data.get(
-            "participantType",
-            "TEAM"
-        )
-    ).upper()
-
     try:
 
-        team_size = int(
+        creation_step = "read request"
+
+        data = request.get_json(
+            silent=True
+        ) or {}
+
+        title = str(
             data.get(
-                "teamSize",
-                1
+                "title",
+                data.get("name", "")
             )
+        ).strip()
+
+        if not title:
+
+            return jsonify({
+                "success": False,
+                "message": "Competition title is required."
+            }), 400
+
+        game_id = data.get(
+            "gameId",
+            data.get("game_id")
         )
 
-        max_participants = int(
+        if not game_id:
+
+            return jsonify({
+                "success": False,
+                "message": "gameId is required."
+            }), 400
+
+        creation_step = "load game"
+
+        game = get_game(game_id)
+
+        if not game:
+
+            return jsonify({
+                "success": False,
+                "message": "Game not found."
+            }), 404
+
+        competition_type = str(
             data.get(
-                "maxTeams",
+                "competitionType",
+                ""
+            )
+        ).upper()
+
+        game_mode = str(
+            data.get(
+                "gameMode",
+                ""
+            )
+        ).upper()
+
+        participant_type = str(
+            data.get(
+                "participantType",
+                "TEAM"
+            )
+        ).upper()
+
+        try:
+
+            team_size = int(
                 data.get(
-                    "maxParticipants",
-                    16
+                    "teamSize",
+                    1
                 )
             )
-        )
 
-    except (
-        TypeError,
-        ValueError
-    ):
-
-        return jsonify({
-            "success": False,
-            "message": (
-                "teamSize and maxParticipants "
-                "must be integers."
+            max_participants = int(
+                data.get(
+                    "maxTeams",
+                    data.get(
+                        "maxParticipants",
+                        16
+                    )
+                )
             )
-        }), 400
 
-    # -----------------------------------------------------
-    # Clash Royale
-    # -----------------------------------------------------
-
-    if normalize_game_slug(game) == "clash-royale":
-
-        if team_size == 1:
-            participant_type = "PLAYER"
-
-        elif team_size == 2:
-            participant_type = "TEAM"
-
-    valid, mode_config = (
-        validate_competition_configuration(
-            game=game,
-            mode=game_mode,
-            participant_type=participant_type,
-            team_size=team_size,
-            max_participants=max_participants,
-            competition_type=competition_type,
-        )
-    )
-
-    if not valid:
-
-        return jsonify({
-            "success": False,
-            "message": mode_config
-        }), 400
-
-    number_of_matches = data.get(
-        "numberOfMatches"
-    )
-
-    if number_of_matches is None:
-
-        number_of_matches = (
-            mode_config["default_matches"]
-        )
-
-    if number_of_matches is None:
-        number_of_matches = 1
-
-    try:
-
-        number_of_matches = int(
-            number_of_matches
-        )
-
-    except (
-        TypeError,
-        ValueError
-    ):
-
-        return jsonify({
-            "success": False,
-            "message": (
-                "numberOfMatches must be an integer."
-            )
-        }), 400
-
-    if competition_type == "CLASSIC":
-
-        if number_of_matches < 1:
+        except (
+            TypeError,
+            ValueError
+        ):
 
             return jsonify({
                 "success": False,
                 "message": (
-                    "Classic competitions need "
-                    "at least one match."
+                    "teamSize and maxParticipants "
+                    "must be integers."
                 )
             }), 400
 
-    else:
+        # -----------------------------------------------------
+        # Clash Royale
+        # -----------------------------------------------------
 
-        number_of_matches = 1
+        if normalize_game_slug(game) == "clash-royale":
 
-    configuration = data.get(
-        "configuration",
-        {}
-    )
+            if team_size == 1:
+                participant_type = "PLAYER"
 
-    if not isinstance(
-        configuration,
-        dict
-    ):
+            elif team_size == 2:
+                participant_type = "TEAM"
 
-        configuration = {}
+        creation_step = "validate competition configuration"
 
-    competition_rules = data.get(
-        "competitionRules"
-    )
-
-    match_rules = data.get(
-        "matchRules"
-    )
-
-    eligibility_rules = data.get(
-        "eligibilityRules"
-    )
-
-    competition = Competition(
-
-        title=title,
-
-        slug=unique_slug(title),
-
-        description=data.get(
-            "description"
-        ),
-
-        organizer_id=user.id,
-
-        game_id=game.id,
-
-        competition_type=competition_type,
-
-        game_mode=game_mode,
-
-        participant_type=participant_type,
-
-        team_size=team_size,
-
-        max_participants=max_participants,
-
-        number_of_matches=number_of_matches,
-
-        structure=mode_config["structure"],
-
-        configuration=configuration,
-
-        competition_rules=competition_rules,
-
-        match_rules=match_rules,
-
-        eligibility_rules=eligibility_rules,
-
-        status="DRAFT",
-
-        is_published=False,
-
-        registration_start=parse_datetime(
-            data.get("registrationStart")
-        ),
-
-        registration_end=parse_datetime(
-            data.get("registrationEnd")
-        ),
-
-        competition_start=parse_datetime(
-            data.get("competitionStart")
-        ),
-
-        competition_end=parse_datetime(
-            data.get("competitionEnd")
-        ),
-    )
-
-    db.session.add(competition)
-
-    db.session.flush()
-
-    stage = CompetitionStage(
-
-        competition_id=competition.id,
-
-        name="Main Stage",
-
-        stage_type="MAIN",
-
-        stage_order=1,
-
-        status="PENDING",
-
-        configuration={
-            "structure": mode_config[
-                "structure"
-            ],
-
-            "competitionType": competition_type,
-
-            "gameMode": game_mode,
-        },
-    )
-
-    db.session.add(stage)
-
-    if competition_type == "CLASSIC":
-
-        scoring_config = (
-            configuration.get(
-                "scoring",
-                DEFAULT_SCORING
+        valid, mode_config = (
+            validate_competition_configuration(
+                game=game,
+                mode=game_mode,
+                participant_type=participant_type,
+                team_size=team_size,
+                max_participants=max_participants,
+                competition_type=competition_type,
             )
         )
 
-        scoring_rule = ScoringRule(
+        if not valid:
+
+            return jsonify({
+                "success": False,
+                "message": mode_config
+            }), 400
+
+        number_of_matches = data.get(
+            "numberOfMatches"
+        )
+
+        if number_of_matches is None:
+
+            number_of_matches = (
+                mode_config["default_matches"]
+            )
+
+        if number_of_matches is None:
+            number_of_matches = 1
+
+        try:
+
+            number_of_matches = int(
+                number_of_matches
+            )
+
+        except (
+            TypeError,
+            ValueError
+        ):
+
+            return jsonify({
+                "success": False,
+                "message": (
+                    "numberOfMatches must be an integer."
+                )
+            }), 400
+
+        if competition_type == "CLASSIC":
+
+            if number_of_matches < 1:
+
+                return jsonify({
+                    "success": False,
+                    "message": (
+                        "Classic competitions need "
+                        "at least one match."
+                    )
+                }), 400
+
+        else:
+
+            number_of_matches = 1
+
+        configuration = data.get(
+            "configuration",
+            {}
+        )
+
+        if not isinstance(
+            configuration,
+            dict
+        ):
+
+            configuration = {}
+
+        competition_rules = data.get(
+            "competitionRules"
+        )
+
+        match_rules = data.get(
+            "matchRules"
+        )
+
+        eligibility_rules = data.get(
+            "eligibilityRules"
+        )
+
+        creation_step = "build competition"
+
+        competition = Competition(
+
+            title=title,
+
+            slug=unique_slug(title),
+
+            description=data.get(
+                "description"
+            ),
+
+            organizer_id=user.id,
+
+            game_id=game.id,
+
+            competition_type=competition_type,
+
+            game_mode=game_mode,
+
+            participant_type=participant_type,
+
+            team_size=team_size,
+
+            max_participants=max_participants,
+
+            number_of_matches=number_of_matches,
+
+            structure=mode_config["structure"],
+
+            configuration=configuration,
+
+            competition_rules=competition_rules,
+
+            match_rules=match_rules,
+
+            eligibility_rules=eligibility_rules,
+
+            status="DRAFT",
+
+            is_published=False,
+
+            registration_start=parse_datetime(
+                data.get("registrationStart")
+            ),
+
+            registration_end=parse_datetime(
+                data.get("registrationEnd")
+            ),
+
+            competition_start=parse_datetime(
+                data.get("competitionStart")
+            ),
+
+            competition_end=parse_datetime(
+                data.get("competitionEnd")
+            ),
+        )
+
+        db.session.add(competition)
+
+        creation_step = "flush competition"
+        db.session.flush()
+
+        stage = CompetitionStage(
 
             competition_id=competition.id,
 
-            rule_type="POINTS",
+            name="Main Stage",
 
-            name="Classic Scoring",
+            stage_type="MAIN",
 
-            points=0,
+            stage_order=1,
 
-            configuration=scoring_config,
+            status="PENDING",
+
+            configuration={
+                "structure": mode_config[
+                    "structure"
+                ],
+
+                "competitionType": competition_type,
+
+                "gameMode": game_mode,
+            },
         )
 
-        db.session.add(
-            scoring_rule
+        db.session.add(stage)
+
+        creation_step = "flush main stage"
+        db.session.flush()
+
+        if competition_type == "CLASSIC":
+
+            scoring_config = (
+                configuration.get(
+                    "scoring",
+                    DEFAULT_SCORING
+                )
+            )
+
+            scoring_rule = ScoringRule(
+
+                competition_id=competition.id,
+
+                rule_type="POINTS",
+
+                name="Classic Scoring",
+
+                points=0,
+
+                configuration=scoring_config,
+            )
+
+            db.session.add(
+                scoring_rule
+            )
+
+            creation_step = "flush scoring rule"
+            db.session.flush()
+
+        creation_step = "create audit log"
+
+        create_audit_log(
+
+            competition.id,
+
+            user.id,
+
+            "COMPETITION_CREATED",
+
+            metadata={
+                "title": title,
+                "gameId": game.id,
+                "competitionType": competition_type,
+                "gameMode": game_mode,
+            },
         )
 
-    create_audit_log(
+        creation_step = "commit competition"
+        db.session.commit()
 
-        competition.id,
+        creation_step = "serialize response"
 
-        user.id,
+        return jsonify({
 
-        "COMPETITION_CREATED",
+            "success": True,
 
-        metadata={
-            "title": title,
-            "gameId": game.id,
-            "competitionType": competition_type,
-            "gameMode": game_mode,
-        },
-    )
+            "message": "Competition created.",
 
-    db.session.commit()
+            "competition": serialize_competition(
+                competition,
+                include_children=True
+            ),
+        }), 201
 
-    return jsonify({
+    except Exception as exc:
 
-        "success": True,
+        db.session.rollback()
 
-        "message": "Competition created.",
+        current_app.logger.exception(
+            "Competition creation failed at step: %s",
+            creation_step if "creation_step" in locals() else "unknown"
+        )
 
-        "competition": serialize_competition(
-            competition,
-            include_children=True
-        ),
-    }), 201
+        return jsonify({
+            "success": False,
+            "message": "Competition creation failed.",
+            "step": creation_step if "creation_step" in locals() else "unknown",
+            "error": str(exc),
+        }), 500
 
 
 # =========================================================
