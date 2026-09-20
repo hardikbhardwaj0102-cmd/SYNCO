@@ -139,7 +139,7 @@
 .synco-friend-mini-avatar,
 .synco-friend-avatar,
 .synco-friend-search-avatar {
-    overflow: hidden;
+    overflow: visible;
     display: flex;
     align-items: center;
     justify-content: center;
