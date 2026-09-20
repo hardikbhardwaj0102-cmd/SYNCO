@@ -1,217 +1,232 @@
 @reference "../global.css";
 
-
 /* =========================================================
-   SYNCO AUTHENTICATED LAYOUT
-   ========================================================= */
+SYNCO AUTHENTICATED LAYOUT
+========================================================= */
 
-/*
-  The Sidebar component is fixed at 90px wide.
-
-  Because position: fixed removes it from normal layout flow,
-  the authenticated main area explicitly reserves that space.
-
-  This becomes the permanent SYNCO edge-to-edge layout model.
-*/
 :root {
-  --synco-sidebar-width: 90px;
+--synco-sidebar-width: 90px;
 }
 
-
 /* =========================================================
-   AUTHENTICATED APP SHELL
-   ========================================================= */
+AUTHENTICATED APP SHELL
+========================================================= */
 
 .hybrid-auth-container {
-  display: flex;
 
-  width: 100%;
-  height: 100vh;
+display: flex;
 
-  min-width: 0;
-  min-height: 0;
+width: 100%;
+height: 100vh;
 
-  overflow: hidden;
+min-width: 0;
+min-height: 0;
 
-  position: relative;
+overflow: hidden;
 
-  overscroll-behavior: none;
+position: relative;
 
-  background:
-    #0b0e14
-    url("../../assets/global-dash-bg.png")
-    center / cover fixed;
+overscroll-behavior: none;
+
+background:
+#0b0e14
+url("../../assets/global-dash-bg.png")
+center / cover fixed;
+
 }
 
-
 /* =========================================================
-   GLOBAL BACKGROUND VIGNETTE
-   ========================================================= */
+GLOBAL BACKGROUND VIGNETTE
+========================================================= */
 
 .hybrid-auth-container::before {
-  content: "";
 
-  position: absolute;
+content: "";
 
-  inset: 0;
+position: absolute;
 
-  z-index: 0;
+inset: 0;
 
-  pointer-events: none;
+z-index: 0;
 
-  background:
-    radial-gradient(
-      circle at center,
-      transparent 30%,
-      rgba(0, 0, 0, 0.8) 100%
-    );
+pointer-events: none;
+
+background:
+radial-gradient(
+circle at center,
+transparent 30%,
+rgba(0, 0, 0, 0.8) 100%
+);
+
 }
 
+/* =========================================================
+COMPETITION ENGINE SHELL
+========================================================= */
+
+/*
+Competition pages must not inherit the normal dashboard
+background.
+
+The competition page itself owns its visual surface.
+The shell therefore becomes transparent so the competition
+background can extend behind the fixed sidebar.
+*/
+
+.hybrid-auth-container-competition {
+
+background:
+#0a0a0a;
+
+}
+
+/*
+Remove the normal dashboard vignette from competition pages.
+
+The Competition Engine has its own visual treatment.
+*/
+
+.hybrid-auth-container-competition::before {
+
+background: transparent;
+
+}
 
 /* =========================================================
-   AUTHENTICATED MAIN CONTENT
-   ========================================================= */
+AUTHENTICATED MAIN CONTENT
+========================================================= */
 
 .hybrid-auth-main {
-  /*
-    Sidebar is fixed and therefore removed from flex flow.
 
-    Reserve exactly the sidebar's horizontal area.
-  */
-  flex: 1 1 auto;
+flex: 1 1 auto;
 
-  min-width: 0;
-  min-height: 0;
+min-width: 0;
+min-height: 0;
 
-  margin-left: var(--synco-sidebar-width);
+margin-left: var(--synco-sidebar-width);
 
-  /*
-    IMPORTANT:
+overflow-y: auto;
+overflow-x: hidden;
 
-    Do NOT add width: 100%.
+position: relative;
 
-    The flex item already occupies the remaining viewport
-    width after the sidebar offset.
-  */
+z-index: 1;
 
-  overflow-y: auto;
-  overflow-x: hidden;
-
-  position: relative;
-
-  z-index: 1;
 }
 
-
 /* =========================================================
-   AUTHENTICATED PAGE CONTENT
-   ========================================================= */
+COMPETITION MAIN CONTENT
+========================================================= */
 
 /*
-  THIS IS THE IMPORTANT FIX.
+The Competition Engine needs to paint backgrounds across
+the complete viewport, including the 90px area occupied
+visually by the fixed sidebar.
 
-  Previously:
-
-      max-w-7xl
-      mx-auto
-      p-8
-
-  created a centered 1280px-ish content container.
-
-  That is completely removed.
-
-  Every authenticated page now receives the entire width
-  available beside the sidebar.
+The main content itself still begins after the sidebar.
 */
+
+.hybrid-auth-container-competition
+.hybrid-auth-main {
+
+overflow-x: hidden;
+
+}
+
+/* =========================================================
+AUTHENTICATED PAGE CONTENT
+========================================================= */
 
 .hybrid-auth-content {
-  width: 100%;
 
-  max-width: none;
+width: 100%;
 
-  margin: 0;
+max-width: none;
 
-  padding: 0;
+margin: 0;
 
-  min-width: 0;
-  min-height: 0;
+padding: 0;
+
+min-width: 0;
+min-height: 0;
+
 }
 
-
 /* =========================================================
-   COMPETITION CONTENT
-   ========================================================= */
-
-/*
-  Keep this explicitly edge-to-edge as well so competition
-  pages follow the same global layout model.
-*/
+COMPETITION CONTENT
+========================================================= */
 
 .competition-auth-content {
-  width: 100%;
 
-  max-width: none;
+width: 100%;
 
-  margin: 0;
+max-width: none;
 
-  padding: 0;
+margin: 0;
 
-  min-width: 0;
-  min-height: 0;
+padding: 0;
+
+min-width: 0;
+min-height: 0;
+
 }
-
 
 /* =========================================================
-   PUBLIC LAYOUT
-   ========================================================= */
+PUBLIC LAYOUT
+========================================================= */
 
 .hybrid-public-container {
-  width: 100%;
-  height: 100vh;
 
-  min-width: 0;
-  min-height: 0;
+width: 100%;
+height: 100vh;
 
-  overflow: hidden;
+min-width: 0;
+min-height: 0;
 
-  background: transparent;
+overflow: hidden;
 
-  color: #000;
+background: transparent;
 
-  font-family: sans-serif;
+color: #000;
 
-  display: flex;
-  flex-direction: column;
+font-family: sans-serif;
+
+display: flex;
+flex-direction: column;
+
 }
-
 
 .hybrid-public-main {
-  flex: 1 1 auto;
 
-  min-width: 0;
-  min-height: 0;
+flex: 1 1 auto;
 
-  display: flex;
-  flex-direction: column;
+min-width: 0;
+min-height: 0;
 
-  overflow-y: auto;
-  overflow-x: hidden;
+display: flex;
+flex-direction: column;
 
-  padding-bottom: 0;
+overflow-y: auto;
+overflow-x: hidden;
+
+padding-bottom: 0;
+
 }
-
 
 .hybrid-public-page-content {
-  flex: 0 0 auto;
 
-  width: 100%;
+flex: 0 0 auto;
 
-  min-width: 0;
+width: 100%;
+
+min-width: 0;
+
 }
 
-
 .hybrid-public-main > .footer-wrapper {
-  flex-shrink: 0;
 
-  margin-top: 3rem;
+flex-shrink: 0;
+
+margin-top: 3rem;
+
 }
