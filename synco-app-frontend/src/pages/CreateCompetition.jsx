@@ -763,7 +763,10 @@ const CreateCompetition = () => {
             }
 
             if (!data?.success) {
-                throw new Error(data?.message || 'Competition creation failed.');
+                const backendMessage = data?.message || 'Competition creation failed.';
+                const backendStep = data?.step ? ` Step: ${data.step}.` : '';
+                const backendError = data?.error ? ` ${data.error}` : '';
+                throw new Error(`${backendMessage}${backendStep}${backendError}`.trim());
             }
 
             const createdCompetition = data?.competition;
