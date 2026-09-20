@@ -1,0 +1,516 @@
+/* =========================================================
+   SYNCO FRIENDS / SOCIAL RIGHT SIDEBAR
+   ========================================================= */
+
+.synco-friends-anchor {
+    position: relative;
+    z-index: 80;
+}
+
+.synco-friends-sidebar {
+    position: fixed;
+    top: 96px;
+    right: 16px;
+    bottom: 16px;
+    width: 58px;
+    z-index: 120;
+    overflow: visible;
+    border: 1px solid rgba(20, 20, 20, 0.10);
+    border-radius: 20px;
+    background: rgba(255, 255, 255, 0.96);
+    box-shadow: 0 18px 50px rgba(0, 0, 0, 0.11);
+    transition: width 220ms ease, border-radius 220ms ease;
+    backdrop-filter: blur(18px);
+}
+
+.synco-friends-sidebar.is-open {
+    width: 348px;
+    border-radius: 22px;
+}
+
+.synco-friends-toggle {
+    position: absolute;
+    left: -13px;
+    top: 22px;
+    width: 27px;
+    height: 27px;
+    border: 1px solid #dedede;
+    border-radius: 999px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: #ffffff;
+    color: #171717;
+    cursor: pointer;
+    box-shadow: 0 5px 18px rgba(0, 0, 0, 0.10);
+    transition: transform 180ms ease, background 180ms ease;
+}
+
+.synco-friends-toggle:hover {
+    transform: scale(1.05);
+    background: #f5f5f5;
+}
+
+.synco-friends-collapsed {
+    height: 100%;
+    min-height: 0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 18px 8px 12px;
+}
+
+.synco-friends-collapsed-header {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 100%;
+    padding-bottom: 9px;
+    border-bottom: 1px solid #eeeeee;
+}
+
+.synco-friends-online-count {
+    min-width: 24px;
+    height: 24px;
+    padding: 0 6px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 999px;
+    background: #f2f2f2;
+    color: #171717;
+    font-size: 10px;
+    font-weight: 900;
+}
+
+.synco-friends-avatar-stack {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 10px;
+    flex: 1;
+    min-height: 0;
+    overflow: auto;
+    padding: 14px 0 10px;
+    scrollbar-width: none;
+}
+
+.synco-friends-avatar-stack::-webkit-scrollbar {
+    display: none;
+}
+
+.synco-friend-mini {
+    position: relative;
+    width: 36px;
+    height: 36px;
+    flex: 0 0 auto;
+}
+
+.synco-friend-mini-avatar,
+.synco-friend-avatar,
+.synco-friend-search-avatar {
+    overflow: hidden;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: #eeeeee;
+    color: #232323;
+    font-weight: 900;
+}
+
+.synco-friend-mini-avatar {
+    width: 36px;
+    height: 36px;
+    border-radius: 12px;
+    font-size: 12px;
+}
+
+.synco-friend-mini-avatar img,
+.synco-friend-avatar img,
+.synco-friend-search-avatar img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    display: block;
+}
+
+.synco-presence-dot {
+    position: absolute;
+    right: -2px;
+    bottom: -2px;
+    width: 10px;
+    height: 10px;
+    border-radius: 999px;
+    border: 2px solid #ffffff;
+    box-sizing: border-box;
+}
+
+.synco-presence-dot.large {
+    width: 11px;
+    height: 11px;
+    right: -1px;
+    bottom: -1px;
+}
+
+.synco-presence-dot.online {
+    background: #22c55e;
+}
+
+.synco-presence-dot.offline {
+    background: #ef4444;
+}
+
+.synco-add-friend-mini {
+    width: 36px;
+    height: 36px;
+    flex: 0 0 auto;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border: 1px dashed #bdbdbd;
+    border-radius: 12px;
+    background: #ffffff;
+    color: #171717;
+    cursor: pointer;
+    transition: background 180ms ease, border-color 180ms ease;
+}
+
+.synco-add-friend-mini:hover {
+    background: #f4f4f4;
+    border-color: #777777;
+}
+
+.synco-friends-open {
+    height: 100%;
+    min-height: 0;
+    display: flex;
+    flex-direction: column;
+    padding: 20px;
+}
+
+.synco-friends-panel-header {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 14px;
+    padding-bottom: 15px;
+    border-bottom: 1px solid #ececec;
+}
+
+.synco-friends-kicker {
+    margin: 0 0 4px;
+    color: #8b8b8b;
+    font-size: 9px;
+    font-weight: 900;
+    letter-spacing: 0.20em;
+    text-transform: uppercase;
+}
+
+.synco-friends-panel-header h3 {
+    margin: 0;
+    color: #171717;
+    font-size: 22px;
+    line-height: 1.1;
+    font-weight: 900;
+}
+
+.synco-friends-meta {
+    margin: 6px 0 0;
+    color: #858585;
+    font-size: 11px;
+    font-weight: 700;
+}
+
+.synco-friends-close-button {
+    width: 30px;
+    height: 30px;
+    flex: 0 0 auto;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border: 1px solid #e0e0e0;
+    border-radius: 10px;
+    background: #ffffff;
+    color: #575757;
+    cursor: pointer;
+}
+
+.synco-friends-close-button:hover {
+    background: #f4f4f4;
+    color: #171717;
+}
+
+.synco-add-friend-button {
+    width: 100%;
+    margin-top: 14px;
+    min-height: 40px;
+    display: flex;
+    align-items: center;
+    gap: 9px;
+    padding: 0 13px;
+    border: 1px solid #dddddd;
+    border-radius: 12px;
+    background: #ffffff;
+    color: #171717;
+    font-size: 11px;
+    font-weight: 900;
+    letter-spacing: 0.02em;
+    cursor: pointer;
+    transition: background 180ms ease, border-color 180ms ease;
+}
+
+.synco-add-friend-button:hover,
+.synco-add-friend-button.active {
+    background: #f4f4f4;
+    border-color: #cfcfcf;
+}
+
+.synco-add-friend-section {
+    margin-top: 10px;
+    padding: 12px;
+    border: 1px solid #ededed;
+    border-radius: 14px;
+    background: #fafafa;
+}
+
+.synco-friend-search-wrap {
+    height: 38px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 0 10px;
+    border: 1px solid #dddddd;
+    border-radius: 10px;
+    background: #ffffff;
+    color: #8a8a8a;
+}
+
+.synco-friend-search-wrap input {
+    width: 100%;
+    min-width: 0;
+    border: 0;
+    outline: none;
+    background: transparent;
+    color: #171717;
+    font-size: 11px;
+    font-weight: 700;
+}
+
+.synco-friend-search-wrap input::placeholder {
+    color: #a5a5a5;
+}
+
+.synco-friend-search-results {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    margin-top: 10px;
+    max-height: 190px;
+    overflow-y: auto;
+}
+
+.synco-friend-search-result {
+    display: flex;
+    align-items: center;
+    gap: 9px;
+    min-width: 0;
+    padding: 7px;
+    border: 1px solid #ececec;
+    border-radius: 11px;
+    background: #ffffff;
+}
+
+.synco-friend-search-avatar {
+    width: 34px;
+    height: 34px;
+    flex: 0 0 auto;
+    border-radius: 10px;
+    font-size: 11px;
+}
+
+.synco-friend-search-info {
+    min-width: 0;
+    flex: 1;
+}
+
+.synco-friend-search-info p {
+    margin: 0;
+    color: #171717;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    font-size: 11px;
+    font-weight: 900;
+}
+
+.synco-friend-search-info span {
+    display: block;
+    margin-top: 3px;
+    color: #919191;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    font-size: 8px;
+    font-weight: 800;
+    letter-spacing: 0.07em;
+}
+
+.synco-friend-search-action {
+    flex: 0 0 auto;
+    min-width: 49px;
+    height: 28px;
+    padding: 0 7px;
+    border: 1px solid #1b1b1b;
+    border-radius: 8px;
+    background: #1b1b1b;
+    color: #ffffff;
+    font-size: 8px;
+    font-weight: 900;
+    cursor: pointer;
+}
+
+.synco-friend-search-action:disabled {
+    border-color: #d7d7d7;
+    background: #ededed;
+    color: #848484;
+    cursor: default;
+}
+
+.synco-friends-status-text,
+.synco-friends-message {
+    margin: 9px 0 0;
+    font-size: 9px;
+    line-height: 1.4;
+    font-weight: 700;
+}
+
+.synco-friends-status-text {
+    color: #929292;
+}
+
+.synco-friends-message.error {
+    color: #d93636;
+}
+
+.synco-friends-message.success {
+    color: #238a4b;
+}
+
+.synco-friends-list-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    margin-top: 17px;
+    padding-bottom: 8px;
+    color: #777777;
+    font-size: 9px;
+    font-weight: 900;
+    letter-spacing: 0.16em;
+    text-transform: uppercase;
+}
+
+.synco-friends-refreshing {
+    color: #b2b2b2;
+    letter-spacing: 0.04em;
+    text-transform: none;
+}
+
+.synco-friends-list {
+    min-height: 0;
+    flex: 1;
+    overflow-y: auto;
+    padding-right: 2px;
+}
+
+.synco-friend-row {
+    display: flex;
+    align-items: center;
+    gap: 11px;
+    padding: 10px 6px;
+    border-top: 1px solid #efefef;
+}
+
+.synco-friend-avatar {
+    position: relative;
+    width: 42px;
+    height: 42px;
+    flex: 0 0 auto;
+    border-radius: 13px;
+    font-size: 12px;
+}
+
+.synco-friend-details {
+    min-width: 0;
+    flex: 1;
+}
+
+.synco-friend-details p {
+    margin: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    color: #171717;
+    font-size: 11px;
+    font-weight: 900;
+}
+
+.synco-friend-details span {
+    display: block;
+    margin-top: 4px;
+    color: #8f8f8f;
+    font-size: 9px;
+    font-weight: 700;
+}
+
+.synco-friends-empty {
+    padding: 26px 8px;
+    text-align: center;
+}
+
+.synco-friends-empty-icon {
+    width: 38px;
+    height: 38px;
+    margin: 0 auto 10px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 11px;
+    background: #f0f0f0;
+    color: #777777;
+}
+
+.synco-friends-empty p {
+    margin: 0;
+    color: #333333;
+    font-size: 11px;
+    font-weight: 900;
+}
+
+.synco-friends-empty span {
+    display: block;
+    margin-top: 6px;
+    color: #9a9a9a;
+    font-size: 9px;
+    line-height: 1.5;
+}
+
+@media (max-width: 1180px) {
+    .synco-friends-sidebar {
+        top: 86px;
+        right: 10px;
+        bottom: 10px;
+    }
+}
+
+@media (max-width: 700px) {
+    .synco-friends-sidebar {
+        top: 78px;
+        right: 8px;
+        bottom: 8px;
+    }
+
+    .synco-friends-sidebar.is-open {
+        width: min(340px, calc(100vw - 22px));
+    }
+}
