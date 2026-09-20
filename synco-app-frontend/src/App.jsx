@@ -1,202 +1,160 @@
-```jsx
 import {
   BrowserRouter as Router,
   Routes,
   Route,
   Outlet,
   Navigate,
-} from 'react-router-dom';
+} from "react-router-dom";
 
-import { AuthProvider, useAuth } from './context/AuthContext';
+import { AuthProvider, useAuth } from "./context/AuthContext";
 
-import LiveTournamentDashboard from './pages/LiveTournamentDashboard';
+import LiveTournamentDashboard from "./pages/LiveTournamentDashboard";
 
-import OrganizerRegister from './pages/OrganizerRegister';
-import OrganizerAdmin from './pages/OrganizerAdmin';
-import AdminUsers from './pages/AdminUsers';
+import OrganizerRegister from "./pages/OrganizerRegister";
+import OrganizerAdmin from "./pages/OrganizerAdmin";
+import AdminUsers from "./pages/AdminUsers";
 
-import HybridLayout from './components/HybridLayout';
+import HybridLayout from "./components/HybridLayout";
 
-import CreateCompetition from './pages/CreateCompetition';
+import CreateCompetition from "./pages/CreateCompetition";
 
-import LandingPage from './pages/LandingPage';
-import GamesHub from './pages/GamesHub';
-import GameDetails from './pages/GameDetails';
-import CompetitionEngine from './pages/CompetitionEngine';
-import Leaderboards from './pages/Leaderboards';
+import LandingPage from "./pages/LandingPage";
+import GamesHub from "./pages/GamesHub";
+import GameDetails from "./pages/GameDetails";
+import CompetitionEngine from "./pages/CompetitionEngine";
+import Leaderboards from "./pages/Leaderboards";
 
-import ClubsHub from './pages/ClubsHub';
-import ClubProfile from './pages/clubprofile';
+import ClubsHub from "./pages/ClubsHub";
+import ClubProfile from "./pages/clubprofile";
 
-import ProfileSettings from './pages/ProfileSettings';
-import ProfileView from './pages/ProfileView';
+import ProfileSettings from "./pages/ProfileSettings";
+import ProfileView from "./pages/ProfileView";
 
-import RegistrationGateway from './pages/RegistrationGateway';
+import RegistrationGateway from "./pages/RegistrationGateway";
 
-import Login from './pages/Login';
-import Register from './pages/Register';
-import ForgotPass from './pages/ForgotPass';
-import ResetPassword from './pages/ResetPassword';
+import Login from "./pages/Login";
+import Register from "./pages/Register";
+import ForgotPass from "./pages/ForgotPass";
+import ResetPassword from "./pages/ResetPassword";
 
-import DashboardHome from './pages/DashboardHome';
-import Reward from './pages/Reward';
-import AddFriends from './pages/AddFriends';
-import Notification from './pages/notification';
+import DashboardHome from "./pages/DashboardHome";
+import Reward from "./pages/Reward";
+import AddFriends from "./pages/AddFriends";
+import Notification from "./pages/notification";
 
-import Search from './components/Search';
+import Search from "./components/Search";
 
 
-// =========================================================
-// DYNAMIC INDEX ROUTE
-// =========================================================
+/* =========================================================
+   INDEX ROUTE
+========================================================= */
 
 const IndexRoute = () => {
-  const {
-    isAuthenticated,
-    loading,
-  } = useAuth();
+  const { isAuthenticated, loading } = useAuth();
 
   if (loading) {
     return null;
   }
 
-  return isAuthenticated
-    ? <DashboardHome />
-    : <LandingPage />;
+  return isAuthenticated ? <DashboardHome /> : <LandingPage />;
 };
 
 
-// =========================================================
-// PROTECTED ROUTE
-// =========================================================
+/* =========================================================
+   PROTECTED ROUTE
+========================================================= */
 
 const ProtectedRoute = () => {
-  const {
-    isAuthenticated,
-    loading,
-  } = useAuth();
+  const { isAuthenticated, loading } = useAuth();
 
   if (loading) {
     return null;
   }
 
   if (!isAuthenticated) {
-    return (
-      <Navigate
-        to="/login"
-        replace
-      />
-    );
+    return <Navigate to="/login" replace />;
   }
 
   return <Outlet />;
 };
 
 
-// =========================================================
-// ORGANIZER ROUTE
-// =========================================================
+/* =========================================================
+   ORGANIZER ROUTE
+========================================================= */
 
 const OrganizerRoute = () => {
-  const {
-    user,
-    loading,
-  } = useAuth();
+  const { user, loading } = useAuth();
 
   if (loading) {
     return null;
   }
 
   if (!user) {
-    return (
-      <Navigate
-        to="/login"
-        replace
-      />
-    );
+    return <Navigate to="/login" replace />;
   }
 
   const accountRole =
     user.accountRole ??
     user.account_role;
 
-  if (accountRole !== 'organizer') {
-    return (
-      <Navigate
-        to="/organizer/register"
-        replace
-      />
-    );
+  if (accountRole !== "organizer") {
+    return <Navigate to="/organizer/register" replace />;
   }
 
   return <Outlet />;
 };
 
 
-// =========================================================
-// ADMIN ROUTE
-// =========================================================
+/* =========================================================
+   ADMIN ROUTE
+========================================================= */
 
 const AdminRoute = () => {
-  const {
-    user,
-    loading,
-  } = useAuth();
+  const { user, loading } = useAuth();
 
   if (loading) {
     return null;
   }
 
   if (!user) {
-    return (
-      <Navigate
-        to="/login"
-        replace
-      />
-    );
+    return <Navigate to="/login" replace />;
   }
 
   const accountRole =
     user.accountRole ??
     user.account_role;
 
-  if (accountRole !== 'admin') {
-    return (
-      <Navigate
-        to="/"
-        replace
-      />
-    );
+  if (accountRole !== "admin") {
+    return <Navigate to="/" replace />;
   }
 
   return <Outlet />;
 };
 
 
-// =========================================================
-// AUTH LAYOUT
-// =========================================================
+/* =========================================================
+   AUTH LAYOUT
+========================================================= */
 
 const AuthLayout = () => {
   return <Outlet />;
 };
 
 
-// =========================================================
-// APP
-// =========================================================
+/* =========================================================
+   APP
+========================================================= */
 
 function App() {
   return (
     <AuthProvider>
-
       <Router>
-
         <Routes>
 
           {/* =================================================
               AUTH ROUTES
-              ================================================= */}
+          ================================================= */}
 
           <Route element={<AuthLayout />}>
 
@@ -224,14 +182,14 @@ function App() {
 
 
           {/* =================================================
-              MAIN ROUTES
-              ================================================= */}
+              MAIN APPLICATION
+          ================================================= */}
 
           <Route element={<HybridLayout />}>
 
-            {/* =================================================
-                PUBLIC / DYNAMIC HOME
-                ================================================= */}
+            {/* -----------------------------------------------
+                HOME
+            ------------------------------------------------ */}
 
             <Route
               path="/"
@@ -241,18 +199,23 @@ function App() {
 
             {/* =================================================
                 PROTECTED ROUTES
-                ================================================= */}
+            ================================================= */}
 
             <Route element={<ProtectedRoute />}>
 
-              {/* -------------------------------------------------
+              {/* ---------------------------------------------
                   SEARCH
-                  ------------------------------------------------- */}
+              --------------------------------------------- */}
 
               <Route
                 path="/search"
                 element={<Search />}
               />
+
+
+              {/* ---------------------------------------------
+                  ADMIN USERS
+              --------------------------------------------- */}
 
               <Route
                 path="/admin/users"
@@ -260,9 +223,9 @@ function App() {
               />
 
 
-              {/* -------------------------------------------------
+              {/* ---------------------------------------------
                   DASHBOARD
-                  ------------------------------------------------- */}
+              --------------------------------------------- */}
 
               <Route
                 path="/home"
@@ -270,9 +233,9 @@ function App() {
               />
 
 
-              {/* -------------------------------------------------
-                  GAMING
-                  ------------------------------------------------- */}
+              {/* ---------------------------------------------
+                  PLAY / GAMES
+              --------------------------------------------- */}
 
               <Route
                 path="/play"
@@ -285,9 +248,9 @@ function App() {
               />
 
 
-              {/* -------------------------------------------------
+              {/* =================================================
                   COMPETITIONS
-                  ------------------------------------------------- */}
+              ================================================= */}
 
               <Route
                 path="/competitions"
@@ -295,21 +258,13 @@ function App() {
               />
 
 
-              {/* -------------------------------------------------
+              {/* =================================================
                   LIVE TOURNAMENT DASHBOARD
-                  -------------------------------------------------
-
-                  IMPORTANT:
-
-                  The competition ID is now part of the URL.
 
                   Example:
                   /live-tournament/1
-
-                  This allows:
-                  useParams().competitionId
-                  to correctly return "1".
-                  ------------------------------------------------- */}
+                  /live-tournament/25
+              ================================================= */}
 
               <Route
                 path="/live-tournament/:competitionId"
@@ -317,9 +272,9 @@ function App() {
               />
 
 
-              {/* -------------------------------------------------
-                  RANKINGS
-                  ------------------------------------------------- */}
+              {/* ---------------------------------------------
+                  RANKING
+              --------------------------------------------- */}
 
               <Route
                 path="/ranking"
@@ -327,9 +282,9 @@ function App() {
               />
 
 
-              {/* -------------------------------------------------
+              {/* ---------------------------------------------
                   CLUBS
-                  ------------------------------------------------- */}
+              --------------------------------------------- */}
 
               <Route
                 path="/clubs"
@@ -342,9 +297,9 @@ function App() {
               />
 
 
-              {/* -------------------------------------------------
+              {/* ---------------------------------------------
                   REWARDS
-                  ------------------------------------------------- */}
+              --------------------------------------------- */}
 
               <Route
                 path="/rewards"
@@ -352,9 +307,9 @@ function App() {
               />
 
 
-              {/* -------------------------------------------------
+              {/* ---------------------------------------------
                   FRIENDS
-                  ------------------------------------------------- */}
+              --------------------------------------------- */}
 
               <Route
                 path="/add-friends"
@@ -362,9 +317,9 @@ function App() {
               />
 
 
-              {/* -------------------------------------------------
+              {/* ---------------------------------------------
                   NOTIFICATIONS
-                  ------------------------------------------------- */}
+              --------------------------------------------- */}
 
               <Route
                 path="/notifications"
@@ -372,9 +327,9 @@ function App() {
               />
 
 
-              {/* -------------------------------------------------
+              {/* ---------------------------------------------
                   PROFILE
-                  ------------------------------------------------- */}
+              --------------------------------------------- */}
 
               <Route
                 path="/profile/:username"
@@ -387,9 +342,9 @@ function App() {
               />
 
 
-              {/* -------------------------------------------------
+              {/* ---------------------------------------------
                   ORGANIZER REGISTRATION
-                  ------------------------------------------------- */}
+              --------------------------------------------- */}
 
               <Route
                 path="/organizer/register"
@@ -397,9 +352,9 @@ function App() {
               />
 
 
-              {/* -------------------------------------------------
-                  ADMIN
-                  ------------------------------------------------- */}
+              {/* =================================================
+                  ADMIN-ONLY ROUTES
+              ================================================= */}
 
               <Route element={<AdminRoute />}>
 
@@ -416,9 +371,9 @@ function App() {
               </Route>
 
 
-              {/* -------------------------------------------------
+              {/* ---------------------------------------------
                   REGISTRATION GATEWAY
-                  ------------------------------------------------- */}
+              --------------------------------------------- */}
 
               <Route
                 path="/gateway"
@@ -429,8 +384,8 @@ function App() {
 
 
             {/* =================================================
-                CREATE COMPETITION
-                ================================================= */}
+                ORGANIZER-ONLY ROUTES
+            ================================================= */}
 
             <Route element={<OrganizerRoute />}>
 
@@ -446,26 +401,22 @@ function App() {
 
           {/* =================================================
               FALLBACK
-              ================================================= */}
+          ================================================= */}
 
           <Route
             path="*"
-            element={
-              <Navigate
-                to="/"
-                replace
-              />
-            }
+            element={<Navigate to="/" replace />}
           />
 
         </Routes>
-
       </Router>
-
     </AuthProvider>
   );
 }
 
 
+/* =========================================================
+   DEFAULT EXPORT
+========================================================= */
+
 export default App;
-```
