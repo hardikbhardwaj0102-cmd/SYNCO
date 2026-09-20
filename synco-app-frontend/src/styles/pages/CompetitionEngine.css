@@ -1,6 +1,8 @@
 /* =========================================================
    SYNCO — COMPETITION ENGINE
+
    FULL-BLEED / EDGE-TO-EDGE PAGE SYSTEM
+   RESPONSIVE / VIEWPORT-SAFE
    ========================================================= */
 
 
@@ -9,6 +11,7 @@
    ========================================================= */
 
 .comp-engine-wrapper {
+
   position: relative;
 
   width: 100%;
@@ -18,6 +21,8 @@
   padding: 0;
 
   min-width: 0;
+
+  min-height: 100vh;
   min-height: 100dvh;
 
   box-sizing: border-box;
@@ -27,6 +32,10 @@
 
   background: #0a0a0a;
 
+  /*
+    Prevent horizontal overflow without creating a
+    vertical scrolling container.
+  */
   overflow-x: clip;
   overflow-y: visible;
 
@@ -35,15 +44,10 @@
 
 
 /*
-   The Competition Engine owns its visual canvas.
-
-   The left sidebar should NOT be compensated for here.
-   No 90px padding.
-   No calc(100% - 90px).
-   No viewport-width negative-margin tricks.
+  Direct children remain part of normal document flow.
 */
 
-.comp-engine-wrapper>* {
+.comp-engine-wrapper > * {
   position: relative;
 }
 
@@ -53,19 +57,26 @@
    ========================================================= */
 
 .comp-hero-section {
+
   position: relative;
 
   width: 100%;
   min-width: 0;
 
   /*
-     Responsive hero sizing.
+    The hero occupies approximately one full viewport.
 
-     The clamp prevents the hero from becoming excessively
-     tall on large displays while still giving it enough
-     vertical space on shorter screens.
+    The minimum prevents the hero from becoming too short
+    on shorter laptop displays.
+
+    The maximum prevents enormous desktop monitors from
+    producing an unnecessarily huge hero.
   */
-  min-height: clamp(540px, 88dvh, 860px);
+  min-height: clamp(
+    560px,
+    100dvh,
+    900px
+  );
 
   height: auto;
 
@@ -80,7 +91,11 @@
   overflow: hidden;
 
   background:
-    #0a0a0a url('../../assets/comp-bg.jpg') center center / cover no-repeat;
+    #0a0a0a
+    url('../../assets/comp-bg.jpg')
+    center center /
+    cover
+    no-repeat;
 
   display: flex;
   align-items: center;
@@ -95,6 +110,7 @@
    ========================================================= */
 
 .hero-bg-layer {
+
   position: absolute;
 
   inset: 0;
@@ -113,40 +129,67 @@
 
 
 .repeating-text-row {
+
   display: flex;
 
   width: max-content;
 
-  gap: 3rem;
+  gap: clamp(
+    1.5rem,
+    3vw,
+    3rem
+  );
 
-  margin-top: clamp(2rem, 4vw, 3rem);
+  margin-top: clamp(
+    2rem,
+    4vw,
+    3rem
+  );
 
-  font-size: clamp(0.7rem, 0.8vw, 0.85rem);
+  font-size: clamp(
+    0.65rem,
+    0.8vw,
+    0.85rem
+  );
 
   font-weight: 700;
 
   letter-spacing: 0.3em;
 
-  color: rgba(255, 255, 255, 0.2);
+  color:
+    rgba(255, 255, 255, 0.2);
 
   white-space: nowrap;
 }
 
 
 .massive-bg-text {
+
   display: flex;
   flex-direction: column;
 
   width: 100%;
 
   margin: 0;
-  padding-top: clamp(5rem, 12vh, 9rem);
 
-  color: rgba(255, 255, 255, 0.08);
+  padding-top: clamp(
+    5rem,
+    12vh,
+    9rem
+  );
 
-  font-family: 'Super Brigade', sans-serif;
+  color:
+    rgba(255, 255, 255, 0.08);
 
-  font-size: clamp(5rem, 10vw, 10rem);
+  font-family:
+    'Super Brigade',
+    sans-serif;
+
+  font-size: clamp(
+    5rem,
+    10vw,
+    10rem
+  );
 
   font-weight: 700;
 
@@ -167,54 +210,92 @@
    ========================================================= */
 
 .compHero-img {
+
   position: absolute;
 
-  left: 61%;
+  left: clamp(
+    58%,
+    61%,
+    64%
+  );
+
   bottom: 0;
 
-  height: 88%;
+  /*
+    Character scales with the hero instead of being tied
+    to a rigid pixel height.
+  */
+  height: clamp(
+    70%,
+    88%,
+    92%
+  );
+
   width: auto;
 
   max-width: none;
 
   object-fit: contain;
 
-  transform: translateX(-50%);
-  transform-origin: bottom center;
+  transform:
+    translateX(-50%);
+
+  transform-origin:
+    bottom center;
 
   pointer-events: none;
 
   filter:
-    drop-shadow(0 15px 25px rgba(0, 0, 0, 0.6));
+    drop-shadow(
+      0 15px 25px
+      rgba(0, 0, 0, 0.6)
+    );
 
   z-index: 2;
 }
 
 
 /* =========================================================
-   5. HERO CTA
+   5. HERO FOREGROUND / CTA
    ========================================================= */
 
 .comp-hero-foreground {
+
   position: absolute;
 
-  left: clamp(2rem, 7vw, 7rem);
-  bottom: 13%;
+  left: clamp(
+    2rem,
+    7vw,
+    7rem
+  );
+
+  bottom: clamp(
+    7%,
+    13%,
+    15%
+  );
 
   width: auto;
-  max-width: min(25vw, 19rem);
+
+  max-width:
+    min(28vw, 19rem);
 
   display: flex;
   flex-direction: column;
   align-items: flex-start;
 
-  gap: 1.25rem;
+  gap: clamp(
+    0.8rem,
+    1.25vw,
+    1.25rem
+  );
 
   z-index: 3;
 }
 
 
 .hero-copy {
+
   display: flex;
   flex-direction: column;
 
@@ -223,12 +304,18 @@
   color: #fff;
 
   text-shadow:
-    0 4px 18px rgba(0, 0, 0, 0.9);
+    0 4px 18px
+    rgba(0, 0, 0, 0.9);
 }
 
 
 .hero-copy span {
-  font-size: clamp(0.8rem, 1vw, 1rem);
+
+  font-size: clamp(
+    0.75rem,
+    1vw,
+    1rem
+  );
 
   font-weight: 800;
 
@@ -237,9 +324,16 @@
 
 
 .hero-copy strong {
-  font-family: 'Super Brigade', sans-serif;
 
-  font-size: clamp(2rem, 3.4vw, 3.5rem);
+  font-family:
+    'Super Brigade',
+    sans-serif;
+
+  font-size: clamp(
+    2rem,
+    3.4vw,
+    3.5rem
+  );
 
   line-height: 0.9;
 
@@ -248,7 +342,10 @@
 
 
 .hero-cta-btn {
-  padding: 1.1rem 2.6rem;
+
+  padding:
+    clamp(0.85rem, 1.1vw, 1.1rem)
+    clamp(1.7rem, 2.6vw, 2.6rem);
 
   background: #ff4655;
 
@@ -256,7 +353,11 @@
 
   font-weight: 800;
 
-  font-size: 0.85rem;
+  font-size: clamp(
+    0.7rem,
+    0.85vw,
+    0.85rem
+  );
 
   letter-spacing: 0.15em;
 
@@ -269,17 +370,21 @@
     transform 0.3s ease;
 
   clip-path:
-    polygon(8% 0,
+    polygon(
+      8% 0,
       100% 0,
       92% 100%,
-      0% 100%);
+      0% 100%
+    );
 }
 
 
 .hero-cta-btn:hover {
+
   background: #ff5e6b;
 
-  transform: scale(1.05);
+  transform:
+    scale(1.05);
 }
 
 
@@ -288,11 +393,15 @@
    ========================================================= */
 
 .post-hero-content {
+
   position: relative;
 
   width: 100%;
   min-width: 0;
 
+  /*
+    Content determines its own final height.
+  */
   min-height: 100dvh;
 
   padding: 0;
@@ -300,7 +409,11 @@
   box-sizing: border-box;
 
   background:
-    #0a0a0a url('../../assets/roster-comp-bg.png') center top / cover no-repeat;
+    #0a0a0a
+    url('../../assets/roster-comp-bg.png')
+    center top /
+    cover
+    no-repeat;
 
   overflow: visible;
 
@@ -309,12 +422,11 @@
 
 
 /*
-   This pseudo-layer ensures the background remains a
-   page-level visual surface instead of behaving like a
-   constrained content box.
+  Subtle readability overlay.
 */
 
 .post-hero-content::before {
+
   content: '';
 
   position: absolute;
@@ -324,15 +436,18 @@
   pointer-events: none;
 
   background:
-    linear-gradient(to bottom,
+    linear-gradient(
+      to bottom,
       rgba(10, 10, 10, 0.05),
-      rgba(10, 10, 10, 0.18));
+      rgba(10, 10, 10, 0.18)
+    );
 
   z-index: 0;
 }
 
 
-.post-hero-content>* {
+.post-hero-content > * {
+
   position: relative;
 
   z-index: 1;
@@ -344,15 +459,26 @@
    ========================================================= */
 
 .competition-sticky-header {
+
   position: sticky;
 
   top: 0;
 
   width: 100%;
 
-  height: clamp(220px, 25vh, 280px);
+  /*
+    Flexible rather than fixed-height.
 
-  min-height: 220px;
+    The minimum guarantees enough room for the roster,
+    carousel and tabs.
+  */
+  min-height: clamp(
+    220px,
+    25vh,
+    280px
+  );
+
+  height: auto;
 
   box-sizing: border-box;
 
@@ -365,13 +491,16 @@
     rgba(10, 10, 10, 0.42);
 
   border-bottom:
-    1px solid rgba(255, 255, 255, 0.1);
+    1px solid
+    rgba(255, 255, 255, 0.1);
 
   backdrop-filter:
-    blur(18px) saturate(115%);
+    blur(18px)
+    saturate(115%);
 
   -webkit-backdrop-filter:
-    blur(18px) saturate(115%);
+    blur(18px)
+    saturate(115%);
 }
 
 
@@ -380,6 +509,7 @@
    ========================================================= */
 
 .floating-roster-section {
+
   position: relative;
 
   width: 100%;
@@ -392,6 +522,7 @@
 
 
 .roster-header {
+
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -405,25 +536,31 @@
 
 
 .roster-title {
+
   margin: 0;
 
   color: #ffffff;
 
-  font-family: 'Super Brigade', sans-serif;
+  font-family:
+    'Super Brigade',
+    sans-serif;
 
-  font-size:
-    clamp(1.35rem,
-      2.2vw,
-      1.8rem);
+  font-size: clamp(
+    1.35rem,
+    2.2vw,
+    1.8rem
+  );
 
   letter-spacing: 0.05em;
 
   text-shadow:
-    0 4px 20px rgba(0, 0, 0, 0.5);
+    0 4px 20px
+    rgba(0, 0, 0, 0.5);
 }
 
 
 .roster-subtitle {
+
   margin: 0;
 
   color:
@@ -444,15 +581,23 @@
    ========================================================= */
 
 .competition-sticky-header .comp-tabs-container {
+
   margin:
-    0.25rem clamp(1rem, 4vw, 4rem) 0.35rem clamp(1rem, 4vw, 4rem);
+    0.25rem
+    clamp(1rem, 4vw, 4rem)
+    0.35rem;
 }
 
 
 .comp-tabs-container {
+
   display: flex;
 
-  gap: 1rem;
+  gap: clamp(
+    0.4rem,
+    1vw,
+    1rem
+  );
 
   margin-bottom: 3rem;
 
@@ -462,7 +607,8 @@
     rgba(255, 255, 255, 0.02);
 
   border:
-    1px solid rgba(255, 255, 255, 0.05);
+    1px solid
+    rgba(255, 255, 255, 0.05);
 
   border-radius: 8px;
 
@@ -471,12 +617,14 @@
 
 
 .comp-tab-btn {
+
   flex: 1;
 
   min-width: 0;
 
   padding:
-    0.4rem 0.5rem;
+    0.4rem
+    0.5rem;
 
   background: transparent;
 
@@ -485,7 +633,11 @@
 
   font-weight: 800;
 
-  font-size: 0.85rem;
+  font-size: clamp(
+    0.68rem,
+    0.85vw,
+    0.85rem
+  );
 
   letter-spacing: 0.1em;
 
@@ -503,6 +655,7 @@
 
 
 .comp-tab-btn:hover {
+
   color: white;
 
   background:
@@ -511,13 +664,15 @@
 
 
 .comp-tab-btn.active {
+
   background:
     rgba(214, 201, 138, 0.1);
 
   color: #D6C98A;
 
   border:
-    1px solid rgba(214, 201, 138, 0.3);
+    1px solid
+    rgba(214, 201, 138, 0.3);
 }
 
 
@@ -526,6 +681,7 @@
    ========================================================= */
 
 .comp-main-content {
+
   width: 100%;
 
   max-width: none;
@@ -533,15 +689,20 @@
   margin: 0;
 
   padding:
-    clamp(2rem, 4vw, 3rem) clamp(1rem, 4vw, 4rem) clamp(4rem, 6vw, 6rem);
+    clamp(2rem, 4vw, 3rem)
+    clamp(1rem, 4vw, 4rem)
+    clamp(4rem, 6vw, 6rem);
 
   box-sizing: border-box;
 }
 
 
 .tournament-toolbar {
+
   display: flex;
+
   align-items: center;
+
   justify-content: space-between;
 
   gap: 1rem;
@@ -551,24 +712,30 @@
 
 
 .tournament-section-title {
+
   margin: 0;
 
   color:
     rgba(255, 255, 255, 0.75);
 
-  font-family: 'Super Brigade', sans-serif;
+  font-family:
+    'Super Brigade',
+    sans-serif;
 
-  font-size:
-    clamp(1.15rem,
-      1.6vw,
-      1.35rem);
+  font-size: clamp(
+    1.15rem,
+    1.6vw,
+    1.35rem
+  );
 
   letter-spacing: 0.08em;
 }
 
 
 .tournament-toolbar-actions {
+
   display: flex;
+
   align-items: center;
 
   gap: 0.75rem;
@@ -582,18 +749,26 @@
    ========================================================= */
 
 .create-competition-btn {
+
   display: inline-flex;
+
   align-items: center;
 
   gap: 0.4rem;
 
-  height: 38px;
+  height: clamp(
+    34px,
+    2.5vw,
+    38px
+  );
 
   padding:
-    0 1rem;
+    0
+    clamp(0.75rem, 1vw, 1rem);
 
   border:
-    1px solid rgba(214, 201, 138, 0.35);
+    1px solid
+    rgba(214, 201, 138, 0.35);
 
   border-radius: 999px;
 
@@ -602,7 +777,11 @@
 
   color: #d6c98a;
 
-  font-size: 0.75rem;
+  font-size: clamp(
+    0.62rem,
+    0.75vw,
+    0.75rem
+  );
 
   font-weight: 800;
 
@@ -619,6 +798,7 @@
 
 
 .create-competition-btn:hover {
+
   border-color:
     rgba(214, 201, 138, 0.6);
 
@@ -632,6 +812,7 @@
    ========================================================= */
 
 .tournament-view-toggle {
+
   display: inline-flex;
 
   gap: 0.25rem;
@@ -639,22 +820,27 @@
   padding: 0.25rem;
 
   border:
-    1px solid rgba(255, 255, 255, 0.12);
+    1px solid
+    rgba(255, 255, 255, 0.12);
 
   border-radius: 999px;
 
   background:
     rgba(15, 15, 15, 0.35);
 
-  backdrop-filter: blur(12px);
+  backdrop-filter:
+    blur(12px);
 
-  -webkit-backdrop-filter: blur(12px);
+  -webkit-backdrop-filter:
+    blur(12px);
 }
 
 
 .tournament-view-toggle button,
 .coverflow-arrow {
+
   display: inline-flex;
+
   align-items: center;
   justify-content: center;
 
@@ -676,6 +862,7 @@
 
 
 .tournament-view-toggle button {
+
   width: 34px;
   height: 30px;
 
@@ -685,6 +872,7 @@
 
 .tournament-view-toggle button:hover,
 .tournament-view-toggle button.active {
+
   color: #d6c98a;
 
   border-color:
@@ -700,37 +888,49 @@
    ========================================================= */
 
 .tournament-coverflow {
+
   position: relative;
 
   width: 100%;
 
-  height: clamp(400px, 55vh, 480px);
+  /*
+    The container is tall enough for the cards but does not
+    force the entire page to a fixed viewport height.
+  */
+  height: clamp(
+    400px,
+    55vh,
+    480px
+  );
 
   overflow: hidden;
 }
 
 
 .tournament-coverflow .portrait-roster-card {
+
   position: absolute;
 
   top: 0;
   left: 50%;
 
   width:
-    min(28vw,
-      340px);
+    min(28vw, 340px);
 
   height:
-    clamp(380px,
+    clamp(
+      380px,
       48vh,
-      430px);
+      430px
+    );
 
   opacity: 0;
 
   pointer-events: none;
 
   transform:
-    translateX(-50%) scale(0.78);
+    translateX(-50%)
+    scale(0.78);
 
   transition:
     transform 0.45s ease,
@@ -739,6 +939,7 @@
 
 
 .tournament-coverflow .coverflow-position-0 {
+
   z-index: 3;
 
   opacity: 1;
@@ -746,31 +947,47 @@
   pointer-events: auto;
 
   transform:
-    translateX(-50%) scale(1);
+    translateX(-50%)
+    scale(1);
 }
 
 
 .tournament-coverflow .coverflow-position--1 {
+
   z-index: 2;
 
   opacity: 0.55;
 
   transform:
-    translateX(calc(-50% - min(20vw, 330px))) scale(0.82);
+    translateX(
+      calc(
+        -50% -
+        min(20vw, 330px)
+      )
+    )
+    scale(0.82);
 }
 
 
 .tournament-coverflow .coverflow-position-1 {
+
   z-index: 2;
 
   opacity: 0.55;
 
   transform:
-    translateX(calc(-50% + min(20vw, 330px))) scale(0.82);
+    translateX(
+      calc(
+        -50% +
+        min(20vw, 330px)
+      )
+    )
+    scale(0.82);
 }
 
 
 .tournament-coverflow .coverflow-position-2 {
+
   display: none;
 }
 
@@ -780,14 +997,24 @@
    ========================================================= */
 
 .coverflow-arrow {
+
   position: absolute;
 
   top: 45%;
 
   z-index: 5;
 
-  width: 42px;
-  height: 42px;
+  width: clamp(
+    36px,
+    3vw,
+    42px
+  );
+
+  height: clamp(
+    36px,
+    3vw,
+    42px
+  );
 
   border-color:
     rgba(255, 255, 255, 0.18);
@@ -797,13 +1024,16 @@
   background:
     rgba(15, 15, 15, 0.42);
 
-  backdrop-filter: blur(10px);
+  backdrop-filter:
+    blur(10px);
 
-  -webkit-backdrop-filter: blur(10px);
+  -webkit-backdrop-filter:
+    blur(10px);
 }
 
 
 .coverflow-arrow:hover {
+
   color: #d6c98a;
 
   border-color:
@@ -829,24 +1059,35 @@
    ========================================================= */
 
 .tournament-grid {
+
   display: grid;
 
   grid-template-columns:
-    repeat(3,
-      minmax(0, 1fr));
+    repeat(
+      3,
+      minmax(0, 1fr)
+    );
 
   gap:
-    clamp(1rem,
+    clamp(
+      1rem,
       1.5vw,
-      1.5rem);
+      1.5rem
+    );
 }
 
 
 .portrait-roster-card {
+
   position: relative;
 
   width: 100%;
-  height: 450px;
+
+  height: clamp(
+    380px,
+    42vw,
+    450px
+  );
 
   border-radius: 12px;
 
@@ -855,18 +1096,26 @@
   background: #111;
 
   border:
-    1px solid rgba(255, 255, 255, 0.05);
+    1px solid
+    rgba(255, 255, 255, 0.05);
 
   cursor: pointer;
 
   transition:
-    transform 0.3s cubic-bezier(0.4, 0, 0.2, 1),
+    transform 0.3s
+      cubic-bezier(
+        0.4,
+        0,
+        0.2,
+        1
+      ),
     box-shadow 0.3s ease,
     border-color 0.3s ease;
 }
 
 
 .card-bg-image {
+
   display: block;
 
   width: 100%;
@@ -877,31 +1126,44 @@
   object-position: center top;
 
   transition:
-    transform 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+    transform 0.5s
+      cubic-bezier(
+        0.4,
+        0,
+        0.2,
+        1
+      );
 }
 
 
 .portrait-roster-card:hover {
+
   transform:
-    scale(1.05) translateY(-5px);
+    scale(1.05)
+    translateY(-5px);
 
   border-color:
     rgba(214, 201, 138, 0.6);
 
   box-shadow:
-    0 15px 35px rgba(214, 201, 138, 0.15),
-    0 0 15px rgba(214, 201, 138, 0.1);
+    0 15px 35px
+      rgba(214, 201, 138, 0.15),
+    0 0 15px
+      rgba(214, 201, 138, 0.1);
 
   z-index: 10;
 }
 
 
 .portrait-roster-card:hover .card-bg-image {
-  transform: scale(1.08);
+
+  transform:
+    scale(1.08);
 }
 
 
 .card-gradient-overlay {
+
   position: absolute;
 
   left: 0;
@@ -910,17 +1172,23 @@
   width: 100%;
 
   padding:
-    4rem 1.5rem 1.5rem;
+    4rem
+    1.5rem
+    1.5rem;
 
   box-sizing: border-box;
 
   background:
-    linear-gradient(to top,
+    linear-gradient(
+      to top,
       rgba(10, 10, 10, 0.95) 0%,
-      rgba(10, 10, 10, 0) 100%);
+      rgba(10, 10, 10, 0) 100%
+    );
 
   display: flex;
+
   flex-direction: column;
+
   justify-content: flex-end;
 
   pointer-events: none;
@@ -928,20 +1196,25 @@
 
 
 .card-title {
+
   margin: 0;
 
   color: #fff;
 
-  font-family: 'Super Brigade', sans-serif;
+  font-family:
+    'Super Brigade',
+    sans-serif;
 
   font-size: 1.2rem;
 
   text-shadow:
-    0 2px 4px rgba(0, 0, 0, 0.8);
+    0 2px 4px
+    rgba(0, 0, 0, 0.8);
 }
 
 
 .card-subtitle {
+
   margin:
     0.25rem 0 0;
 
@@ -961,20 +1234,39 @@
    ========================================================= */
 
 .tournament-coverflow .coverflow-position-0:hover {
+
   transform:
-    translateX(-50%) scale(1.02) translateY(-4px);
+    translateX(-50%)
+    scale(1.02)
+    translateY(-4px);
 }
 
 
 .tournament-coverflow .coverflow-position--1:hover {
+
   transform:
-    translateX(calc(-50% - min(20vw, 330px))) scale(0.86) translateY(-3px);
+    translateX(
+      calc(
+        -50% -
+        min(20vw, 330px)
+      )
+    )
+    scale(0.86)
+    translateY(-3px);
 }
 
 
 .tournament-coverflow .coverflow-position-1:hover {
+
   transform:
-    translateX(calc(-50% + min(20vw, 330px))) scale(0.86) translateY(-3px);
+    translateX(
+      calc(
+        -50% +
+        min(20vw, 330px)
+      )
+    )
+    scale(0.86)
+    translateY(-3px);
 }
 
 
@@ -983,8 +1275,11 @@
    ========================================================= */
 
 .comp-state-box {
+
   display: flex;
+
   flex-direction: column;
+
   align-items: center;
   justify-content: center;
 
@@ -997,16 +1292,19 @@
   box-sizing: border-box;
 
   border:
-    1px solid rgba(255, 255, 255, 0.08);
+    1px solid
+    rgba(255, 255, 255, 0.08);
 
   border-radius: 12px;
 
   background:
     rgba(15, 15, 15, 0.35);
 
-  backdrop-filter: blur(12px);
+  backdrop-filter:
+    blur(12px);
 
-  -webkit-backdrop-filter: blur(12px);
+  -webkit-backdrop-filter:
+    blur(12px);
 
   color:
     rgba(255, 255, 255, 0.6);
@@ -1016,11 +1314,14 @@
 
 
 .comp-state-box h3 {
+
   margin: 0;
 
   color: #fff;
 
-  font-family: 'Super Brigade', sans-serif;
+  font-family:
+    'Super Brigade',
+    sans-serif;
 
   font-size: 1.1rem;
 
@@ -1029,6 +1330,7 @@
 
 
 .comp-state-box p {
+
   margin: 0;
 
   max-width: 420px;
@@ -1040,24 +1342,28 @@
 
 
 .comp-error-box {
+
   border-color:
     rgba(255, 70, 85, 0.35);
 }
 
 
 .comp-error-box p {
+
   color: #ff4655;
 }
 
 
 .comp-retry-btn {
+
   margin-top: 0.5rem;
 
   padding:
     0.5rem 1.4rem;
 
   border:
-    1px solid rgba(255, 255, 255, 0.2);
+    1px solid
+    rgba(255, 255, 255, 0.2);
 
   border-radius: 999px;
 
@@ -1080,6 +1386,7 @@
 
 
 .comp-retry-btn:hover {
+
   border-color: #d6c98a;
 
   color: #d6c98a;
@@ -1087,265 +1394,424 @@
 
 
 /* =========================================================
-   18. RESPONSIVE — TABLET
+   18. TABLET / MEDIUM DESKTOP
    ========================================================= */
 
 @media (max-width: 1200px) {
 
   .comp-hero-section {
-    min-height: clamp(520px, 82dvh, 760px);
+
+    min-height:
+      clamp(
+        560px,
+        100dvh,
+        820px
+      );
   }
+
 
   .compHero-img {
+
     left: 63%;
 
-    height: 84%;
+    height:
+      clamp(
+        72%,
+        84%,
+        88%
+      );
   }
+
 
   .comp-hero-foreground {
-    left: clamp(2rem, 5vw, 5rem);
-    bottom: 11%;
+
+    left:
+      clamp(
+        2rem,
+        5vw,
+        5rem
+      );
+
+    bottom:
+      clamp(
+        8%,
+        11%,
+        13%
+      );
   }
+
 
   .massive-bg-text {
+
     font-size:
-      clamp(4.5rem,
+      clamp(
+        4.5rem,
         11vw,
-        8rem);
+        8rem
+      );
   }
+
 
   .tournament-grid {
-    grid-template-columns:
-      repeat(2,
-        minmax(0, 1fr));
-  }
 
+    grid-template-columns:
+      repeat(
+        2,
+        minmax(0, 1fr)
+      );
+  }
 }
 
 
 /* =========================================================
-   19. RESPONSIVE — MOBILE / SMALL TABLET
+   19. SMALL DESKTOP / TABLET
    ========================================================= */
 
 @media (max-width: 900px) {
 
   .comp-hero-section {
-    min-height: 560px;
 
-    height: 70dvh;
+    min-height:
+      clamp(
+        540px,
+        100dvh,
+        760px
+      );
   }
+
 
   .compHero-img {
+
     left: 64%;
 
-    height: 78%;
+    height:
+      clamp(
+        66%,
+        78%,
+        82%
+      );
   }
+
 
   .comp-hero-foreground {
+
     left: 2rem;
 
-    bottom: 10%;
+    bottom: 9%;
 
-    max-width: min(42vw, 19rem);
+    max-width:
+      min(45vw, 19rem);
   }
 
+
   .hero-bg-layer {
+
     width: 100%;
   }
 
-  .massive-bg-text {
-    font-size:
-      clamp(4rem,
-        14vw,
-        7rem);
 
-    padding-top: 10vh;
+  .massive-bg-text {
+
+    font-size:
+      clamp(
+        4rem,
+        14vw,
+        7rem
+      );
+
+    padding-top:
+      clamp(
+        6rem,
+        10vh,
+        8rem
+      );
   }
+
 
   .competition-sticky-header {
-    height: auto;
 
-    min-height: 220px;
+    min-height:
+      clamp(
+        220px,
+        30vh,
+        280px
+      );
   }
 
-  .competition-sticky-header .comp-tabs-container {
+
+  .competition-sticky-header
+  .comp-tabs-container {
+
     margin-left: 1rem;
     margin-right: 1rem;
   }
 
+
   .comp-main-content {
+
     padding:
-      2rem 1.25rem 4rem;
+      2rem
+      1.25rem
+      4rem;
   }
 
+
   .tournament-toolbar {
+
     flex-wrap: wrap;
 
     gap: 0.75rem;
   }
 
+
   .tournament-coverflow {
+
     height: 430px;
   }
 
-  .tournament-coverflow .portrait-roster-card {
+
+  .tournament-coverflow
+  .portrait-roster-card {
+
     width:
-      min(42vw,
-        320px);
+      min(42vw, 320px);
 
     height: 400px;
   }
-
 }
 
 
 /* =========================================================
-   20. RESPONSIVE — PHONE
+   20. PHONE
    ========================================================= */
 
 @media (max-width: 650px) {
 
   .comp-hero-section {
-    min-height: 540px;
 
-    height: 72dvh;
+    min-height:
+      clamp(
+        520px,
+        100dvh,
+        680px
+      );
   }
+
 
   .compHero-img {
+
     left: 65%;
 
-    height: 70%;
+    height:
+      clamp(
+        62%,
+        70%,
+        74%
+      );
   }
 
+
   .comp-hero-foreground {
+
     left: 1.25rem;
 
-    bottom: 8%;
+    bottom: 7%;
 
     max-width: 50%;
   }
 
+
   .hero-copy span {
+
     font-size: 0.72rem;
   }
+
 
   .hero-copy strong {
+
     font-size:
-      clamp(1.7rem,
+      clamp(
+        1.7rem,
         8vw,
-        2.7rem);
+        2.7rem
+      );
   }
 
+
   .hero-cta-btn {
+
     padding:
-      0.9rem 1.8rem;
+      0.9rem
+      1.8rem;
 
     font-size: 0.72rem;
   }
 
+
   .repeating-text-row {
+
     gap: 1.5rem;
 
     font-size: 0.65rem;
   }
 
+
   .massive-bg-text {
+
     font-size:
-      clamp(3.5rem,
+      clamp(
+        3.5rem,
         18vw,
-        5.5rem);
+        5.5rem
+      );
   }
 
+
   .competition-sticky-header {
+
     min-height: 0;
   }
 
+
   .roster-title {
+
     font-size: 1.25rem;
   }
 
+
   .roster-subtitle {
+
     font-size: 0.55rem;
   }
 
-  .competition-sticky-header .comp-tabs-container {
+
+  .competition-sticky-header
+  .comp-tabs-container {
+
     gap: 0.35rem;
 
     margin:
-      0.5rem 0.65rem 0.75rem;
+      0.5rem
+      0.65rem
+      0.75rem;
   }
 
+
   .comp-tab-btn {
+
     padding:
-      0.55rem 0.25rem;
+      0.55rem
+      0.25rem;
 
     font-size: 0.6rem;
 
     letter-spacing: 0.04em;
   }
 
+
   .comp-main-content {
+
     padding:
-      1.5rem 0.75rem 3rem;
+      1.5rem
+      0.75rem
+      3rem;
   }
 
+
   .tournament-toolbar {
+
     align-items: flex-start;
   }
 
+
   .tournament-section-title {
+
     font-size: 1.05rem;
   }
 
+
   .create-competition-btn {
+
     height: 34px;
 
     padding:
-      0 0.75rem;
+      0
+      0.75rem;
 
     font-size: 0.62rem;
   }
 
+
   .tournament-grid {
+
     grid-template-columns: 1fr;
   }
 
+
   .portrait-roster-card {
+
     height: 400px;
   }
 
+
   .tournament-coverflow {
+
     height: 410px;
   }
 
-  .tournament-coverflow .portrait-roster-card {
+
+  .tournament-coverflow
+  .portrait-roster-card {
+
     width:
-      min(62vw,
-        280px);
+      min(62vw, 280px);
 
     height: 380px;
   }
 
-  .tournament-coverflow .coverflow-position--1,
-  .tournament-coverflow .coverflow-position-1 {
+
+  .tournament-coverflow
+  .coverflow-position--1,
+  .tournament-coverflow
+  .coverflow-position-1 {
+
     opacity: 0.25;
   }
 
-  .tournament-coverflow .coverflow-position--1 {
+
+  .tournament-coverflow
+  .coverflow-position--1 {
+
     transform:
-      translateX(calc(-50% - min(30vw, 150px))) scale(0.78);
+      translateX(
+        calc(
+          -50% -
+          min(30vw, 150px)
+        )
+      )
+      scale(0.78);
   }
 
-  .tournament-coverflow .coverflow-position-1 {
+
+  .tournament-coverflow
+  .coverflow-position-1 {
+
     transform:
-      translateX(calc(-50% + min(30vw, 150px))) scale(0.78);
+      translateX(
+        calc(
+          -50% +
+          min(30vw, 150px)
+        )
+      )
+      scale(0.78);
   }
+
 
   .coverflow-arrow {
+
     width: 36px;
     height: 36px;
   }
-
 }
 
 
@@ -1356,16 +1822,21 @@
 @media (max-width: 420px) {
 
   .comp-hero-section {
+
     min-height: 500px;
   }
 
+
   .compHero-img {
+
     left: 68%;
 
     height: 66%;
   }
 
+
   .comp-hero-foreground {
+
     left: 1rem;
 
     bottom: 7%;
@@ -1373,34 +1844,121 @@
     max-width: 55%;
   }
 
+
   .hero-copy strong {
+
     font-size: 1.6rem;
   }
 
+
   .hero-cta-btn {
+
     padding:
-      0.8rem 1.45rem;
+      0.8rem
+      1.45rem;
 
     font-size: 0.65rem;
   }
 
+
   .massive-bg-text {
+
     font-size: 3rem;
   }
 
+
   .comp-tabs-container {
+
     flex-wrap: wrap;
   }
 
+
   .comp-tab-btn {
+
     flex:
-      1 1 calc(50% - 0.35rem);
+      1 1
+      calc(50% - 0.35rem);
   }
 
+
   .tournament-toolbar-actions {
+
     width: 100%;
 
     justify-content: space-between;
   }
+}
 
+
+/* =========================================================
+   22. SHORT VIEWPORT SAFETY
+   ========================================================= */
+
+/*
+  Important for short laptop screens.
+
+  Do NOT shrink the hero to match the available height.
+
+  The hero remains substantial and the document simply
+  continues below it.
+*/
+
+@media (max-height: 760px) and (min-width: 651px) {
+
+  .comp-hero-section {
+
+    min-height:
+      max(
+        560px,
+        100dvh
+      );
+  }
+
+
+  .compHero-img {
+
+    height:
+      min(
+        88%,
+        680px
+      );
+  }
+
+
+  .comp-hero-foreground {
+
+    bottom: 8%;
+  }
+}
+
+
+/* =========================================================
+   23. VERY SHORT DESKTOP VIEWPORT
+   ========================================================= */
+
+@media (max-height: 620px) and (min-width: 901px) {
+
+  .comp-hero-section {
+
+    min-height: 620px;
+  }
+
+
+  .compHero-img {
+
+    height: 84%;
+  }
+
+
+  .massive-bg-text {
+
+    padding-top: 5rem;
+
+    font-size:
+      clamp(
+        4.5rem,
+        9vw,
+        7rem
+      );
+  }
 }
