@@ -14,6 +14,8 @@ html {
 
 
 
+
+
 /* =========================================================
 
    DASHBOARD ROOT
@@ -21,54 +23,104 @@ html {
    ========================================================= */
 
 /* =========================================================
+
    TOP DASHBOARD HERO ROW
+
    GREETING + CHARACTER + PREMIUM
+
    ========================================================= */
 
 .dashboard-top-row {
+
   position: relative;
+
+  grid-column:
+    1 / -1;
+
+  grid-row: 1;
+
   width: 100%;
+
+  height:
+    clamp(70px, 7vw, 90px);
+
+  min-height:
+    clamp(70px, 7vw, 90px);
+
   min-width: 0;
-  min-height: clamp(70px, 7vw, 90px);
 
   display: flex;
+
   flex-direction: row;
+
   align-items: center;
+
   justify-content: space-between;
 
-  gap: clamp(0.75rem, 1.5vw, 1.5rem);
+  gap:
+    clamp(0.75rem, 1.5vw, 1.5rem);
+
+  flex: 0 0 auto;
+
+  z-index: 20;
+
 }
 
 
 .dashboard-character-slot {
+
   position: relative;
 
-  flex: 1 1 auto;
+  flex:
+    1 1 auto;
+
+  width: auto;
+
+  height: 100%;
+
   min-width: 0;
+
   min-height: 0;
 
   display: flex;
-  align-items: center;
+
+  flex-direction: row;
+
+  align-items: flex-end;
+
   justify-content: center;
 
-  align-self: stretch;
+  overflow: visible;
+
 }
 
 
 .dashboard-character-render {
 
-  display: block;
+  position: relative;
 
-  height:
-    clamp(90px, 10vw, 135px);
+  display: block;
 
   width: auto;
 
+  height:
+    clamp(100px, 11vw, 150px);
+
   max-width: 100%;
+
+  max-height: none;
 
   object-fit: contain;
 
+  object-position:
+    center bottom;
+
+  flex:
+    0 0 auto;
+
   pointer-events: none;
+
+  z-index: 2;
 
   filter:
     drop-shadow(
@@ -76,6 +128,7 @@ html {
     );
 
 }
+
 
 .bento-dashboard-wrapper {
 
@@ -123,6 +176,10 @@ html {
     minmax(0, 1fr)
     clamp(60px, 4vw, 80px);
 
+  grid-template-rows:
+    auto
+    minmax(0, auto);
+
   gap:
     clamp(1rem, 1.35vw, 1.5rem);
 
@@ -149,12 +206,18 @@ html {
 
 
 
+
+
 /*
+
   Global box sizing inside dashboard.
+
 */
 
 .bento-dashboard-wrapper *,
+
 .bento-dashboard-wrapper *::before,
+
 .bento-dashboard-wrapper *::after {
 
   box-sizing: border-box;
@@ -163,21 +226,30 @@ html {
 
 
 
+
+
 /*
+
   Important for grid/flex descendants.
 
   Without min-width: 0, long text/media can force a grid
   column wider than its available space.
+
 */
 
 .bento-dashboard-wrapper > *,
+
 .col-main-left > *,
+
 .col-main-right > *,
+
 .col-far-right > * {
 
   min-width: 0;
 
 }
+
+
 
 
 
@@ -188,6 +260,7 @@ html {
    ========================================================= */
 
 .bento-card,
+
 .wire-block {
 
   border:
@@ -219,12 +292,14 @@ html {
 
 }
 
+
 .bento-card {
 
   padding:
     clamp(1rem, 1.8vw, 1.5rem);
 
 }
+
 
 .wire-block {
 
@@ -236,6 +311,8 @@ html {
 
 
 
+
+
 /* =========================================================
 
    MAIN COLUMNS
@@ -243,15 +320,20 @@ html {
    ========================================================= */
 
 .bento-dashboard-wrapper > *,
+
 .col-main-left > *,
+
 .col-main-right > *,
+
 .col-far-right > * {
 
   min-width: 0;
 
 }
 
+
 .col-main-left,
+
 .col-main-right {
 
   display: flex;
@@ -263,7 +345,6 @@ html {
 
   /*
     Do not force column height to 100%.
-
     Content and flex growth determine the height.
   */
 
@@ -271,27 +352,30 @@ html {
 
 }
 
+
 .col-main-left {
 
   grid-column: 1;
 
-  grid-row: 1;
+  grid-row: 2;
 
 }
+
 
 .col-main-right {
 
   grid-column: 2;
 
-  grid-row: 1;
+  grid-row: 2;
 
 }
+
 
 .col-far-right {
 
   grid-column: 3;
 
-  grid-row: 1;
+  grid-row: 2;
 
   display: flex;
 
@@ -308,6 +392,8 @@ html {
 
 
 
+
+
 /* =========================================================
 
    TOP GREETING / PREMIUM
@@ -315,32 +401,23 @@ html {
    ========================================================= */
 
 .greetings-pill {
+
   position: relative;
+
   z-index: 3;
 
   width: fit-content;
-  max-width: clamp(180px, 22vw, 280px);
-  min-width: 0;
 
-  flex: 0 1 auto;
-  flex-shrink: 1;
-
-  display: flex;
-  align-items: center;
-
-  white-space: nowrap;
-}
-
-
-.premium-banner-pill {
-
-  width: fit-content;
+  max-width:
+    clamp(180px, 18vw, 280px);
 
   height:
     clamp(52px, 5vw, 68px);
 
   min-height:
     clamp(52px, 5vw, 68px);
+
+  min-width: 0;
 
   flex:
     0 0 auto;
@@ -349,22 +426,82 @@ html {
 
   display: flex;
 
+  flex-direction: row;
+
   align-items: center;
+
+  white-space: nowrap;
+
+  padding-inline:
+    clamp(0.85rem, 1.4vw, 1.25rem);
+
+}
+
+
+.greetings-pill h2 {
+
+  min-width: 0;
+
+  margin: 0;
+
+  overflow: hidden;
+
+  text-overflow: ellipsis;
+
+  white-space: nowrap;
+
+}
+
+
+.premium-banner-pill {
+
+  position: relative;
+
+  z-index: 3;
+
+  width: fit-content;
+
+  max-width:
+    clamp(220px, 24vw, 340px);
+
+  height:
+    clamp(52px, 5vw, 68px);
+
+  min-height:
+    clamp(52px, 5vw, 68px);
+
+  min-width: 0;
+
+  flex:
+    0 0 auto;
+
+  flex-shrink: 0;
+
+  display: flex;
+
+  flex-direction: row;
+
+  align-items: center;
+
+  justify-content: center;
 
   padding-inline:
     clamp(1rem, 1.8vw, 1.5rem);
 
-  min-width: 0;
-
   gap: 0.6rem;
 
+  white-space: nowrap;
+
 }
+
 
 .text-highlight {
 
   color: #f4d35e;
 
 }
+
+
 
 
 
@@ -380,7 +517,6 @@ html {
 
   /*
     Hero occupies a responsive amount of vertical space.
-
     It can grow/shrink with the available viewport while
     still maintaining enough room for its content.
   */
@@ -411,6 +547,7 @@ html {
 
 }
 
+
 .tournaments-card-content {
 
   position: relative;
@@ -424,6 +561,7 @@ html {
   min-width: 0;
 
 }
+
 
 .block-title {
 
@@ -447,6 +585,7 @@ html {
 
 }
 
+
 .hero-comp-sub {
 
   margin:
@@ -463,14 +602,19 @@ html {
 
 
 
+
+
 /*
+
   Decorative character.
 
   Absolute positioning is intentional because this is an
-  image overlay inside the hero.
+  image overlay inside the tournament hero.
 
-  It is NOT used to position the page itself.
+  It is NOT used for the dashboard top character.
+
 */
+
 
 
 .live-badge {
@@ -499,6 +643,7 @@ html {
 
 }
 
+
 .live-badge .dot {
 
   width: 6px;
@@ -511,6 +656,7 @@ html {
   border-radius: 50%;
 
 }
+
 
 .join-btn {
 
@@ -529,6 +675,8 @@ html {
   gap: 0.5rem;
 
 }
+
+
 
 
 
@@ -560,6 +708,7 @@ html {
 
 }
 
+
 .section-label {
 
   min-width: 0;
@@ -571,6 +720,8 @@ html {
   letter-spacing: 0.08em;
 
 }
+
+
 
 
 
@@ -604,6 +755,7 @@ html {
   overflow: visible;
 
 }
+
 
 .clip-game-tag {
 
@@ -655,6 +807,7 @@ html {
 
 }
 
+
 .coverflow-track {
 
   position: relative;
@@ -679,6 +832,8 @@ html {
 
 
 
+
+
 /* =========================================================
 
    CLIP CARDS
@@ -695,7 +850,6 @@ html {
 
   /*
     Videos are 5:4.
-
     Width remains responsive while height is generated
     automatically from the 5:4 ratio.
   */
@@ -718,10 +872,8 @@ html {
 
   /*
     IMPORTANT:
-
     left is included because the Coverflow positions
     change between 15% → 50% → 85%.
-
     All visual properties now move together smoothly.
   */
 
@@ -748,6 +900,8 @@ html {
 
 
 
+
+
 /* =========================================================
 
    CENTER / SIDE CARDS
@@ -770,6 +924,7 @@ html {
 
 }
 
+
 .clip-left {
 
   left: 15%;
@@ -786,6 +941,7 @@ html {
 
 }
 
+
 .clip-right {
 
   left: 85%;
@@ -801,6 +957,7 @@ html {
   z-index: 5;
 
 }
+
 
 .clip-hidden {
 
@@ -822,6 +979,8 @@ html {
 
 
 
+
+
 /* =========================================================
 
    VIDEO
@@ -829,6 +988,7 @@ html {
    ========================================================= */
 
 .clip-card video,
+
 .clip-card img {
 
   display: block;
@@ -851,6 +1011,8 @@ html {
 
 
 
+
+
 /* =========================================================
 
    COVERFLOW INFORMATION
@@ -858,6 +1020,7 @@ html {
    ========================================================= */
 
 .coverflow-left-overlay,
+
 .coverflow-right-overlay {
 
   position: absolute;
@@ -875,6 +1038,7 @@ html {
 
 }
 
+
 .coverflow-left-overlay {
 
   left: 0;
@@ -885,6 +1049,7 @@ html {
   pointer-events: none;
 
 }
+
 
 .coverflow-right-overlay {
 
@@ -900,6 +1065,8 @@ html {
   min-height: 0;
 
 }
+
+
 
 
 
@@ -935,6 +1102,7 @@ html {
 
 }
 
+
 .clip-author {
 
   width: 100%;
@@ -962,6 +1130,7 @@ html {
 
 }
 
+
 .clip-actions {
 
   display: flex;
@@ -980,6 +1149,7 @@ html {
   pointer-events: auto;
 
 }
+
 
 .clip-actions button {
 
@@ -1020,6 +1190,7 @@ html {
 
 }
 
+
 .clip-actions button:hover {
 
   background:
@@ -1029,6 +1200,8 @@ html {
     rgba(255, 255, 255, 0.35);
 
 }
+
+
 
 
 
@@ -1062,11 +1235,14 @@ html {
 
 }
 
+
 .clip-center:hover .play-overlay {
 
   opacity: 1;
 
 }
+
+
 
 
 
@@ -1097,6 +1273,7 @@ html {
   box-sizing: border-box;
 
 }
+
 
 .comments-header {
 
@@ -1135,6 +1312,7 @@ html {
 
 }
 
+
 .comments-list {
 
   display: flex;
@@ -1161,6 +1339,7 @@ html {
 
 }
 
+
 .comment-item {
 
   width: 100%;
@@ -1181,6 +1360,7 @@ html {
 
 }
 
+
 .comment-user {
 
   color: #d6c98a;
@@ -1190,6 +1370,7 @@ html {
   overflow-wrap: anywhere;
 
 }
+
 
 .empty-comms {
 
@@ -1202,6 +1383,7 @@ html {
   font-style: italic;
 
 }
+
 
 .comment-input {
 
@@ -1242,6 +1424,7 @@ html {
 
 }
 
+
 .comment-input input {
 
   width: 100%;
@@ -1261,6 +1444,8 @@ html {
   box-sizing: border-box;
 
 }
+
+
 
 
 
@@ -1304,7 +1489,6 @@ html {
 
   /*
     Hidden by default.
-
     They become visible when the video card is hovered.
   */
 
@@ -1325,6 +1509,8 @@ html {
 
 
 
+
+
 /* =========================================================
 
    SHOW CONTROLS ON CARD HOVER
@@ -1340,6 +1526,8 @@ html {
   pointer-events: auto;
 
 }
+
+
 
 
 
@@ -1364,6 +1552,7 @@ html {
 
 }
 
+
 .clip-card:hover .play-control {
 
   transform:
@@ -1372,6 +1561,7 @@ html {
 
 }
 
+
 .clip-card:hover .play-control:hover {
 
   transform:
@@ -1379,6 +1569,8 @@ html {
     scale(1.08);
 
 }
+
+
 
 
 
@@ -1403,12 +1595,15 @@ html {
 
 }
 
+
 .clip-card:hover .mute-control:hover {
 
   transform:
     scale(1.08);
 
 }
+
+
 
 
 
@@ -1427,6 +1622,8 @@ html {
     rgba(255, 255, 255, 0.42);
 
 }
+
+
 
 
 
@@ -1482,6 +1679,7 @@ html {
 
 }
 
+
 .prev-btn {
 
   left: 38%;
@@ -1491,6 +1689,7 @@ html {
 
 }
 
+
 .next-btn {
 
   right: 38%;
@@ -1499,6 +1698,7 @@ html {
     translateX(50%);
 
 }
+
 
 .prev-btn:hover {
 
@@ -1514,6 +1714,7 @@ html {
 
 }
 
+
 .next-btn:hover {
 
   background:
@@ -1528,6 +1729,7 @@ html {
 
 }
 
+
 .prev-btn:active {
 
   transform:
@@ -1536,6 +1738,7 @@ html {
 
 }
 
+
 .next-btn:active {
 
   transform:
@@ -1543,6 +1746,8 @@ html {
     scale(0.95);
 
 }
+
+
 
 
 
@@ -1579,6 +1784,8 @@ html {
 
 
 
+
+
 /* =========================================================
 
    RIGHT SIDE MINI GRID
@@ -1601,7 +1808,6 @@ html {
 
   /*
     Give this row a real responsive height.
-
     The game list will scroll inside this fixed
     responsive space instead of increasing the
     height of the dashboard.
@@ -1618,6 +1824,7 @@ html {
     0 0 auto;
 
 }
+
 
 .game-selector-card {
 
@@ -1642,6 +1849,7 @@ html {
 
 }
 
+
 .game-option:hover {
 
   background:
@@ -1650,6 +1858,7 @@ html {
   color: #fff;
 
 }
+
 
 .game-option.active {
 
@@ -1662,6 +1871,7 @@ html {
   color: #d6c98a;
 
 }
+
 
 .game-list {
 
@@ -1681,7 +1891,6 @@ html {
 
   /*
     IMPORTANT:
-
     The list consumes the remaining height
     inside the game card.
   */
@@ -1711,6 +1920,8 @@ html {
 
 
 
+
+
 /* Chrome / Edge / Safari */
 
 .game-list::-webkit-scrollbar {
@@ -1719,11 +1930,13 @@ html {
 
 }
 
+
 .game-list::-webkit-scrollbar-track {
 
   background: transparent;
 
 }
+
 
 .game-list::-webkit-scrollbar-thumb {
 
@@ -1734,12 +1947,14 @@ html {
 
 }
 
+
 .game-list::-webkit-scrollbar-thumb:hover {
 
   background:
     rgba(214, 201, 138, 0.65);
 
 }
+
 
 .game-option {
 
@@ -1782,6 +1997,7 @@ html {
 
 }
 
+
 .game-option span {
 
   min-width: 0;
@@ -1796,6 +2012,7 @@ html {
   white-space: nowrap;
 
 }
+
 
 .synco-promo-card {
 
@@ -1818,6 +2035,7 @@ html {
 
 }
 
+
 .synco-promo-card h3 {
 
   max-width: 100%;
@@ -1825,6 +2043,8 @@ html {
   overflow-wrap: anywhere;
 
 }
+
+
 
 
 
@@ -1856,6 +2076,7 @@ html {
 
 }
 
+
 .stat-header-row {
 
   width: 100%;
@@ -1864,11 +2085,13 @@ html {
 
 }
 
+
 .stat-icon {
 
   flex-shrink: 0;
 
 }
+
 
 .stat-meter-container {
 
@@ -1892,6 +2115,7 @@ html {
 
 }
 
+
 .stat-glowing-blob {
 
   position: absolute;
@@ -1904,6 +2128,7 @@ html {
   max-width: 100%;
 
 }
+
 
 .rating-number {
 
@@ -1920,6 +2145,7 @@ html {
 
 }
 
+
 .stat-breakdown {
 
   display: flex;
@@ -1934,6 +2160,7 @@ html {
   margin-top: auto;
 
 }
+
 
 .stat-pill {
 
@@ -1957,6 +2184,7 @@ html {
 
 }
 
+
 .stat-pill .label {
 
   font-size: 0.55rem;
@@ -1964,6 +2192,7 @@ html {
   white-space: nowrap;
 
 }
+
 
 .stat-pill .value {
 
@@ -1978,6 +2207,8 @@ html {
   white-space: nowrap;
 
 }
+
+
 
 
 
@@ -2006,6 +2237,7 @@ html {
 
 }
 
+
 .vertical-text {
 
   max-width: 100%;
@@ -2020,6 +2252,8 @@ html {
   white-space: nowrap;
 
 }
+
+
 
 
 
@@ -2041,6 +2275,31 @@ html {
 
   }
 
+  .dashboard-top-row {
+
+    grid-column:
+      1 / -1;
+
+    grid-row: 1;
+
+  }
+
+  .col-main-left {
+
+    grid-column: 1;
+
+    grid-row: 2;
+
+  }
+
+  .col-main-right {
+
+    grid-column: 2;
+
+    grid-row: 2;
+
+  }
+
   .col-far-right {
 
     display: none;
@@ -2048,6 +2307,7 @@ html {
   }
 
   .coverflow-left-overlay,
+
   .coverflow-right-overlay {
 
     width:
@@ -2063,6 +2323,8 @@ html {
   }
 
 }
+
+
 
 
 
@@ -2088,11 +2350,35 @@ html {
 
   }
 
-  .col-main-left {
+  .dashboard-top-row {
 
     grid-column: 1;
 
     grid-row: 1;
+
+    width: 100%;
+
+    height:
+      clamp(70px, 10vw, 90px);
+
+    min-height:
+      clamp(70px, 10vw, 90px);
+
+    display: flex;
+
+    flex-direction: row;
+
+    align-items: center;
+
+    justify-content: space-between;
+
+  }
+
+  .col-main-left {
+
+    grid-column: 1;
+
+    grid-row: 2;
 
   }
 
@@ -2100,7 +2386,49 @@ html {
 
     grid-column: 1;
 
-    grid-row: 2;
+    grid-row: 3;
+
+  }
+
+  .dashboard-character-slot {
+
+    flex:
+      1 1 auto;
+
+    height: 100%;
+
+    display: flex;
+
+    flex-direction: row;
+
+    align-items: flex-end;
+
+    justify-content: center;
+
+  }
+
+  .dashboard-character-render {
+
+    height:
+      clamp(90px, 15vw, 130px);
+
+    width: auto;
+
+    max-width: 100%;
+
+  }
+
+  .greetings-pill {
+
+    max-width:
+      clamp(160px, 30vw, 260px);
+
+  }
+
+  .premium-banner-pill {
+
+    max-width:
+      clamp(200px, 35vw, 300px);
 
   }
 
@@ -2114,29 +2442,6 @@ html {
   .tournaments-card-content {
 
     max-width: 100%;
-
-  }
-
-  .hero-character-render {
-
-    position: relative;
-
-    right: auto;
-
-    bottom: auto;
-
-    width: auto;
-
-    height:
-      clamp(160px, 28vw, 220px);
-
-    max-width: 100%;
-
-    max-height: none;
-
-    margin-top: 1rem;
-
-    align-self: center;
 
   }
 
@@ -2158,6 +2463,8 @@ html {
 
 
 
+
+
 /* =========================================================
 
    <= 650px
@@ -2165,6 +2472,80 @@ html {
    ========================================================= */
 
 @media (max-width: 650px) {
+
+  .dashboard-top-row {
+
+    height: auto;
+
+    min-height: 70px;
+
+    gap: 0.5rem;
+
+  }
+
+  .greetings-pill {
+
+    max-width: 42%;
+
+    height:
+      52px;
+
+    min-height:
+      52px;
+
+    padding-inline:
+      0.75rem;
+
+  }
+
+  .greetings-pill h2 {
+
+    font-size:
+      0.85rem !important;
+
+  }
+
+  .dashboard-character-slot {
+
+    height:
+      80px;
+
+  }
+
+  .dashboard-character-render {
+
+    height:
+      90px;
+
+  }
+
+  .premium-banner-pill {
+
+    max-width: 42%;
+
+    height:
+      52px;
+
+    min-height:
+      52px;
+
+    padding-inline:
+      0.75rem;
+
+    gap: 0.4rem;
+
+  }
+
+  .premium-banner-pill span {
+
+    font-size:
+      0.7rem !important;
+
+    overflow: hidden;
+
+    text-overflow: ellipsis;
+
+  }
 
   .mid-grid-row {
 
@@ -2174,6 +2555,7 @@ html {
   }
 
   .coverflow-left-overlay,
+
   .coverflow-right-overlay {
 
     width: 23%;
@@ -2203,6 +2585,8 @@ html {
 
 
 
+
+
 /* =========================================================
 
    <= 420px
@@ -2217,7 +2601,74 @@ html {
 
   }
 
+  .dashboard-top-row {
+
+    min-height: 62px;
+
+    gap: 0.3rem;
+
+  }
+
+  .greetings-pill {
+
+    max-width: 40%;
+
+    height:
+      48px;
+
+    min-height:
+      48px;
+
+    padding-inline:
+      0.6rem;
+
+  }
+
+  .greetings-pill h2 {
+
+    font-size:
+      0.75rem !important;
+
+  }
+
+  .dashboard-character-slot {
+
+    height:
+      68px;
+
+  }
+
+  .dashboard-character-render {
+
+    height:
+      78px;
+
+  }
+
+  .premium-banner-pill {
+
+    max-width: 40%;
+
+    height:
+      48px;
+
+    min-height:
+      48px;
+
+    padding-inline:
+      0.55rem;
+
+  }
+
+  .premium-banner-pill span {
+
+    font-size:
+      0.62rem !important;
+
+  }
+
   .coverflow-left-overlay,
+
   .coverflow-right-overlay {
 
     display: none;
