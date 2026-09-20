@@ -514,13 +514,14 @@ html {
 
   /*
     Videos are 5:4.
-
     Width remains responsive while height is generated
     automatically from the 5:4 ratio.
   */
+
   width: clamp(180px, 20vw, 320px);
 
   aspect-ratio: 5 / 4;
+
   height: auto;
 
   overflow: hidden;
@@ -529,30 +530,35 @@ html {
 
   background: #000;
 
-  transform: translate(-50%, -50%);
+  transform:
+    translate(-50%, -50%);
+
+  /*
+    IMPORTANT:
+    left is included because the Coverflow positions
+    change between 15% → 50% → 85%.
+
+    All visual properties now move together smoothly.
+  */
 
   transition:
-    transform 0.6s ease,
-    opacity 0.6s ease,
-    filter 0.6s ease;
+    left 700ms cubic-bezier(0.22, 1, 0.36, 1),
+    transform 700ms cubic-bezier(0.22, 1, 0.36, 1),
+    opacity 700ms cubic-bezier(0.22, 1, 0.36, 1),
+    filter 700ms cubic-bezier(0.22, 1, 0.36, 1);
+
+  will-change:
+    left,
+    transform,
+    opacity,
+    filter;
 
   z-index: 10;
 
   min-width: 0;
-  max-width: calc(100% - 2rem);
-}
 
-.clip-card video,
-.clip-card img {
-  display: block;
-
-  width: 100%;
-  height: 100%;
-
-  max-width: 100%;
-  max-height: 100%;
-
-  object-fit: cover;
+  max-width:
+    calc(100% - 2rem);
 }
 
 
@@ -568,6 +574,9 @@ html {
     scale(1);
 
   opacity: 1;
+
+  filter: blur(0);
+
   z-index: 10;
 }
 
@@ -600,11 +609,40 @@ html {
 }
 
 .clip-hidden {
+  left: 50%;
+
   z-index: 0;
 
   opacity: 0;
 
+  transform:
+    translate(-50%, -50%)
+    scale(0.65);
+
+  filter: blur(8px);
+
   pointer-events: none;
+}
+
+
+/* =========================================================
+   VIDEO
+   ========================================================= */
+
+.clip-card video,
+.clip-card img {
+  display: block;
+
+  width: 100%;
+  height: 100%;
+
+  max-width: 100%;
+  max-height: 100%;
+
+  object-fit: cover;
+
+  border: 0;
+  outline: none;
 }
 
 
@@ -620,7 +658,8 @@ html {
 
   z-index: 20;
 
-  transform: translateY(-50%);
+  transform:
+    translateY(-50%);
 
   min-width: 0;
 
@@ -630,15 +669,18 @@ html {
 .coverflow-left-overlay {
   left: 0;
 
-  width: clamp(135px, 24%, 220px);
+  width:
+    clamp(135px, 24%, 220px);
 
   pointer-events: none;
 }
 
 .coverflow-right-overlay {
-  right: clamp(0.5rem, 1vw, 1rem);
+  right:
+    clamp(0.5rem, 1vw, 1rem);
 
-  width: clamp(135px, 24%, 220px);
+  width:
+    clamp(135px, 24%, 220px);
 
   height: 82%;
 
@@ -652,31 +694,39 @@ html {
 
 .clip-title-massive {
   width: 100%;
+
   min-width: 0;
 
-  margin: 1rem 0 0.75rem;
+  margin:
+    1rem 0 0.75rem;
 
-  font-family: "Super Brigade", sans-serif;
+  font-family:
+    "Super Brigade",
+    sans-serif;
 
-  font-size: clamp(1.15rem, 1.7vw, 1.5rem);
+  font-size:
+    clamp(1.15rem, 1.7vw, 1.5rem);
 
   line-height: 1.15;
 
   text-transform: uppercase;
 
   overflow-wrap: anywhere;
+
   word-break: break-word;
 }
 
 .clip-author {
   width: 100%;
+
   min-width: 0;
 
   margin-bottom: 1rem;
 
   color: #d6c98a;
 
-  font-size: clamp(0.5rem, 0.6vw, 0.65rem);
+  font-size:
+    clamp(0.5rem, 0.6vw, 0.65rem);
 
   font-weight: 800;
 
@@ -685,7 +735,9 @@ html {
   text-transform: uppercase;
 
   overflow: hidden;
+
   text-overflow: ellipsis;
+
   white-space: nowrap;
 }
 
@@ -694,9 +746,11 @@ html {
 
   align-items: center;
 
-  gap: clamp(0.5rem, 0.9vw, 1rem);
+  gap:
+    clamp(0.5rem, 0.9vw, 1rem);
 
   width: 100%;
+
   min-width: 0;
 
   flex-wrap: wrap;
@@ -713,23 +767,40 @@ html {
 
   min-width: 0;
 
-  padding: 0.5rem 0.8rem;
+  padding:
+    0.5rem 0.8rem;
 
-  border: 1px solid rgba(255, 255, 255, 0.2);
+  border:
+    1px solid rgba(255, 255, 255, 0.2);
 
   border-radius: 8px;
 
-  background: rgba(255, 255, 255, 0.1);
+  background:
+    rgba(255, 255, 255, 0.1);
 
   color: #fff;
 
-  font-size: clamp(0.65rem, 0.75vw, 0.8rem);
+  font-size:
+    clamp(0.65rem, 0.75vw, 0.8rem);
 
   white-space: nowrap;
 
   cursor: pointer;
 
   box-sizing: border-box;
+
+  transition:
+    background 200ms ease,
+    border-color 200ms ease,
+    transform 200ms ease;
+}
+
+.clip-actions button:hover {
+  background:
+    rgba(255, 255, 255, 0.18);
+
+  border-color:
+    rgba(255, 255, 255, 0.35);
 }
 
 
@@ -745,15 +816,18 @@ html {
   display: flex;
 
   align-items: center;
+
   justify-content: center;
 
-  background: rgba(0, 0, 0, 0.3);
+  background:
+    rgba(0, 0, 0, 0.3);
 
   opacity: 0;
 
   cursor: pointer;
 
-  transition: opacity 0.2s ease;
+  transition:
+    opacity 220ms ease;
 }
 
 .clip-center:hover .play-overlay {
@@ -773,6 +847,7 @@ html {
   height: 100%;
 
   min-width: 0;
+
   min-height: 0;
 
   padding: 0;
@@ -788,21 +863,27 @@ html {
   display: flex;
 
   align-items: center;
+
   justify-content: space-between;
 
   gap: 0.5rem;
 
   min-width: 0;
 
-  margin: 0 0 0.75rem;
+  margin:
+    0 0 0.75rem;
 
-  padding-bottom: 0.5rem;
+  padding-bottom:
+    0.5rem;
 
-  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+  border-bottom:
+    1px solid rgba(255, 255, 255, 0.1);
 
-  color: rgba(255, 255, 255, 0.5);
+  color:
+    rgba(255, 255, 255, 0.5);
 
-  font-size: clamp(0.6rem, 0.7vw, 0.75rem);
+  font-size:
+    clamp(0.6rem, 0.7vw, 0.75rem);
 
   letter-spacing: 0.1em;
 
@@ -820,14 +901,17 @@ html {
 
   flex-direction: column;
 
-  gap: clamp(0.5rem, 0.8vw, 0.8rem);
+  gap:
+    clamp(0.5rem, 0.8vw, 0.8rem);
 
   width: 100%;
 
   min-width: 0;
+
   min-height: 0;
 
   overflow-y: auto;
+
   overflow-x: hidden;
 
   box-sizing: border-box;
@@ -838,13 +922,16 @@ html {
 
   min-width: 0;
 
-  color: rgba(255, 255, 255, 0.8);
+  color:
+    rgba(255, 255, 255, 0.8);
 
-  font-size: clamp(0.7rem, 0.8vw, 0.8rem);
+  font-size:
+    clamp(0.7rem, 0.8vw, 0.8rem);
 
   line-height: 1.4;
 
   overflow-wrap: anywhere;
+
   word-break: break-word;
 }
 
@@ -857,9 +944,11 @@ html {
 }
 
 .empty-comms {
-  color: rgba(255, 255, 255, 0.3);
+  color:
+    rgba(255, 255, 255, 0.3);
 
-  font-size: clamp(0.65rem, 0.75vw, 0.75rem);
+  font-size:
+    clamp(0.65rem, 0.75vw, 0.75rem);
 
   font-style: italic;
 }
@@ -873,21 +962,26 @@ html {
 
   min-width: 0;
 
-  margin-top: 0.75rem;
+  margin-top:
+    0.75rem;
 
-  padding: 0.5rem 0.75rem;
+  padding:
+    0.5rem 0.75rem;
 
-  border: 1px solid rgba(255, 255, 255, 0.1);
+  border:
+    1px solid rgba(255, 255, 255, 0.1);
 
   border-radius: 30px;
 
   outline: none;
 
-  background: rgba(255, 255, 255, 0.05);
+  background:
+    rgba(255, 255, 255, 0.05);
 
   color: #fff;
 
-  font-size: clamp(0.7rem, 0.8vw, 0.8rem);
+  font-size:
+    clamp(0.7rem, 0.8vw, 0.8rem);
 
   text-align: left;
 
@@ -902,6 +996,7 @@ html {
   min-width: 0;
 
   border: none;
+
   outline: none;
 
   background: transparent;
@@ -913,6 +1008,7 @@ html {
   box-sizing: border-box;
 }
 
+
 /* =========================================================
    VIDEO CONTROLS
    ========================================================= */
@@ -920,102 +1016,166 @@ html {
 .video-control {
   position: absolute;
 
-  z-index: 30;
+  z-index: 90;
 
   display: flex;
 
   align-items: center;
-  justify-content: center;
 
-  width: 40px;
-  height: 40px;
+  justify-content: center;
 
   padding: 0;
 
-  border: 1px solid rgba(255, 255, 255, 0.2);
+  border:
+    1px solid rgba(255, 255, 255, 0.2);
 
   border-radius: 50%;
 
-  background: rgba(0, 0, 0, 0.55);
+  background:
+    rgba(0, 0, 0, 0.55);
 
   color: #fff;
 
-  backdrop-filter: blur(8px);
+  backdrop-filter:
+    blur(8px);
+
+  -webkit-backdrop-filter:
+    blur(8px);
 
   cursor: pointer;
 
+  /*
+    Hidden by default.
+    They become visible when the video card is hovered.
+  */
+
   opacity: 0;
 
+  visibility: hidden;
+
+  pointer-events: none;
+
   transition:
-    opacity 0.2s ease,
-    background 0.2s ease,
-    transform 0.2s ease;
+    opacity 220ms ease,
+    visibility 220ms ease,
+    background 200ms ease,
+    border-color 200ms ease,
+    transform 200ms ease;
 }
 
-.clip-center:hover .video-control {
+
+/* =========================================================
+   SHOW CONTROLS ON CARD HOVER
+   ========================================================= */
+
+.clip-card:hover .video-control {
   opacity: 1;
+
+  visibility: visible;
+
+  pointer-events: auto;
 }
 
-.video-control:hover {
-  background: rgba(0, 0, 0, 0.75);
-}
+
+/* =========================================================
+   PLAY / PAUSE
+   ========================================================= */
 
 .play-control {
   top: 50%;
+
   left: 50%;
+
+  width: 54px;
+
+  height: 54px;
 
   transform:
     translate(-50%, -50%);
 }
 
-.play-control:hover {
+.clip-card:hover .play-control {
+  transform:
+    translate(-50%, -50%)
+    scale(1);
+}
+
+.clip-card:hover .play-control:hover {
   transform:
     translate(-50%, -50%)
     scale(1.08);
 }
 
+
+/* =========================================================
+   MUTE / UNMUTE
+   ========================================================= */
+
 .mute-control {
   right: 0.75rem;
+
   bottom: 0.75rem;
+
+  width: 38px;
+
+  height: 38px;
+
+  transform:
+    scale(0.95);
 }
 
-.mute-control:hover {
-  transform: scale(1.08);
+.clip-card:hover .mute-control:hover {
+  transform:
+    scale(1.08);
 }
+
+
+/* =========================================================
+   CONTROL HOVER
+   ========================================================= */
+
+.video-control:hover {
+  background:
+    rgba(0, 0, 0, 0.88);
+
+  border-color:
+    rgba(255, 255, 255, 0.42);
+}
+
 
 /* =========================================================
    COVERFLOW NAV BUTTONS
    ========================================================= */
 
-/* =========================================================
-   NAVIGATION BUTTONS
-   ========================================================= */
-
 .nav-btn {
   position: absolute;
 
-  /*
-    Responsive overlap.
-    Scales with the container but stays within safe limits.
-  */
-  bottom: clamp(-24px, -2vw, -14px);
+  bottom:
+    clamp(-24px, -2vw, -14px);
 
   z-index: 80;
 
   display: flex;
+
   align-items: center;
+
   justify-content: center;
 
-  width: clamp(40px, 3.5vw, 48px);
-  height: clamp(40px, 3.5vw, 48px);
+  width:
+    clamp(40px, 3.5vw, 48px);
+
+  height:
+    clamp(40px, 3.5vw, 48px);
 
   padding: 0;
 
-  border: 1px solid rgba(255, 255, 255, 0.15);
+  border:
+    1px solid rgba(255, 255, 255, 0.15);
 
   border-radius: 50%;
 
   background: #1a1a1a;
+
   color: #fff;
 
   box-shadow:
@@ -1026,25 +1186,28 @@ html {
   box-sizing: border-box;
 
   transition:
-    background 0.2s ease,
-    transform 0.2s ease,
-    border-color 0.2s ease;
+    background 200ms ease,
+    transform 200ms ease,
+    border-color 200ms ease;
 }
 
 .prev-btn {
   left: 38%;
 
-  transform: translateX(-50%);
+  transform:
+    translateX(-50%);
 }
 
 .next-btn {
   right: 38%;
 
-  transform: translateX(50%);
+  transform:
+    translateX(50%);
 }
 
 .prev-btn:hover {
-  background: #2a2a2a;
+  background:
+    #2a2a2a;
 
   border-color:
     rgba(255, 255, 255, 0.3);
@@ -1055,7 +1218,8 @@ html {
 }
 
 .next-btn:hover {
-  background: #2a2a2a;
+  background:
+    #2a2a2a;
 
   border-color:
     rgba(255, 255, 255, 0.3);
@@ -1077,117 +1241,29 @@ html {
     scale(0.95);
 }
 
-/* =========================================================
-   VIDEO CONTROLS
-   ========================================================= */
-
-.video-control {
-  position: absolute;
-
-  z-index: 90;
-
-  display: flex;
-
-  align-items: center;
-  justify-content: center;
-
-  padding: 0;
-
-  border:
-    1px solid rgba(255, 255, 255, 0.2);
-
-  border-radius: 50%;
-
-  background:
-    rgba(0, 0, 0, 0.68);
-
-  color: #fff;
-
-  backdrop-filter: blur(10px);
-  -webkit-backdrop-filter: blur(10px);
-
-  cursor: pointer;
-
-  opacity: 1;
-
-  transition:
-    background 0.2s ease,
-    border-color 0.2s ease,
-    transform 0.2s ease;
-}
-
-.play-control {
-  top: 50%;
-  left: 50%;
-
-  width: 54px;
-  height: 54px;
-
-  transform:
-    translate(-50%, -50%);
-}
-
-.mute-control {
-  right: 0.75rem;
-  bottom: 0.75rem;
-
-  width: 38px;
-  height: 38px;
-}
-
-.video-control:hover {
-  background:
-    rgba(0, 0, 0, 0.86);
-
-  border-color:
-    rgba(255, 255, 255, 0.4);
-}
-
-.play-control:hover {
-  transform:
-    translate(-50%, -50%)
-    scale(1.06);
-}
-
-.mute-control:hover {
-  transform:
-    scale(1.06);
-}
 
 /* =========================================================
-   RESPONSIVE SAFETY
+   REDUCED MOTION ACCESSIBILITY
    ========================================================= */
 
-@media (max-width: 900px) {
+@media (prefers-reduced-motion: reduce) {
   .clip-card {
-    width: clamp(170px, 28vw, 280px);
+    transition:
+      opacity 200ms ease,
+      filter 200ms ease;
   }
 
-  .clip-left {
-    left: 12%;
+  .video-control {
+    transition:
+      opacity 150ms ease;
   }
 
-  .clip-right {
-    left: 88%;
+  .nav-btn {
+    transition: none;
   }
 }
 
-@media (max-width: 600px) {
-  .clip-card {
-    width: min(75vw, 280px);
-  }
 
-  .clip-left,
-  .clip-right {
-    opacity: 0;
-    pointer-events: none;
-  }
-
-  .coverflow-left-overlay,
-  .coverflow-right-overlay {
-    width: 100%;
-  }
-}
 /* =========================================================
    RIGHT SIDE MINI GRID
    ========================================================= */
