@@ -1977,424 +1977,121 @@ const DashboardHome = () => {
 
 
       {/* =========================================
-          COLUMN 4: FRIENDS / SOCIAL RIGHT SIDEBAR
+          COLUMN 4: FAR RIGHT SOCIAL CORNER
+          FRIENDS LIVE ONLY INSIDE THE SOCIAL BLOCK
+          DISCORD BLOCK REMAINS AS-IS
           ========================================= */}
 
-      <div className="col-far-right synco-friends-anchor">
+      <div className="col-far-right synco-friends-column">
 
-        <aside
-          className={`synco-friends-sidebar ${
-            friendsSidebarOpen
-              ? 'is-open'
-              : 'is-collapsed'
-          }`}
-        >
+        {/* =========================================
+            SOCIAL / FRIENDS CORNER
+            ========================================= */}
 
-          {/* ---------------------------------------------------
-              TOGGLE
-          --------------------------------------------------- */}
+        <div className="wire-block social-bar-top synco-social-friends-corner">
 
-          <button
-            type="button"
-            className="synco-friends-toggle"
-            onClick={() =>
-              setFriendsSidebarOpen(
-                (previous) => !previous
-              )
-            }
-            aria-label={
+          <aside
+            className={`synco-friends-sidebar ${
               friendsSidebarOpen
-                ? 'Collapse friends sidebar'
-                : 'Open friends sidebar'
-            }
+                ? 'is-open'
+                : 'is-collapsed'
+            }`}
           >
 
-            {friendsSidebarOpen ? (
-              <ChevronRight size={16} />
-            ) : (
-              <ChevronLeft size={16} />
-            )}
-
-          </button>
-
-
-          {/* ---------------------------------------------------
-              COLLAPSED RAIL
-          --------------------------------------------------- */}
-
-          {!friendsSidebarOpen && (
-
-            <div className="synco-friends-collapsed">
-
-              <div className="synco-friends-collapsed-header">
-                <span
-                  className="synco-friends-online-count"
-                  title={`${onlineCount} online`}
-                >
-                  {onlineCount}
-                </span>
-              </div>
-
-              <div className="synco-friends-avatar-stack">
-
-                {friends.slice(0, 8).map((item) => {
-
-                  const friend =
-                    getFriendFromItem(item);
-
-                  const online =
-                    isFriendOnline(friend);
-
-                  const name =
-                    getFriendName(friend);
-
-                  return (
-
-                    <div
-                      key={
-                        friend.id ??
-                        item.id
-                      }
-                      className="synco-friend-mini"
-                      title={`${name} · ${online ? 'Online' : 'Offline'}`}
-                    >
-
-                      <div className="synco-friend-mini-avatar">
-
-                        {friend.avatar ? (
-
-                          <img
-                            src={friend.avatar}
-                            alt={name}
-                          />
-
-                        ) : (
-
-                          <span>
-                            {getFriendInitial(
-                              friend
-                            )}
-                          </span>
-
-                        )}
-
-                      </div>
-
-                      <span
-                        className={`synco-presence-dot ${
-                          online
-                            ? 'online'
-                            : 'offline'
-                        }`}
-                      />
-
-                    </div>
-
-                  );
-                })}
-
-              </div>
-
-              <button
-                type="button"
-                className="synco-add-friend-mini"
-                onClick={() => {
-                  setFriendsSidebarOpen(true);
-                  setAddFriendOpen(true);
-                  setFriendError('');
-                  setFriendSuccess('');
-                }}
-                aria-label="Add friend"
-                title="Add friend"
-              >
-                <UserPlus size={16} />
-              </button>
-
-            </div>
-
-          )}
-
-
-          {/* ---------------------------------------------------
-              OPEN SIDEBAR
-          --------------------------------------------------- */}
-
-          {friendsSidebarOpen && (
-
-            <div className="synco-friends-open">
-
-              <div className="synco-friends-panel-header">
-
-                <div>
-
-                  <p className="synco-friends-kicker">
-                    SOCIAL
-                  </p>
-
-                  <h3>
-                    Friends
-                  </h3>
-
-                  <p className="synco-friends-meta">
-                    {onlineCount} online · {friends.length} total
-                  </p>
-
-                </div>
-
-                <button
-                  type="button"
-                  className="synco-friends-close-button"
-                  onClick={() =>
-                    setFriendsSidebarOpen(false)
-                  }
-                  aria-label="Close friends sidebar"
-                >
-                  <X size={16} />
-                </button>
-
-              </div>
-
-
-              <button
-                type="button"
-                className={`synco-add-friend-button ${
-                  addFriendOpen
-                    ? 'active'
-                    : ''
-                }`}
-                onClick={() => {
-                  setAddFriendOpen(
-                    (previous) => !previous
-                  );
-                  setFriendError('');
-                  setFriendSuccess('');
-                }}
-              >
-
-                <UserPlus size={15} />
-
-                <span>
-                  Add Friend
-                </span>
-
-              </button>
-
-
-              {addFriendOpen && (
-
-                <div className="synco-add-friend-section">
-
-                  <div className="synco-friend-search-wrap">
-
-                    <Search size={15} />
-
-                    <input
-                      type="text"
-                      value={friendSearch}
-                      onChange={(event) =>
-                        setFriendSearch(
-                          event.target.value
-                        )
-                      }
-                      placeholder="Username or SYNCO UID"
-                      autoComplete="off"
-                    />
-
-                  </div>
-
-                  {friendSearchLoading && (
-                    <p className="synco-friends-status-text">
-                      Searching players...
-                    </p>
-                  )}
-
-                  {!friendSearchLoading &&
-                    friendSearch.trim().length >= 2 &&
-                    friendSearchResults.length === 0 && (
-                      <p className="synco-friends-status-text">
-                        No players found.
-                      </p>
-                    )}
-
-                  {friendSearchResults.length > 0 && (
-
-                    <div className="synco-friend-search-results">
-
-                      {friendSearchResults.map((player) => {
-
-                        const playerName =
-                          getFriendName(player);
-
-                        const playerOnline =
-                          isFriendOnline(player);
-
-                        const status =
-                          player.friendStatus;
-
-                        const isSending =
-                          friendActionLoading ===
-                          player.id;
-
-                        return (
-
-                          <div
-                            key={player.id}
-                            className="synco-friend-search-result"
-                          >
-
-                            <div className="synco-friend-search-avatar">
-
-                              {player.avatar ? (
-                                <img
-                                  src={player.avatar}
-                                  alt={playerName}
-                                />
-                              ) : (
-                                <span>
-                                  {getFriendInitial(player)}
-                                </span>
-                              )}
-
-                            </div>
-
-                            <div className="synco-friend-search-info">
-
-                              <p>
-                                {playerName}
-                              </p>
-
-                              <span>
-                                {player.uid || 'SYNCO PLAYER'}
-                              </span>
-
-                            </div>
-
-                            <button
-                              type="button"
-                              className="synco-friend-search-action"
-                              disabled={
-                                isSending ||
-                                status === 'FRIENDS' ||
-                                (
-                                  status === 'PENDING' &&
-                                  player.requestDirection === 'SENT'
-                                )
-                              }
-                              onClick={() =>
-                                sendFriendRequest(player)
-                              }
-                            >
-                              {isSending
-                                ? '...'
-                                : status === 'FRIENDS'
-                                  ? 'Friends'
-                                  : status === 'PENDING'
-                                    ? player.requestDirection === 'RECEIVED'
-                                      ? 'Pending'
-                                      : 'Sent'
-                                    : 'Add'}
-                            </button>
-
-                          </div>
-
-                        );
-                      })}
-
-                    </div>
-
-                  )}
-
-                  {friendError && (
-                    <p className="synco-friends-message error">
-                      {friendError}
-                    </p>
-                  )}
-
-                  {friendSuccess && (
-                    <p className="synco-friends-message success">
-                      {friendSuccess}
-                    </p>
-                  )}
-
-                </div>
-
+            {/* ---------------------------------------------------
+                TOGGLE
+                --------------------------------------------------- */}
+
+            <button
+              type="button"
+              className="synco-friends-toggle"
+              onClick={() =>
+                setFriendsSidebarOpen(
+                  (previous) => !previous
+                )
+              }
+              aria-label={
+                friendsSidebarOpen
+                  ? 'Collapse friends sidebar'
+                  : 'Open friends sidebar'
+              }
+            >
+
+              {friendsSidebarOpen ? (
+                <ChevronRight size={15} />
+              ) : (
+                <ChevronLeft size={15} />
               )}
 
+            </button>
 
-              <div className="synco-friends-list-header">
 
-                <span>
-                  Your Friends
-                </span>
+            {/* ---------------------------------------------------
+                COLLAPSED FRIENDS RAIL
+                --------------------------------------------------- */}
 
-                {friendsLoading && (
-                  <span className="synco-friends-refreshing">
-                    Updating...
+            {!friendsSidebarOpen && (
+
+              <div className="synco-friends-collapsed">
+
+                <div className="synco-friends-collapsed-header">
+
+                  <span
+                    className="synco-friends-online-count"
+                    title={`${onlineCount} online`}
+                  >
+                    {onlineCount}
                   </span>
-                )}
 
-              </div>
+                </div>
 
+                <div className="synco-friends-avatar-stack">
 
-              <div className="synco-friends-list">
+                  {friends.slice(0, 6).map((item) => {
 
-                {friends.length === 0 && !friendsLoading && (
+                    const friend =
+                      getFriendFromItem(item);
 
-                  <div className="synco-friends-empty">
+                    const online =
+                      isFriendOnline(friend);
 
-                    <div className="synco-friends-empty-icon">
-                      <UserPlus size={17} />
-                    </div>
+                    const name =
+                      getFriendName(friend);
 
-                    <p>
-                      No friends yet
-                    </p>
+                    return (
 
-                    <span>
-                      Add players using their username or SYNCO UID.
-                    </span>
+                      <div
+                        key={
+                          friend.id ??
+                          item.id
+                        }
+                        className="synco-friend-mini"
+                        title={`${name} · ${online ? 'Online' : 'Offline'}`}
+                      >
 
-                  </div>
+                        <div className="synco-friend-mini-avatar">
 
-                )}
+                          {friend.avatar ? (
 
-                {friends.map((item) => {
+                            <img
+                              src={friend.avatar}
+                              alt={name}
+                            />
 
-                  const friend =
-                    getFriendFromItem(item);
+                          ) : (
 
-                  const online =
-                    isFriendOnline(friend);
+                            <span>
+                              {getFriendInitial(
+                                friend
+                              )}
+                            </span>
 
-                  const name =
-                    getFriendName(friend);
+                          )}
 
-                  return (
-
-                    <div
-                      key={friend.id ?? item.id}
-                      className="synco-friend-row"
-                    >
-
-                      <div className="synco-friend-avatar">
-
-                        {friend.avatar ? (
-
-                          <img
-                            src={friend.avatar}
-                            alt={name}
-                          />
-
-                        ) : (
-
-                          <span>
-                            {getFriendInitial(friend)}
-                          </span>
-
-                        )}
+                        </div>
 
                         <span
-                          className={`synco-presence-dot large ${
+                          className={`synco-presence-dot ${
                             online
                               ? 'online'
                               : 'offline'
@@ -2403,32 +2100,322 @@ const DashboardHome = () => {
 
                       </div>
 
-                      <div className="synco-friend-details">
+                    );
+                  })}
 
-                        <p>
-                          {name}
-                        </p>
+                </div>
 
-                        <span>
-                          {online
-                            ? 'Online now'
-                            : 'Offline'}
-                        </span>
-
-                      </div>
-
-                    </div>
-
-                  );
-                })}
+                <button
+                  type="button"
+                  className="synco-add-friend-mini"
+                  onClick={() => {
+                    setFriendsSidebarOpen(true);
+                    setAddFriendOpen(true);
+                    setFriendError('');
+                    setFriendSuccess('');
+                  }}
+                  aria-label="Add friend"
+                  title="Add friend"
+                >
+                  <UserPlus size={14} />
+                </button>
 
               </div>
 
-            </div>
+            )}
 
-          )}
 
-        </aside>
+            {/* ---------------------------------------------------
+                OPEN FRIENDS PANEL
+                --------------------------------------------------- */}
+
+            {friendsSidebarOpen && (
+
+              <div className="synco-friends-open">
+
+                <div className="synco-friends-panel-header">
+
+                  <div>
+
+                    <p className="synco-friends-kicker">
+                      SOCIAL
+                    </p>
+
+                    <h3>
+                      Friends
+                    </h3>
+
+                    <p className="synco-friends-meta">
+                      {onlineCount} online · {friends.length} total
+                    </p>
+
+                  </div>
+
+                  <button
+                    type="button"
+                    className="synco-friends-close-button"
+                    onClick={() => {
+                      setFriendsSidebarOpen(false);
+                      setAddFriendOpen(false);
+                    }}
+                    aria-label="Close friends sidebar"
+                  >
+                    <X size={14} />
+                  </button>
+
+                </div>
+
+                <button
+                  type="button"
+                  className={`synco-add-friend-button ${
+                    addFriendOpen
+                      ? 'active'
+                      : ''
+                  }`}
+                  onClick={() => {
+                    setAddFriendOpen(
+                      (previous) => !previous
+                    );
+                    setFriendError('');
+                    setFriendSuccess('');
+                  }}
+                >
+                  <UserPlus size={14} />
+                  <span>Add Friend</span>
+                </button>
+
+                {addFriendOpen && (
+
+                  <div className="synco-add-friend-section">
+
+                    <div className="synco-friend-search-wrap">
+                      <Search size={14} />
+                      <input
+                        type="text"
+                        value={friendSearch}
+                        onChange={(event) =>
+                          setFriendSearch(
+                            event.target.value
+                          )
+                        }
+                        placeholder="Username or SYNCO UID"
+                        autoComplete="off"
+                      />
+                    </div>
+
+                    {friendSearchLoading && (
+                      <p className="synco-friends-status-text">
+                        Searching players...
+                      </p>
+                    )}
+
+                    {!friendSearchLoading &&
+                      friendSearch.trim().length >= 2 &&
+                      friendSearchResults.length === 0 && (
+                        <p className="synco-friends-status-text">
+                          No players found.
+                        </p>
+                      )}
+
+                    {friendSearchResults.length > 0 && (
+
+                      <div className="synco-friend-search-results">
+
+                        {friendSearchResults.map((player) => {
+
+                          const playerName =
+                            getFriendName(player);
+
+                          const status =
+                            player.friendStatus;
+
+                          const isSending =
+                            friendActionLoading ===
+                            player.id;
+
+                          return (
+
+                            <div
+                              key={player.id}
+                              className="synco-friend-search-result"
+                            >
+
+                              <div className="synco-friend-search-avatar">
+
+                                {player.avatar ? (
+                                  <img
+                                    src={player.avatar}
+                                    alt={playerName}
+                                  />
+                                ) : (
+                                  <span>
+                                    {getFriendInitial(player)}
+                                  </span>
+                                )}
+
+                              </div>
+
+                              <div className="synco-friend-search-info">
+                                <p>{playerName}</p>
+                                <span>
+                                  {player.uid || 'SYNCO PLAYER'}
+                                </span>
+                              </div>
+
+                              <button
+                                type="button"
+                                className="synco-friend-search-action"
+                                disabled={
+                                  isSending ||
+                                  status === 'FRIENDS' ||
+                                  (
+                                    status === 'PENDING' &&
+                                    player.requestDirection === 'SENT'
+                                  )
+                                }
+                                onClick={() =>
+                                  sendFriendRequest(player)
+                                }
+                              >
+                                {isSending
+                                  ? '...'
+                                  : status === 'FRIENDS'
+                                    ? 'Friends'
+                                    : status === 'PENDING'
+                                      ? player.requestDirection === 'RECEIVED'
+                                        ? 'Pending'
+                                        : 'Sent'
+                                      : 'Add'}
+                              </button>
+
+                            </div>
+
+                          );
+                        })}
+
+                      </div>
+
+                    )}
+
+                    {friendError && (
+                      <p className="synco-friends-message error">
+                        {friendError}
+                      </p>
+                    )}
+
+                    {friendSuccess && (
+                      <p className="synco-friends-message success">
+                        {friendSuccess}
+                      </p>
+                    )}
+
+                  </div>
+
+                )}
+
+                <div className="synco-friends-list-header">
+                  <span>Your Friends</span>
+                  {friendsLoading && (
+                    <span className="synco-friends-refreshing">
+                      Updating...
+                    </span>
+                  )}
+                </div>
+
+                <div className="synco-friends-list">
+
+                  {friends.length === 0 && !friendsLoading && (
+
+                    <div className="synco-friends-empty">
+                      <div className="synco-friends-empty-icon">
+                        <UserPlus size={15} />
+                      </div>
+                      <p>No friends yet</p>
+                      <span>
+                        Add players using their username or SYNCO UID.
+                      </span>
+                    </div>
+
+                  )}
+
+                  {friends.map((item) => {
+
+                    const friend =
+                      getFriendFromItem(item);
+
+                    const online =
+                      isFriendOnline(friend);
+
+                    const name =
+                      getFriendName(friend);
+
+                    return (
+
+                      <div
+                        key={friend.id ?? item.id}
+                        className="synco-friend-row"
+                      >
+
+                        <div className="synco-friend-avatar">
+
+                          {friend.avatar ? (
+                            <img
+                              src={friend.avatar}
+                              alt={name}
+                            />
+                          ) : (
+                            <span>
+                              {getFriendInitial(friend)}
+                            </span>
+                          )}
+
+                          <span
+                            className={`synco-presence-dot large ${
+                              online
+                                ? 'online'
+                                : 'offline'
+                            }`}
+                          />
+
+                        </div>
+
+                        <div className="synco-friend-details">
+                          <p>{name}</p>
+                          <span>
+                            {online
+                              ? 'Online now'
+                              : 'Offline'}
+                          </span>
+                        </div>
+
+                      </div>
+
+                    );
+                  })}
+
+                </div>
+
+              </div>
+
+            )}
+
+          </aside>
+
+        </div>
+
+
+        {/* =========================================
+            DISCORD INTEGRATION
+            EXISTING CONTENT KEPT UNCHANGED
+            ========================================= */}
+
+        <div className="wire-block social-bar-bottom">
+
+          <span className="vertical-text">
+            discord right bar
+          </span>
+
+        </div>
 
       </div>
 

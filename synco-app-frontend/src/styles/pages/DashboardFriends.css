@@ -1,40 +1,64 @@
 /* =========================================================
-   SYNCO FRIENDS / SOCIAL RIGHT SIDEBAR
+   SYNCO FRIENDS — SOCIAL RIGHT CORNER ONLY
    ========================================================= */
 
-.synco-friends-anchor {
+.synco-friends-column {
     position: relative;
     z-index: 80;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    min-width: 0;
 }
 
+/*
+   The existing social top block becomes the small friends area.
+   The rest of DashboardHome remains untouched.
+*/
+.synco-social-friends-corner {
+    position: relative;
+    flex: 0 0 300px;
+    height: 300px;
+    min-height: 300px;
+    overflow: visible !important;
+    z-index: 90;
+}
+
+/* =========================================================
+   FRIENDS SIDEBAR
+   ========================================================= */
+
 .synco-friends-sidebar {
-    position: fixed;
-    top: 96px;
-    right: 16px;
-    bottom: 16px;
-    width: 58px;
+    position: absolute;
+    top: 0;
+    right: 0;
+    bottom: 0;
+    width: 56px;
     z-index: 120;
     overflow: visible;
     border: 1px solid rgba(20, 20, 20, 0.10);
-    border-radius: 20px;
-    background: rgba(255, 255, 255, 0.96);
-    box-shadow: 0 18px 50px rgba(0, 0, 0, 0.11);
+    border-radius: 16px;
+    background: rgba(255, 255, 255, 0.97);
+    box-shadow: 0 12px 32px rgba(0, 0, 0, 0.10);
     transition: width 220ms ease, border-radius 220ms ease;
-    backdrop-filter: blur(18px);
 }
 
 .synco-friends-sidebar.is-open {
-    width: 348px;
-    border-radius: 22px;
+    width: 320px;
+    border-radius: 18px;
 }
+
+/* =========================================================
+   TOGGLE
+   ========================================================= */
 
 .synco-friends-toggle {
     position: absolute;
-    left: -13px;
-    top: 22px;
-    width: 27px;
-    height: 27px;
-    border: 1px solid #dedede;
+    left: -11px;
+    top: 18px;
+    width: 23px;
+    height: 23px;
+    border: 1px solid #dddddd;
     border-radius: 999px;
     display: flex;
     align-items: center;
@@ -42,14 +66,20 @@
     background: #ffffff;
     color: #171717;
     cursor: pointer;
-    box-shadow: 0 5px 18px rgba(0, 0, 0, 0.10);
+    box-shadow: 0 4px 14px rgba(0, 0, 0, 0.10);
     transition: transform 180ms ease, background 180ms ease;
+    z-index: 130;
+    padding: 0;
 }
 
 .synco-friends-toggle:hover {
     transform: scale(1.05);
-    background: #f5f5f5;
+    background: #f4f4f4;
 }
+
+/* =========================================================
+   COLLAPSED RAIL
+   ========================================================= */
 
 .synco-friends-collapsed {
     height: 100%;
@@ -57,7 +87,7 @@
     display: flex;
     flex-direction: column;
     align-items: center;
-    padding: 18px 8px 12px;
+    padding: 12px 7px 9px;
 }
 
 .synco-friends-collapsed-header {
@@ -65,21 +95,21 @@
     align-items: center;
     justify-content: center;
     width: 100%;
-    padding-bottom: 9px;
+    padding-bottom: 7px;
     border-bottom: 1px solid #eeeeee;
 }
 
 .synco-friends-online-count {
-    min-width: 24px;
-    height: 24px;
-    padding: 0 6px;
+    min-width: 21px;
+    height: 21px;
+    padding: 0 5px;
     display: inline-flex;
     align-items: center;
     justify-content: center;
     border-radius: 999px;
-    background: #f2f2f2;
+    background: #f1f1f1;
     color: #171717;
-    font-size: 10px;
+    font-size: 9px;
     font-weight: 900;
 }
 
@@ -87,11 +117,11 @@
     display: flex;
     flex-direction: column;
     align-items: center;
-    gap: 10px;
+    gap: 8px;
     flex: 1;
     min-height: 0;
-    overflow: auto;
-    padding: 14px 0 10px;
+    overflow-y: auto;
+    padding: 10px 0 8px;
     scrollbar-width: none;
 }
 
@@ -101,8 +131,8 @@
 
 .synco-friend-mini {
     position: relative;
-    width: 36px;
-    height: 36px;
+    width: 32px;
+    height: 32px;
     flex: 0 0 auto;
 }
 
@@ -119,10 +149,10 @@
 }
 
 .synco-friend-mini-avatar {
-    width: 36px;
-    height: 36px;
-    border-radius: 12px;
-    font-size: 12px;
+    width: 32px;
+    height: 32px;
+    border-radius: 10px;
+    font-size: 10px;
 }
 
 .synco-friend-mini-avatar img,
@@ -138,16 +168,16 @@
     position: absolute;
     right: -2px;
     bottom: -2px;
-    width: 10px;
-    height: 10px;
+    width: 9px;
+    height: 9px;
     border-radius: 999px;
     border: 2px solid #ffffff;
     box-sizing: border-box;
 }
 
 .synco-presence-dot.large {
-    width: 11px;
-    height: 11px;
+    width: 10px;
+    height: 10px;
     right: -1px;
     bottom: -1px;
 }
@@ -161,18 +191,19 @@
 }
 
 .synco-add-friend-mini {
-    width: 36px;
-    height: 36px;
+    width: 32px;
+    height: 32px;
     flex: 0 0 auto;
     display: flex;
     align-items: center;
     justify-content: center;
     border: 1px dashed #bdbdbd;
-    border-radius: 12px;
+    border-radius: 10px;
     background: #ffffff;
     color: #171717;
     cursor: pointer;
     transition: background 180ms ease, border-color 180ms ease;
+    padding: 0;
 }
 
 .synco-add-friend-mini:hover {
@@ -180,59 +211,64 @@
     border-color: #777777;
 }
 
+/* =========================================================
+   OPEN PANEL
+   ========================================================= */
+
 .synco-friends-open {
     height: 100%;
     min-height: 0;
     display: flex;
     flex-direction: column;
-    padding: 20px;
+    padding: 15px;
 }
 
 .synco-friends-panel-header {
     display: flex;
     align-items: flex-start;
     justify-content: space-between;
-    gap: 14px;
-    padding-bottom: 15px;
+    gap: 10px;
+    padding-bottom: 11px;
     border-bottom: 1px solid #ececec;
 }
 
 .synco-friends-kicker {
-    margin: 0 0 4px;
+    margin: 0 0 3px;
     color: #8b8b8b;
-    font-size: 9px;
+    font-size: 8px;
     font-weight: 900;
-    letter-spacing: 0.20em;
+    letter-spacing: 0.18em;
     text-transform: uppercase;
 }
 
 .synco-friends-panel-header h3 {
     margin: 0;
     color: #171717;
-    font-size: 22px;
+    font-size: 19px;
     line-height: 1.1;
     font-weight: 900;
 }
 
 .synco-friends-meta {
-    margin: 6px 0 0;
+    margin: 5px 0 0;
     color: #858585;
-    font-size: 11px;
+    font-size: 9px;
     font-weight: 700;
 }
 
 .synco-friends-close-button {
-    width: 30px;
-    height: 30px;
+    width: 25px;
+    height: 25px;
     flex: 0 0 auto;
     display: flex;
     align-items: center;
     justify-content: center;
     border: 1px solid #e0e0e0;
-    border-radius: 10px;
+    border-radius: 8px;
     background: #ffffff;
     color: #575757;
     cursor: pointer;
+    padding: 0;
 }
 
 .synco-friends-close-button:hover {
@@ -242,17 +278,17 @@
 
 .synco-add-friend-button {
     width: 100%;
-    margin-top: 14px;
-    min-height: 40px;
+    margin-top: 10px;
+    min-height: 34px;
     display: flex;
     align-items: center;
-    gap: 9px;
-    padding: 0 13px;
+    gap: 7px;
+    padding: 0 10px;
     border: 1px solid #dddddd;
-    border-radius: 12px;
+    border-radius: 9px;
     background: #ffffff;
     color: #171717;
-    font-size: 11px;
+    font-size: 9px;
     font-weight: 900;
     letter-spacing: 0.02em;
     cursor: pointer;
@@ -266,21 +302,21 @@
 }
 
 .synco-add-friend-section {
-    margin-top: 10px;
-    padding: 12px;
+    margin-top: 8px;
+    padding: 9px;
     border: 1px solid #ededed;
-    border-radius: 14px;
+    border-radius: 10px;
     background: #fafafa;
 }
 
 .synco-friend-search-wrap {
-    height: 38px;
+    height: 33px;
     display: flex;
     align-items: center;
-    gap: 8px;
-    padding: 0 10px;
+    gap: 6px;
+    padding: 0 8px;
     border: 1px solid #dddddd;
-    border-radius: 10px;
+    border-radius: 8px;
     background: #ffffff;
     color: #8a8a8a;
 }
@@ -292,7 +328,7 @@
     outline: none;
     background: transparent;
     color: #171717;
-    font-size: 11px;
+    font-size: 9px;
     font-weight: 700;
 }
 
@@ -303,29 +339,29 @@
 .synco-friend-search-results {
     display: flex;
     flex-direction: column;
-    gap: 8px;
-    margin-top: 10px;
-    max-height: 190px;
+    gap: 6px;
+    margin-top: 8px;
+    max-height: 135px;
     overflow-y: auto;
 }
 
 .synco-friend-search-result {
     display: flex;
     align-items: center;
-    gap: 9px;
+    gap: 7px;
     min-width: 0;
-    padding: 7px;
+    padding: 6px;
     border: 1px solid #ececec;
-    border-radius: 11px;
+    border-radius: 9px;
     background: #ffffff;
 }
 
 .synco-friend-search-avatar {
-    width: 34px;
-    height: 34px;
+    width: 28px;
+    height: 28px;
     flex: 0 0 auto;
-    border-radius: 10px;
-    font-size: 11px;
+    border-radius: 8px;
+    font-size: 9px;
 }
 
 .synco-friend-search-info {
@@ -339,32 +375,32 @@
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
-    font-size: 11px;
+    font-size: 9px;
     font-weight: 900;
 }
 
 .synco-friend-search-info span {
     display: block;
-    margin-top: 3px;
+    margin-top: 2px;
     color: #919191;
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
-    font-size: 8px;
+    font-size: 7px;
     font-weight: 800;
-    letter-spacing: 0.07em;
+    letter-spacing: 0.05em;
 }
 
 .synco-friend-search-action {
     flex: 0 0 auto;
-    min-width: 49px;
-    height: 28px;
-    padding: 0 7px;
+    min-width: 40px;
+    height: 24px;
+    padding: 0 6px;
     border: 1px solid #1b1b1b;
-    border-radius: 8px;
+    border-radius: 7px;
     background: #1b1b1b;
     color: #ffffff;
-    font-size: 8px;
+    font-size: 7px;
     font-weight: 900;
     cursor: pointer;
 }
@@ -378,8 +414,8 @@
 
 .synco-friends-status-text,
 .synco-friends-message {
-    margin: 9px 0 0;
-    font-size: 9px;
+    margin: 7px 0 0;
+    font-size: 8px;
     line-height: 1.4;
     font-weight: 700;
 }
@@ -401,18 +437,18 @@
     align-items: center;
     justify-content: space-between;
     gap: 8px;
-    margin-top: 17px;
-    padding-bottom: 8px;
+    margin-top: 11px;
+    padding-bottom: 6px;
     color: #777777;
-    font-size: 9px;
+    font-size: 8px;
     font-weight: 900;
-    letter-spacing: 0.16em;
+    letter-spacing: 0.14em;
     text-transform: uppercase;
 }
 
 .synco-friends-refreshing {
     color: #b2b2b2;
-    letter-spacing: 0.04em;
+    letter-spacing: 0.02em;
     text-transform: none;
 }
 
@@ -420,24 +456,24 @@
     min-height: 0;
     flex: 1;
     overflow-y: auto;
-    padding-right: 2px;
+    padding-right: 1px;
 }
 
 .synco-friend-row {
     display: flex;
     align-items: center;
-    gap: 11px;
-    padding: 10px 6px;
+    gap: 8px;
+    padding: 7px 4px;
     border-top: 1px solid #efefef;
 }
 
 .synco-friend-avatar {
     position: relative;
-    width: 42px;
-    height: 42px;
+    width: 34px;
+    height: 34px;
     flex: 0 0 auto;
-    border-radius: 13px;
-    font-size: 12px;
+    border-radius: 10px;
+    font-size: 10px;
 }
 
 .synco-friend-details {
@@ -451,31 +487,31 @@
     text-overflow: ellipsis;
     white-space: nowrap;
     color: #171717;
-    font-size: 11px;
+    font-size: 9px;
     font-weight: 900;
 }
 
 .synco-friend-details span {
     display: block;
-    margin-top: 4px;
+    margin-top: 3px;
     color: #8f8f8f;
-    font-size: 9px;
+    font-size: 8px;
     font-weight: 700;
 }
 
 .synco-friends-empty {
-    padding: 26px 8px;
+    padding: 18px 6px;
     text-align: center;
 }
 
 .synco-friends-empty-icon {
-    width: 38px;
-    height: 38px;
-    margin: 0 auto 10px;
+    width: 30px;
+    height: 30px;
+    margin: 0 auto 7px;
     display: flex;
     align-items: center;
     justify-content: center;
-    border-radius: 11px;
+    border-radius: 9px;
     background: #f0f0f0;
     color: #777777;
 }
@@ -483,34 +519,75 @@
 .synco-friends-empty p {
     margin: 0;
     color: #333333;
-    font-size: 11px;
+    font-size: 9px;
     font-weight: 900;
 }
 
 .synco-friends-empty span {
     display: block;
-    margin-top: 6px;
+    margin-top: 5px;
     color: #9a9a9a;
-    font-size: 9px;
-    line-height: 1.5;
+    font-size: 8px;
+    line-height: 1.4;
 }
 
+/* =========================================================
+   DISCORD BLOCK — SMALL, ORIGINAL CONTENT UNTOUCHED
+   ========================================================= */
+
+.synco-friends-column>.social-bar-bottom {
+    flex: 0 0 58px !important;
+    height: 58px !important;
+    min-height: 58px !important;
+    overflow: hidden;
+}
+
+/* =========================================================
+   RESPONSIVE
+   ========================================================= */
+
 @media (max-width: 1180px) {
-    .synco-friends-sidebar {
-        top: 86px;
-        right: 10px;
-        bottom: 10px;
+    .synco-social-friends-corner {
+        flex-basis: 250px;
+        height: 250px;
+        min-height: 250px;
+    }
+
+    .synco-friends-sidebar.is-open {
+        width: 300px;
+    }
+}
+
+@media (max-width: 900px) {
+    .synco-social-friends-corner {
+        flex-basis: 220px;
+        height: 220px;
+        min-height: 220px;
+    }
+
+    .synco-friends-sidebar.is-open {
+        width: min(300px, calc(100vw - 70px));
     }
 }
 
 @media (max-width: 700px) {
+    .synco-social-friends-corner {
+        flex-basis: 200px;
+        height: 200px;
+        min-height: 200px;
+    }
+
     .synco-friends-sidebar {
-        top: 78px;
-        right: 8px;
-        bottom: 8px;
+        width: 52px;
     }
 
     .synco-friends-sidebar.is-open {
-        width: min(340px, calc(100vw - 22px));
+        width: min(290px, calc(100vw - 36px));
+    }
+
+    .synco-friends-column>.social-bar-bottom {
+        flex-basis: 52px !important;
+        height: 52px !important;
+        min-height: 52px !important;
     }
 }
