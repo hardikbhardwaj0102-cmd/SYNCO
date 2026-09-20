@@ -1,206 +1,187 @@
 @reference "../global.css";
 
-/* =========================================================
-   SYNCO GLOBAL APP LAYOUT
-   RESPONSIVE / FULL-WIDTH / NON-RIGID
-   ========================================================= */
-
-/*
-  ARCHITECTURE
-
-  ┌─────────────────────────────────────────────────────┐
-  │                 FULL PAGE CANVAS                    │
-  │                                                     │
-  │  ┌───────┐                                          │
-  │  │ SIDEBAR│     PAGE CONTENT                        │
-  │  │ FIXED │                                          │
-  │  │       │                                          │
-  │  └───────┘                                          │
-  │                                                     │
-  └─────────────────────────────────────────────────────┘
-
-  The sidebar is an independent fixed overlay.
-
-  It does NOT participate in document flow.
-
-  The page canvas underneath is full-width.
-
-  Individual pages control their own internal spacing.
-*/
-
-
-/* =========================================================
-   GLOBAL SIDEBAR REFERENCE
-   ========================================================= */
 
 :root {
-  /*
-    Used only as a shared reference by pages that need
-    to account for the sidebar visually.
 
-    The layout itself does NOT reserve this width.
-  */
-  --synco-sidebar-width: clamp(72px, 6vw, 90px);
+  --synco-sidebar-width: 90px;
+
 }
 
 
 /* =========================================================
-   OUTER APPLICATION CANVAS
+   GLOBAL LAYOUT
    ========================================================= */
 
 .layout-container {
+
   position: relative;
+
+  display: flex;
 
   width: 100%;
   min-width: 0;
 
-  /*
-    Do not use a fixed height.
+  height: 100vh;
+  min-height: 0;
 
-    The application must be allowed to grow with its pages.
-  */
-  min-height: 100vh;
-  min-height: 100dvh;
-
-  margin: 0;
-  padding: 0;
+  overflow: hidden;
 
   background: #0b0e14;
 
-  /*
-    Do not clip page content here.
-
-    This is especially important for large page backgrounds,
-    hero sections, dropdowns and naturally growing pages.
-  */
-  overflow: visible;
 }
 
-
-/* =========================================================
-   MAIN PAGE CANVAS
-   ========================================================= */
-
-/*
-  IMPORTANT:
-
-  The sidebar is fixed.
-
-  Therefore the main page must NOT use:
-      margin-left: 90px;
-
-  The page canvas occupies the complete viewport.
-
-  This allows page-level backgrounds to continue underneath
-  the sidebar.
-*/
 
 .layout-main {
+
   position: relative;
 
-  width: 100%;
+  z-index: 1;
+
+  flex: 1 1 auto;
+
   min-width: 0;
+  min-height: 0;
 
-  min-height: 100vh;
-  min-height: 100dvh;
+  margin-left: var(--synco-sidebar-width);
 
-  margin: 0;
-  padding: 0;
+  overflow-y: auto;
+  overflow-x: hidden;
 
-  /*
-    Let the document handle vertical scrolling.
-
-    The sidebar will remain fixed independently.
-  */
-  overflow: visible;
 }
 
 
-/* =========================================================
-   OUTLET / PAGE CONTENT
-   ========================================================= */
-
 .layout-content-wrapper {
-  position: relative;
 
   width: 100%;
-  min-width: 0;
-
   max-width: none;
 
   margin: 0;
   padding: 0;
 
-  min-height: 100vh;
-  min-height: 100dvh;
+  min-width: 0;
+  min-height: 0;
+
 }
 
 
-/* =========================================================
-   BOX SIZING
-   ========================================================= */
-
-.layout-container,
 .layout-main,
 .layout-content-wrapper {
+
   box-sizing: border-box;
+
 }
 
-.layout-container *,
+
 .layout-main *,
 .layout-content-wrapper * {
+
   box-sizing: border-box;
-}
-
-
-/* =========================================================
-   SHORT VIEWPORT SAFETY
-   ========================================================= */
-
-/*
-  Do not reduce page height just because the viewport is
-  short.
-
-  Pages are allowed to naturally extend beyond the viewport
-  and the document can scroll.
-*/
-
-@media (max-height: 700px) {
-
-  .layout-main,
-  .layout-content-wrapper {
-    min-height: 100dvh;
-  }
 
 }
 
 
 /* =========================================================
-   NARROW DESKTOP / TABLET SAFETY
+   GLOBAL FULL-VIEWPORT PAGE BACKGROUND
+
+   This exists OUTSIDE layout-main.
+
+   Therefore it can occupy the complete viewport,
+   including the 90px area underneath the sidebar.
    ========================================================= */
 
-@media (max-width: 1100px) {
+.global-page-background {
 
-  :root {
-    --synco-sidebar-width: clamp(68px, 7vw, 82px);
-  }
+  position: fixed;
+
+  inset: 0;
+
+  width: 100vw;
+  height: 100vh;
+
+  pointer-events: none;
+
+  z-index: 0;
+
+  overflow: hidden;
 
 }
 
 
 /* =========================================================
-   MOBILE
+   COMPETITION ENGINE GLOBAL BACKGROUND CANVAS
    ========================================================= */
 
-@media (max-width: 768px) {
+.global-competition-background {
 
-  :root {
-    --synco-sidebar-width: 64px;
-  }
+  background: #0a0a0a;
 
-  .layout-main,
-  .layout-content-wrapper {
-    width: 100%;
-  }
+}
+
+
+/* =========================================================
+   HERO BACKGROUND
+
+   This is the background visible behind the sidebar
+   during the Competition Engine hero section.
+   ========================================================= */
+
+.global-competition-hero-bg {
+
+  position: absolute;
+
+  top: 0;
+  left: 0;
+
+  width: 100%;
+  height: 100%;
+
+  background-image:
+    url('../../assets/comp-bg.jpg');
+
+  background-position: center center;
+
+  background-size: cover;
+
+  background-repeat: no-repeat;
+
+}
+
+
+/* =========================================================
+   LOWER COMPETITION BACKGROUND
+
+   The lower page artwork is also viewport-wide.
+
+   The layer begins below the hero through the
+   Competition Engine page background system.
+   ========================================================= */
+
+.global-competition-content-bg {
+
+  position: absolute;
+
+  top: 100vh;
+  left: 0;
+
+  width: 100%;
+  height: 100vh;
+
+  background:
+    #0a0a0a
+    url('../../assets/roster-comp-bg.png')
+    center top /
+    cover
+    no-repeat;
+
+}
+
+
+/* =========================================================
+   COMPETITION PAGE SHELL
+   ========================================================= */
+
+.layout-container-competition {
+
+  background: transparent;
 
 }

@@ -21,34 +21,24 @@
   padding: 0;
 
   min-width: 0;
-
-  min-height: 100vh;
-  min-height: 100dvh;
+  min-height: 100%;
 
   box-sizing: border-box;
 
   display: flex;
   flex-direction: column;
 
-  background: #0a0a0a;
+  background: transparent;
 
   /*
-    Prevent horizontal overflow without creating a
-    vertical scrolling container.
+    The global background belongs to Layout.jsx.
+
+    Do not create a local page-level clipping container
+    that would prevent the background system from reaching
+    behind the sidebar.
   */
-  overflow-x: clip;
-  overflow-y: visible;
+  overflow: visible;
 
-  isolation: isolate;
-}
-
-
-/*
-  Direct children remain part of normal document flow.
-*/
-
-.comp-engine-wrapper > * {
-  position: relative;
 }
 
 
@@ -64,19 +54,18 @@
   min-width: 0;
 
   /*
-    The hero occupies approximately one full viewport.
+    Keep the hero substantial on short laptop screens.
 
-    The minimum prevents the hero from becoming too short
-    on shorter laptop displays.
-
-    The maximum prevents enormous desktop monitors from
-    producing an unnecessarily huge hero.
+    100svh represents the stable visible viewport.
+    The 560px floor prevents a short display from
+    crushing the composition.
   */
-  min-height: clamp(
-    560px,
-    100dvh,
-    900px
-  );
+  min-height:
+    clamp(
+      560px,
+      100svh,
+      900px
+    );
 
   height: auto;
 
@@ -90,18 +79,14 @@
 
   overflow: hidden;
 
-  background:
-    #0a0a0a
-    url('../../assets/comp-bg.jpg')
-    center center /
-    cover
-    no-repeat;
-
   display: flex;
   align-items: center;
   justify-content: center;
 
+  background: transparent;
+
   z-index: 1;
+
 }
 
 
@@ -125,6 +110,7 @@
   pointer-events: none;
 
   z-index: 1;
+
 }
 
 
@@ -134,23 +120,26 @@
 
   width: max-content;
 
-  gap: clamp(
-    1.5rem,
-    3vw,
-    3rem
-  );
+  gap:
+    clamp(
+      1.5rem,
+      3vw,
+      3rem
+    );
 
-  margin-top: clamp(
-    2rem,
-    4vw,
-    3rem
-  );
+  margin-top:
+    clamp(
+      2rem,
+      4vw,
+      3rem
+    );
 
-  font-size: clamp(
-    0.65rem,
-    0.8vw,
-    0.85rem
-  );
+  font-size:
+    clamp(
+      0.65rem,
+      0.8vw,
+      0.85rem
+    );
 
   font-weight: 700;
 
@@ -160,6 +149,7 @@
     rgba(255, 255, 255, 0.2);
 
   white-space: nowrap;
+
 }
 
 
@@ -172,11 +162,12 @@
 
   margin: 0;
 
-  padding-top: clamp(
-    5rem,
-    12vh,
-    9rem
-  );
+  padding-top:
+    clamp(
+      5rem,
+      12vh,
+      9rem
+    );
 
   color:
     rgba(255, 255, 255, 0.08);
@@ -185,11 +176,12 @@
     'Super Brigade',
     sans-serif;
 
-  font-size: clamp(
-    5rem,
-    10vw,
-    10rem
-  );
+  font-size:
+    clamp(
+      5rem,
+      10vw,
+      10rem
+    );
 
   font-weight: 700;
 
@@ -202,6 +194,7 @@
   white-space: nowrap;
 
   user-select: none;
+
 }
 
 
@@ -213,23 +206,21 @@
 
   position: absolute;
 
-  left: clamp(
-    58%,
-    61%,
-    64%
-  );
+  left:
+    clamp(
+      58%,
+      61%,
+      64%
+    );
 
   bottom: 0;
 
-  /*
-    Character scales with the hero instead of being tied
-    to a rigid pixel height.
-  */
-  height: clamp(
-    70%,
-    88%,
-    92%
-  );
+  height:
+    clamp(
+      70%,
+      88%,
+      92%
+    );
 
   width: auto;
 
@@ -252,6 +243,7 @@
     );
 
   z-index: 2;
+
 }
 
 
@@ -263,17 +255,19 @@
 
   position: absolute;
 
-  left: clamp(
-    2rem,
-    7vw,
-    7rem
-  );
+  left:
+    clamp(
+      2rem,
+      7vw,
+      7rem
+    );
 
-  bottom: clamp(
-    7%,
-    13%,
-    15%
-  );
+  bottom:
+    clamp(
+      7%,
+      13%,
+      15%
+    );
 
   width: auto;
 
@@ -284,13 +278,15 @@
   flex-direction: column;
   align-items: flex-start;
 
-  gap: clamp(
-    0.8rem,
-    1.25vw,
-    1.25rem
-  );
+  gap:
+    clamp(
+      0.8rem,
+      1.25vw,
+      1.25rem
+    );
 
   z-index: 3;
+
 }
 
 
@@ -306,20 +302,23 @@
   text-shadow:
     0 4px 18px
     rgba(0, 0, 0, 0.9);
+
 }
 
 
 .hero-copy span {
 
-  font-size: clamp(
-    0.75rem,
-    1vw,
-    1rem
-  );
+  font-size:
+    clamp(
+      0.75rem,
+      1vw,
+      1rem
+    );
 
   font-weight: 800;
 
   letter-spacing: 0.18em;
+
 }
 
 
@@ -329,15 +328,17 @@
     'Super Brigade',
     sans-serif;
 
-  font-size: clamp(
-    2rem,
-    3.4vw,
-    3.5rem
-  );
+  font-size:
+    clamp(
+      2rem,
+      3.4vw,
+      3.5rem
+    );
 
   line-height: 0.9;
 
   letter-spacing: 0.03em;
+
 }
 
 
@@ -353,11 +354,12 @@
 
   font-weight: 800;
 
-  font-size: clamp(
-    0.7rem,
-    0.85vw,
-    0.85rem
-  );
+  font-size:
+    clamp(
+      0.7rem,
+      0.85vw,
+      0.85rem
+    );
 
   letter-spacing: 0.15em;
 
@@ -376,6 +378,7 @@
       92% 100%,
       0% 100%
     );
+
 }
 
 
@@ -385,6 +388,7 @@
 
   transform:
     scale(1.05);
+
 }
 
 
@@ -400,29 +404,28 @@
   min-width: 0;
 
   /*
-    Content determines its own final height.
+    Let the content determine its own height.
   */
-  min-height: 100dvh;
+  min-height: 0;
 
   padding: 0;
 
   box-sizing: border-box;
 
-  background:
-    #0a0a0a
-    url('../../assets/roster-comp-bg.png')
-    center top /
-    cover
-    no-repeat;
+  background: transparent;
 
   overflow: visible;
 
   z-index: 2;
+
 }
 
 
 /*
-  Subtle readability overlay.
+  The lower background is supplied by the global page
+  background in Layout.jsx.
+
+  This local overlay only provides readability.
 */
 
 .post-hero-content::before {
@@ -443,6 +446,7 @@
     );
 
   z-index: 0;
+
 }
 
 
@@ -451,6 +455,7 @@
   position: relative;
 
   z-index: 1;
+
 }
 
 
@@ -467,16 +472,12 @@
   width: 100%;
 
   /*
-    Flexible rather than fixed-height.
+    No rigid height.
 
-    The minimum guarantees enough room for the roster,
-    carousel and tabs.
+    Content determines the required height so shorter
+    viewports do not cause clipping or compression.
   */
-  min-height: clamp(
-    220px,
-    25vh,
-    280px
-  );
+  min-height: 0;
 
   height: auto;
 
@@ -501,6 +502,7 @@
   -webkit-backdrop-filter:
     blur(18px)
     saturate(115%);
+
 }
 
 
@@ -518,6 +520,7 @@
     0.5rem 0 0;
 
   background: transparent;
+
 }
 
 
@@ -532,6 +535,7 @@
   margin-bottom: 0.25rem;
 
   text-align: center;
+
 }
 
 
@@ -545,17 +549,19 @@
     'Super Brigade',
     sans-serif;
 
-  font-size: clamp(
-    1.35rem,
-    2.2vw,
-    1.8rem
-  );
+  font-size:
+    clamp(
+      1.35rem,
+      2.2vw,
+      1.8rem
+    );
 
   letter-spacing: 0.05em;
 
   text-shadow:
     0 4px 20px
     rgba(0, 0, 0, 0.5);
+
 }
 
 
@@ -573,6 +579,7 @@
   letter-spacing: 0.3em;
 
   text-transform: uppercase;
+
 }
 
 
@@ -586,6 +593,7 @@
     0.25rem
     clamp(1rem, 4vw, 4rem)
     0.35rem;
+
 }
 
 
@@ -593,11 +601,12 @@
 
   display: flex;
 
-  gap: clamp(
-    0.4rem,
-    1vw,
-    1rem
-  );
+  gap:
+    clamp(
+      0.4rem,
+      1vw,
+      1rem
+    );
 
   margin-bottom: 3rem;
 
@@ -613,6 +622,7 @@
   border-radius: 8px;
 
   box-sizing: border-box;
+
 }
 
 
@@ -633,11 +643,12 @@
 
   font-weight: 800;
 
-  font-size: clamp(
-    0.68rem,
-    0.85vw,
-    0.85rem
-  );
+  font-size:
+    clamp(
+      0.68rem,
+      0.85vw,
+      0.85rem
+    );
 
   letter-spacing: 0.1em;
 
@@ -651,6 +662,7 @@
     color 0.3s ease,
     background 0.3s ease,
     border-color 0.3s ease;
+
 }
 
 
@@ -660,6 +672,7 @@
 
   background:
     rgba(255, 255, 255, 0.05);
+
 }
 
 
@@ -673,6 +686,7 @@
   border:
     1px solid
     rgba(214, 201, 138, 0.3);
+
 }
 
 
@@ -694,6 +708,7 @@
     clamp(4rem, 6vw, 6rem);
 
   box-sizing: border-box;
+
 }
 
 
@@ -708,6 +723,7 @@
   gap: 1rem;
 
   margin-bottom: 1.25rem;
+
 }
 
 
@@ -722,13 +738,15 @@
     'Super Brigade',
     sans-serif;
 
-  font-size: clamp(
-    1.15rem,
-    1.6vw,
-    1.35rem
-  );
+  font-size:
+    clamp(
+      1.15rem,
+      1.6vw,
+      1.35rem
+    );
 
   letter-spacing: 0.08em;
+
 }
 
 
@@ -741,6 +759,7 @@
   gap: 0.75rem;
 
   flex-shrink: 0;
+
 }
 
 
@@ -756,11 +775,12 @@
 
   gap: 0.4rem;
 
-  height: clamp(
-    34px,
-    2.5vw,
-    38px
-  );
+  height:
+    clamp(
+      34px,
+      2.5vw,
+      38px
+    );
 
   padding:
     0
@@ -777,11 +797,12 @@
 
   color: #d6c98a;
 
-  font-size: clamp(
-    0.62rem,
-    0.75vw,
-    0.75rem
-  );
+  font-size:
+    clamp(
+      0.62rem,
+      0.75vw,
+      0.75rem
+    );
 
   font-weight: 800;
 
@@ -794,6 +815,7 @@
   transition:
     border-color 0.2s ease,
     background 0.2s ease;
+
 }
 
 
@@ -804,6 +826,7 @@
 
   background:
     rgba(214, 201, 138, 0.24);
+
 }
 
 
@@ -833,6 +856,7 @@
 
   -webkit-backdrop-filter:
     blur(12px);
+
 }
 
 
@@ -858,6 +882,7 @@
     color 0.2s ease,
     border-color 0.2s ease,
     background 0.2s ease;
+
 }
 
 
@@ -867,6 +892,7 @@
   height: 30px;
 
   border-radius: 999px;
+
 }
 
 
@@ -880,6 +906,7 @@
 
   background:
     rgba(214, 201, 138, 0.14);
+
 }
 
 
@@ -893,17 +920,15 @@
 
   width: 100%;
 
-  /*
-    The container is tall enough for the cards but does not
-    force the entire page to a fixed viewport height.
-  */
-  height: clamp(
-    400px,
-    55vh,
-    480px
-  );
+  height:
+    clamp(
+      400px,
+      55svh,
+      480px
+    );
 
   overflow: hidden;
+
 }
 
 
@@ -920,7 +945,7 @@
   height:
     clamp(
       380px,
-      48vh,
+      48svh,
       430px
     );
 
@@ -935,6 +960,7 @@
   transition:
     transform 0.45s ease,
     opacity 0.45s ease;
+
 }
 
 
@@ -949,6 +975,7 @@
   transform:
     translateX(-50%)
     scale(1);
+
 }
 
 
@@ -966,6 +993,7 @@
       )
     )
     scale(0.82);
+
 }
 
 
@@ -983,12 +1011,14 @@
       )
     )
     scale(0.82);
+
 }
 
 
 .tournament-coverflow .coverflow-position-2 {
 
   display: none;
+
 }
 
 
@@ -1004,17 +1034,19 @@
 
   z-index: 5;
 
-  width: clamp(
-    36px,
-    3vw,
-    42px
-  );
+  width:
+    clamp(
+      36px,
+      3vw,
+      42px
+    );
 
-  height: clamp(
-    36px,
-    3vw,
-    42px
-  );
+  height:
+    clamp(
+      36px,
+      3vw,
+      42px
+    );
 
   border-color:
     rgba(255, 255, 255, 0.18);
@@ -1029,6 +1061,7 @@
 
   -webkit-backdrop-filter:
     blur(10px);
+
 }
 
 
@@ -1041,16 +1074,21 @@
 
   background:
     rgba(214, 201, 138, 0.14);
+
 }
 
 
 .coverflow-arrow-prev {
+
   left: 1rem;
+
 }
 
 
 .coverflow-arrow-next {
+
   right: 1rem;
+
 }
 
 
@@ -1074,6 +1112,7 @@
       1.5vw,
       1.5rem
     );
+
 }
 
 
@@ -1083,11 +1122,12 @@
 
   width: 100%;
 
-  height: clamp(
-    380px,
-    42vw,
-    450px
-  );
+  height:
+    clamp(
+      380px,
+      42vw,
+      450px
+    );
 
   border-radius: 12px;
 
@@ -1111,6 +1151,7 @@
       ),
     box-shadow 0.3s ease,
     border-color 0.3s ease;
+
 }
 
 
@@ -1133,6 +1174,7 @@
         0.2,
         1
       );
+
 }
 
 
@@ -1152,6 +1194,7 @@
       rgba(214, 201, 138, 0.1);
 
   z-index: 10;
+
 }
 
 
@@ -1159,6 +1202,7 @@
 
   transform:
     scale(1.08);
+
 }
 
 
@@ -1192,6 +1236,7 @@
   justify-content: flex-end;
 
   pointer-events: none;
+
 }
 
 
@@ -1210,6 +1255,7 @@
   text-shadow:
     0 2px 4px
     rgba(0, 0, 0, 0.8);
+
 }
 
 
@@ -1226,6 +1272,22 @@
   font-weight: 700;
 
   letter-spacing: 0.1em;
+
+}
+
+
+.card-open-label {
+
+  margin-top: 0.6rem;
+
+  color: #d6c98a;
+
+  font-size: 0.62rem;
+
+  font-weight: 800;
+
+  letter-spacing: 0.12em;
+
 }
 
 
@@ -1239,6 +1301,7 @@
     translateX(-50%)
     scale(1.02)
     translateY(-4px);
+
 }
 
 
@@ -1253,6 +1316,7 @@
     )
     scale(0.86)
     translateY(-3px);
+
 }
 
 
@@ -1267,6 +1331,7 @@
     )
     scale(0.86)
     translateY(-3px);
+
 }
 
 
@@ -1310,6 +1375,7 @@
     rgba(255, 255, 255, 0.6);
 
   text-align: center;
+
 }
 
 
@@ -1326,6 +1392,7 @@
   font-size: 1.1rem;
 
   letter-spacing: 0.05em;
+
 }
 
 
@@ -1338,6 +1405,7 @@
   font-size: 0.85rem;
 
   line-height: 1.5;
+
 }
 
 
@@ -1345,12 +1413,14 @@
 
   border-color:
     rgba(255, 70, 85, 0.35);
+
 }
 
 
 .comp-error-box p {
 
   color: #ff4655;
+
 }
 
 
@@ -1382,6 +1452,7 @@
   transition:
     border-color 0.2s ease,
     color 0.2s ease;
+
 }
 
 
@@ -1390,6 +1461,7 @@
   border-color: #d6c98a;
 
   color: #d6c98a;
+
 }
 
 
@@ -1404,9 +1476,10 @@
     min-height:
       clamp(
         560px,
-        100dvh,
+        100svh,
         820px
       );
+
   }
 
 
@@ -1420,6 +1493,7 @@
         84%,
         88%
       );
+
   }
 
 
@@ -1438,6 +1512,7 @@
         11%,
         13%
       );
+
   }
 
 
@@ -1449,6 +1524,7 @@
         11vw,
         8rem
       );
+
   }
 
 
@@ -1459,7 +1535,9 @@
         2,
         minmax(0, 1fr)
       );
+
   }
+
 }
 
 
@@ -1474,9 +1552,10 @@
     min-height:
       clamp(
         540px,
-        100dvh,
+        100svh,
         760px
       );
+
   }
 
 
@@ -1490,6 +1569,7 @@
         78%,
         82%
       );
+
   }
 
 
@@ -1501,12 +1581,14 @@
 
     max-width:
       min(45vw, 19rem);
+
   }
 
 
   .hero-bg-layer {
 
     width: 100%;
+
   }
 
 
@@ -1525,17 +1607,14 @@
         10vh,
         8rem
       );
+
   }
 
 
   .competition-sticky-header {
 
-    min-height:
-      clamp(
-        220px,
-        30vh,
-        280px
-      );
+    min-height: 0;
+
   }
 
 
@@ -1544,6 +1623,7 @@
 
     margin-left: 1rem;
     margin-right: 1rem;
+
   }
 
 
@@ -1553,6 +1633,7 @@
       2rem
       1.25rem
       4rem;
+
   }
 
 
@@ -1561,12 +1642,14 @@
     flex-wrap: wrap;
 
     gap: 0.75rem;
+
   }
 
 
   .tournament-coverflow {
 
     height: 430px;
+
   }
 
 
@@ -1577,7 +1660,9 @@
       min(42vw, 320px);
 
     height: 400px;
+
   }
+
 }
 
 
@@ -1592,9 +1677,10 @@
     min-height:
       clamp(
         520px,
-        100dvh,
+        100svh,
         680px
       );
+
   }
 
 
@@ -1608,6 +1694,7 @@
         70%,
         74%
       );
+
   }
 
 
@@ -1618,12 +1705,14 @@
     bottom: 7%;
 
     max-width: 50%;
+
   }
 
 
   .hero-copy span {
 
     font-size: 0.72rem;
+
   }
 
 
@@ -1635,6 +1724,7 @@
         8vw,
         2.7rem
       );
+
   }
 
 
@@ -1645,6 +1735,7 @@
       1.8rem;
 
     font-size: 0.72rem;
+
   }
 
 
@@ -1653,6 +1744,7 @@
     gap: 1.5rem;
 
     font-size: 0.65rem;
+
   }
 
 
@@ -1664,24 +1756,28 @@
         18vw,
         5.5rem
       );
+
   }
 
 
   .competition-sticky-header {
 
     min-height: 0;
+
   }
 
 
   .roster-title {
 
     font-size: 1.25rem;
+
   }
 
 
   .roster-subtitle {
 
     font-size: 0.55rem;
+
   }
 
 
@@ -1694,6 +1790,7 @@
       0.5rem
       0.65rem
       0.75rem;
+
   }
 
 
@@ -1706,6 +1803,7 @@
     font-size: 0.6rem;
 
     letter-spacing: 0.04em;
+
   }
 
 
@@ -1715,18 +1813,21 @@
       1.5rem
       0.75rem
       3rem;
+
   }
 
 
   .tournament-toolbar {
 
     align-items: flex-start;
+
   }
 
 
   .tournament-section-title {
 
     font-size: 1.05rem;
+
   }
 
 
@@ -1739,24 +1840,28 @@
       0.75rem;
 
     font-size: 0.62rem;
+
   }
 
 
   .tournament-grid {
 
     grid-template-columns: 1fr;
+
   }
 
 
   .portrait-roster-card {
 
     height: 400px;
+
   }
 
 
   .tournament-coverflow {
 
     height: 410px;
+
   }
 
 
@@ -1767,6 +1872,7 @@
       min(62vw, 280px);
 
     height: 380px;
+
   }
 
 
@@ -1776,6 +1882,7 @@
   .coverflow-position-1 {
 
     opacity: 0.25;
+
   }
 
 
@@ -1790,6 +1897,7 @@
         )
       )
       scale(0.78);
+
   }
 
 
@@ -1804,6 +1912,7 @@
         )
       )
       scale(0.78);
+
   }
 
 
@@ -1811,7 +1920,9 @@
 
     width: 36px;
     height: 36px;
+
   }
+
 }
 
 
@@ -1824,6 +1935,7 @@
   .comp-hero-section {
 
     min-height: 500px;
+
   }
 
 
@@ -1832,6 +1944,7 @@
     left: 68%;
 
     height: 66%;
+
   }
 
 
@@ -1842,12 +1955,14 @@
     bottom: 7%;
 
     max-width: 55%;
+
   }
 
 
   .hero-copy strong {
 
     font-size: 1.6rem;
+
   }
 
 
@@ -1858,18 +1973,21 @@
       1.45rem;
 
     font-size: 0.65rem;
+
   }
 
 
   .massive-bg-text {
 
     font-size: 3rem;
+
   }
 
 
   .comp-tabs-container {
 
     flex-wrap: wrap;
+
   }
 
 
@@ -1878,6 +1996,7 @@
     flex:
       1 1
       calc(50% - 0.35rem);
+
   }
 
 
@@ -1886,22 +2005,15 @@
     width: 100%;
 
     justify-content: space-between;
+
   }
+
 }
 
 
 /* =========================================================
    22. SHORT VIEWPORT SAFETY
    ========================================================= */
-
-/*
-  Important for short laptop screens.
-
-  Do NOT shrink the hero to match the available height.
-
-  The hero remains substantial and the document simply
-  continues below it.
-*/
 
 @media (max-height: 760px) and (min-width: 651px) {
 
@@ -1910,8 +2022,9 @@
     min-height:
       max(
         560px,
-        100dvh
+        100svh
       );
+
   }
 
 
@@ -1922,13 +2035,16 @@
         88%,
         680px
       );
+
   }
 
 
   .comp-hero-foreground {
 
     bottom: 8%;
+
   }
+
 }
 
 
@@ -1941,12 +2057,14 @@
   .comp-hero-section {
 
     min-height: 620px;
+
   }
 
 
   .compHero-img {
 
     height: 84%;
+
   }
 
 
@@ -1960,5 +2078,7 @@
         9vw,
         7rem
       );
+
   }
+
 }

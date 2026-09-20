@@ -11,7 +11,6 @@ import {
 import GameCarousel from '../components/Pickem/GameCarousel';
 import '../styles/pages/CompetitionEngine.css';
 
-// Ensure your character render has a transparent background (PNG/WebP)
 import compHero from '../assets/comp-hero.png';
 import cardCharacter from '../assets/card-charcter-logo.png';
 
@@ -40,12 +39,12 @@ const CompetitionEngine = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
 
-  // Ignores responses from older requests when the game filter changes quickly
   const latestRequestId = useRef(0);
+
 
   /* =====================================================
      LOAD GAMES
-  ===================================================== */
+     ===================================================== */
 
   const loadGames = async () => {
     try {
@@ -73,9 +72,10 @@ const CompetitionEngine = () => {
     }
   };
 
+
   /* =====================================================
      LOAD COMPETITIONS
-  ===================================================== */
+     ===================================================== */
 
   const loadCompetitions = async () => {
     const requestId = ++latestRequestId.current;
@@ -117,11 +117,15 @@ const CompetitionEngine = () => {
         );
       }
 
-      if (requestId !== latestRequestId.current) return;
+      if (requestId !== latestRequestId.current) {
+        return;
+      }
 
       setCompetitions(data?.competitions || []);
     } catch (err) {
-      if (requestId !== latestRequestId.current) return;
+      if (requestId !== latestRequestId.current) {
+        return;
+      }
 
       console.error(
         'Failed to load competitions:',
@@ -140,21 +144,24 @@ const CompetitionEngine = () => {
     }
   };
 
+
   /* =====================================================
      INITIAL LOAD
-  ===================================================== */
+     ===================================================== */
 
   useEffect(() => {
     loadGames();
   }, []);
 
+
   useEffect(() => {
     loadCompetitions();
   }, [activeGame]);
 
+
   /* =====================================================
      GAME LIST FOR CAROUSEL
-  ===================================================== */
+     ===================================================== */
 
   const carouselGames = useMemo(() => {
     return [
@@ -169,9 +176,10 @@ const CompetitionEngine = () => {
     ];
   }, [games]);
 
+
   /* =====================================================
      FILTER COMPETITIONS
-  ===================================================== */
+     ===================================================== */
 
   const filteredCompetitions = useMemo(() => {
     let result = [...competitions];
@@ -221,9 +229,10 @@ const CompetitionEngine = () => {
     return result;
   }, [competitions, activeTab]);
 
+
   /* =====================================================
      COMPETITION -> CARD
-  ===================================================== */
+     ===================================================== */
 
   const cards = useMemo(
     () =>
@@ -241,15 +250,15 @@ const CompetitionEngine = () => {
           competition.competitionType ||
           'COMPETITION',
 
-        // Keep the complete original competition object.
         competition,
       })),
     [filteredCompetitions]
   );
 
+
   /* =====================================================
      OPEN LIVE TOURNAMENT DASHBOARD
-  ===================================================== */
+     ===================================================== */
 
   const openLiveTournament = (competitionId) => {
     if (
@@ -260,12 +269,10 @@ const CompetitionEngine = () => {
       console.error(
         'Unable to open live tournament: missing competition ID'
       );
+
       return;
     }
 
-    // IMPORTANT:
-    // App.jsx route:
-    // /live-tournament/:competitionId
     navigate(
       `/live-tournament/${encodeURIComponent(
         String(competitionId)
@@ -273,29 +280,35 @@ const CompetitionEngine = () => {
     );
   };
 
+
   /* =====================================================
      START FROM FIRST CARD WHEN LIST CHANGES
-  ===================================================== */
+     ===================================================== */
 
   useEffect(() => {
     setActiveMatchIndex(0);
   }, [activeTab, activeGame, competitions]);
 
+
   /* =====================================================
      MOVE COVERFLOW
-  ===================================================== */
+     ===================================================== */
 
   const moveMatch = (direction) => {
-    if (!cards.length) return;
+    if (!cards.length) {
+      return;
+    }
 
     setActiveMatchIndex((currentIndex) => (
-      (currentIndex + direction + cards.length) % cards.length
+      (currentIndex + direction + cards.length) %
+      cards.length
     ));
   };
 
+
   /* =====================================================
      TOURNAMENT CARD
-  ===================================================== */
+     ===================================================== */
 
   const renderTournamentCard = (
     card,
@@ -310,8 +323,9 @@ const CompetitionEngine = () => {
       <button
         key={card.id}
         type="button"
-        className={`portrait-roster-card ${positionClass} ${isActive ? 'active-tournament-card' : ''
-          }`}
+        className={`portrait-roster-card ${positionClass} ${
+          isActive ? 'active-tournament-card' : ''
+        }`}
         onClick={() => openLiveTournament(card.id)}
         aria-label={`Open ${card.title}`}
       >
@@ -338,9 +352,10 @@ const CompetitionEngine = () => {
     );
   };
 
+
   /* =====================================================
      TOURNAMENT LIST
-  ===================================================== */
+     ===================================================== */
 
   const renderTournaments = () => {
     if (loading) {
@@ -428,6 +443,7 @@ const CompetitionEngine = () => {
               <ChevronRight size={24} />
             </button>
           )}
+
         </div>
       );
     }
@@ -445,20 +461,19 @@ const CompetitionEngine = () => {
     );
   };
 
+
   /* =====================================================
      RENDER
-  ===================================================== */
+     ===================================================== */
 
   return (
     <div className="comp-engine-wrapper">
 
       {/* =================================================
           1. HERO SECTION
-      ================================================= */}
+          ================================================= */}
 
       <div className="comp-hero-section">
-
-        {/* Layer 1: Background Typography */}
 
         <div className="hero-bg-layer">
 
@@ -483,7 +498,6 @@ const CompetitionEngine = () => {
 
         </div>
 
-        {/* Layer 2: Foreground Character */}
 
         <img
           src={compHero}
@@ -491,7 +505,6 @@ const CompetitionEngine = () => {
           className="compHero-img"
         />
 
-        {/* Layer 3: Left-aligned CTA */}
 
         <div className="comp-hero-foreground">
 
@@ -506,6 +519,7 @@ const CompetitionEngine = () => {
             </strong>
 
           </div>
+
 
           <button
             type="button"
@@ -525,9 +539,10 @@ const CompetitionEngine = () => {
 
       </div>
 
+
       {/* =================================================
           POST HERO
-      ================================================= */}
+          ================================================= */}
 
       <div className="post-hero-content">
 
@@ -535,7 +550,7 @@ const CompetitionEngine = () => {
 
           {/* =================================================
               2. FREE-FLOATING ROSTER SECTION
-          ================================================= */}
+              ================================================= */}
 
           <div className="floating-roster-section">
 
@@ -551,6 +566,7 @@ const CompetitionEngine = () => {
 
             </div>
 
+
             <GameCarousel
               games={carouselGames}
               activeGameId={activeGame}
@@ -560,9 +576,10 @@ const CompetitionEngine = () => {
 
           </div>
 
+
           {/* =================================================
               3. TABS
-          ================================================= */}
+              ================================================= */}
 
           <div className="comp-tabs-container">
 
@@ -571,10 +588,11 @@ const CompetitionEngine = () => {
                 type="button"
                 key={tab}
                 onClick={() => setActiveTab(tab)}
-                className={`comp-tab-btn ${activeTab === tab
+                className={`comp-tab-btn ${
+                  activeTab === tab
                     ? 'active'
                     : ''
-                  }`}
+                }`}
               >
                 {tab}
               </button>
@@ -584,9 +602,10 @@ const CompetitionEngine = () => {
 
         </div>
 
+
         {/* =================================================
             4. MAIN CONTENT
-        ================================================= */}
+            ================================================= */}
 
         <div className="comp-main-content">
 
@@ -595,6 +614,7 @@ const CompetitionEngine = () => {
             <h2 className="tournament-section-title">
               TOURNAMENTS
             </h2>
+
 
             <div className="tournament-toolbar-actions">
 
@@ -614,6 +634,7 @@ const CompetitionEngine = () => {
                   Create Competition
                 </span>
               </button>
+
 
               <div
                 className="tournament-view-toggle"
@@ -636,6 +657,7 @@ const CompetitionEngine = () => {
                   <Layers3 size={16} />
                 </button>
 
+
                 <button
                   type="button"
                   className={
@@ -656,6 +678,7 @@ const CompetitionEngine = () => {
             </div>
 
           </div>
+
 
           {renderTournaments()}
 
