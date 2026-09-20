@@ -15,14 +15,38 @@ html {
 .bento-dashboard-wrapper {
   position: relative;
 
+  /*
+    IMPORTANT:
+    This page is allowed to occupy the entire width supplied
+    by the authenticated layout.
+
+    There is intentionally NO:
+      max-width
+      margin: 0 auto
+  */
   width: 100%;
   max-width: none;
+
   margin: 0;
 
-  padding: clamp(1rem, 1.35vw, 1.5rem);
+  /*
+    Responsive outer breathing room.
+
+    This is internal page padding, NOT a centered container.
+  */
+  padding:
+    clamp(1rem, 1.35vw, 1.5rem);
 
   box-sizing: border-box;
 
+  /*
+    Main desktop composition:
+
+      LEFT CONTENT      RIGHT CONTENT       SOCIAL RAIL
+
+    The first column is intentionally larger because the
+    tournament + moments area is visually dominant.
+  */
   display: grid;
 
   grid-template-columns:
@@ -30,8 +54,12 @@ html {
     minmax(0, 1fr)
     clamp(60px, 4vw, 80px);
 
-  gap: clamp(1rem, 1.35vw, 1.5rem);
+  gap:
+    clamp(1rem, 1.35vw, 1.5rem);
 
+  /*
+    Never allow children to force the page wider.
+  */
   min-width: 0;
   min-height: 0;
 
@@ -47,7 +75,9 @@ html {
 }
 
 
-/* Global box sizing */
+/*
+  Global box sizing inside dashboard.
+*/
 
 .bento-dashboard-wrapper *,
 .bento-dashboard-wrapper *::before,
@@ -56,7 +86,12 @@ html {
 }
 
 
-/* Prevent children from forcing grid width */
+/*
+  Important for grid/flex descendants.
+
+  Without min-width: 0, long text/media can force a grid
+  column wider than its available space.
+*/
 
 .bento-dashboard-wrapper > *,
 .col-main-left > *,
@@ -72,7 +107,8 @@ html {
 
 .bento-card,
 .wire-block {
-  border: 1px solid rgba(255, 255, 255, 0.08);
+  border:
+    1px solid rgba(255, 255, 255, 0.08);
 
   border-radius:
     clamp(1rem, 2vw, 2rem);
@@ -114,11 +150,17 @@ html {
 .col-main-left,
 .col-main-right {
   display: flex;
+
   flex-direction: column;
 
   gap:
     clamp(1rem, 1.35vw, 1.5rem);
 
+  /*
+    Do not force column height to 100%.
+
+    Content and flex growth determine the height.
+  */
   height: auto;
 }
 
@@ -137,6 +179,7 @@ html {
   grid-row: 1;
 
   display: flex;
+
   flex-direction: column;
 
   gap:
@@ -157,12 +200,16 @@ html {
 .premium-banner-pill {
   width: 100%;
 
+  /*
+    This is a minimum visual size, not a fixed card height.
+  */
   min-height:
     clamp(52px, 5vw, 68px);
 
   flex: 0 0 auto;
 
   display: flex;
+
   align-items: center;
 
   padding-inline:
@@ -187,6 +234,12 @@ html {
 .tournaments-card {
   position: relative;
 
+  /*
+    Hero occupies a responsive amount of vertical space.
+
+    It can grow/shrink with the available viewport while
+    still maintaining enough room for its content.
+  */
   flex:
     0 1 clamp(260px, 34vh, 360px);
 
@@ -194,7 +247,9 @@ html {
     clamp(260px, 34vh, 360px);
 
   display: flex;
+
   flex-direction: column;
+
   justify-content: center;
 
   padding:
@@ -202,12 +257,8 @@ html {
 
   overflow: visible;
 
-  background:
-    linear-gradient(
-      135deg,
-      rgba(20, 20, 20, 0.9),
-      rgba(139, 21, 37, 0.4)
-    );
+  background: linear-gradient(135deg, rgba(20, 20, 20, 0.9), rgba(139, 21, 37, 0.4));
+
 }
 
 .tournaments-card-content {
@@ -216,6 +267,7 @@ html {
   z-index: 2;
 
   width: 100%;
+
   max-width: 64%;
 
   min-width: 0;
@@ -253,6 +305,16 @@ html {
   line-height: 1.4;
 }
 
+
+/*
+  Decorative character.
+
+  Absolute positioning is intentional because this is an
+  image overlay inside the hero.
+
+  It is NOT used to position the page itself.
+*/
+
 .hero-character-render {
   position: absolute;
 
@@ -261,7 +323,11 @@ html {
 
   z-index: 1;
 
+  /*
+    The image scales relative to its responsive parent.
+  */
   height: 135%;
+
   width: auto;
 
   max-width: 55%;
@@ -281,6 +347,7 @@ html {
 
 .live-badge {
   width: fit-content;
+
   max-width: 100%;
 
   margin-bottom:
@@ -294,6 +361,7 @@ html {
   font-size: 0.6rem;
 
   display: flex;
+
   align-items: center;
 
   gap: 6px;
@@ -313,12 +381,15 @@ html {
 
 .join-btn {
   width: 100%;
+
   max-width: 250px;
 
   min-height: 50px;
 
   display: flex;
+
   align-items: center;
+
   justify-content: center;
 
   gap: 0.5rem;
@@ -333,25 +404,26 @@ html {
   position: relative;
 
   display: flex;
+
   flex-direction: column;
 
-  flex: 1 1 0;
+  /*
+    Consume remaining space in the left column.
+  */
+  flex:
+    1 1 0;
 
-  width: 100%;
   min-width: 0;
-  min-height: 0;
 
-  overflow: hidden;
+  min-height:
+    clamp(320px, 36vh, 420px);
 }
 
 .section-label {
-  flex: 0 0 auto;
-
-  margin: 0;
-
   min-width: 0;
 
   font-size: 0.65rem;
+
   line-height: 1.2;
 
   letter-spacing: 0.08em;
@@ -359,88 +431,48 @@ html {
 
 
 /* =========================================================
-   GAME TAG
-   ========================================================= */
-
-.clip-game-tag {
-  position: relative;
-
-  align-self: center;
-
-  z-index: 20;
-
-  display: inline-flex;
-
-  align-items: center;
-  justify-content: center;
-
-  width: fit-content;
-  max-width: 80%;
-
-  margin: 0.55rem auto 0;
-
-  padding: 0.4rem 1.1rem;
-
-  border: 1px solid rgba(255, 255, 255, 0.12);
-  border-radius: 999px;
-
-  background: rgba(10, 10, 10, 0.7);
-
-  backdrop-filter: blur(12px);
-  -webkit-backdrop-filter: blur(12px);
-
-  color: #d6c98a;
-
-  font-size: clamp(0.65rem, 0.8vw, 0.8rem);
-  font-weight: 800;
-
-  letter-spacing: 0.12em;
-
-  text-transform: uppercase;
-
-  white-space: nowrap;
-
-  overflow: hidden;
-  text-overflow: ellipsis;
-
-  pointer-events: none;
-
-  flex: 0 0 auto;
-}
-
-
-/* =========================================================
    COVERFLOW CONTAINER
-   THIS IS THE IMPORTANT CONTAINING BLOCK
    ========================================================= */
 
 .coverflow-container {
   position: relative;
 
   display: flex;
+  flex: 1 1 0;
+
   align-items: center;
   justify-content: center;
 
   width: 100%;
-
-  flex: 1 1 0;
-
-  height: auto;
-
   min-width: 0;
   min-height: 0;
 
-  margin-top: 0.75rem;
+  margin-top: 1rem;
 
   overflow: hidden;
-
-  isolation: isolate;
 }
 
+.clip-game-tag {
+  position: absolute;
 
-/* =========================================================
-   COVERFLOW TRACK
-   ========================================================= */
+  top: 0.25rem;
+  left: 50%;
+  z-index: 25;
+
+  max-width: calc(100% - 2rem);
+
+  padding: 0.45rem 1.4rem;
+
+  border-radius: 999px;
+
+  font-size: clamp(1rem, 1.8vw, 1.25rem);
+
+  transform: translateX(-50%);
+
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
 
 .coverflow-track {
   position: relative;
@@ -455,13 +487,12 @@ html {
   min-width: 0;
   min-height: 0;
 
-  overflow: visible;
+  overflow: hidden;
 }
 
 
 /* =========================================================
-   VIDEO CARD
-   DO NOT CHANGE GEOMETRY
+   CLIP CARDS
    ========================================================= */
 
 .clip-card {
@@ -470,11 +501,18 @@ html {
   top: 50%;
   left: 50%;
 
+  /*
+    Videos are 5:4.
+
+    Width remains responsive while height is generated
+    automatically from the 5:4 ratio.
+  */
   width: clamp(180px, 20vw, 320px);
 
   aspect-ratio: 5 / 4;
-
   height: auto;
+
+  overflow: hidden;
 
   border-radius: 1rem;
 
@@ -490,12 +528,7 @@ html {
   z-index: 10;
 
   min-width: 0;
-
   max-width: calc(100% - 2rem);
-
-  isolation: isolate;
-
-  overflow: hidden;
 }
 
 .clip-card video,
@@ -509,16 +542,11 @@ html {
   max-height: 100%;
 
   object-fit: cover;
-
-  border: 0;
-  outline: none;
-
-  border-radius: inherit;
 }
 
 
 /* =========================================================
-   COVERFLOW POSITIONS
+   CENTER / SIDE CARDS
    ========================================================= */
 
 .clip-center {
@@ -529,9 +557,6 @@ html {
     scale(1);
 
   opacity: 1;
-
-  filter: none;
-
   z-index: 10;
 }
 
@@ -573,40 +598,52 @@ html {
 
 
 /* =========================================================
-   LEFT INFORMATION
+   COVERFLOW INFORMATION
    ========================================================= */
 
-.coverflow-left-overlay {
+.coverflow-left-overlay,
+.coverflow-right-overlay {
   position: absolute;
 
-  left: 0;
   top: 50%;
 
-  z-index: 40;
-
-  width: clamp(135px, 24%, 220px);
-
-  max-height: 82%;
-
-  min-width: 0;
+  z-index: 20;
 
   transform: translateY(-50%);
 
-  display: flex;
-  flex-direction: column;
-  justify-content: center;
+  min-width: 0;
 
-  padding: 0;
+  box-sizing: border-box;
+}
+
+.coverflow-left-overlay {
+  left: 0;
+
+  width: clamp(135px, 24%, 220px);
 
   pointer-events: none;
 }
 
+.coverflow-right-overlay {
+  right: clamp(0.5rem, 1vw, 1rem);
+
+  width: clamp(135px, 24%, 220px);
+
+  height: 82%;
+
+  min-height: 0;
+}
+
+
+/* =========================================================
+   CLIP INFORMATION / TEXT
+   ========================================================= */
+
 .clip-title-massive {
   width: 100%;
-
-  margin: 0 0 0.75rem;
-
   min-width: 0;
+
+  margin: 1rem 0 0.75rem;
 
   font-family: "Super Brigade", sans-serif;
 
@@ -620,21 +657,25 @@ html {
   word-break: break-word;
 }
 
-.clip-description {
+.clip-author {
   width: 100%;
-
   min-width: 0;
 
-  margin: 0 0 1rem;
+  margin-bottom: 1rem;
 
-  color: rgba(255, 255, 255, 0.65);
+  color: #d6c98a;
 
-  font-size: clamp(0.65rem, 0.75vw, 0.78rem);
+  font-size: clamp(0.5rem, 0.6vw, 0.65rem);
 
-  line-height: 1.5;
+  font-weight: 800;
 
-  overflow-wrap: anywhere;
-  word-break: break-word;
+  letter-spacing: 0.1em;
+
+  text-transform: uppercase;
+
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .clip-actions {
@@ -645,7 +686,6 @@ html {
   gap: clamp(0.5rem, 0.9vw, 1rem);
 
   width: 100%;
-
   min-width: 0;
 
   flex-wrap: wrap;
@@ -654,10 +694,9 @@ html {
 }
 
 .clip-actions button {
-  display: inline-flex;
+  display: flex;
 
   align-items: center;
-  justify-content: center;
 
   gap: 0.3rem;
 
@@ -679,52 +718,40 @@ html {
 
   cursor: pointer;
 
-  transition:
-    background 0.2s ease,
-    border-color 0.2s ease,
-    transform 0.2s ease;
-}
-
-.clip-actions button:hover {
-  background: rgba(255, 255, 255, 0.18);
-
-  border-color: rgba(255, 255, 255, 0.35);
-
-  transform: translateY(-1px);
+  box-sizing: border-box;
 }
 
 
 /* =========================================================
-   RIGHT COMMENTS OVERLAY
-   IMPORTANT:
-   THIS IS CONSTRAINED TO THE COVERFLOW CONTAINER
+   VIDEO PLAY OVERLAY
    ========================================================= */
 
-.coverflow-right-overlay {
+.play-overlay {
   position: absolute;
 
-  top: 9%;
-  right: 0;
+  inset: 0;
 
-  bottom: 9%;
+  display: flex;
 
-  z-index: 40;
+  align-items: center;
+  justify-content: center;
 
-  width: clamp(135px, 24%, 220px);
+  background: rgba(0, 0, 0, 0.3);
 
-  height: auto;
+  opacity: 0;
 
-  min-width: 0;
-  min-height: 0;
+  cursor: pointer;
 
-  pointer-events: auto;
+  transition: opacity 0.2s ease;
+}
 
-  overflow: hidden;
+.clip-center:hover .play-overlay {
+  opacity: 1;
 }
 
 
 /* =========================================================
-   COMMENTS PANEL
+   COMMENTS
    ========================================================= */
 
 .comments-panel {
@@ -732,34 +759,19 @@ html {
 
   flex-direction: column;
 
-  width: 100%;
   height: 100%;
 
   min-width: 0;
   min-height: 0;
 
-  padding: clamp(0.75rem, 1vw, 1rem);
+  padding: 0;
 
-  border:
-    1px solid rgba(255, 255, 255, 0.08);
-
-  border-radius: 1rem;
-
-  background:
-    rgba(12, 12, 12, 0.55);
-
-  backdrop-filter: blur(14px);
-  -webkit-backdrop-filter: blur(14px);
+  background: transparent;
 
   overflow: hidden;
 
   box-sizing: border-box;
 }
-
-
-/* =========================================================
-   COMMENTS HEADER
-   ========================================================= */
 
 .comments-header {
   display: flex;
@@ -769,45 +781,35 @@ html {
 
   gap: 0.5rem;
 
-  width: 100%;
   min-width: 0;
 
-  margin:
-    0 0 0.75rem;
+  margin: 0 0 0.75rem;
 
-  padding-bottom:
-    0.6rem;
+  padding-bottom: 0.5rem;
 
-  border-bottom:
-    1px solid rgba(255, 255, 255, 0.1);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
 
-  color:
-    rgba(255, 255, 255, 0.55);
+  color: rgba(255, 255, 255, 0.5);
 
-  font-size:
-    clamp(0.6rem, 0.7vw, 0.75rem);
+  font-size: clamp(0.6rem, 0.7vw, 0.75rem);
 
   letter-spacing: 0.1em;
 
   text-transform: uppercase;
 
-  flex: 0 0 auto;
+  flex-shrink: 0;
+
+  box-sizing: border-box;
 }
-
-
-/* =========================================================
-   COMMENTS LIST
-   ========================================================= */
 
 .comments-list {
   display: flex;
 
-  flex-direction: column;
-
   flex: 1 1 0;
 
-  gap:
-    clamp(0.5rem, 0.8vw, 0.8rem);
+  flex-direction: column;
+
+  gap: clamp(0.5rem, 0.8vw, 0.8rem);
 
   width: 100%;
 
@@ -817,71 +819,25 @@ html {
   overflow-y: auto;
   overflow-x: hidden;
 
-  padding-right: 0.25rem;
-
   box-sizing: border-box;
-
-  scrollbar-width: thin;
-
-  scrollbar-color:
-    rgba(255, 255, 255, 0.2)
-    transparent;
 }
-
-.comments-list::-webkit-scrollbar {
-  width: 4px;
-}
-
-.comments-list::-webkit-scrollbar-track {
-  background: transparent;
-}
-
-.comments-list::-webkit-scrollbar-thumb {
-  background:
-    rgba(255, 255, 255, 0.18);
-
-  border-radius: 999px;
-}
-
-.comments-list::-webkit-scrollbar-thumb:hover {
-  background:
-    rgba(214, 201, 138, 0.65);
-}
-
-
-/* =========================================================
-   INDIVIDUAL COMMENT
-   ========================================================= */
 
 .comment-item {
   width: 100%;
 
   min-width: 0;
 
-  padding-bottom:
-    0.5rem;
+  color: rgba(255, 255, 255, 0.8);
 
-  color:
-    rgba(255, 255, 255, 0.8);
-
-  font-size:
-    clamp(0.7rem, 0.8vw, 0.8rem);
+  font-size: clamp(0.7rem, 0.8vw, 0.8rem);
 
   line-height: 1.4;
 
   overflow-wrap: anywhere;
-
   word-break: break-word;
-
-  flex: 0 0 auto;
 }
 
 .comment-user {
-  display: block;
-
-  margin-bottom:
-    0.15rem;
-
   color: #d6c98a;
 
   font-weight: 800;
@@ -889,156 +845,62 @@ html {
   overflow-wrap: anywhere;
 }
 
+.empty-comms {
+  color: rgba(255, 255, 255, 0.3);
 
-/* =========================================================
-   COMMENT INPUT
-   ========================================================= */
+  font-size: clamp(0.65rem, 0.75vw, 0.75rem);
+
+  font-style: italic;
+}
 
 .comment-input {
-  display: block;
+  display: flex;
+
+  align-items: center;
 
   width: 100%;
 
   min-width: 0;
 
-  height: 38px;
+  margin-top: 0.75rem;
 
-  margin-top:
-    0.75rem;
+  padding: 0.5rem 0.75rem;
 
-  padding:
-    0.5rem 0.75rem;
-
-  border:
-    1px solid rgba(255, 255, 255, 0.1);
+  border: 1px solid rgba(255, 255, 255, 0.1);
 
   border-radius: 30px;
 
   outline: none;
 
-  background:
-    rgba(255, 255, 255, 0.05);
+  background: rgba(255, 255, 255, 0.05);
 
   color: #fff;
 
-  font-size:
-    clamp(0.7rem, 0.8vw, 0.8rem);
+  font-size: clamp(0.7rem, 0.8vw, 0.8rem);
+
+  text-align: left;
 
   box-sizing: border-box;
 
-  flex:
-    0 0 38px;
+  flex-shrink: 0;
 }
 
-.comment-input::placeholder {
-  color: rgba(255, 255, 255, 0.35);
+.comment-input input {
+  width: 100%;
+
+  min-width: 0;
+
+  border: none;
+  outline: none;
+
+  background: transparent;
+
+  color: inherit;
+
+  font: inherit;
+
+  box-sizing: border-box;
 }
-
-.comment-input:focus {
-  border-color:
-    rgba(214, 201, 138, 0.4);
-
-  background:
-    rgba(255, 255, 255, 0.07);
-}
-
-
-/* =========================================================
-   EMPTY COMMENTS
-   ========================================================= */
-
-.empty-comms {
-  margin:
-    auto 0;
-
-  color:
-    rgba(255, 255, 255, 0.3);
-
-  font-size:
-    clamp(0.65rem, 0.75vw, 0.75rem);
-
-  font-style: italic;
-
-  text-align: center;
-}
-
-
-/* =========================================================
-   NAVIGATION BUTTONS
-   ========================================================= */
-
-.nav-btn {
-  position: absolute;
-
-  top: 50%;
-
-  z-index: 80;
-
-  display: flex;
-
-  align-items: center;
-  justify-content: center;
-
-  width: clamp(38px, 3vw, 48px);
-
-  height: clamp(38px, 3vw, 48px);
-
-  padding: 0;
-
-  border:
-    1px solid rgba(255, 255, 255, 0.18);
-
-  border-radius: 50%;
-
-  background:
-    rgba(8, 8, 8, 0.78);
-
-  color: #fff;
-
-  backdrop-filter: blur(12px);
-  -webkit-backdrop-filter: blur(12px);
-
-  box-shadow:
-    0 8px 24px rgba(0, 0, 0, 0.3);
-
-  transform: translateY(-50%);
-
-  cursor: pointer;
-
-  transition:
-    background 0.2s ease,
-    border-color 0.2s ease,
-    transform 0.2s ease;
-}
-
-.prev-btn {
-  left: clamp(0.5rem, 8%, 5rem);
-}
-
-.next-btn {
-  right: clamp(0.5rem, 8%, 5rem);
-}
-
-.prev-btn:hover,
-.next-btn:hover {
-  background:
-    rgba(255, 255, 255, 0.14);
-
-  border-color:
-    rgba(255, 255, 255, 0.35);
-
-  transform:
-    translateY(-50%)
-    scale(1.05);
-}
-
-.prev-btn:active,
-.next-btn:active {
-  transform:
-    translateY(-50%)
-    scale(0.95);
-}
-
 
 /* =========================================================
    VIDEO CONTROLS
@@ -1047,108 +909,121 @@ html {
 .video-control {
   position: absolute;
 
-  z-index: 90;
+  z-index: 30;
 
   display: flex;
 
   align-items: center;
   justify-content: center;
 
+  width: 40px;
+  height: 40px;
+
   padding: 0;
 
-  border:
-    1px solid rgba(255, 255, 255, 0.2);
+  border: 1px solid rgba(255, 255, 255, 0.2);
 
   border-radius: 50%;
 
-  background:
-    rgba(0, 0, 0, 0.68);
+  background: rgba(0, 0, 0, 0.55);
 
   color: #fff;
 
-  backdrop-filter: blur(10px);
-  -webkit-backdrop-filter: blur(10px);
+  backdrop-filter: blur(8px);
 
   cursor: pointer;
 
-  opacity: 1;
+  opacity: 0;
 
   transition:
+    opacity 0.2s ease,
     background 0.2s ease,
-    border-color 0.2s ease,
     transform 0.2s ease;
+}
+
+.clip-center:hover .video-control {
+  opacity: 1;
+}
+
+.video-control:hover {
+  background: rgba(0, 0, 0, 0.75);
 }
 
 .play-control {
   top: 50%;
   left: 50%;
 
-  width: 54px;
-  height: 54px;
-
   transform:
     translate(-50%, -50%);
-}
-
-.mute-control {
-  right: 0.75rem;
-  bottom: 0.75rem;
-
-  width: 38px;
-  height: 38px;
-}
-
-.video-control:hover {
-  background:
-    rgba(0, 0, 0, 0.86);
-
-  border-color:
-    rgba(255, 255, 255, 0.4);
 }
 
 .play-control:hover {
   transform:
     translate(-50%, -50%)
-    scale(1.06);
+    scale(1.08);
+}
+
+.mute-control {
+  right: 0.75rem;
+  bottom: 0.75rem;
 }
 
 .mute-control:hover {
-  transform:
-    scale(1.06);
+  transform: scale(1.08);
 }
 
-
 /* =========================================================
-   EMPTY MOMENTS
+   COVERFLOW NAV BUTTONS
    ========================================================= */
 
-.empty-moments {
-  width: 100%;
-  height: 100%;
+.nav-btn {
+  position: absolute;
 
-  min-height: 220px;
+  bottom: 0.5rem;
+
+  z-index: 30;
 
   display: flex;
 
   align-items: center;
   justify-content: center;
 
-  color:
-    rgba(255, 255, 255, 0.3);
+  width: 40px;
+  height: 40px;
 
-  font-size: 0.8rem;
+  flex: 0 0 40px;
 
-  text-transform: uppercase;
+  border-radius: 50%;
+}
 
-  letter-spacing: 0.08em;
+.prev-btn {
+  left: 50%;
+
+  transform:
+    translateX(
+      calc(-100% - clamp(8px, 1vw, 14px))
+    );
+}
+
+.next-btn {
+  right: 50%;
+
+  transform:
+    translateX(
+      calc(100% + clamp(8px, 1vw, 14px))
+    );
 }
 
 
 /* =========================================================
-   RESPONSIVE
+   RESPONSIVE SAFETY
    ========================================================= */
 
 @media (max-width: 900px) {
+  .clip-card {
+    width: clamp(170px, 28vw, 280px);
+  }
+
   .clip-left {
     left: 12%;
   }
@@ -1156,79 +1031,24 @@ html {
   .clip-right {
     left: 88%;
   }
-
-  .coverflow-left-overlay {
-    width: clamp(120px, 22%, 190px);
-  }
-
-  .coverflow-right-overlay {
-    width: clamp(120px, 22%, 190px);
-  }
-
-  .nav-btn {
-    width: 42px;
-    height: 42px;
-  }
 }
 
+@media (max-width: 600px) {
+  .clip-card {
+    width: min(75vw, 280px);
+  }
 
-@media (max-width: 650px) {
   .clip-left,
   .clip-right {
     opacity: 0;
     pointer-events: none;
   }
 
-  .coverflow-left-overlay {
-    width: 110px;
-  }
-
+  .coverflow-left-overlay,
   .coverflow-right-overlay {
-    width: 110px;
+    width: 100%;
   }
 }
-
-
-@media (max-width: 480px) {
-  .coverflow-left-overlay {
-    width: 95px;
-  }
-
-  .coverflow-right-overlay {
-    width: 95px;
-  }
-
-  .comments-panel {
-    padding: 0.7rem;
-  }
-
-  .nav-btn {
-    width: 38px;
-    height: 38px;
-  }
-
-  .prev-btn {
-    left: 0.4rem;
-  }
-
-  .next-btn {
-    right: 0.4rem;
-  }
-
-  .clip-title-massive {
-    font-size: 1rem;
-  }
-
-  .clip-description {
-    font-size: 0.62rem;
-  }
-
-  .clip-actions button {
-    padding: 0.4rem 0.6rem;
-  }
-}
-
-
 /* =========================================================
    RIGHT SIDE MINI GRID
    ========================================================= */
@@ -1243,29 +1063,22 @@ html {
     clamp(0.8rem, 1.35vw, 1.5rem);
 
   width: 100%;
-
   min-width: 0;
 
   /*
-    Responsive definite height so the game selector
-    itself does not grow indefinitely.
-  */
+    Give this row a real responsive height.
 
-  height:
-    clamp(220px, 28vh, 300px);
+    The game list will scroll inside this fixed
+    responsive space instead of increasing the
+    height of the dashboard.
+  */
+  height: clamp(220px, 28vh, 300px);
 
   min-height: 220px;
-
   max-height: 300px;
 
-  flex:
-    0 0 auto;
+  flex: 0 0 auto;
 }
-
-
-/* =========================================================
-   GAME SELECTOR
-   ========================================================= */
 
 .game-selector-card {
   display: flex;
@@ -1278,16 +1091,15 @@ html {
   min-width: 0;
   min-height: 0;
 
-  padding:
-    clamp(1rem, 1.8vw, 1.5rem);
+  padding: clamp(1rem, 1.8vw, 1.5rem);
 
   box-sizing: border-box;
 
   overflow: hidden;
 }
 
-
-/* Game list */
+.game-option:hover { background: rgba(255, 255, 255, 0.08); color: #fff; }
+.game-option.active { background: rgba(214, 201, 138, 0.1); border-color: rgba(214, 201, 138, 0.3); color: #d6c98a; }
 
 .game-list {
   display: flex;
@@ -1296,32 +1108,38 @@ html {
 
   gap: 0.5rem;
 
-  margin-top:
-    0.5rem;
+  margin-top: 0.5rem;
 
   width: 100%;
 
   min-width: 0;
   min-height: 0;
 
-  flex:
-    1 1 0;
+  /*
+    IMPORTANT:
+    The list consumes the remaining height
+    inside the game card.
+  */
+  flex: 1 1 0;
 
   overflow-y: auto;
-
   overflow-x: hidden;
 
-  padding-right:
-    0.35rem;
+  padding-right: 0.35rem;
 
   box-sizing: border-box;
 
+  /*
+    Firefox
+  */
   scrollbar-width: thin;
-
   scrollbar-color:
     rgba(255, 255, 255, 0.2)
     transparent;
 }
+
+
+/* Chrome / Edge / Safari */
 
 .game-list::-webkit-scrollbar {
   width: 5px;
@@ -1332,51 +1150,32 @@ html {
 }
 
 .game-list::-webkit-scrollbar-thumb {
-  background:
-    rgba(255, 255, 255, 0.18);
+  background: rgba(255, 255, 255, 0.18);
 
   border-radius: 999px;
 }
 
 .game-list::-webkit-scrollbar-thumb:hover {
-  background:
-    rgba(214, 201, 138, 0.65);
+  background: rgba(214, 201, 138, 0.65);
 }
-
-
-/* Game option */
 
 .game-option {
   width: 100%;
-
   min-width: 0;
 
-  flex:
-    0 0 auto;
+  flex: 0 0 auto;
 
   display: flex;
-
   align-items: center;
 
   gap: 10px;
 
-  padding:
-    0.8rem 1rem;
+  padding: 0.8rem 1rem;
 
-  border:
-    1px solid rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 0.75rem;
 
-  border-radius:
-    0.75rem;
-
-  background:
-    rgba(255, 255, 255, 0.03);
-
-  color:
-    rgba(255, 255, 255, 0.75);
-
-  font-size:
-    clamp(0.75rem, 1vw, 0.85rem);
+  font-size: clamp(0.75rem, 1vw, 0.85rem);
 
   box-sizing: border-box;
 
@@ -1384,37 +1183,17 @@ html {
 
   cursor: pointer;
 
+  /*
+   * Prevent any parent overlay from making the button
+   * unclickable.
+   */
   pointer-events: auto;
-
-  transition:
-    background 0.2s ease,
-    border-color 0.2s ease,
-    color 0.2s ease;
-}
-
-.game-option:hover {
-  background:
-    rgba(255, 255, 255, 0.08);
-
-  color: #fff;
-}
-
-.game-option.active {
-  background:
-    rgba(214, 201, 138, 0.1);
-
-  border-color:
-    rgba(214, 201, 138, 0.3);
-
-  color:
-    #d6c98a;
 }
 
 .game-option span {
   min-width: 0;
 
-  flex:
-    1 1 auto;
+  flex: 1 1 auto;
 
   overflow: hidden;
 
@@ -1422,11 +1201,6 @@ html {
 
   white-space: nowrap;
 }
-
-
-/* =========================================================
-   SYNCO PROMO CARD
-   ========================================================= */
 
 .synco-promo-card {
   display: flex;
@@ -1642,12 +1416,10 @@ html {
       clamp(125px, 23%, 190px);
   }
 
-  /*
-    IMPORTANT:
-    Do NOT shrink the clip-card here.
-    The 5:4 video card sizing is intentionally
-    preserved.
-  */
+  .clip-card {
+    width:
+      clamp(135px, 13vw, 180px);
+  }
 }
 
 
@@ -1707,44 +1479,13 @@ html {
   }
 
   .highlights-section {
-  position: relative;
-
-  display: flex;
-  flex-direction: column;
-
-  flex: 0 1 auto;
-
-  width: 100%;
-  min-width: 0;
-
-  height: clamp(360px, 42vh, 480px);
-  min-height: 360px;
-  max-height: 480px;
-
-  overflow: hidden;
-}
+    min-height:
+      clamp(360px, 65vw, 480px);
+  }
 
   .stat-meter-card {
     min-height:
       clamp(300px, 60vw, 430px);
-  }
-
-  .coverflow-left-overlay {
-    width:
-      clamp(110px, 20%, 170px);
-  }
-
-  .coverflow-right-overlay {
-    width:
-      clamp(110px, 20%, 170px);
-  }
-
-  .prev-btn {
-    left: 0.5rem;
-  }
-
-  .next-btn {
-    right: 0.5rem;
   }
 }
 
@@ -1757,31 +1498,16 @@ html {
   .mid-grid-row {
     grid-template-columns:
       minmax(0, 1fr);
-
-    /*
-      One-column mobile card stack should not
-      inherit an unnecessarily tall desktop row.
-    */
-    height: auto;
-
-    min-height: 0;
-
-    max-height: none;
-  }
-
-  .game-selector-card {
-    min-height: 220px;
-
-    height: 220px;
-  }
-
-  .synco-promo-card {
-    min-height: 220px;
   }
 
   .coverflow-left-overlay,
   .coverflow-right-overlay {
     width: 23%;
+  }
+
+  .clip-card {
+    width:
+      clamp(125px, 30vw, 165px);
   }
 
   .clip-title-massive {
@@ -1790,24 +1516,6 @@ html {
 
   .clip-actions {
     flex-wrap: wrap;
-  }
-
-  .clip-game-tag {
-    max-width: 65%;
-
-    font-size: 0.65rem;
-
-    padding-inline:
-      0.85rem;
-  }
-
-  .prev-btn,
-  .next-btn {
-    width: 40px;
-    height: 40px;
-
-    min-width: 40px;
-    min-height: 40px;
   }
 }
 
@@ -1827,23 +1535,8 @@ html {
   }
 
   .clip-card {
-    /*
-      Preserve 5:4 ratio while allowing
-      the card to fit small screens.
-    */
     width:
       min(48vw, 160px);
-  }
-
-  .clip-game-tag {
-    top: 0.5rem;
-
-    max-width: 70%;
-
-    font-size: 0.6rem;
-
-    padding:
-      0.4rem 0.75rem;
   }
 
   .prev-btn {
@@ -1861,7 +1554,6 @@ html {
   }
 
   .stat-pill {
-    padding-inline:
-      0.35rem;
+    padding-inline: 0.35rem;
   }
 }
