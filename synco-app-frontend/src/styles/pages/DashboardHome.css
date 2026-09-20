@@ -8,14 +8,19 @@ html {
 .bento-dashboard-wrapper {
   position: relative;
   width: 100%;
+  max-width: 100% !important; /* Forces expansion even if a parent restricts it */
   min-height: calc(100dvh - 4rem);
   margin: 0; 
   box-sizing: border-box;
   display: grid;
-  /* Updated relaxed grid constraints */
-  grid-template-columns: minmax(280px, 1fr) minmax(300px, 1.2fr) 60px;
+  
+  /* Converted to pure fractional units to aggressively eat empty space */
+  grid-template-columns: 1fr 1.2fr 60px; 
   gap: clamp(1rem, 2vw, 1.5rem);
-  padding: clamp(1rem, 2vw, 1.5rem);
+  
+  /* Top/Bottom padding remains, Left/Right padding is forced to 0 */
+  padding: clamp(1rem, 2vw, 1.5rem) 0; 
+  
   color: #fff;
   font-family: 'Inter', system-ui, sans-serif;
   overflow-x: hidden;
@@ -651,7 +656,7 @@ html {
 ========================================= */
 @media (max-width: 1200px) {
   .bento-dashboard-wrapper {
-    grid-template-columns: minmax(0, 1fr) minmax(350px, 1.5fr); 
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1.5fr); 
   }
   .col-far-right {
     display: none; 
@@ -664,8 +669,9 @@ html {
 
 @media (max-width: 900px) {
   .bento-dashboard-wrapper {
-    grid-template-columns: 1fr; 
-    padding: 1rem;
+    grid-template-columns: minmax(0, 1fr); 
+    /* Keep horizontal padding at 0 on mobile */
+    padding: 1rem 0; 
     margin: 0;
   }
   .col-main-right {
