@@ -26,6 +26,7 @@ const ClubsHub = () => {
 
   const [gameCatalog, setGameCatalog] = useState([]);
   const [clubs, setClubs] = useState([]);
+  const [ownedGameIds, setOwnedGameIds] = useState([]);
 
   const [isGameMenuOpen, setIsGameMenuOpen] = useState(false);
   const [isLoadingGames, setIsLoadingGames] = useState(false);
@@ -116,12 +117,51 @@ const ClubsHub = () => {
   };
 
   // =========================================================
+  // LOAD OWNED CLUB GAMES
+  // =========================================================
+
+  const loadOwnedGameIds = async () => {
+    try {
+      const response = await fetch(
+        `${API_URL}/api/clubs/mine`,
+        {
+          method: 'GET',
+          credentials: 'include',
+        }
+      );
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(
+          data.message ||
+          'Failed to load your clubs.'
+        );
+      }
+
+      setOwnedGameIds(
+        data.ownedGameIds || []
+      );
+
+    } catch (err) {
+      console.error(
+        'Failed to load owned club games:',
+        err
+      );
+
+      // Backend remains the final source of truth.
+      setOwnedGameIds([]);
+    }
+  };
+
+  // =========================================================
   // INITIAL LOAD
   // =========================================================
 
   useEffect(() => {
     loadGames();
     loadClubs();
+    loadOwnedGameIds();
   }, []);
 
   // =========================================================
@@ -143,6 +183,19 @@ const ClubsHub = () => {
   // =========================================================
 
   const handleGameSelect = (game) => {
+    const alreadyOwned = ownedGameIds.some(
+      (ownedGameId) =>
+        String(ownedGameId) === String(game.id)
+    );
+
+    if (alreadyOwned) {
+      setError(
+        `You already have a club for ${game.name}. You can create only one club per game.`
+      );
+      setIsGameMenuOpen(false);
+      return;
+    }
+
     setNewClub((previous) => ({
       ...previous,
       game: game.name,
@@ -183,6 +236,18 @@ const ClubsHub = () => {
     if (!newClub.gameId) {
       setError(
         'Please select a primary game.'
+      );
+      return;
+    }
+
+    const alreadyOwned = ownedGameIds.some(
+      (ownedGameId) =>
+        String(ownedGameId) === String(newClub.gameId)
+    );
+
+    if (alreadyOwned) {
+      setError(
+        `You already have a club for ${newClub.game}. You can create only one club per game.`
       );
       return;
     }
@@ -230,10 +295,13 @@ const ClubsHub = () => {
       );
 
       // -----------------------------------------------------
-      // REFRESH CLUB DIRECTORY
+      // REFRESH CLUB DIRECTORY + OWNED GAME LIST
       // -----------------------------------------------------
 
-      await loadClubs();
+      await Promise.all([
+        loadClubs(),
+        loadOwnedGameIds(),
+      ]);
 
       // -----------------------------------------------------
       // RESET FORM
@@ -663,6 +731,10 @@ const ClubsHub = () => {
 
                   </button>
 
+                  <p className="mt-2 text-[9px] font-bold uppercase tracking-wider text-gray-400">
+                    One club per game per account.
+                  </p>
+
                   {/* =================================================
                       GAME MENU
                   ================================================= */}
@@ -687,29 +759,44 @@ const ClubsHub = () => {
 
                         ) : (
 
-                          gameCatalog.map((game) => (
+                          gameCatalog.map((game) => {
+                            const alreadyOwned = ownedGameIds.some(
+                              (ownedGameId) =>
+                                String(ownedGameId) === String(game.id)
+                            );
 
-                            <button
-                              type="button"
-                              key={game.id}
-                              className={`flex items-center gap-3 p-2 rounded-xl text-left transition-all hover:bg-white/40 ${newClub.gameId === game.id
-                                ? 'bg-white/60 shadow-sm'
-                                : ''
-                                }`}
-                              onClick={() =>
-                                handleGameSelect(
-                                  game
-                                )
-                              }
-                            >
+                            return (
+                              <button
+                                type="button"
+                                key={game.id}
+                                disabled={alreadyOwned}
+                                className={`flex items-center justify-between gap-3 p-2 rounded-xl text-left transition-all ${alreadyOwned
+                                  ? 'cursor-not-allowed bg-gray-100 opacity-45'
+                                  : `hover:bg-white/40 ${newClub.gameId === game.id
+                                    ? 'bg-white/60 shadow-sm'
+                                    : ''
+                                  }`
+                                  }`}
+                                onClick={() =>
+                                  handleGameSelect(
+                                    game
+                                  )
+                                }
+                              >
 
-                              <span className="text-black text-xs font-bold font-header uppercase">
-                                {game.name}
-                              </span>
+                                <span className="text-black text-xs font-bold font-header uppercase">
+                                  {game.name}
+                                </span>
 
-                            </button>
+                                {alreadyOwned && (
+                                  <span className="text-[8px] font-black uppercase tracking-wider text-gray-400">
+                                    Club Created
+                                  </span>
+                                )}
 
-                          ))
+                              </button>
+                            );
+                          })
 
                         )}
 

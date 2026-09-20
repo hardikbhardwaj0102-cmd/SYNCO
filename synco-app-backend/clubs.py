@@ -528,6 +528,43 @@ def create_club():
                 "message": "Selected game was not found."
             }), 404
 
+        # -------------------------------------------------
+        # ONE CLUB PER GAME PER USER
+        # -------------------------------------------------
+        # A user may own multiple clubs, but only one club
+        # for each individual game. This check intentionally
+        # includes inactive clubs as well, so deactivating a
+        # club does not allow creating a second club for the
+        # same game.
+        # -------------------------------------------------
+
+        existing_game_club = (
+            Club.query
+            .filter_by(
+                owner_id=user.id,
+                game_id=game_id
+            )
+            .first()
+        )
+
+        if existing_game_club:
+
+            game_name = (
+                getattr(game, "name", None)
+                or game_id
+            )
+
+            return jsonify({
+                "success": False,
+                "message": (
+                    f"You already have a club for {game_name}. "
+                    "Each account can create only one club per game."
+                ),
+                "code": "ONE_CLUB_PER_GAME",
+                "existingClubId": existing_game_club.id,
+                "gameId": game_id
+            }), 409
+
         existing_name = (
             Club.query
             .filter(
@@ -651,9 +688,24 @@ def get_my_clubs():
             if membership.club
         ]
 
+        owned_game_ids = [
+            membership.club.game_id
+            for membership in memberships
+            if (
+                membership.club
+                and membership.club.owner_id == user.id
+            )
+        ]
+
+        # Preserve order while removing duplicates.
+        owned_game_ids = list(
+            dict.fromkeys(owned_game_ids)
+        )
+
         return jsonify({
             "success": True,
-            "clubs": clubs
+            "clubs": clubs,
+            "ownedGameIds": owned_game_ids
         })
 
     except Exception as e:
