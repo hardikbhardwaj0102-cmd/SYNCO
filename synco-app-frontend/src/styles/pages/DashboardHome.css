@@ -397,36 +397,37 @@ html {
 
 
 /* =========================================================
-   SYNCO MOMENTS
+   HIGHLIGHTS / COVERFLOW
+   Responsive dimension model
    ========================================================= */
 
 .highlights-section {
   position: relative;
 
   display: flex;
+  flex: 1 1 0;
 
   flex-direction: column;
 
-  /*
-    Consume remaining space in the left column.
-  */
-  flex:
-    1 1 0;
-
+  width: 100%;
   min-width: 0;
+  min-height: 0;
 
-  min-height:
-    clamp(320px, 36vh, 420px);
+  overflow: hidden;
 }
 
 .section-label {
-  min-width: 0;
+  flex: 0 0 auto;
+
+  margin: 0 0 1rem;
+
+  color: rgba(255, 255, 255, 0.4);
 
   font-size: 0.65rem;
+  font-weight: 800;
 
-  line-height: 1.2;
-
-  letter-spacing: 0.08em;
+  letter-spacing: 0.15em;
+  text-transform: uppercase;
 }
 
 
@@ -457,27 +458,41 @@ html {
 
   top: 0.25rem;
   left: 50%;
+
   z-index: 25;
 
   max-width: calc(100% - 2rem);
 
   padding: 0.45rem 1.4rem;
 
+  border: 1px solid rgba(214, 201, 138, 0.45);
   border-radius: 999px;
 
-  font-size: clamp(1rem, 1.8vw, 1.25rem);
+  background: rgba(20, 20, 20, 0.8);
+
+  color: #d6c98a;
+
+  font-family: 'Super Brigade', sans-serif;
+
+  font-size: clamp(0.85rem, 1.5vw, 1.25rem);
+
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
 
   transform: translateX(-50%);
 
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+
+  box-sizing: border-box;
 }
 
 .coverflow-track {
   position: relative;
 
   display: flex;
+
   align-items: center;
   justify-content: center;
 
@@ -492,7 +507,7 @@ html {
 
 
 /* =========================================================
-   CLIP CARDS
+   VIDEO CARDS
    ========================================================= */
 
 .clip-card {
@@ -502,15 +517,18 @@ html {
   left: 50%;
 
   /*
-    Videos are 5:4.
-
-    Width remains responsive while height is generated
-    automatically from the 5:4 ratio.
-  */
-  width: clamp(180px, 20vw, 320px);
+   * The video itself is 5:4.
+   *
+   * Width is responsive.
+   * Height is automatically derived from the ratio.
+   */
+  width: clamp(180px, 28vw, 420px);
 
   aspect-ratio: 5 / 4;
+
   height: auto;
+
+  min-width: 0;
 
   overflow: hidden;
 
@@ -518,17 +536,12 @@ html {
 
   background: #000;
 
-  transform: translate(-50%, -50%);
+  box-sizing: border-box;
 
   transition:
     transform 0.6s ease,
     opacity 0.6s ease,
     filter 0.6s ease;
-
-  z-index: 10;
-
-  min-width: 0;
-  max-width: calc(100% - 2rem);
 }
 
 .clip-card video,
@@ -546,46 +559,50 @@ html {
 
 
 /* =========================================================
-   CENTER / SIDE CARDS
+   CENTER / SIDE POSITIONS
    ========================================================= */
 
 .clip-center {
-  left: 50%;
+  z-index: 10;
 
   transform:
     translate(-50%, -50%)
     scale(1);
 
   opacity: 1;
-  z-index: 10;
+
+  border: 1px solid rgba(255, 255, 255, 0.2);
+
+  box-shadow:
+    0 20px 40px rgba(0, 0, 0, 0.8);
 }
 
 .clip-left {
   left: 15%;
 
+  z-index: 5;
+
   transform:
     translate(-50%, -50%)
     scale(0.8);
 
-  opacity: 0.3;
+  opacity: 0.2;
 
   filter: blur(4px);
-
-  z-index: 5;
 }
 
 .clip-right {
   left: 85%;
 
+  z-index: 5;
+
   transform:
     translate(-50%, -50%)
     scale(0.8);
 
-  opacity: 0.3;
+  opacity: 0.2;
 
   filter: blur(4px);
-
-  z-index: 5;
 }
 
 .clip-hidden {
@@ -598,7 +615,7 @@ html {
 
 
 /* =========================================================
-   COVERFLOW INFORMATION
+   LEFT / RIGHT INFORMATION
    ========================================================= */
 
 .coverflow-left-overlay,
@@ -609,9 +626,9 @@ html {
 
   z-index: 20;
 
-  transform: translateY(-50%);
-
   min-width: 0;
+
+  transform: translateY(-50%);
 
   box-sizing: border-box;
 }
@@ -619,7 +636,7 @@ html {
 .coverflow-left-overlay {
   left: 0;
 
-  width: clamp(135px, 24%, 220px);
+  width: clamp(140px, 25%, 260px);
 
   pointer-events: none;
 }
@@ -627,7 +644,7 @@ html {
 .coverflow-right-overlay {
   right: clamp(0.5rem, 1vw, 1rem);
 
-  width: clamp(135px, 24%, 220px);
+  width: clamp(140px, 24%, 260px);
 
   height: 82%;
 
@@ -636,44 +653,65 @@ html {
 
 
 /* =========================================================
-   CLIP INFORMATION / TEXT
+   VIDEO INFORMATION
    ========================================================= */
 
 .clip-title-massive {
   width: 100%;
+
   min-width: 0;
 
   margin: 1rem 0;
 
-  font-family:
-    "Super Brigade",
-    sans-serif;
+  font-family: 'Super Brigade', sans-serif;
 
   font-size:
-    clamp(1.15rem, 1.7vw, 1.5rem);
+    clamp(1rem, 1.7vw, 1.5rem);
 
   line-height: 1.1;
+
+  text-transform: uppercase;
 
   overflow-wrap: anywhere;
   word-break: break-word;
 }
 
 .clip-author {
+  width: 100%;
+
   min-width: 0;
 
-  font-size: 0.55rem;
+  margin-bottom: 1.5rem;
+
+  color: #d6c98a;
+
+  font-size:
+    clamp(0.5rem, 0.6vw, 0.65rem);
+
+  font-weight: 800;
+
+  letter-spacing: 0.1em;
+
+  text-transform: uppercase;
 
   overflow: hidden;
+
   text-overflow: ellipsis;
+
   white-space: nowrap;
 }
+
+
+/* =========================================================
+   ACTION BUTTONS
+   ========================================================= */
 
 .clip-actions {
   display: flex;
 
   align-items: center;
 
-  gap: clamp(0.5rem, 0.9vw, 1rem);
+  gap: clamp(0.5rem, 1vw, 1rem);
 
   min-width: 0;
 
@@ -683,15 +721,32 @@ html {
 }
 
 .clip-actions button {
-  min-width: 0;
-
   display: flex;
 
   align-items: center;
 
-  gap: 0.3rem;
+  gap: 8px;
 
-  flex-shrink: 0;
+  min-width: 0;
+
+  padding:
+    clamp(0.4rem, 0.7vw, 0.5rem)
+    clamp(0.6rem, 1vw, 1rem);
+
+  border:
+    1px solid rgba(255, 255, 255, 0.2);
+
+  border-radius: 8px;
+
+  background: rgba(255, 255, 255, 0.1);
+
+  color: #fff;
+
+  cursor: pointer;
+
+  box-sizing: border-box;
+
+  white-space: nowrap;
 }
 
 
@@ -724,7 +779,7 @@ html {
 
 
 /* =========================================================
-   COMMENTS
+   COMMENTS PANEL
    ========================================================= */
 
 .comments-panel {
@@ -743,13 +798,14 @@ html {
   background: transparent;
 
   overflow: hidden;
+
+  box-sizing: border-box;
 }
 
 .comments-header {
   display: flex;
 
   align-items: center;
-  justify-content: space-between;
 
   gap: 0.5rem;
 
@@ -757,8 +813,28 @@ html {
 
   min-width: 0;
 
+  margin: 0 0 1rem;
+
+  padding-bottom: 0.5rem;
+
+  border-bottom:
+    1px solid rgba(255, 255, 255, 0.1);
+
+  color: rgba(255, 255, 255, 0.5);
+
+  font-size: clamp(0.6rem, 0.7vw, 0.75rem);
+
+  letter-spacing: 0.1em;
+
+  text-transform: uppercase;
+
   flex-shrink: 0;
 }
+
+
+/* =========================================================
+   COMMENTS LIST
+   ========================================================= */
 
 .comments-list {
   display: flex;
@@ -767,7 +843,7 @@ html {
 
   flex-direction: column;
 
-  gap: 0.8rem;
+  gap: clamp(0.5rem, 1vw, 0.8rem);
 
   width: 100%;
 
@@ -776,6 +852,8 @@ html {
 
   overflow-y: auto;
   overflow-x: hidden;
+
+  box-sizing: border-box;
 }
 
 .comment-item {
@@ -783,7 +861,10 @@ html {
 
   min-width: 0;
 
-  font-size: 0.8rem;
+  color: rgba(255, 255, 255, 0.8);
+
+  font-size:
+    clamp(0.7rem, 0.8vw, 0.8rem);
 
   line-height: 1.4;
 
@@ -792,22 +873,28 @@ html {
 }
 
 .comment-user {
-  display: inline-block;
-
-  max-width: 100%;
-
   min-width: 0;
 
-  overflow: hidden;
+  color: #d6c98a;
 
-  text-overflow: ellipsis;
+  font-weight: 800;
 
-  white-space: nowrap;
+  overflow-wrap: anywhere;
 }
 
 .empty-comms {
-  font-size: 0.75rem;
+  color: rgba(255, 255, 255, 0.3);
+
+  font-size:
+    clamp(0.65rem, 0.75vw, 0.75rem);
+
+  font-style: italic;
 }
+
+
+/* =========================================================
+   COMMENT INPUT
+   ========================================================= */
 
 .comment-input {
   display: flex;
@@ -820,13 +907,26 @@ html {
 
   margin-top: 1rem;
 
-  padding: 0.5rem;
+  padding:
+    clamp(0.35rem, 0.5vw, 0.5rem);
 
-  box-sizing: border-box;
+  border:
+    1px solid rgba(255, 255, 255, 0.1);
 
-  font-size: 0.8rem;
+  border-radius: 30px;
+
+  outline: none;
+
+  background: rgba(255, 255, 255, 0.05);
+
+  color: #fff;
+
+  font-size:
+    clamp(0.7rem, 0.8vw, 0.8rem);
 
   text-align: center;
+
+  box-sizing: border-box;
 
   flex-shrink: 0;
 }
@@ -836,12 +936,20 @@ html {
 
   min-width: 0;
 
+  border: 0;
+
+  outline: none;
+
+  background: transparent;
+
+  color: inherit;
+
   box-sizing: border-box;
 }
 
 
 /* =========================================================
-   COVERFLOW NAV BUTTONS
+   NAVIGATION BUTTONS
    ========================================================= */
 
 .nav-btn {
@@ -856,12 +964,23 @@ html {
   align-items: center;
   justify-content: center;
 
-  width: 40px;
-  height: 40px;
+  width: clamp(34px, 3vw, 40px);
+  height: clamp(34px, 3vw, 40px);
 
-  flex: 0 0 40px;
+  flex: 0 0 auto;
+
+  border:
+    1px solid rgba(255, 255, 255, 0.2);
 
   border-radius: 50%;
+
+  background: rgba(255, 255, 255, 0.1);
+
+  color: #fff;
+
+  cursor: pointer;
+
+  box-sizing: border-box;
 }
 
 .prev-btn {
@@ -888,8 +1007,9 @@ html {
    ========================================================= */
 
 @media (max-width: 900px) {
+
   .clip-card {
-    width: clamp(170px, 28vw, 280px);
+    width: clamp(170px, 34vw, 320px);
   }
 
   .clip-left {
@@ -899,11 +1019,21 @@ html {
   .clip-right {
     left: 88%;
   }
+
+  .coverflow-left-overlay {
+    width: clamp(120px, 22%, 200px);
+  }
+
+  .coverflow-right-overlay {
+    width: clamp(120px, 22%, 200px);
+  }
 }
 
-@media (max-width: 600px) {
+
+@media (max-width: 650px) {
+
   .clip-card {
-    width: min(75vw, 280px);
+    width: min(70vw, 300px);
   }
 
   .clip-left,
@@ -912,11 +1042,16 @@ html {
     pointer-events: none;
   }
 
-  .coverflow-left-overlay,
+  .coverflow-left-overlay {
+    display: none;
+  }
+
   .coverflow-right-overlay {
-    width: 100%;
+    right: 0.75rem;
+    width: min(40%, 180px);
   }
 }
+
 /* =========================================================
    RIGHT SIDE MINI GRID
    ========================================================= */
@@ -952,6 +1087,9 @@ html {
 
   box-sizing: border-box;
 }
+
+.game-option:hover { background: rgba(255, 255, 255, 0.08); color: #fff; }
+.game-option.active { background: rgba(214, 201, 138, 0.1); border-color: rgba(214, 201, 138, 0.3); color: #d6c98a; }
 
 .game-list {
   display: flex;
