@@ -438,48 +438,39 @@ html {
   position: relative;
 
   display: flex;
-
-  flex:
-    1 1 0;
+  flex: 1 1 0;
 
   align-items: center;
-
   justify-content: center;
 
   width: 100%;
-
   min-width: 0;
   min-height: 0;
 
   margin-top: 1rem;
+
+  overflow: hidden;
 }
 
 .clip-game-tag {
   position: absolute;
 
-  top: -2.75rem;
+  top: 0.25rem;
   left: 50%;
-
   z-index: 25;
 
-  max-width:
-    calc(100% - 2rem);
+  max-width: calc(100% - 2rem);
 
-  padding:
-    0.45rem 1.4rem;
+  padding: 0.45rem 1.4rem;
 
   border-radius: 999px;
 
-  font-size:
-    clamp(1rem, 1.8vw, 1.25rem);
+  font-size: clamp(1rem, 1.8vw, 1.25rem);
 
-  transform:
-    translateX(-50%);
+  transform: translateX(-50%);
 
   white-space: nowrap;
-
   overflow: hidden;
-
   text-overflow: ellipsis;
 }
 
@@ -487,9 +478,7 @@ html {
   position: relative;
 
   display: flex;
-
   align-items: center;
-
   justify-content: center;
 
   width: 100%;
@@ -497,6 +486,8 @@ html {
 
   min-width: 0;
   min-height: 0;
+
+  overflow: hidden;
 }
 
 
@@ -507,20 +498,18 @@ html {
 .clip-card {
   position: absolute;
 
-  top: 10%;
+  top: 50%;
   left: 50%;
 
   /*
-    Width is fluid.
+    Videos are 5:4.
 
-    Height is generated from the 9:16 aspect ratio.
+    Width remains responsive while height is generated
+    automatically from the 5:4 ratio.
   */
-  width:
-    clamp(145px, 11.5vw, 200px);
+  width: clamp(180px, 20vw, 320px);
 
-  aspect-ratio:
-    9 / 16;
-
+  aspect-ratio: 5 / 4;
   height: auto;
 
   overflow: hidden;
@@ -529,8 +518,7 @@ html {
 
   background: #000;
 
-  transform:
-    translate(-50%, -50%);
+  transform: translate(-50%, -50%);
 
   transition:
     transform 0.6s ease,
@@ -540,6 +528,7 @@ html {
   z-index: 10;
 
   min-width: 0;
+  max-width: calc(100% - 2rem);
 }
 
 .clip-card video,
@@ -550,9 +539,15 @@ html {
   height: 100%;
 
   max-width: 100%;
+  max-height: 100%;
 
   object-fit: cover;
 }
+
+
+/* =========================================================
+   CENTER / SIDE CARDS
+   ========================================================= */
 
 .clip-center {
   left: 50%;
@@ -562,12 +557,11 @@ html {
     scale(1);
 
   opacity: 1;
-
   z-index: 10;
 }
 
 .clip-left {
-  left: 10%;
+  left: 15%;
 
   transform:
     translate(-50%, -50%)
@@ -575,14 +569,13 @@ html {
 
   opacity: 0.3;
 
-  filter:
-    blur(4px);
+  filter: blur(4px);
 
   z-index: 5;
 }
 
 .clip-right {
-  left: 90%;
+  left: 85%;
 
   transform:
     translate(-50%, -50%)
@@ -590,8 +583,7 @@ html {
 
   opacity: 0.3;
 
-  filter:
-    blur(4px);
+  filter: blur(4px);
 
   z-index: 5;
 }
@@ -617,36 +609,41 @@ html {
 
   z-index: 20;
 
-  transform:
-    translateY(-50%);
+  transform: translateY(-50%);
 
   min-width: 0;
+
+  box-sizing: border-box;
 }
 
 .coverflow-left-overlay {
   left: 0;
 
-  width:
-    clamp(135px, 24%, 220px);
+  width: clamp(135px, 24%, 220px);
 
   pointer-events: none;
 }
 
 .coverflow-right-overlay {
-  right:
-    clamp(0.5rem, 1vw, 1rem);
+  right: clamp(0.5rem, 1vw, 1rem);
 
-  width:
-    clamp(135px, 24%, 220px);
+  width: clamp(135px, 24%, 220px);
 
   height: 82%;
 
   min-height: 0;
 }
 
+
+/* =========================================================
+   CLIP INFORMATION / TEXT
+   ========================================================= */
+
 .clip-title-massive {
-  margin:
-    1rem 0;
+  width: 100%;
+  min-width: 0;
+
+  margin: 1rem 0;
 
   font-family:
     "Super Brigade",
@@ -658,21 +655,29 @@ html {
   line-height: 1.1;
 
   overflow-wrap: anywhere;
+  word-break: break-word;
 }
 
 .clip-author {
+  min-width: 0;
+
   font-size: 0.55rem;
 
-  overflow-wrap: anywhere;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .clip-actions {
   display: flex;
 
-  gap:
-    clamp(0.5rem, 0.9vw, 1rem);
+  align-items: center;
+
+  gap: clamp(0.5rem, 0.9vw, 1rem);
 
   min-width: 0;
+
+  flex-wrap: wrap;
 
   pointer-events: auto;
 }
@@ -685,7 +690,14 @@ html {
   align-items: center;
 
   gap: 0.3rem;
+
+  flex-shrink: 0;
 }
+
+
+/* =========================================================
+   VIDEO PLAY OVERLAY
+   ========================================================= */
 
 .play-overlay {
   position: absolute;
@@ -695,15 +707,15 @@ html {
   display: flex;
 
   align-items: center;
-
   justify-content: center;
 
-  background:
-    rgba(0, 0, 0, 0.3);
+  background: rgba(0, 0, 0, 0.3);
 
   opacity: 0;
 
   cursor: pointer;
+
+  transition: opacity 0.2s ease;
 }
 
 .clip-center:hover .play-overlay {
@@ -729,29 +741,35 @@ html {
   padding: 0;
 
   background: transparent;
+
+  overflow: hidden;
 }
 
 .comments-header {
   display: flex;
 
   align-items: center;
-
   justify-content: space-between;
 
   gap: 0.5rem;
 
+  width: 100%;
+
   min-width: 0;
+
+  flex-shrink: 0;
 }
 
 .comments-list {
   display: flex;
 
-  flex:
-    1 1 0;
+  flex: 1 1 0;
 
   flex-direction: column;
 
   gap: 0.8rem;
+
+  width: 100%;
 
   min-width: 0;
   min-height: 0;
@@ -761,6 +779,8 @@ html {
 }
 
 .comment-item {
+  width: 100%;
+
   min-width: 0;
 
   font-size: 0.8rem;
@@ -768,9 +788,14 @@ html {
   line-height: 1.4;
 
   overflow-wrap: anywhere;
+  word-break: break-word;
 }
 
 .comment-user {
+  display: inline-block;
+
+  max-width: 100%;
+
   min-width: 0;
 
   overflow: hidden;
@@ -797,15 +822,21 @@ html {
 
   padding: 0.5rem;
 
+  box-sizing: border-box;
+
   font-size: 0.8rem;
 
   text-align: center;
+
+  flex-shrink: 0;
 }
 
 .comment-input input {
   width: 100%;
 
   min-width: 0;
+
+  box-sizing: border-box;
 }
 
 
@@ -816,46 +847,76 @@ html {
 .nav-btn {
   position: absolute;
 
-  bottom: -10px;
+  bottom: 0.5rem;
 
   z-index: 30;
 
   display: flex;
 
   align-items: center;
-
   justify-content: center;
 
   width: 40px;
   height: 40px;
 
-  flex:
-    0 0 40px;
+  flex: 0 0 40px;
 
   border-radius: 50%;
 }
 
 .prev-btn {
-  left:
-    calc(
-      50% - clamp(40px, 4vw, 55px)
-    );
+  left: 50%;
 
   transform:
-    translateX(-50%);
+    translateX(
+      calc(-100% - clamp(8px, 1vw, 14px))
+    );
 }
 
 .next-btn {
-  right:
-    calc(
-      50% - clamp(40px, 4vw, 55px)
-    );
+  right: 50%;
 
   transform:
-    translateX(50%);
+    translateX(
+      calc(100% + clamp(8px, 1vw, 14px))
+    );
 }
 
 
+/* =========================================================
+   RESPONSIVE SAFETY
+   ========================================================= */
+
+@media (max-width: 900px) {
+  .clip-card {
+    width: clamp(170px, 28vw, 280px);
+  }
+
+  .clip-left {
+    left: 12%;
+  }
+
+  .clip-right {
+    left: 88%;
+  }
+}
+
+@media (max-width: 600px) {
+  .clip-card {
+    width: min(75vw, 280px);
+  }
+
+  .clip-left,
+  .clip-right {
+    opacity: 0;
+    pointer-events: none;
+  }
+
+  .coverflow-left-overlay,
+  .coverflow-right-overlay {
+    width: 100%;
+  }
+}
 /* =========================================================
    RIGHT SIDE MINI GRID
    ========================================================= */
@@ -883,63 +944,80 @@ html {
 
 .game-selector-card {
   display: flex;
-
   flex-direction: column;
 
+  width: 100%;
   min-width: 0;
   min-height: 0;
+
+  box-sizing: border-box;
 }
 
 .game-list {
   display: flex;
-
   flex-direction: column;
 
   gap: 0.5rem;
-
   margin-top: 0.5rem;
 
   width: 100%;
-
   min-width: 0;
+  min-height: 0;
 
-  max-height:
-    clamp(160px, 20vh, 240px);
+  /*
+   * The list itself scrolls.
+   * It does not push the card or dashboard larger.
+   */
+  max-height: clamp(160px, 25vh, 240px);
 
   overflow-y: auto;
-
   overflow-x: hidden;
 
+  padding-right: 0.3rem;
+
+  box-sizing: border-box;
+
   scrollbar-width: thin;
+
+  /* Important when inside flex layouts */
+  flex: 0 1 auto;
 }
 
 .game-option {
   width: 100%;
-
   min-width: 0;
 
-  display: flex;
+  flex: 0 0 auto;
 
+  display: flex;
   align-items: center;
 
   gap: 10px;
 
-  padding:
-    0.8rem 1rem;
+  padding: 0.8rem 1rem;
 
-  border:
-    1px solid rgba(255, 255, 255, 0.08);
-
+  border: 1px solid rgba(255, 255, 255, 0.08);
   border-radius: 0.75rem;
 
-  font-size:
-    clamp(0.75rem, 1vw, 0.85rem);
+  font-size: clamp(0.75rem, 1vw, 0.85rem);
+
+  box-sizing: border-box;
 
   overflow: hidden;
+
+  cursor: pointer;
+
+  /*
+   * Prevent any parent overlay from making the button
+   * unclickable.
+   */
+  pointer-events: auto;
 }
 
 .game-option span {
   min-width: 0;
+
+  flex: 1 1 auto;
 
   overflow: hidden;
 
