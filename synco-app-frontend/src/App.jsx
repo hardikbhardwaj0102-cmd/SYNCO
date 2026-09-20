@@ -7,7 +7,7 @@ import {
 } from 'react-router-dom';
 
 import { AuthProvider, useAuth } from './context/AuthContext';
-
+import LiveTournamentDashboard from './pages/LiveTournamentDashboard';
 import OrganizerRegister from "./pages/OrganizerRegister";
 import OrganizerAdmin from "./pages/OrganizerAdmin";
 import AdminUsers from "./pages/AdminUsers";
@@ -303,7 +303,10 @@ function App() {
                 path="/ranking"
                 element={<Leaderboards />}
               />
-
+              <Route
+                path="/live-tournament"
+                element={<LiveTournamentDashboard />}
+              />
 
               {/* -------------------------------------------------
                   CLUBS
