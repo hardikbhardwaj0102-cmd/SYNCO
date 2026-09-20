@@ -16,7 +16,7 @@ import {
     Medal,
 } from "lucide-react";
 
-import "../styles/liveTournamentDashboard.css";
+import "../styles/pages/liveTournamentDashboard.css";
 
 
 // =========================================================
@@ -1375,11 +1375,11 @@ export default function LiveTournamentDashboard() {
                                                     className={`live-match-list-item ${String(
                                                         selectedMatchId
                                                     ) ===
-                                                            String(
-                                                                match.id
-                                                            )
-                                                            ? "selected"
-                                                            : ""
+                                                        String(
+                                                            match.id
+                                                        )
+                                                        ? "selected"
+                                                        : ""
                                                         }`}
                                                     onClick={() =>
                                                         handleSelectMatch(
@@ -1958,8 +1958,8 @@ export default function LiveTournamentDashboard() {
                                         return (
                                             <div
                                                 className={`live-result-row ${index === 0
-                                                        ? "result-first"
-                                                        : ""
+                                                    ? "result-first"
+                                                    : ""
                                                     }`}
                                                 key={
                                                     team.team_id ||
