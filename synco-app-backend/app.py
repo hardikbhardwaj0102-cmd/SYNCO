@@ -1,5 +1,6 @@
 import os
-
+from competition import competition_bp
+from live_tournament import live_tournament_bp
 from flask import Flask
 from flask_cors import CORS
 from dotenv import load_dotenv
@@ -179,6 +180,7 @@ app.register_blueprint(search_bp)
 app.register_blueprint(leaderboards_bp)
 
 app.register_blueprint(competition_bp)
+app.register_blueprint(live_tournament_bp)
 
 app.register_blueprint(organizers_bp)
 

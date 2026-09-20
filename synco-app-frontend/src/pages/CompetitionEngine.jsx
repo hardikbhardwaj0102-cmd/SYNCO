@@ -240,14 +240,49 @@ const CompetitionEngine = () => {
           competition.round ||
           competition.competitionType ||
           'COMPETITION',
+
+        // Keep the complete original competition object.
+        // This allows the live dashboard integration to use
+        // existing competition information if required later.
+        competition,
       })),
     [filteredCompetitions]
   );
 
-  // Start from the first card whenever the list changes
+  /* =====================================================
+     OPEN LIVE TOURNAMENT DASHBOARD
+  ===================================================== */
+
+  const openLiveTournament = (competitionId) => {
+    if (
+      competitionId === undefined ||
+      competitionId === null ||
+      competitionId === ''
+    ) {
+      console.error(
+        'Unable to open live tournament: missing competition ID'
+      );
+      return;
+    }
+
+    navigate(
+      `/competitions/${encodeURIComponent(
+        String(competitionId)
+      )}/live`
+    );
+  };
+
+  /* =====================================================
+     START FROM FIRST CARD WHEN LIST CHANGES
+  ===================================================== */
+
   useEffect(() => {
     setActiveMatchIndex(0);
   }, [activeTab, activeGame, competitions]);
+
+  /* =====================================================
+     MOVE COVERFLOW
+  ===================================================== */
 
   const moveMatch = (direction) => {
     if (!cards.length) return;
@@ -257,19 +292,54 @@ const CompetitionEngine = () => {
     ));
   };
 
-  const renderTournamentCard = (card, positionClass = '') => (
-    <div key={card.id} className={`portrait-roster-card ${positionClass}`}>
-      <img src={cardCharacter} alt="" className="card-bg-image" />
-      <div className="card-gradient-overlay">
-        <h3 className="card-title">{card.title}</h3>
-        <p className="card-subtitle">{card.subtitle}</p>
-      </div>
-    </div>
-  );
+  /* =====================================================
+     TOURNAMENT CARD
+  ===================================================== */
+
+  const renderTournamentCard = (
+    card,
+    positionClass = '',
+    cardIndex = 0
+  ) => {
+    const isActive =
+      tournamentView === 'coverflow' &&
+      cardIndex === activeMatchIndex;
+
+    return (
+      <button
+        key={card.id}
+        type="button"
+        className={`portrait-roster-card ${positionClass} ${isActive ? 'active-tournament-card' : ''
+          }`}
+        onClick={() => openLiveTournament(card.id)}
+        aria-label={`Open ${card.title}`}
+      >
+        <img
+          src={cardCharacter}
+          alt=""
+          className="card-bg-image"
+        />
+
+        <div className="card-gradient-overlay">
+          <h3 className="card-title">
+            {card.title}
+          </h3>
+
+          <p className="card-subtitle">
+            {card.subtitle}
+          </p>
+
+          <span className="card-open-label">
+            OPEN LIVE DASHBOARD
+          </span>
+        </div>
+      </button>
+    );
+  };
 
   /* =====================================================
-     TOURNAMENT LIST (loading / error / empty / data)
-  ===================================================== */
+     TOURNAMENT LIST
+     ===================================================== */
 
   const renderTournaments = () => {
     if (loading) {
@@ -284,6 +354,7 @@ const CompetitionEngine = () => {
       return (
         <div className="comp-state-box comp-error-box">
           <p>{error}</p>
+
           <button
             type="button"
             onClick={loadCompetitions}
@@ -299,6 +370,7 @@ const CompetitionEngine = () => {
       return (
         <div className="comp-state-box">
           <h3>No competitions found</h3>
+
           <p>
             There are currently no competitions
             matching your selected filters.
@@ -310,6 +382,7 @@ const CompetitionEngine = () => {
     if (tournamentView === 'coverflow') {
       return (
         <div className="tournament-coverflow">
+
           {cards.length > 1 && (
             <button
               type="button"
@@ -322,7 +395,12 @@ const CompetitionEngine = () => {
           )}
 
           {cards.map((card, index) => {
-            const distance = (index - activeMatchIndex + cards.length) % cards.length;
+            const distance =
+              (index -
+                activeMatchIndex +
+                cards.length) %
+              cards.length;
+
             const position =
               distance === 0
                 ? 0
@@ -334,7 +412,8 @@ const CompetitionEngine = () => {
 
             return renderTournamentCard(
               card,
-              `coverflow-card coverflow-position-${position}`
+              `coverflow-card coverflow-position-${position}`,
+              index
             );
           })}
 
@@ -354,7 +433,13 @@ const CompetitionEngine = () => {
 
     return (
       <div className="tournament-grid">
-        {cards.map((card) => renderTournamentCard(card))}
+        {cards.map((card, index) =>
+          renderTournamentCard(
+            card,
+            '',
+            index
+          )
+        )}
       </div>
     );
   };
@@ -366,47 +451,103 @@ const CompetitionEngine = () => {
   return (
     <div className="comp-engine-wrapper">
 
-      {/* 1. HERO SECTION (Edge-to-Edge) */}
+      {/* =================================================
+          1. HERO SECTION
+      ================================================= */}
+
       <div className="comp-hero-section">
 
         {/* Layer 1: Background Typography */}
+
         <div className="hero-bg-layer">
-          <div className="repeating-text-row" aria-hidden="true">
+
+          <div
+            className="repeating-text-row"
+            aria-hidden="true"
+          >
             <span>THAT NEW FIRE</span>
             <span>THAT NEW FIRE</span>
             <span>THAT NEW FIRE</span>
             <span>THAT NEW FIRE</span>
           </div>
-          <h1 className="massive-bg-text" aria-hidden="true">
+
+          <h1
+            className="massive-bg-text"
+            aria-hidden="true"
+          >
             <span>SYNCO</span>
             <span>SEASON</span>
             <span>01</span>
           </h1>
+
         </div>
 
         {/* Layer 2: Foreground Character */}
-        <img src={compHero} alt="Season Hero" className="compHero-img" />
+
+        <img
+          src={compHero}
+          alt="Season Hero"
+          className="compHero-img"
+        />
 
         {/* Layer 3: Left-aligned CTA */}
+
         <div className="comp-hero-foreground">
+
           <div className="hero-copy">
-            <span>SYNCO SEASON 1</span>
-            <strong>CHAMPIONSHIP</strong>
+
+            <span>
+              SYNCO SEASON 1
+            </span>
+
+            <strong>
+              CHAMPIONSHIP
+            </strong>
+
           </div>
-          <button type="button" className="hero-cta-btn">BE A CHAMPION</button>
+
+          <button
+            type="button"
+            className="hero-cta-btn"
+            onClick={() => {
+              if (cards.length > 0) {
+                openLiveTournament(
+                  cards[activeMatchIndex]?.id
+                );
+              }
+            }}
+          >
+            BE A CHAMPION
+          </button>
+
         </div>
 
       </div>
 
+      {/* =================================================
+          POST HERO
+      ================================================= */}
+
       <div className="post-hero-content">
+
         <div className="competition-sticky-header">
 
-          {/* 2. FREE-FLOATING ROSTER SECTION */}
+          {/* =================================================
+              2. FREE-FLOATING ROSTER SECTION
+          ================================================= */}
+
           <div className="floating-roster-section">
 
             <div className="roster-header">
-              <h2 className="roster-title">ACTIVE COMPETITIONS</h2>
-              <h3 className="roster-subtitle">Available Game Roster</h3>
+
+              <h2 className="roster-title">
+                ACTIVE COMPETITIONS
+              </h2>
+
+              <h3 className="roster-subtitle">
+                Available Game Roster
+              </h3>
+
             </div>
 
             <GameCarousel
@@ -418,59 +559,109 @@ const CompetitionEngine = () => {
 
           </div>
 
+          {/* =================================================
+              3. TABS
+          ================================================= */}
+
           <div className="comp-tabs-container">
+
             {TABS.map((tab) => (
               <button
                 type="button"
                 key={tab}
                 onClick={() => setActiveTab(tab)}
-                className={`comp-tab-btn ${activeTab === tab ? 'active' : ''}`}
+                className={`comp-tab-btn ${activeTab === tab
+                    ? 'active'
+                    : ''
+                  }`}
               >
                 {tab}
               </button>
             ))}
+
           </div>
+
         </div>
 
-        {/* 3. MAIN CONTENT */}
+        {/* =================================================
+            4. MAIN CONTENT
+        ================================================= */}
+
         <div className="comp-main-content">
+
           <div className="tournament-toolbar">
-            <h2 className="tournament-section-title">TOURNAMENTS</h2>
+
+            <h2 className="tournament-section-title">
+              TOURNAMENTS
+            </h2>
 
             <div className="tournament-toolbar-actions">
+
               <button
                 type="button"
                 className="create-competition-btn"
-                onClick={() => navigate('/competitions/create')}
+                onClick={() =>
+                  navigate('/competitions/create')
+                }
               >
-                <Plus size={16} strokeWidth={2.5} />
-                <span>Create Competition</span>
+                <Plus
+                  size={16}
+                  strokeWidth={2.5}
+                />
+
+                <span>
+                  Create Competition
+                </span>
               </button>
 
-              <div className="tournament-view-toggle" role="group" aria-label="Tournament view">
+              <div
+                className="tournament-view-toggle"
+                role="group"
+                aria-label="Tournament view"
+              >
+
                 <button
                   type="button"
-                  className={tournamentView === 'coverflow' ? 'active' : ''}
-                  onClick={() => setTournamentView('coverflow')}
+                  className={
+                    tournamentView === 'coverflow'
+                      ? 'active'
+                      : ''
+                  }
+                  onClick={() =>
+                    setTournamentView('coverflow')
+                  }
                   aria-label="Coverflow view"
                 >
                   <Layers3 size={16} />
                 </button>
+
                 <button
                   type="button"
-                  className={tournamentView === 'grid' ? 'active' : ''}
-                  onClick={() => setTournamentView('grid')}
+                  className={
+                    tournamentView === 'grid'
+                      ? 'active'
+                      : ''
+                  }
+                  onClick={() =>
+                    setTournamentView('grid')
+                  }
                   aria-label="Grid view"
                 >
                   <Grid2X2 size={16} />
                 </button>
+
               </div>
+
             </div>
+
           </div>
 
           {renderTournaments()}
+
         </div>
+
       </div>
+
     </div>
   );
 };

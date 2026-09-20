@@ -1,4 +1,3 @@
-
 /* 1. Base Wrapper: Strictly Edge-to-Edge */
 .comp-engine-wrapper {
   position: relative;
@@ -7,8 +6,10 @@
   min-height: 100dvh;
   margin: -2rem 0;
   margin-left: calc(50% - 50vw);
-  padding: 0; /* Removed the 2rem padding causing the gap */
-  max-width: none; /* Removed the max-width restriction */
+  padding: 0;
+  /* Removed the 2rem padding causing the gap */
+  max-width: none;
+  /* Removed the max-width restriction */
   background: #0a0a0a;
   box-sizing: border-box;
   overflow-x: clip;
@@ -16,18 +17,18 @@
   flex-direction: column;
 }
 
-.comp-engine-wrapper > * {
+.comp-engine-wrapper>* {
   position: relative;
   z-index: 1;
 }
 
-.comp-engine-wrapper > .comp-hero-section {
+.comp-engine-wrapper>.comp-hero-section {
   z-index: 0;
   position: relative;
   top: 0;
 }
 
-.comp-engine-wrapper > .post-hero-content {
+.comp-engine-wrapper>.post-hero-content {
   z-index: 1;
 }
 
@@ -62,9 +63,11 @@
   min-height: clamp(560px, 100dvh, 900px);
   position: relative;
   top: 0;
-  border-radius: 0; /* Removed rounded corners to sit flush */
+  border-radius: 0;
+  /* Removed rounded corners to sit flush */
   margin: 0;
-  border: none; /* Removed the outer border */
+  border: none;
+  /* Removed the outer border */
   overflow: hidden;
   padding-left: 90px;
   box-sizing: border-box;
@@ -119,7 +122,8 @@
 /* Layer 2: Single Character */
 .compHero-img {
   position: absolute;
-  bottom: 0; /* Anchored directly to the bottom edge of the hero */
+  bottom: 0;
+  /* Anchored directly to the bottom edge of the hero */
   left: calc(61% + 90px);
   height: 88%;
   object-fit: contain;
@@ -127,7 +131,7 @@
   transform: translateX(-50%);
   transform-origin: bottom center;
   pointer-events: none;
-  filter: drop-shadow(0 15px 25px rgba(0,0,0,0.6));
+  filter: drop-shadow(0 15px 25px rgba(0, 0, 0, 0.6));
 }
 
 /* Layer 3: Left CTA */
@@ -181,6 +185,7 @@
   background: #ff5e6b;
   transform: scale(1.05);
 }
+
 /* 2. Free-Floating Roster Section (No background block) */
 .floating-roster-section {
   width: 100%;
@@ -209,7 +214,7 @@
   color: #ffffff;
   margin: 0;
   letter-spacing: 0.05em;
-  text-shadow: 0 4px 20px rgba(0,0,0,0.5);
+  text-shadow: 0 4px 20px rgba(0, 0, 0, 0.5);
 }
 
 .roster-subtitle {
@@ -341,8 +346,13 @@
   background: rgba(214, 201, 138, 0.14);
 }
 
-.coverflow-arrow-prev { left: 1rem; }
-.coverflow-arrow-next { right: 1rem; }
+.coverflow-arrow-prev {
+  left: 1rem;
+}
+
+.coverflow-arrow-next {
+  right: 1rem;
+}
 
 /* Navigation Tabs */
 .comp-tabs-container {
@@ -395,9 +405,9 @@
   background: #111;
   border: 1px solid rgba(255, 255, 255, 0.05);
   cursor: pointer;
-  transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1), 
-              box-shadow 0.3s ease, 
-              border-color 0.3s ease;
+  transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1),
+    box-shadow 0.3s ease,
+    border-color 0.3s ease;
 }
 
 .card-bg-image {
@@ -411,8 +421,8 @@
 .portrait-roster-card:hover {
   transform: scale(1.05) translateY(-5px);
   border-color: rgba(214, 201, 138, 0.6);
-  box-shadow: 0 15px 35px rgba(214, 201, 138, 0.15), 
-              0 0 15px rgba(214, 201, 138, 0.1);
+  box-shadow: 0 15px 35px rgba(214, 201, 138, 0.15),
+    0 0 15px rgba(214, 201, 138, 0.1);
   z-index: 10;
 }
 
@@ -426,7 +436,7 @@
   left: 0;
   width: 100%;
   padding: 4rem 1.5rem 1.5rem;
-  background: linear-gradient(to top, rgba(10,10,10, 0.95) 0%, rgba(10,10,10, 0) 100%);
+  background: linear-gradient(to top, rgba(10, 10, 10, 0.95) 0%, rgba(10, 10, 10, 0) 100%);
   display: flex;
   flex-direction: column;
   justify-content: flex-end;
@@ -438,12 +448,12 @@
   font-size: 1.2rem;
   margin: 0;
   color: #fff;
-  text-shadow: 0 2px 4px rgba(0,0,0,0.8);
+  text-shadow: 0 2px 4px rgba(0, 0, 0, 0.8);
 }
 
 .card-subtitle {
   font-size: 0.8rem;
-  color: rgba(255,255,255,0.6);
+  color: rgba(255, 255, 255, 0.6);
   margin: 0.25rem 0 0;
   font-weight: 700;
   letter-spacing: 0.1em;
@@ -462,15 +472,36 @@
 }
 
 @media (max-width: 900px) {
-  .tournament-grid { grid-template-columns: repeat(2, 1fr); }
+  .tournament-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
 }
 
 @media (max-width: 900px) {
-  .comp-hero-section { height: 70vh; min-height: 560px; }
-  .compHero-img { left: calc(64% + 45px); height: 78%; }
-  .comp-hero-foreground { left: calc(2rem + 45px); bottom: 10%; }
-  .hero-bg-layer { left: 45px; width: calc(100% - 45px); }
-  .massive-bg-text { font-size: clamp(4rem, 14vw, 7rem); padding-top: 10vh; }
+  .comp-hero-section {
+    height: 70vh;
+    min-height: 560px;
+  }
+
+  .compHero-img {
+    left: calc(64% + 45px);
+    height: 78%;
+  }
+
+  .comp-hero-foreground {
+    left: calc(2rem + 45px);
+    bottom: 10%;
+  }
+
+  .hero-bg-layer {
+    left: 45px;
+    width: calc(100% - 45px);
+  }
+
+  .massive-bg-text {
+    font-size: clamp(4rem, 14vw, 7rem);
+    padding-top: 10vh;
+  }
 }
 
 
@@ -574,4 +605,43 @@
     flex-wrap: wrap;
     gap: 0.75rem;
   }
+}
+
+/* =========================================================
+   LIVE TOURNAMENT CARD
+========================================================= */
+
+.portrait-roster-card {
+  border: 0;
+  padding: 0;
+  margin: 0;
+  font: inherit;
+  color: inherit;
+  cursor: pointer;
+  text-align: left;
+  background: transparent;
+}
+
+.portrait-roster-card:focus-visible {
+  outline: 2px solid #111;
+  outline-offset: 4px;
+}
+
+.card-open-label {
+  display: block;
+  margin-top: 10px;
+  font-size: 9px;
+  font-weight: 800;
+  letter-spacing: 0.14em;
+  opacity: 0;
+  transform: translateY(4px);
+  transition:
+    opacity 0.2s ease,
+    transform 0.2s ease;
+}
+
+.portrait-roster-card:hover .card-open-label,
+.active-tournament-card .card-open-label {
+  opacity: 1;
+  transform: translateY(0);
 }
