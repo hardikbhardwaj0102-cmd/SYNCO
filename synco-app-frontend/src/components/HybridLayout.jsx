@@ -32,8 +32,13 @@ className={`hybrid-auth-container ${
         }`}
 > <Sidebar />
 
-```
-    <main className="hybrid-auth-main">
+    <main
+      className={`hybrid-auth-main ${
+        isCompetitionPage
+          ? 'hybrid-auth-main-competition'
+          : ''
+      }`}
+    >
       <div className="hybrid-auth-content">
         <Outlet />
       </div>
@@ -41,9 +46,11 @@ className={`hybrid-auth-container ${
   </div>
 );
 
+
 }
 
 return ( <div className="hybrid-public-container"> <Navbar />
+
 
   <main
     ref={publicMainRef}
@@ -56,6 +63,7 @@ return ( <div className="hybrid-public-container"> <Navbar />
     <Footer />
   </main>
 </div>
+
 
 );
 };

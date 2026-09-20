@@ -4,10 +4,9 @@ SYNCO — COMPETITION ENGINE
 FULL-BLEED / EDGE-TO-EDGE
 RESPONSIVE / VIEWPORT-SAFE
 
-Competition backgrounds intentionally extend beneath
-the fixed 90px SYNCO sidebar.
-
-The sidebar remains visually on top of these surfaces.
+The Competition Engine is its own viewport-level scroll
+surface so its backgrounds can extend underneath the
+fixed SYNCO sidebar.
 ========================================================= */
 
 /* =========================================================
@@ -34,8 +33,10 @@ calc(
 
 padding: 0;
 
+height: 100vh;
+
 min-width: 0;
-min-height: 100%;
+min-height: 0;
 
 box-sizing: border-box;
 
@@ -44,8 +45,17 @@ flex-direction: column;
 
 background: transparent;
 
-overflow-x: clip;
-overflow-y: visible;
+/*
+THIS is now the vertical scroll container.
+
+The sidebar remains fixed outside this scroll surface.
+
+*/
+overflow-x: hidden;
+overflow-y: auto;
+
+overscroll-behavior:
+contain;
 
 }
 
@@ -70,14 +80,7 @@ clamp(
 height: auto;
 
 margin: 0;
-
-/*
-Preserve the original content position relative to
-the sidebar while allowing the background to occupy
-the entire viewport.
-*/
-padding-left:
-var(--synco-sidebar-width);
+padding: 0;
 
 box-sizing: border-box;
 
@@ -214,13 +217,10 @@ user-select: none;
 position: absolute;
 
 left:
-calc(
-var(--synco-sidebar-width) +
 clamp(
 58%,
 61%,
 64%
-)
 );
 
 bottom: 0;
@@ -265,13 +265,10 @@ z-index: 2;
 position: absolute;
 
 left:
-calc(
-var(--synco-sidebar-width) +
 clamp(
 2rem,
 7vw,
 7rem
-)
 );
 
 bottom:
@@ -427,12 +424,7 @@ min-width: 0;
 
 min-height: 0;
 
-/*
-Preserve the 90px content offset while allowing the
-actual background surface to span the full viewport.
-*/
-padding-left:
-var(--synco-sidebar-width);
+padding: 0;
 
 box-sizing: border-box;
 
@@ -1466,10 +1458,7 @@ min-height:
 
 .compHero-img {
 
-left:
-  calc(
-    var(--synco-sidebar-width) + 63%
-  );
+left: 63%;
 
 height:
   clamp(
@@ -1483,13 +1472,10 @@ height:
 .comp-hero-foreground {
 
 left:
-  calc(
-    var(--synco-sidebar-width) +
-    clamp(
-      2rem,
-      5vw,
-      5rem
-    )
+  clamp(
+    2rem,
+    5vw,
+    5rem
   );
 
 bottom:
@@ -1543,10 +1529,7 @@ min-height:
 
 .compHero-img {
 
-left:
-  calc(
-    var(--synco-sidebar-width) + 64%
-  );
+left: 64%;
 
 height:
   clamp(
@@ -1559,10 +1542,7 @@ height:
 
 .comp-hero-foreground {
 
-left:
-  calc(
-    var(--synco-sidebar-width) + 2rem
-  );
+left: 2rem;
 
 bottom: 9%;
 
@@ -1657,10 +1637,7 @@ min-height:
 
 .compHero-img {
 
-left:
-  calc(
-    var(--synco-sidebar-width) + 65%
-  );
+left: 65%;
 
 height:
   clamp(
@@ -1673,10 +1650,7 @@ height:
 
 .comp-hero-foreground {
 
-left:
-  calc(
-    var(--synco-sidebar-width) + 1.25rem
-  );
+left: 1.25rem;
 
 bottom: 7%;
 
@@ -1890,10 +1864,7 @@ min-height: 500px;
 
 .compHero-img {
 
-left:
-  calc(
-    var(--synco-sidebar-width) + 68%
-  );
+left: 68%;
 
 height: 66%;
 
@@ -1901,10 +1872,7 @@ height: 66%;
 
 .comp-hero-foreground {
 
-left:
-  calc(
-    var(--synco-sidebar-width) + 1rem
-  );
+left: 1rem;
 
 bottom: 7%;
 
