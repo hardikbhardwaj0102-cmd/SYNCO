@@ -1,3 +1,4 @@
+```jsx
 import {
   BrowserRouter as Router,
   Routes,
@@ -7,21 +8,29 @@ import {
 } from 'react-router-dom';
 
 import { AuthProvider, useAuth } from './context/AuthContext';
+
 import LiveTournamentDashboard from './pages/LiveTournamentDashboard';
-import OrganizerRegister from "./pages/OrganizerRegister";
-import OrganizerAdmin from "./pages/OrganizerAdmin";
-import AdminUsers from "./pages/AdminUsers";
+
+import OrganizerRegister from './pages/OrganizerRegister';
+import OrganizerAdmin from './pages/OrganizerAdmin';
+import AdminUsers from './pages/AdminUsers';
+
 import HybridLayout from './components/HybridLayout';
+
 import CreateCompetition from './pages/CreateCompetition';
+
 import LandingPage from './pages/LandingPage';
 import GamesHub from './pages/GamesHub';
 import GameDetails from './pages/GameDetails';
 import CompetitionEngine from './pages/CompetitionEngine';
 import Leaderboards from './pages/Leaderboards';
+
 import ClubsHub from './pages/ClubsHub';
 import ClubProfile from './pages/clubprofile';
+
 import ProfileSettings from './pages/ProfileSettings';
 import ProfileView from './pages/ProfileView';
+
 import RegistrationGateway from './pages/RegistrationGateway';
 
 import Login from './pages/Login';
@@ -42,7 +51,6 @@ import Search from './components/Search';
 // =========================================================
 
 const IndexRoute = () => {
-
   const {
     isAuthenticated,
     loading,
@@ -63,7 +71,6 @@ const IndexRoute = () => {
 // =========================================================
 
 const ProtectedRoute = () => {
-
   const {
     isAuthenticated,
     loading,
@@ -87,17 +94,10 @@ const ProtectedRoute = () => {
 
 
 // =========================================================
-// ADMIN ROUTE
-// =========================================================
-
-
-
-// =========================================================
 // ORGANIZER ROUTE
 // =========================================================
 
 const OrganizerRoute = () => {
-
   const {
     user,
     loading,
@@ -120,7 +120,7 @@ const OrganizerRoute = () => {
     user.accountRole ??
     user.account_role;
 
-  if (accountRole !== "organizer") {
+  if (accountRole !== 'organizer') {
     return (
       <Navigate
         to="/organizer/register"
@@ -133,8 +133,11 @@ const OrganizerRoute = () => {
 };
 
 
-const AdminRoute = () => {
+// =========================================================
+// ADMIN ROUTE
+// =========================================================
 
+const AdminRoute = () => {
   const {
     user,
     loading,
@@ -145,7 +148,6 @@ const AdminRoute = () => {
   }
 
   if (!user) {
-
     return (
       <Navigate
         to="/login"
@@ -158,8 +160,7 @@ const AdminRoute = () => {
     user.accountRole ??
     user.account_role;
 
-  if (accountRole !== "admin") {
-
+  if (accountRole !== 'admin') {
     return (
       <Navigate
         to="/"
@@ -186,9 +187,7 @@ const AuthLayout = () => {
 // =========================================================
 
 function App() {
-
   return (
-
     <AuthProvider>
 
       <Router>
@@ -246,7 +245,6 @@ function App() {
 
             <Route element={<ProtectedRoute />}>
 
-
               {/* -------------------------------------------------
                   SEARCH
                   ------------------------------------------------- */}
@@ -255,10 +253,12 @@ function App() {
                 path="/search"
                 element={<Search />}
               />
+
               <Route
                 path="/admin/users"
                 element={<AdminUsers />}
               />
+
 
               {/* -------------------------------------------------
                   DASHBOARD
@@ -296,6 +296,28 @@ function App() {
 
 
               {/* -------------------------------------------------
+                  LIVE TOURNAMENT DASHBOARD
+                  -------------------------------------------------
+
+                  IMPORTANT:
+
+                  The competition ID is now part of the URL.
+
+                  Example:
+                  /live-tournament/1
+
+                  This allows:
+                  useParams().competitionId
+                  to correctly return "1".
+                  ------------------------------------------------- */}
+
+              <Route
+                path="/live-tournament/:competitionId"
+                element={<LiveTournamentDashboard />}
+              />
+
+
+              {/* -------------------------------------------------
                   RANKINGS
                   ------------------------------------------------- */}
 
@@ -303,10 +325,7 @@ function App() {
                 path="/ranking"
                 element={<Leaderboards />}
               />
-              <Route
-                path="/live-tournament"
-                element={<LiveTournamentDashboard />}
-              />
+
 
               {/* -------------------------------------------------
                   CLUBS
@@ -409,9 +428,9 @@ function App() {
             </Route>
 
 
-            {/* -------------------------------------------------
+            {/* =================================================
                 CREATE COMPETITION
-                ------------------------------------------------- */}
+                ================================================= */}
 
             <Route element={<OrganizerRoute />}>
 
@@ -449,3 +468,4 @@ function App() {
 
 
 export default App;
+```

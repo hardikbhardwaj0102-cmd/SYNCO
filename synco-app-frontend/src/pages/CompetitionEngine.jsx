@@ -242,8 +242,6 @@ const CompetitionEngine = () => {
           'COMPETITION',
 
         // Keep the complete original competition object.
-        // This allows the live dashboard integration to use
-        // existing competition information if required later.
         competition,
       })),
     [filteredCompetitions]
@@ -265,10 +263,13 @@ const CompetitionEngine = () => {
       return;
     }
 
+    // IMPORTANT:
+    // App.jsx route:
+    // /live-tournament/:competitionId
     navigate(
-      `/competitions/${encodeURIComponent(
+      `/live-tournament/${encodeURIComponent(
         String(competitionId)
-      )}/live`
+      )}`
     );
   };
 
@@ -339,7 +340,7 @@ const CompetitionEngine = () => {
 
   /* =====================================================
      TOURNAMENT LIST
-     ===================================================== */
+  ===================================================== */
 
   const renderTournaments = () => {
     if (loading) {
