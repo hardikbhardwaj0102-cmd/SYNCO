@@ -9,21 +9,37 @@
 
 .leaderboards-page {
   position: relative;
-  width: 100%;
+
+  /*
+     Extend the entire Leaderboards visual layer underneath
+     the fixed 90px sidebar.
+
+     HybridLayout normally gives authenticated content only
+     the space to the right of the sidebar. This deliberately
+     expands the Leaderboards page back across that 90px area.
+  */
+  width: calc(100% + var(--synco-sidebar-width));
   min-width: 0;
+
+  margin-left: calc(-1 * var(--synco-sidebar-width));
+
   min-height: 100%;
+
   background:
     #0a0a0a
     url('../../assets/rank-bg.png')
     center top / cover fixed no-repeat;
+
+  overflow-x: clip;
 }
 
 
 /*
-   The Leaderboards page uses ONE continuous background.
+   Keep the actual hero/content sections transparent.
 
-   The hero and content sections remain transparent so rank-bg.jpeg
-   visually continues through the entire page.
+   The background belongs to the Leaderboards page itself,
+   so rank-bg.png remains visually continuous from the hero
+   through the rankings content.
 */
 
 .rank-hero,
@@ -37,27 +53,25 @@
    ========================================================================== */
 
 .rank-hero {
-  min-height: clamp(
-    620px,
-    78vh,
-    820px
-  ) !important;
+  /*
+     Use the available viewport rather than a fixed 620/820px
+     hero. This keeps the complete podium composition inside
+     the first viewport across different screen heights.
+  */
+  min-height: 100svh !important;
 
   height: auto !important;
 
+  box-sizing: border-box;
+
   justify-content: flex-start !important;
 
-  padding-top: clamp(
-    1.25rem,
-    3vh,
-    2rem
-  );
+  padding:
+    clamp(1rem, 3vh, 2rem)
+    clamp(1rem, 3vw, 3rem)
+    clamp(1rem, 2.5vh, 2rem);
 
-  padding-bottom: clamp(
-    1.5rem,
-    4vh,
-    2.5rem
-  );
+  overflow: hidden;
 }
 
 
@@ -67,15 +81,31 @@
 
 .timeframe-toggle-container {
   position: relative;
+
   z-index: 10;
 
   display: flex;
+
+  align-items: center;
+  justify-content: center;
+
   gap: 0.5rem;
 
   width: fit-content;
   max-width: 100%;
 
-  background: rgba(10, 10, 10, 0.7);
+  flex-shrink: 0;
+
+  margin:
+    0 auto
+    clamp(
+      0.5rem,
+      2vh,
+      1.5rem
+    );
+
+  background:
+    rgba(10, 10, 10, 0.7);
 
   backdrop-filter: blur(14px);
   -webkit-backdrop-filter: blur(14px);
@@ -83,47 +113,57 @@
   padding: 0.35rem;
 
   border-radius: 999px;
-  border: 1px solid rgba(255, 255, 255, 0.1);
 
-  margin-bottom: clamp(
-    1rem,
-    3vh,
-    2rem
-  );
+  border:
+    1px solid
+    rgba(255, 255, 255, 0.1);
 }
 
 
 .timeframe-btn {
   display: flex;
+
   align-items: center;
   justify-content: center;
 
   gap: 0.5rem;
 
   padding:
-    clamp(0.5rem, 1vw, 0.6rem)
-    clamp(0.9rem, 2vw, 1.4rem);
+    clamp(0.5rem, 1vh, 0.6rem)
+    clamp(0.8rem, 1.8vw, 1.4rem);
 
   border-radius: 999px;
 
   background: transparent;
+
   border: none;
 
-  color: rgba(255, 255, 255, 0.45);
+  color:
+    rgba(255, 255, 255, 0.45);
 
   font-weight: 800;
-  font-size: clamp(
-    0.65rem,
-    0.8vw,
-    0.75rem
-  );
+
+  font-size:
+    clamp(
+      0.62rem,
+      0.8vw,
+      0.75rem
+    );
 
   letter-spacing: 0.15em;
+
+  white-space: nowrap;
 
   cursor: pointer;
 
   transition:
-    all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    all 0.3s
+    cubic-bezier(
+      0.4,
+      0,
+      0.2,
+      1
+    );
 }
 
 
@@ -149,57 +189,93 @@
 
 .v-shape-podium {
   position: relative;
+
   z-index: 5;
 
-  display: flex;
-  align-items: flex-end;
-  justify-content: center;
-
-  width: 100%;
-  max-width: min(
-    1200px,
-    100%
-  );
+  display: grid;
 
   /*
-     Instead of a fixed 620px height, scale the podium with the viewport
-     while keeping sensible minimum and maximum limits.
+     Five equal visual zones guarantee that all five podium
+     positions remain inside the viewport.
+
+     This is more stable than the previous flex + negative-margin
+     approach, especially on shorter/wider/odd aspect-ratio screens.
   */
-  height: clamp(
-    430px,
-    58vh,
-    620px
+  grid-template-columns:
+    repeat(
+      5,
+      minmax(0, 1fr)
+    );
+
+  align-items: end;
+
+  justify-items: center;
+
+  width: min(
+    100%,
+    1500px
   );
 
-  margin-top: auto;
+  max-width: 100%;
 
-  margin-bottom: clamp(
-    0.5rem,
-    2vh,
-    1rem
-  );
+  flex: 1 1 auto;
 
-  padding-bottom: clamp(
-    1rem,
-    3vh,
-    2rem
-  );
+  min-height: 0;
+
+  margin:
+    0 auto;
+
+  padding:
+    0
+    clamp(0rem, 1vw, 1rem)
+    clamp(0.5rem, 1.5vh, 1rem);
+
+  box-sizing: border-box;
+
+  overflow: visible;
 }
 
 
-/* Loading / empty message shown in place of the podium */
+/*
+   Empty / loading state.
+
+   This must not participate in the five-column podium layout.
+   It is centered against the entire podium area.
+*/
 
 .podium-empty {
-  align-self: center;
+  position: absolute;
+
+  top: 50%;
+  left: 50%;
+
+  transform:
+    translate(
+      -50%,
+      -50%
+    );
+
+  width: max-content;
+
+  max-width: 90%;
 
   margin: 0;
 
-  color: rgba(255, 255, 255, 0.5);
+  color:
+    rgba(255, 255, 255, 0.5);
 
-  font-size: 0.85rem;
+  font-size:
+    clamp(
+      0.7rem,
+      1vw,
+      0.85rem
+    );
+
   font-weight: 800;
 
   letter-spacing: 0.15em;
+
+  text-align: center;
 
   text-transform: uppercase;
 
@@ -209,55 +285,107 @@
 }
 
 
+/* ==========================================================================
+   4. PODIUM SLOT POSITIONING
+   ========================================================================== */
+
 .podium-slot {
   position: relative;
 
   display: flex;
+
   flex-direction: column;
+
   align-items: center;
+  justify-content: flex-end;
+
+  width: 100%;
 
   min-width: 0;
 
-  transition:
-    all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+  height: 100%;
 
   /*
-     Keep the overlap effect, but make it proportional instead
-     of relying on a large fixed offset.
+     Each rank gets its own grid column.
+
+     The V-shape is produced through vertical alignment rather
+     than horizontal negative margins.
   */
-  margin:
-    0 clamp(
-      -1.5rem,
-      -1.8vw,
-      -0.5rem
+  margin: 0;
+
+  transition:
+    all 0.4s
+    cubic-bezier(
+      0.4,
+      0,
+      0.2,
+      1
     );
 }
 
 
+/*
+   The JSX renders podium slots in:
+
+   3, 1, 0, 2, 4
+
+   while `position-rank-*` identifies the actual rank.
+
+   Grid placement restores the intended visual order:
+
+   Rank 4 | Rank 2 | Rank 1 | Rank 3 | Rank 5
+*/
+
+.position-rank-4 {
+  grid-column: 1;
+}
+
+
+.position-rank-2 {
+  grid-column: 2;
+}
+
+
+.position-rank-1 {
+  grid-column: 3;
+}
+
+
+.position-rank-3 {
+  grid-column: 4;
+}
+
+
+.position-rank-5 {
+  grid-column: 5;
+}
+
+
 /* ==========================================================================
-   4. PODIUM CHARACTER FRAME
+   5. PODIUM CHARACTER FRAME
    ========================================================================== */
 
 .podium-char-wrapper {
   position: relative;
 
+  display: flex;
+
+  align-items: flex-end;
+  justify-content: center;
+
   width: 100%;
 
-  display: flex;
-  justify-content: center;
-  align-items: flex-end;
-
   min-width: 0;
+
+  flex: 0 1 auto;
 }
 
 
 .podium-char-img {
+  display: block;
+
   width: auto;
 
-  /*
-     Prevent oversized character assets from breaking the podium
-     on narrower screens.
-  */
   max-width: 100%;
 
   object-fit: contain;
@@ -276,48 +404,58 @@
 
 
 /* ==========================================================================
-   5. PODIUM PROFILE / RANK CARD
+   6. PODIUM PROFILE / RANK CARD
    ========================================================================== */
 
 .podium-card {
   position: relative;
+
   z-index: 10;
 
-  width: clamp(
-    180px,
-    18vw,
-    280px
-  );
-
-  max-width: 100%;
-
-  background: rgba(15, 15, 15, 0.85);
-
-  backdrop-filter: blur(16px);
-  -webkit-backdrop-filter: blur(16px);
-
-  border: 1px solid rgba(255, 255, 255, 0.08);
-
-  border-radius: 8px;
-
-  padding:
-    clamp(0.8rem, 1.5vw, 1.2rem)
-    clamp(0.7rem, 1.2vw, 1rem);
-
   display: flex;
+
   flex-direction: column;
+
   align-items: center;
 
   gap: 0.5rem;
 
-  /*
-     Retain the visual overlap while making it responsive.
-  */
-  margin-top: clamp(
-    -30px,
-    -3vh,
-    -12px
-  );
+  width:
+    min(
+      90%,
+      clamp(
+        130px,
+        17vw,
+        280px
+      )
+    );
+
+  max-width: 100%;
+
+  box-sizing: border-box;
+
+  margin-top:
+    clamp(
+      -24px,
+      -2.5vh,
+      -10px
+    );
+
+  padding:
+    clamp(0.6rem, 1.2vw, 1.2rem)
+    clamp(0.5rem, 1vw, 1rem);
+
+  background:
+    rgba(15, 15, 15, 0.85);
+
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+
+  border:
+    1px solid
+    rgba(255, 255, 255, 0.08);
+
+  border-radius: 8px;
 
   box-shadow:
     0 10px 30px
@@ -329,21 +467,29 @@
 
 
 .podium-badge {
-  font-family: 'Super Brigade', sans-serif;
+  font-family:
+    'Super Brigade',
+    sans-serif;
 
-  font-size: clamp(
-    0.75rem,
-    1vw,
-    0.9rem
-  );
+  font-size:
+    clamp(
+      0.65rem,
+      0.9vw,
+      0.9rem
+    );
 
   padding:
     0.15rem
-    clamp(0.45rem, 1vw, 0.6rem);
+    clamp(
+      0.35rem,
+      0.7vw,
+      0.6rem
+    );
 
   border-radius: 4px;
 
-  background: rgba(255, 255, 255, 0.1);
+  background:
+    rgba(255, 255, 255, 0.1);
 
   color: #fff;
 }
@@ -351,8 +497,12 @@
 
 .podium-info {
   display: flex;
+
   flex-direction: column;
+
   align-items: center;
+
+  width: 100%;
 
   max-width: 100%;
 
@@ -363,27 +513,29 @@
 .podium-name {
   width: 100%;
 
+  max-width:
+    clamp(
+      90px,
+      12vw,
+      160px
+    );
+
   overflow: hidden;
 
   color: #fff;
 
   font-weight: 800;
 
-  font-size: clamp(
-    0.72rem,
-    1vw,
-    0.85rem
-  );
+  font-size:
+    clamp(
+      0.62rem,
+      0.9vw,
+      0.85rem
+    );
 
   white-space: nowrap;
 
   text-overflow: ellipsis;
-
-  max-width: clamp(
-    120px,
-    12vw,
-    160px
-  );
 }
 
 
@@ -392,15 +544,17 @@
 
   overflow: hidden;
 
-  font-size: clamp(
-    0.55rem,
-    0.75vw,
-    0.65rem
-  );
+  font-size:
+    clamp(
+      0.48rem,
+      0.7vw,
+      0.65rem
+    );
 
   font-weight: 700;
 
-  color: rgba(255, 255, 255, 0.4);
+  color:
+    rgba(255, 255, 255, 0.4);
 
   letter-spacing: 0.05em;
 
@@ -417,18 +571,19 @@
 
   font-weight: 800;
 
-  font-size: clamp(
-    0.72rem,
-    1vw,
-    0.85rem
-  );
+  font-size:
+    clamp(
+      0.62rem,
+      0.9vw,
+      0.85rem
+    );
 
   color: #d6c98a;
 }
 
 
 /* ==========================================================================
-   6. V-SHAPE LAYERING & RESPONSIVE SIZING
+   7. V-SHAPE LAYERING & RESPONSIVE SIZING
    ========================================================================== */
 
 
@@ -442,20 +597,25 @@
 
 
 .position-rank-1 .podium-char-img {
-  height: clamp(
-    280px,
-    43vh,
-    460px
-  );
+  height:
+    clamp(
+      240px,
+      42vh,
+      460px
+    );
 }
 
 
 .position-rank-1 .podium-card {
-  width: clamp(
-    200px,
-    19vw,
-    300px
-  );
+  width:
+    min(
+      92%,
+      clamp(
+        160px,
+        19vw,
+        300px
+      )
+    );
 
   border-color:
     rgba(214, 201, 138, 0.4);
@@ -468,6 +628,7 @@
 
 .position-rank-1 .podium-badge {
   background: #d6c98a;
+
   color: #000;
 }
 
@@ -479,17 +640,19 @@
 .position-rank-2,
 .position-rank-3 {
   z-index: 4;
+
   opacity: 0.9;
 }
 
 
 .position-rank-2 .podium-char-img,
 .position-rank-3 .podium-char-img {
-  height: clamp(
-    230px,
-    34vh,
-    360px
-  );
+  height:
+    clamp(
+      190px,
+      33vh,
+      360px
+    );
 
   filter:
     brightness(0.85)
@@ -502,11 +665,15 @@
 
 .position-rank-2 .podium-card,
 .position-rank-3 .podium-card {
-  width: clamp(
-    170px,
-    16vw,
-    240px
-  );
+  width:
+    min(
+      90%,
+      clamp(
+        140px,
+        16vw,
+        240px
+      )
+    );
 }
 
 
@@ -517,17 +684,19 @@
 .position-rank-4,
 .position-rank-5 {
   z-index: 3;
+
   opacity: 0.75;
 }
 
 
 .position-rank-4 .podium-char-img,
 .position-rank-5 .podium-char-img {
-  height: clamp(
-    190px,
-    28vh,
-    300px
-  );
+  height:
+    clamp(
+      150px,
+      27vh,
+      300px
+    );
 
   filter:
     brightness(0.7)
@@ -540,16 +709,20 @@
 
 .position-rank-4 .podium-card,
 .position-rank-5 .podium-card {
-  width: clamp(
-    150px,
-    14vw,
-    210px
-  );
+  width:
+    min(
+      88%,
+      clamp(
+        120px,
+        14vw,
+        210px
+      )
+    );
 }
 
 
 /* ==========================================================================
-   7. PODIUM HOVER
+   8. PODIUM HOVER
    ========================================================================== */
 
 .podium-slot:hover {
@@ -573,17 +746,18 @@
 
 
 /* ==========================================================================
-   8. STICKY CONTROLS BAR
+   9. STICKY CONTROLS BAR
    ========================================================================== */
 
 .rank-sticky-header {
   height: auto !important;
 
-  min-height: clamp(
-    100px,
-    12vh,
-    120px
-  ) !important;
+  min-height:
+    clamp(
+      100px,
+      12vh,
+      120px
+    ) !important;
 
   max-height: none !important;
 
@@ -593,30 +767,34 @@
 
   justify-content: center !important;
 
+  box-sizing: border-box;
+
   padding:
     clamp(0.75rem, 2vw, 1rem)
     clamp(1.25rem, 4vw, 4rem) !important;
 
-  gap: clamp(
-    0.75rem,
-    1.5vw,
-    1rem
-  );
+  gap:
+    clamp(
+      0.75rem,
+      1.5vw,
+      1rem
+    );
 }
 
 
 /* ==========================================================================
-   9. CATEGORY TABS
+   10. CATEGORY TABS
    ========================================================================== */
 
 .rank-tabs-container {
   display: flex;
 
-  gap: clamp(
-    0.5rem,
-    1vw,
-    0.75rem
-  );
+  gap:
+    clamp(
+      0.5rem,
+      1vw,
+      0.75rem
+    );
 
   min-width: 0;
 
@@ -633,6 +811,7 @@
 
 .rank-tab-btn {
   display: flex;
+
   align-items: center;
   justify-content: center;
 
@@ -642,9 +821,14 @@
 
   padding:
     0.55rem
-    clamp(0.8rem, 1.5vw, 1.25rem);
+    clamp(
+      0.8rem,
+      1.5vw,
+      1.25rem
+    );
 
-  background: rgba(255, 255, 255, 0.02);
+  background:
+    rgba(255, 255, 255, 0.02);
 
   border:
     1px solid
@@ -652,15 +836,17 @@
 
   border-radius: 6px;
 
-  color: rgba(255, 255, 255, 0.45);
+  color:
+    rgba(255, 255, 255, 0.45);
 
   font-weight: 800;
 
-  font-size: clamp(
-    0.7rem,
-    0.85vw,
-    0.8rem
-  );
+  font-size:
+    clamp(
+      0.7rem,
+      0.85vw,
+      0.8rem
+    );
 
   letter-spacing: 0.08em;
 
@@ -691,17 +877,20 @@
 
 
 /* ==========================================================================
-   10. TOOLBAR & FILTERS
+   11. TOOLBAR & FILTERS
    ========================================================================== */
 
 .rank-toolbar {
   display: flex;
 
-  gap: clamp(
-    0.6rem,
-    1vw,
-    1rem
-  );
+  align-items: stretch;
+
+  gap:
+    clamp(
+      0.6rem,
+      1vw,
+      1rem
+    );
 
   width: 100%;
 
@@ -715,6 +904,7 @@
   min-width: 0;
 
   display: flex;
+
   align-items: center;
 
   gap: 0.75rem;
@@ -730,7 +920,11 @@
 
   padding:
     0.5rem
-    clamp(0.75rem, 1.5vw, 1rem);
+    clamp(
+      0.75rem,
+      1.5vw,
+      1rem
+    );
 }
 
 
@@ -755,6 +949,7 @@
   position: relative;
 
   display: flex;
+
   align-items: center;
 
   flex: 0 1 auto;
@@ -798,6 +993,7 @@
 
 .rank-filter-dropdown select option {
   background: #111;
+
   color: #fff;
 }
 
@@ -815,7 +1011,7 @@
 
 
 /* ==========================================================================
-   11. REFRESH BUTTON
+   12. REFRESH BUTTON
    ========================================================================== */
 
 .rank-refresh-btn {
@@ -826,11 +1022,12 @@
 
   flex: 0 0 auto;
 
-  width: clamp(
-    40px,
-    4vw,
-    48px
-  );
+  width:
+    clamp(
+      40px,
+      4vw,
+      48px
+    );
 
   padding: 0;
 
@@ -885,11 +1082,12 @@
 
 
 /* ==========================================================================
-   12. MAIN TABLE CONTENT
+   13. MAIN TABLE CONTENT
    ========================================================================== */
 
 .rank-content-bg {
   width: 100%;
+
   min-width: 0;
 
   background: transparent !important;
@@ -916,7 +1114,7 @@
 
 
 /* ==========================================================================
-   13. TABLE GRID
+   14. TABLE GRID
    ========================================================================== */
 
 .rank-table-header {
@@ -932,7 +1130,11 @@
 
   padding:
     1.25rem
-    clamp(1rem, 2.5vw, 2rem);
+    clamp(
+      1rem,
+      2.5vw,
+      2rem
+    );
 
   background:
     rgba(0, 0, 0, 0.5);
@@ -965,7 +1167,11 @@
 
   padding:
     1.1rem
-    clamp(1rem, 2.5vw, 2rem);
+    clamp(
+      1rem,
+      2.5vw,
+      2rem
+    );
 
   align-items: center;
 
@@ -974,7 +1180,13 @@
     rgba(255, 255, 255, 0.03);
 
   transition:
-    all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+    all 0.2s
+    cubic-bezier(
+      0.4,
+      0,
+      0.2,
+      1
+    );
 }
 
 
@@ -994,7 +1206,7 @@
 
 
 /* ==========================================================================
-   14. TABLE CELLS
+   15. TABLE CELLS
    ========================================================================== */
 
 .rank-number {
@@ -1017,17 +1229,19 @@
 
 
 .player-insignia-badge {
-  width: clamp(
-    32px,
-    3vw,
-    36px
-  );
+  width:
+    clamp(
+      32px,
+      3vw,
+      36px
+    );
 
-  height: clamp(
-    32px,
-    3vw,
-    36px
-  );
+  height:
+    clamp(
+      32px,
+      3vw,
+      36px
+    );
 
   border-radius: 50%;
 
@@ -1060,6 +1274,7 @@
 
 .player-insignia-badge img {
   width: 100%;
+
   height: 100%;
 
   object-fit: cover;
@@ -1160,7 +1375,7 @@
 
 
 /* ==========================================================================
-   15. LOADING / ERROR / EMPTY STATE
+   16. LOADING / ERROR / EMPTY STATE
    ========================================================================== */
 
 .rank-table-state {
@@ -1174,8 +1389,16 @@
   gap: 0.5rem;
 
   padding:
-    clamp(3rem, 6vw, 4rem)
-    clamp(1.5rem, 3vw, 2rem);
+    clamp(
+      3rem,
+      6vw,
+      4rem
+    )
+    clamp(
+      1.5rem,
+      3vw,
+      2rem
+    );
 
   color:
     rgba(255, 255, 255, 0.5);
@@ -1250,12 +1473,13 @@
 
 .rank-retry-btn:hover {
   border-color: #d6c98a;
+
   color: #d6c98a;
 }
 
 
 /* ==========================================================================
-   16. TABLE / TOOLBAR RESPONSIVENESS
+   17. TABLE / TOOLBAR RESPONSIVENESS
    ========================================================================== */
 
 @media (max-width: 1100px) {
@@ -1323,89 +1547,85 @@
 }
 
 
-@media (max-width: 700px) {
+/* ==========================================================================
+   18. PODIUM RESPONSIVENESS
+   ========================================================================== */
+
+@media (max-width: 900px) {
 
   .rank-hero {
-    min-height: 560px !important;
+    min-height: 100svh !important;
+
+    padding:
+      0.85rem
+      1rem
+      1rem;
   }
 
 
   .v-shape-podium {
-    height: clamp(
-      390px,
-      58vh,
-      500px
-    );
-
-    overflow: hidden;
-  }
-
-
-  .podium-slot {
-    margin:
-      0 clamp(
-        -1rem,
-        -1.5vw,
-        -0.35rem
-      );
+    padding:
+      0
+      0
+      0.5rem;
   }
 
 
   .position-rank-1 .podium-char-img {
-    height: clamp(
-      240px,
-      40vh,
-      340px
-    );
+    height:
+      clamp(
+        210px,
+        38vh,
+        340px
+      );
   }
 
 
   .position-rank-2 .podium-char-img,
   .position-rank-3 .podium-char-img {
-    height: clamp(
-      190px,
-      32vh,
-      280px
-    );
+    height:
+      clamp(
+        165px,
+        31vh,
+        280px
+      );
   }
 
 
   .position-rank-4 .podium-char-img,
   .position-rank-5 .podium-char-img {
-    height: clamp(
-      160px,
-      27vh,
-      230px
-    );
+    height:
+      clamp(
+        130px,
+        25vh,
+        225px
+      );
+  }
+
+
+  .podium-card {
+    width:
+      min(
+        92%,
+        clamp(
+          110px,
+          17vw,
+          190px
+        )
+      );
   }
 
 
   .position-rank-1 .podium-card {
-    width: clamp(
-      170px,
-      28vw,
-      240px
-    );
-  }
-
-
-  .position-rank-2 .podium-card,
-  .position-rank-3 .podium-card {
-    width: clamp(
-      150px,
-      24vw,
-      200px
-    );
-  }
-
-
-  .position-rank-4 .podium-card,
-  .position-rank-5 .podium-card {
-    width: clamp(
-      130px,
-      21vw,
-      180px
-    );
+    width:
+      min(
+        95%,
+        clamp(
+          130px,
+          20vw,
+          220px
+        )
+      );
   }
 
 
@@ -1416,86 +1636,124 @@
 }
 
 
-@media (max-width: 560px) {
+/* ==========================================================================
+   19. SMALL SCREENS
+   ========================================================================== */
+
+@media (max-width: 700px) {
+
+  .leaderboards-page {
+    /*
+       Keep the background attached to the full page layer.
+       Avoid horizontal overflow caused by the sidebar expansion.
+    */
+    overflow-x: clip;
+  }
+
 
   .rank-hero {
-    min-height: 520px !important;
+    min-height: 100svh !important;
 
-    padding-top: 1rem;
+    padding:
+      0.75rem
+      0.5rem
+      0.75rem;
   }
 
 
   .timeframe-toggle-container {
-    align-self: center;
-
-    width: auto;
+    margin:
+      0 auto
+      0.5rem;
   }
 
 
   .timeframe-btn {
     padding:
-      0.5rem
-      0.75rem;
+      0.45rem
+      0.65rem;
 
-    letter-spacing: 0.08em;
+    letter-spacing: 0.06em;
   }
 
 
   .v-shape-podium {
     width: 100%;
 
-    height: 390px;
-
-    padding-bottom: 1rem;
-  }
-
-
-  .podium-slot {
-    margin:
-      0 -0.7rem;
+    padding:
+      0
+      0
+      0.25rem;
   }
 
 
   .position-rank-1 .podium-char-img {
-    height: 260px;
+    height:
+      clamp(
+        175px,
+        37vh,
+        290px
+      );
   }
 
 
   .position-rank-2 .podium-char-img,
   .position-rank-3 .podium-char-img {
-    height: 210px;
+    height:
+      clamp(
+        140px,
+        30vh,
+        235px
+      );
   }
 
 
   .position-rank-4 .podium-char-img,
   .position-rank-5 .podium-char-img {
-    height: 175px;
+    height:
+      clamp(
+        110px,
+        24vh,
+        190px
+      );
   }
 
 
   .podium-card {
     padding:
-      0.65rem
-      0.5rem;
+      0.5rem
+      0.35rem;
 
-    gap: 0.35rem;
+    gap: 0.3rem;
   }
 
 
   .position-rank-1 .podium-card {
-    width: 170px;
+    width:
+      min(
+        95%,
+        180px
+      );
   }
 
 
   .position-rank-2 .podium-card,
   .position-rank-3 .podium-card {
-    width: 145px;
+    width:
+      min(
+        95%,
+        150px
+      );
   }
 
 
   .position-rank-4 .podium-card,
   .position-rank-5 .podium-card {
-    width: 125px;
+    width:
+      min(
+        95%,
+        125px
+      );
   }
 
 
@@ -1522,7 +1780,8 @@
 
 
   .rank-tab-btn {
-    flex: 1 0 auto;
+    flex:
+      1 0 auto;
 
     padding:
       0.5rem
@@ -1538,7 +1797,9 @@
 
 
   .rank-filter-dropdown {
-    flex: 1 1 calc(50% - 0.25rem);
+    flex:
+      1 1
+      calc(50% - 0.25rem);
   }
 
 
@@ -1546,4 +1807,149 @@
     width: 42px;
   }
 
+}
+
+
+/* ==========================================================================
+   20. VERY SHORT VIEWPORTS
+   ========================================================================== */
+
+/*
+   This is specifically for laptops / browser windows with limited
+   vertical height.
+
+   The composition remains inside the viewport instead of forcing
+   the browser to scroll just to see the podium.
+*/
+
+@media (max-height: 720px) and (min-width: 701px) {
+
+  .rank-hero {
+    min-height: 100svh !important;
+
+    padding-top: 0.6rem;
+
+    padding-bottom: 0.6rem;
+  }
+
+
+  .timeframe-toggle-container {
+    margin-bottom: 0.25rem;
+  }
+
+
+  .position-rank-1 .podium-char-img {
+    height:
+      clamp(
+        190px,
+        38vh,
+        300px
+      );
+  }
+
+
+  .position-rank-2 .podium-char-img,
+  .position-rank-3 .podium-char-img {
+    height:
+      clamp(
+        155px,
+        30vh,
+        245px
+      );
+  }
+
+
+  .position-rank-4 .podium-char-img,
+  .position-rank-5 .podium-char-img {
+    height:
+      clamp(
+        120px,
+        23vh,
+        200px
+      );
+  }
+
+
+  .podium-card {
+    margin-top: -12px;
+
+    padding:
+      0.45rem
+      0.5rem;
+
+    gap: 0.3rem;
+  }
+}
+
+
+/* ==========================================================================
+   21. EXTREMELY SHORT VIEWPORTS
+   ========================================================================== */
+
+@media (max-height: 600px) {
+
+  .rank-hero {
+    min-height: 100svh !important;
+
+    padding-top: 0.4rem;
+
+    padding-bottom: 0.4rem;
+  }
+
+
+  .timeframe-toggle-container {
+    transform: scale(0.9);
+
+    transform-origin: top center;
+
+    margin-bottom: 0;
+  }
+
+
+  .position-rank-1 .podium-char-img {
+    height:
+      clamp(
+        150px,
+        34vh,
+        230px
+      );
+  }
+
+
+  .position-rank-2 .podium-char-img,
+  .position-rank-3 .podium-char-img {
+    height:
+      clamp(
+        125px,
+        27vh,
+        190px
+      );
+  }
+
+
+  .position-rank-4 .podium-char-img,
+  .position-rank-5 .podium-char-img {
+    height:
+      clamp(
+        95px,
+        21vh,
+        155px
+      );
+  }
+
+
+  .podium-card {
+    margin-top: -8px;
+
+    padding:
+      0.35rem
+      0.4rem;
+
+    gap: 0.2rem;
+  }
+
+
+  .podium-points {
+    font-size: 0.6rem;
+  }
 }
