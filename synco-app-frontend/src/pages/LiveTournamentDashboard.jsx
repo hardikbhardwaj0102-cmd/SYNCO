@@ -16,7 +16,7 @@ import {
     Medal,
 } from "lucide-react";
 
-import '../styles/pages/liveTournamentDashboard.css';
+import '../styles/pages/LiveTournamentDashboard.css';
 
 
 // =========================================================
