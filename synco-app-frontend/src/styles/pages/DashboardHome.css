@@ -1,447 +1,665 @@
-/* =========================================
-   GLOBAL & DASHBOARD WRAPPER
-========================================= */
 html {
   scroll-behavior: smooth;
 }
 
+/* =========================================================
+   DASHBOARD ROOT
+   Edge-to-edge within the available content area.
+   No centered/max-width container.
+   ========================================================= */
+
 .bento-dashboard-wrapper {
   position: relative;
+
   width: 100%;
-  max-width: 100% !important; /* Forces expansion even if a parent restricts it */
-  min-height: calc(100dvh - 4rem);
-  margin: 0; 
+  max-width: none;
+
+  margin: 0;
+  padding: clamp(1rem, 1.5vw, 1.5rem);
+
   box-sizing: border-box;
+
   display: grid;
-  
-  /* Converted to pure fractional units to aggressively eat empty space */
-  grid-template-columns: 1fr 1.2fr 60px; 
-  gap: clamp(1rem, 2vw, 1.5rem);
-  
-  /* Top/Bottom padding remains, Left/Right padding is forced to 0 */
-  padding: clamp(1rem, 2vw, 1.5rem) 0; 
-  
+  grid-template-columns:
+    minmax(0, 1fr)
+    minmax(0, 1.2fr)
+    clamp(220px, 18vw, 280px);
+
+  gap: clamp(1rem, 1.5vw, 1.5rem);
+
   color: #fff;
-  font-family: 'Inter', system-ui, sans-serif;
+  font-family: "Inter", system-ui, sans-serif;
+
   overflow-x: hidden;
+  overflow-y: visible;
+
+  min-width: 0;
 }
 
-.bento-dashboard-wrapper * {
+.bento-dashboard-wrapper *,
+.bento-dashboard-wrapper *::before,
+.bento-dashboard-wrapper *::after {
   box-sizing: border-box;
 }
 
-/* =========================================
-   BASE CARD STYLES
-========================================= */
+
+/* =========================================================
+   SHARED CARDS
+   ========================================================= */
+
 .bento-card,
 .wire-block {
   border: 1px solid rgba(255, 255, 255, 0.08);
-  border-radius: clamp(1rem, 3vw, 2rem);
-  background: rgba(20, 20, 20, 0.35);
-  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.5);
+  border-radius: clamp(1rem, 2vw, 2rem);
+
+  background: rgba(255, 255, 255, 0.025);
+
+  box-shadow:
+    0 18px 50px rgba(0, 0, 0, 0.18),
+    inset 0 1px 0 rgba(255, 255, 255, 0.025);
 }
 
 .bento-card {
-  padding: clamp(1rem, 2.5vw, 1.5rem);
-  backdrop-filter: blur(25px);
-  -webkit-backdrop-filter: blur(25px);
+  padding: clamp(1rem, 2vw, 1.5rem);
+
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+
+  min-width: 0;
 }
 
 .wire-block {
   display: flex;
   flex-direction: column;
+
+  min-width: 0;
 }
 
-/* =========================================
+
+/* =========================================================
    MAIN COLUMNS
-========================================= */
+   ========================================================= */
+
+.col-main-left,
+.col-main-right,
+.col-far-right {
+  min-width: 0;
+  min-height: 0;
+
+  height: auto;
+}
+
 .col-main-left,
 .col-main-right {
   display: flex;
   flex-direction: column;
-  gap: clamp(1rem, 2vw, 1.5rem);
-  height: 100%;
-  min-width: 0; 
+
+  gap: clamp(1rem, 1.5vw, 1.5rem);
 }
 
 .col-main-left {
   grid-column: 1;
+  grid-row: 1;
+
+  min-width: 0;
 }
 
 .col-main-right {
   grid-column: 2;
   grid-row: 1;
+
+  min-width: 0;
 }
 
 .col-far-right {
   grid-column: 3;
   grid-row: 1;
+
   display: flex;
   flex-direction: column;
-  gap: 1.5rem;
-  height: 100%;
+
+  gap: clamp(1rem, 1.5vw, 1.5rem);
+
+  min-width: 0;
+  min-height: 0;
 }
 
-/* =========================================
-   HEADER PILLS
-========================================= */
+
+/* =========================================================
+   TOP PILLS
+   ========================================================= */
+
 .greetings-pill,
 .premium-banner-pill {
-  min-height: 60px;
+  min-height: clamp(52px, 4vw, 60px);
+
   flex-shrink: 0;
+
   display: flex;
   align-items: center;
-  padding: 0 clamp(1rem, 2vw, 1.5rem);
+
   width: 100%;
+
+  padding:
+    0
+    clamp(1rem, 1.75vw, 1.5rem);
+
+  min-width: 0;
 }
 
 .premium-banner-pill {
-  justify-content: space-between;
-  background: linear-gradient(90deg, rgba(214, 201, 138, 0.15), #141414);
-  border-color: rgba(214, 201, 138, 0.3);
+  flex-direction: row;
+  gap: 0.6rem;
 }
 
 .text-highlight {
-  color: #d6c98a;
+  color: #f4d35e;
 }
 
-/* =========================================
-   TOURNAMENTS HERO CARD
-========================================= */
+
+/* =========================================================
+   TOURNAMENT HERO
+   ========================================================= */
+
 .tournaments-card {
   position: relative;
-  flex: 1 1 auto;
-  min-height: 280px;
+
+  flex: 0 1 auto;
+
+  min-height: clamp(240px, 22vw, 340px);
+
   display: flex;
   flex-direction: column;
   justify-content: center;
+
   padding: clamp(1.5rem, 3vw, 2rem);
-  overflow: hidden !important; /* CRITICAL: Prevents character bleed out bottom */
-  background: linear-gradient(135deg, rgba(20, 20, 20, 0.9), rgba(139, 21, 37, 0.4));
+
+  overflow: hidden !important;
+
+  background:
+    linear-gradient(
+      120deg,
+      rgba(255, 255, 255, 0.035),
+      rgba(255, 255, 255, 0.01)
+    );
 }
 
 .tournaments-card-content {
   position: relative;
   z-index: 2;
-  max-width: 65%; /* Extended to prevent title truncation */
+
+  width: 100%;
+  max-width: 65%;
+
+  min-width: 0;
 }
 
 .block-title {
   margin: 0 0 0.5rem;
-  font-family: 'Super Brigade', sans-serif;
+
+  font-family: "Super Brigade", sans-serif;
+
   font-size: clamp(1.2rem, 2.5vw, 2rem);
   line-height: 1.1;
+
   text-transform: uppercase;
-  white-space: normal; /* Prevents text cutoff */
+
+  white-space: normal;
+  overflow-wrap: anywhere;
   word-wrap: break-word;
 }
 
 .hero-comp-sub {
-  margin: 0 0 1.5rem;
+  margin: 0 0 clamp(1rem, 2vw, 1.5rem);
+
   color: #d6c98a;
-  font-size: clamp(0.75rem, 1.5vw, 0.8rem);
+
+  font-size: clamp(0.75rem, 1.2vw, 0.85rem);
+
+  line-height: 1.4;
 }
 
 .hero-character-render {
   position: absolute;
+
   right: -2%;
   bottom: 0;
+
   z-index: 1;
-  height: 100%; /* Constrains to exact card height */
+
   width: auto;
+
+  /*
+    Keep the image responsive without giving it a fixed
+    desktop height.
+  */
   max-width: 50%;
+  max-height: 100%;
+
   object-fit: contain;
   object-position: bottom right;
+
   pointer-events: none;
-  filter: drop-shadow(-10px 0 20px rgba(0, 0, 0, 0.5));
+
+  filter:
+    drop-shadow(0 20px 30px rgba(0, 0, 0, 0.35));
 }
 
 .live-badge {
-  display: inline-flex;
+  width: fit-content;
+  max-width: 100%;
+
+  margin-bottom: clamp(0.7rem, 1.5vw, 1rem);
+
+  padding: 4px 10px;
+
+  border-radius: 20px;
+
+  font-size: 0.6rem;
+
+  display: flex;
   align-items: center;
   gap: 6px;
-  width: fit-content;
-  margin-bottom: 1rem;
-  padding: 4px 10px;
-  border-radius: 20px;
-  background: rgba(255, 255, 255, 0.1);
-  color: #ff4655;
-  font-size: 0.6rem;
-  font-weight: 800;
-  letter-spacing: 0.1em;
+
+  white-space: nowrap;
 }
 
 .live-badge .dot {
   width: 6px;
   height: 6px;
+
+  flex: 0 0 6px;
+
   border-radius: 50%;
-  background: #ff4655;
-  box-shadow: 0 0 10px #ff4655;
 }
 
 .join-btn {
   width: 100%;
   max-width: 250px;
+
   min-height: 50px;
-  border: 0;
-  border-radius: 10px;
-  background: #fff;
-  color: #000;
-  font-weight: 800;
-  cursor: pointer;
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  gap: 0.5rem;
 }
 
-/* =========================================
-   MIDDLE GRID (GAMES & PROMO)
-========================================= */
+
+/* =========================================================
+   MID GRID
+   ========================================================= */
+
 .mid-grid-row {
   display: grid;
-  flex: 0 0 auto;
-  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+
+  grid-template-columns:
+    repeat(
+      auto-fit,
+      minmax(min(100%, 220px), 1fr)
+    );
+
   gap: clamp(0.8rem, 1.5vw, 1.5rem);
-  min-height: 220px;
+
+  min-width: 0;
+  min-height: 0;
+
+  flex: 0 0 auto;
 }
 
 .game-selector-card {
   display: flex;
   flex-direction: column;
+
+  min-width: 0;
+  min-height: 0;
 }
 
 .game-list {
   display: flex;
   flex-direction: column;
+
   gap: 0.5rem;
+
   margin-top: 0.5rem;
-  max-height: 240px;
+
+  width: 100%;
+  min-width: 0;
+
+  max-height: clamp(160px, 16vw, 240px);
+
   overflow-y: auto;
   overflow-x: hidden;
+
   scrollbar-width: thin;
-  scrollbar-color: rgba(214, 201, 138, 0.5) rgba(255, 255, 255, 0.05);
-}
-
-.game-list::-webkit-scrollbar {
-  width: 8px;
-}
-
-.game-list::-webkit-scrollbar-thumb {
-  border-radius: 999px;
-  background: rgba(214, 201, 138, 0.5);
-}
-
-.game-list::-webkit-scrollbar-track {
-  background: rgba(255, 255, 255, 0.05);
-  border-radius: 999px;
 }
 
 .game-option {
+  width: 100%;
+  min-width: 0;
+
   display: flex;
   align-items: center;
+
   gap: 10px;
+
   padding: 0.8rem 1rem;
-  border: 1px solid transparent;
-  border-radius: 12px;
-  background: rgba(255, 255, 255, 0.03);
-  color: rgba(255, 255, 255, 0.5);
-  font: inherit;
-  font-size: clamp(0.75rem, 1.5vw, 0.85rem);
-  font-weight: 600;
-  cursor: pointer;
+
+  border: 1px solid rgba(255, 255, 255, 0.08);
+
+  border-radius: 0.75rem;
+
+  font-size: clamp(0.75rem, 1.2vw, 0.85rem);
+
+  overflow: hidden;
 }
 
-.game-option:hover {
-  background: rgba(255, 255, 255, 0.08);
-  color: #fff;
-}
+.game-option span {
+  min-width: 0;
 
-.game-option.active {
-  background: rgba(214, 201, 138, 0.1);
-  border-color: rgba(214, 201, 138, 0.3);
-  color: #d6c98a;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .synco-promo-card {
   display: flex;
+
   flex-direction: column;
   align-items: center;
   justify-content: center;
+
+  min-width: 0;
+
   padding: clamp(1rem, 2vw, 1.5rem);
+
   text-align: center;
 }
 
-/* =========================================
-   HIGHLIGHTS COVERFLOW
-========================================= */
+.synco-promo-card h3 {
+  max-width: 100%;
+
+  overflow-wrap: anywhere;
+}
+
+
+/* =========================================================
+   HIGHLIGHTS
+   ========================================================= */
+
 .highlights-section {
   display: flex;
-  flex: 1 1 auto; 
+
+  flex: 1 1 auto;
+
   flex-direction: column;
+
   position: relative;
-  min-height: 400px; /* Increased to separate text and clip */
+
   min-width: 0;
+  min-height: clamp(360px, 32vw, 500px);
 }
 
 .section-label {
-  margin: 0 0 1rem;
-  color: rgba(255, 255, 255, 0.4);
+  min-width: 0;
+
   font-size: 0.65rem;
-  font-weight: 800;
-  letter-spacing: 0.15em;
-  text-transform: uppercase;
+
+  line-height: 1.2;
+
+  letter-spacing: 0.08em;
 }
+
+
+/* =========================================================
+   COVERFLOW CONTAINER
+   ========================================================= */
 
 .coverflow-container {
   display: flex;
-  flex: 1;
+
+  flex: 1 1 auto;
+
   align-items: center;
   justify-content: center;
+
   position: relative;
+
   width: 100%;
-  min-height: 250px; /* Holds open space for absolute clips */
+
+  min-width: 0;
+  min-height: clamp(220px, 24vw, 320px);
+
   margin-top: 1rem;
 }
 
 .clip-game-tag {
   position: absolute;
+
   top: -2.75rem;
   left: 50%;
+
   z-index: 25;
+
+  max-width: calc(100% - 2rem);
+
   padding: 0.45rem 1.4rem;
-  border: 1px solid rgba(214, 201, 138, 0.45);
+
   border-radius: 999px;
-  background: rgba(20, 20, 20, 0.8);
-  color: #d6c98a;
-  font-family: 'Super Brigade', sans-serif;
-  font-size: clamp(1rem, 2vw, 1.25rem);
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
+
+  font-size: clamp(1rem, 1.8vw, 1.25rem);
+
   transform: translateX(-50%);
+
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .coverflow-track {
   display: flex;
+
   align-items: center;
   justify-content: center;
+
   position: relative;
+
   width: 100%;
   height: 100%;
+
+  min-width: 0;
+  min-height: 0;
 }
+
+
+/* =========================================================
+   CLIP CARDS
+   ========================================================= */
 
 .clip-card {
   position: absolute;
+
   top: 50%;
   left: 50%;
-  transform: translate(-50%, -50%); 
-  aspect-ratio: 9 / 16; 
-  height: 100%; 
-  max-height: 320px; /* Caps max size to prevent text overlap */
-  width: auto; 
+
+  /*
+    Width is fluid rather than relying on a parent height.
+    9:16 aspect ratio determines the video height.
+  */
+  width: clamp(140px, 12vw, 190px);
+  height: auto;
+
+  aspect-ratio: 9 / 16;
+
+  max-height: none;
+
   overflow: hidden;
+
   border-radius: 1rem;
+
   background: #000;
-  transition: all 0.6s ease;
+
+  transform: translate(-50%, -50%);
+
+  transition:
+    transform 0.6s ease,
+    opacity 0.6s ease,
+    filter 0.6s ease;
+
   z-index: 10;
+
+  min-width: 0;
 }
 
 .clip-card video,
 .clip-card img {
+  display: block;
+
   width: 100%;
   height: 100%;
+
   object-fit: cover;
+
+  max-width: 100%;
 }
 
 .clip-center {
-  z-index: 10;
-  transform: translate(-50%, -50%) scale(1);
+  left: 50%;
+
+  transform:
+    translate(-50%, -50%)
+    scale(1);
+
   opacity: 1;
-  border: 1px solid rgba(255, 255, 255, 0.2);
-  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.8);
+
+  z-index: 10;
 }
 
 .clip-left {
   left: 15%;
-  z-index: 5;
-  transform: translate(-50%, -50%) scale(0.8);
+
+  transform:
+    translate(-50%, -50%)
+    scale(0.8);
+
   opacity: 0.3;
+
   filter: blur(4px);
+
+  z-index: 5;
 }
 
 .clip-right {
   left: 85%;
-  z-index: 5;
-  transform: translate(-50%, -50%) scale(0.8);
+
+  transform:
+    translate(-50%, -50%)
+    scale(0.8);
+
   opacity: 0.3;
+
   filter: blur(4px);
+
+  z-index: 5;
 }
 
 .clip-hidden {
   z-index: 0;
+
   opacity: 0;
+
   pointer-events: none;
 }
+
+
+/* =========================================================
+   COVERFLOW OVERLAYS
+   These remain absolute because they intentionally overlay
+   the coverflow content.
+   ========================================================= */
 
 .coverflow-left-overlay,
 .coverflow-right-overlay {
   position: absolute;
+
   top: 50%;
+
   z-index: 20;
+
   transform: translateY(-50%);
+
+  min-width: 0;
 }
 
 .coverflow-left-overlay {
   left: 0;
-  width: 25%;
+
+  width: clamp(140px, 24%, 220px);
+
   pointer-events: none;
 }
 
 .coverflow-right-overlay {
   right: 1rem;
-  width: 25%;
+
+  width: clamp(140px, 24%, 220px);
+
   height: 85%;
+
+  min-height: 0;
 }
 
 .clip-title-massive {
-  margin: 1rem 0 1rem 0;
-  font-family: 'Super Brigade', sans-serif;
-  font-size: 1.5rem;
-  line-height: 1;
-  text-transform: uppercase;
+  margin: 1rem 0;
+
+  font-family: "Super Brigade", sans-serif;
+
+  font-size: clamp(1.15rem, 1.8vw, 1.5rem);
+
+  line-height: 1.1;
+
+  overflow-wrap: anywhere;
 }
 
 .clip-author {
-  margin-bottom: 1.5rem;
-  color: #d6c98a;
   font-size: 0.55rem;
-  font-weight: 800;
-  letter-spacing: 0.1em;
-  text-transform: uppercase;
+
+  overflow-wrap: anywhere;
 }
 
 .clip-actions {
   display: flex;
-  gap: 1rem;
+
+  gap: clamp(0.5rem, 1vw, 1rem);
+
   pointer-events: auto;
+
+  min-width: 0;
 }
 
 .clip-actions button {
   display: flex;
   align-items: center;
-  gap: 8px;
-  padding: 0.5rem 1rem;
-  border: 1px solid rgba(255, 255, 255, 0.2);
-  border-radius: 8px;
-  background: rgba(255, 255, 255, 0.1);
-  color: #fff;
-  cursor: pointer;
+
+  gap: 0.3rem;
+
+  min-width: 0;
 }
 
 .play-overlay {
   position: absolute;
+
   inset: 0;
+
   display: flex;
   align-items: center;
   justify-content: center;
+
   background: rgba(0, 0, 0, 0.3);
+
   opacity: 0;
+
   cursor: pointer;
 }
 
@@ -449,246 +667,464 @@ html {
   opacity: 1;
 }
 
-/* =========================================
-   COMMENTS & NAVIGATION
-========================================= */
+
+/* =========================================================
+   COMMENTS
+   ========================================================= */
+
 .comments-panel {
   display: flex;
+
   flex-direction: column;
+
+  width: 100%;
   height: 100%;
+
+  min-width: 0;
+  min-height: 0;
+
   padding: 0;
+
   background: transparent;
 }
 
 .comments-header {
+  min-width: 0;
+
   display: flex;
+
   align-items: center;
+  justify-content: space-between;
+
   gap: 0.5rem;
-  margin: 0 0 1rem;
-  padding-bottom: 0.5rem;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
-  color: rgba(255, 255, 255, 0.5);
-  font-size: 0.7rem;
-  letter-spacing: 0.1em;
-  text-transform: uppercase;
 }
 
 .comments-list {
   display: flex;
-  flex: 1;
+
+  flex: 1 1 auto;
+
   flex-direction: column;
+
   gap: 0.8rem;
+
+  min-width: 0;
+  min-height: 0;
+
   overflow-y: auto;
+  overflow-x: hidden;
 }
 
 .comment-item {
-  color: rgba(255, 255, 255, 0.8);
+  min-width: 0;
+
   font-size: 0.8rem;
+
   line-height: 1.4;
+
+  overflow-wrap: anywhere;
 }
 
 .comment-user {
-  color: #d6c98a;
-  font-weight: 800;
+  min-width: 0;
+
+  overflow: hidden;
+
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .empty-comms {
-  color: rgba(255, 255, 255, 0.3);
   font-size: 0.75rem;
-  font-style: italic;
 }
 
 .comment-input {
+  display: flex;
+
+  align-items: center;
+
+  min-width: 0;
+
   margin-top: 1rem;
+
   padding: 0.5rem;
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  border-radius: 30px;
-  outline: none;
-  background: rgba(255, 255, 255, 0.05);
-  color: #fff;
-  font-size: 13px;
+
+  font-size: 0.8rem;
+
   text-align: center;
 }
 
+.comment-input input {
+  min-width: 0;
+  width: 100%;
+}
+
+
+/* =========================================================
+   COVERFLOW NAVIGATION
+   ========================================================= */
+
 .nav-btn {
   position: absolute;
+
   bottom: -10px;
+
   z-index: 30;
+
   display: flex;
+
   align-items: center;
   justify-content: center;
+
   width: 40px;
   height: 40px;
-  border: 1px solid rgba(255, 255, 255, 0.2);
+
+  flex: 0 0 40px;
+
   border-radius: 50%;
-  background: rgba(255, 255, 255, 0.1);
-  color: #fff;
-  cursor: pointer;
 }
 
 .prev-btn {
-  left: 40%;
+  left: calc(50% - 50px);
+
   transform: translateX(-50%);
 }
 
 .next-btn {
-  right: 40%;
+  right: calc(50% - 50px);
+
   transform: translateX(50%);
 }
 
-/* =========================================
+
+/* =========================================================
    STAT METER
-========================================= */
+   ========================================================= */
+
 .stat-meter-card {
   display: flex;
+
   flex: 1 1 auto;
+
   flex-direction: column;
+
   align-items: center;
   justify-content: space-between;
-  min-height: 320px; /* Restores vertical space for layout */
+
+  min-width: 0;
+
+  min-height: clamp(280px, 24vw, 360px);
 }
 
 .stat-header-row {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
   width: 100%;
+  min-width: 0;
 }
 
 .stat-icon {
-  color: #d6c98a;
+  flex-shrink: 0;
 }
 
 .stat-meter-container {
   display: flex;
-  flex: 1;
+
+  flex: 1 1 auto;
+
   align-items: center;
   justify-content: center;
+
   position: relative;
+
   width: 100%;
-  min-height: 150px;
+
+  min-width: 0;
+  min-height: clamp(120px, 14vw, 180px);
 }
 
 .stat-glowing-blob {
   position: absolute;
-  width: clamp(120px, 15vw, 160px);
-  aspect-ratio: 1; 
-  border-radius: 40% 60% 70% 30% / 40% 50% 60% 50%;
-  background: radial-gradient(circle, rgba(214, 201, 138, 0.2), rgba(214, 201, 138, 0.05) 50%, transparent 80%);
-  box-shadow: 0 0 50px rgba(214, 201, 138, 0.15);
-  animation: blob-morph 8s ease-in-out infinite alternate;
-}
 
-@keyframes blob-morph {
-  to {
-    border-radius: 60% 40% 30% 70% / 60% 30% 70% 40%;
-    transform: rotate(15deg) scale(1.05);
-  }
+  width: clamp(120px, 15vw, 160px);
+
+  aspect-ratio: 1 / 1;
+
+  max-width: 100%;
+
+  border-radius: 50%;
 }
 
 .rating-number {
   position: relative;
+
   z-index: 2;
-  font-family: 'Super Brigade', sans-serif;
+
+  min-width: 0;
+
   font-size: clamp(2.5rem, 5vw, 4rem);
-  text-shadow: 0 0 30px rgba(214, 201, 138, 0.5);
+
+  line-height: 1;
 }
 
 .stat-breakdown {
   display: flex;
+
   width: 100%;
+
+  min-width: 0;
+
   gap: clamp(0.5rem, 1vw, 1rem);
+
   margin-top: auto;
 }
 
 .stat-pill {
   display: flex;
-  flex: 1;
+
+  flex: 1 1 0;
+
   flex-direction: column;
+
   align-items: center;
+
+  min-width: 0;
+
   gap: 0.3rem;
+
   padding: clamp(0.5rem, 1.5vw, 0.8rem);
-  border: 1px solid rgba(255, 255, 255, 0.05);
-  border-radius: 12px;
-  background: rgba(255, 255, 255, 0.03);
+
+  overflow: hidden;
 }
 
 .stat-pill .label {
-  color: rgba(255, 255, 255, 0.4);
   font-size: 0.55rem;
-  text-transform: uppercase;
+
+  white-space: nowrap;
 }
 
 .stat-pill .value {
+  max-width: 100%;
+
   font-size: 0.9rem;
-  font-weight: 700;
-  text-align: center;
+
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
-.text-emerald {
-  color: #34d399;
-}
 
-/* =========================================
-   FAR RIGHT BARS (SOCIAL)
-========================================= */
+/* =========================================================
+   SOCIAL RAIL
+   ========================================================= */
+
 .social-bar-top,
 .social-bar-bottom {
-  flex: 1;
+  flex: 1 1 0;
+
   display: flex;
+
   align-items: center;
   justify-content: center;
-  padding: 1.5rem 0.5rem;
+
+  min-width: 0;
+  min-height: 0;
+
+  padding: clamp(1rem, 2vw, 1.5rem) 0.5rem;
 }
 
 .vertical-text {
-  writing-mode: vertical-rl;
-  transform: rotate(180deg);
-  color: rgba(255, 255, 255, 0.4);
   font-size: 0.75rem;
-  font-weight: 800;
-  letter-spacing: 0.2em;
-  text-transform: uppercase;
+
+  max-width: 100%;
+
+  writing-mode: vertical-rl;
+
+  text-orientation: mixed;
+
+  white-space: nowrap;
 }
 
-/* =========================================
-   RESPONSIVE MEDIA QUERIES 
-========================================= */
+
+/* =========================================================
+   LARGE DESKTOP / REDUCED AVAILABLE WIDTH
+   ========================================================= */
+
 @media (max-width: 1200px) {
   .bento-dashboard-wrapper {
-    grid-template-columns: minmax(0, 1fr) minmax(0, 1.5fr); 
+    grid-template-columns:
+      minmax(0, 1fr)
+      minmax(0, 1.5fr);
+
+    padding-inline: clamp(1rem, 1.5vw, 1.25rem);
   }
+
   .col-far-right {
-    display: none; 
+    display: none;
   }
+
   .coverflow-left-overlay,
   .coverflow-right-overlay {
+    width: clamp(130px, 25%, 200px);
+  }
+
+  .clip-card {
+    width: clamp(135px, 14vw, 180px);
+  }
+}
+
+
+/* =========================================================
+   TABLET / SMALL DESKTOP
+   ========================================================= */
+
+@media (max-width: 900px) {
+  .bento-dashboard-wrapper {
+    grid-template-columns: minmax(0, 1fr);
+
+    padding:
+      clamp(0.8rem, 2vw, 1rem)
+      clamp(0.8rem, 2vw, 1rem);
+  }
+
+  .col-main-left {
+    grid-column: 1;
+    grid-row: 1;
+  }
+
+  .col-main-right {
+    grid-column: 1;
+    grid-row: 2;
+  }
+
+  .tournaments-card {
+    min-height: auto;
+  }
+
+  .tournaments-card-content {
+    max-width: 100%;
+  }
+
+  .hero-character-render {
+    position: relative;
+
+    right: auto;
+    bottom: auto;
+
+    width: auto;
+
+    height: clamp(160px, 30vw, 220px);
+
+    max-width: 100%;
+    max-height: none;
+
+    margin-top: 1rem;
+
+    align-self: center;
+  }
+
+  .highlights-section {
+    min-height: clamp(380px, 70vw, 500px);
+  }
+
+  .coverflow-left-overlay {
+    width: 25%;
+  }
+
+  .coverflow-right-overlay {
+    right: 0.75rem;
+
     width: 25%;
   }
 }
 
-@media (max-width: 900px) {
+
+/* =========================================================
+   NARROW MOBILE
+   ========================================================= */
+
+@media (max-width: 600px) {
   .bento-dashboard-wrapper {
-    grid-template-columns: minmax(0, 1fr); 
-    /* Keep horizontal padding at 0 on mobile */
-    padding: 1rem 0; 
-    margin: 0;
+    gap: 1rem;
+
+    padding:
+      0.75rem
+      0.75rem;
   }
+
+  .col-main-left,
   .col-main-right {
-    grid-column: 1;
-    grid-row: 2; 
+    gap: 1rem;
   }
+
   .tournaments-card {
-    min-height: auto; 
+    padding: 1.25rem;
   }
-  .tournaments-card-content {
-    max-width: 100%; 
+
+  .block-title {
+    font-size: clamp(1.1rem, 6vw, 1.5rem);
   }
+
   .hero-character-render {
-    position: relative;
-    right: 0;
-    height: 200px;
-    max-width: 100%;
-    margin-top: 1rem;
+    height: clamp(150px, 40vw, 200px);
+  }
+
+  .mid-grid-row {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .highlights-section {
+    min-height: 420px;
+  }
+
+  .coverflow-container {
+    min-height: 250px;
+  }
+
+  .clip-card {
+    width: clamp(125px, 30vw, 165px);
+  }
+
+  .coverflow-left-overlay,
+  .coverflow-right-overlay {
+    width: 24%;
+  }
+
+  .clip-title-massive {
+    font-size: 1rem;
+  }
+
+  .clip-actions {
+    flex-wrap: wrap;
+  }
+
+  .stat-breakdown {
+    gap: 0.4rem;
+  }
+
+  .stat-pill {
+    padding-inline: 0.4rem;
+  }
+}
+
+
+/* =========================================================
+   VERY NARROW SCREENS
+   ========================================================= */
+
+@media (max-width: 420px) {
+  .coverflow-left-overlay,
+  .coverflow-right-overlay {
+    display: none;
+  }
+
+  .clip-card {
+    width: min(48vw, 160px);
+  }
+
+  .prev-btn {
+    left: calc(50% - 35px);
+  }
+
+  .next-btn {
+    right: calc(50% - 35px);
   }
 }
