@@ -130,23 +130,6 @@ def _require_user():
 # =========================================================
 # REWARD EVENT HELPER
 # =========================================================
-#
-# IMPORTANT:
-# Reward failures must NEVER break the actual profile action.
-#
-# Example:
-# If a clip successfully uploads but the reward system has
-# an unexpected problem, the clip should still remain uploaded.
-#
-# process_synco_event() is responsible for:
-# - checking whether the event is valid
-# - preventing duplicate rewards
-# - updating missions
-# - updating achievements
-# - awarding XP
-# - awarding Credits
-#
-# =========================================================
 
 def _process_reward_event(
     user,
@@ -212,12 +195,6 @@ def _profile_for(user):
 # =========================================================
 # PROFILE COMPLETION CHECK
 # =========================================================
-#
-# This checks actual database-backed profile information.
-#
-# We do NOT reward simply because /update was called.
-#
-# =========================================================
 
 def _is_profile_complete(user, profile=None):
 
@@ -254,10 +231,6 @@ def _is_profile_complete(user, profile=None):
         user.avatar
         or basic_data.get("avatarUrl", "")
     ).strip()
-
-    # -----------------------------------------------------
-    # Required profile information
-    # -----------------------------------------------------
 
     return bool(
         name
@@ -328,6 +301,81 @@ def _clip_media_url(filename):
 
 
 # =========================================================
+# GET CLIP IDS LIKED BY CURRENT VIEWER
+# =========================================================
+#
+# IMPORTANT:
+# A clip belongs to one user, but the "liked" state belongs
+# to the person currently viewing the clip.
+#
+# Therefore we must calculate isLiked using:
+#
+#     ProfileClipLike.user_id == viewer_user_id
+#
+# and NOT using the clip owner.
+#
+# =========================================================
+
+def _liked_clip_ids_for_viewer(
+    clip_ids,
+    viewer_user_id,
+):
+
+    if not viewer_user_id or not clip_ids:
+        return set()
+
+    liked_rows = (
+        ProfileClipLike.query
+        .filter(
+            ProfileClipLike.user_id == viewer_user_id,
+            ProfileClipLike.clip_id.in_(clip_ids),
+        )
+        .all()
+    )
+
+    return {
+        like.clip_id
+        for like in liked_rows
+    }
+
+
+# =========================================================
+# CLIP SERIALIZER
+# =========================================================
+
+def _serialize_clip(
+    clip,
+    liked_clip_ids=None,
+):
+
+    liked_clip_ids = liked_clip_ids or set()
+
+    clip_data = clip.to_dict(
+        _clip_media_url(
+            clip.filename
+        )
+    )
+
+    # -----------------------------------------------------
+    # THIS IS THE IMPORTANT PART
+    # -----------------------------------------------------
+    #
+    # The frontend uses:
+    #
+    #     clip.isLiked
+    #
+    # so always send it explicitly.
+    #
+    # -----------------------------------------------------
+
+    clip_data["isLiked"] = (
+        clip.id in liked_clip_ids
+    )
+
+    return clip_data
+
+
+# =========================================================
 # PUBLIC PROFILE SERIALIZER
 # =========================================================
 
@@ -346,6 +394,28 @@ def _public_profile(user):
             ProfileClip.created_at.desc()
         )
         .all()
+    )
+
+    # -----------------------------------------------------
+    # CURRENT VIEWER
+    # -----------------------------------------------------
+
+    session_user = session.get("user")
+
+    viewer_user_id = (
+        session_user.get("id")
+        if session_user
+        else None
+    )
+
+    clip_ids = [
+        clip.id
+        for clip in clips
+    ]
+
+    liked_clip_ids = _liked_clip_ids_for_viewer(
+        clip_ids,
+        viewer_user_id,
     )
 
     return {
@@ -414,10 +484,9 @@ def _public_profile(user):
 
         "clips": [
 
-            clip.to_dict(
-                _clip_media_url(
-                    clip.filename
-                )
+            _serialize_clip(
+                clip,
+                liked_clip_ids,
             )
 
             for clip in clips
@@ -536,6 +605,16 @@ def get_profile():
         .all()
     )
 
+    clip_ids = [
+        clip.id
+        for clip in clips
+    ]
+
+    liked_clip_ids = _liked_clip_ids_for_viewer(
+        clip_ids,
+        user.id,
+    )
+
     return jsonify({
 
         "basicData": basic_data,
@@ -564,10 +643,9 @@ def get_profile():
 
         "clips": [
 
-            clip.to_dict(
-                _clip_media_url(
-                    clip.filename
-                )
+            _serialize_clip(
+                clip,
+                liked_clip_ids,
             )
 
             for clip in clips
@@ -770,13 +848,6 @@ def update_profile():
 
     # =====================================================
     # PROFILE COMPLETION REWARD
-    # =====================================================
-    #
-    # Only fires when the profile is actually complete.
-    #
-    # The reward engine handles idempotency, so repeatedly
-    # updating the profile cannot farm the reward.
-    #
     # =====================================================
 
     if _is_profile_complete(
@@ -1019,14 +1090,6 @@ def add_game():
     # =====================================================
     # FIRST GAME REWARD
     # =====================================================
-    #
-    # This event is generated only after the ProfileGame
-    # has successfully been committed to the database.
-    #
-    # Reward engine decides whether this is the user's
-    # first game and prevents duplicate rewards.
-    #
-    # =====================================================
 
     _process_reward_event(
 
@@ -1092,6 +1155,69 @@ def delete_game(game_id):
         "success": True,
 
         "message": "Game removed",
+
+    })
+
+
+# =========================================================
+# GET CURRENT USER CLIPS
+# =========================================================
+#
+# DashboardHome uses:
+#
+#     GET /api/profile/clips
+#
+# This endpoint now also returns isLiked so the heart
+# correctly restores its state after refresh.
+#
+# =========================================================
+
+@profile_bp.route(
+    "/clips",
+    methods=["GET"],
+)
+def get_my_clips():
+
+    user, error = _require_user()
+
+    if error:
+        return error
+
+    clips = (
+        ProfileClip.query
+        .filter_by(
+            user_id=user.id
+        )
+        .order_by(
+            ProfileClip.created_at.desc()
+        )
+        .all()
+    )
+
+    clip_ids = [
+        clip.id
+        for clip in clips
+    ]
+
+    liked_clip_ids = _liked_clip_ids_for_viewer(
+        clip_ids,
+        user.id,
+    )
+
+    return jsonify({
+
+        "success": True,
+
+        "clips": [
+
+            _serialize_clip(
+                clip,
+                liked_clip_ids,
+            )
+
+            for clip in clips
+
+        ],
 
     })
 
@@ -1636,15 +1762,6 @@ def upload_clip():
     # =====================================================
     # FIRST CLIP REWARD
     # =====================================================
-    #
-    # This is triggered only after:
-    #
-    # 1. Supabase upload succeeded
-    # 2. ProfileClip DB record succeeded
-    #
-    # The reward engine handles duplicate protection.
-    #
-    # =====================================================
 
     _process_reward_event(
 
@@ -1675,6 +1792,10 @@ def upload_clip():
     # -----------------------------------------------------
     # RESPONSE
     # -----------------------------------------------------
+    #
+    # A newly uploaded clip is not automatically liked.
+    #
+    # -----------------------------------------------------
 
     return jsonify({
 
@@ -1682,8 +1803,9 @@ def upload_clip():
 
         "message": "Clip uploaded successfully.",
 
-        "clip": clip.to_dict(
-            media_url
+        "clip": _serialize_clip(
+            clip,
+            set(),
         ),
 
     }), 201

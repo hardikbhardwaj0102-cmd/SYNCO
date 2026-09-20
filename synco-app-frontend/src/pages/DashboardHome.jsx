@@ -27,18 +27,64 @@ const API_URL = 'https://synco-backend-vi7b.onrender.com';
 // HELPERS
 // =========================================================
 
-const compactNumber = new Intl.NumberFormat('en', { notation: 'compact' });
+const compactNumber = new Intl.NumberFormat('en', {
+  notation: 'compact',
+});
 
-const formatCount = (value) => compactNumber.format(value || 0);
+const formatCount = (value) =>
+  compactNumber.format(value || 0);
 
 const showValue = (value) =>
-  value === undefined || value === null || value === '' ? '--' : value;
+  value === undefined ||
+    value === null ||
+    value === ''
+    ? '--'
+    : value;
 
 const getGreeting = () => {
   const hour = new Date().getHours();
-  if (hour < 12) return 'Good morning';
-  if (hour < 17) return 'Good afternoon';
+
+  if (hour < 12) {
+    return 'Good morning';
+  }
+
+  if (hour < 17) {
+    return 'Good afternoon';
+  }
+
   return 'Good evening';
+};
+
+
+// =========================================================
+// NORMALIZE CLIP
+// =========================================================
+//
+// The backend now sends:
+//
+//     isLiked: true / false
+//
+// We also support common alternate naming so the UI remains
+// safe if another endpoint returns snake_case.
+//
+// =========================================================
+
+const normalizeClip = (clip) => {
+
+  if (!clip) {
+    return clip;
+  }
+
+  return {
+    ...clip,
+
+    isLiked: Boolean(
+      clip.isLiked ??
+      clip.is_liked ??
+      clip.liked ??
+      false
+    ),
+  };
 };
 
 
@@ -56,13 +102,17 @@ const DashboardHome = () => {
 
   const isAdmin = accountRole === 'admin';
 
-  const gametag = user?.gametag || user?.username || 'PLAYER';
+  const gametag =
+    user?.gametag ||
+    user?.username ||
+    'PLAYER';
 
   const [gameCatalog, setGameCatalog] = useState([]);
   const [profileGames, setProfileGames] = useState([]);
   const [selectedGame, setSelectedGame] = useState('');
   const [clips, setClips] = useState([]);
   const [activeClipIndex, setActiveClipIndex] = useState(0);
+
   const [comments, setComments] = useState([]);
   const [commentText, setCommentText] = useState('');
   const [commentsLoading, setCommentsLoading] = useState(false);
@@ -71,9 +121,14 @@ const DashboardHome = () => {
   const videoRefs = useRef({});
   const activeClipIdRef = useRef(null);
 
-  const activeClip = clips[activeClipIndex] ?? null;
-  const activeClipId = activeClip?.id ?? null;
-  activeClipIdRef.current = activeClipId;
+  const activeClip =
+    clips[activeClipIndex] ?? null;
+
+  const activeClipId =
+    activeClip?.id ?? null;
+
+  activeClipIdRef.current =
+    activeClipId;
 
 
   // =========================================================
@@ -93,54 +148,90 @@ const DashboardHome = () => {
         const [
           catalogResponse,
           profileResponse,
-          clipsResponse
+          clipsResponse,
         ] = await Promise.all([
 
-          fetch(`${API_URL}/api/games`, {
-            method: 'GET',
-            credentials: 'include'
-          }).catch(() => ({
-            ok: false
+          fetch(
+            `${API_URL}/api/games`,
+            {
+              method: 'GET',
+              credentials: 'include',
+            }
+          ).catch(() => ({
+            ok: false,
           })),
 
-          fetch(`${API_URL}/api/profile`, {
-            method: 'GET',
-            credentials: 'include'
-          }).catch(() => ({
-            ok: false
+          fetch(
+            `${API_URL}/api/profile`,
+            {
+              method: 'GET',
+              credentials: 'include',
+            }
+          ).catch(() => ({
+            ok: false,
           })),
 
-          fetch(`${API_URL}/api/profile/clips`, {
-            method: 'GET',
-            credentials: 'include'
-          }).catch(() => ({
-            ok: false
-          }))
+          fetch(
+            `${API_URL}/api/profile/clips`,
+            {
+              method: 'GET',
+              credentials: 'include',
+            }
+          ).catch(() => ({
+            ok: false,
+          })),
 
         ]);
 
 
+        // =====================================================
         // GAME CATALOG
+        // =====================================================
 
         if (catalogResponse?.ok) {
-          const catalogData = await catalogResponse.json();
-          setGameCatalog(catalogData.games || []);
+
+          const catalogData =
+            await catalogResponse.json();
+
+          setGameCatalog(
+            catalogData.games || []
+          );
         }
 
 
+        // =====================================================
         // PROFILE GAMES
+        // =====================================================
 
         if (profileResponse?.ok) {
-          const profileData = await profileResponse.json();
-          setProfileGames(profileData.games || []);
+
+          const profileData =
+            await profileResponse.json();
+
+          setProfileGames(
+            profileData.games || []
+          );
         }
 
 
+        // =====================================================
         // CLIPS
+        // =====================================================
 
         if (clipsResponse?.ok) {
-          const clipsData = await clipsResponse.json();
-          setClips(clipsData.clips || []);
+
+          const clipsData =
+            await clipsResponse.json();
+
+          const loadedClips =
+            (clipsData.clips || []).map(
+              normalizeClip
+            );
+
+          setClips(
+            loadedClips
+          );
+
           setActiveClipIndex(0);
         }
 
@@ -164,31 +255,50 @@ const DashboardHome = () => {
   // =========================================================
   // GAME LIST + DEFAULT SELECTED GAME
   // "Your Games" = only the games on the player's profile.
-  // If the profile has no games, we should not fall back to the
-  // global catalog because that incorrectly shows all games.
   // =========================================================
 
   const gameOptions = useMemo(
-    () => profileGames.map((game) => game.gameName),
+    () =>
+      profileGames.map(
+        (game) => game.gameName
+      ),
     [profileGames]
   );
+
 
   useEffect(() => {
 
     if (!profileGames.length) {
+
       setSelectedGame('');
+
       return;
     }
 
-    if (!selectedGame || !profileGames.some((game) => game.gameName === selectedGame)) {
-      setSelectedGame(profileGames[0].gameName);
+    if (
+      !selectedGame ||
+      !profileGames.some(
+        (game) =>
+          game.gameName === selectedGame
+      )
+    ) {
+
+      setSelectedGame(
+        profileGames[0].gameName
+      );
     }
 
-  }, [profileGames, selectedGame]);
+  }, [
+    profileGames,
+    selectedGame,
+  ]);
 
-  const selectedStats = profileGames.find(
-    (game) => game.gameName === selectedGame
-  );
+
+  const selectedStats =
+    profileGames.find(
+      (game) =>
+        game.gameName === selectedGame
+    );
 
 
   // =========================================================
@@ -198,7 +308,9 @@ const DashboardHome = () => {
   useEffect(() => {
 
     if (!activeClipId) {
+
       setComments([]);
+
       return undefined;
     }
 
@@ -207,36 +319,61 @@ const DashboardHome = () => {
     const loadComments = async () => {
 
       setComments([]);
+
       setCommentText('');
+
       setCommentError('');
+
       setCommentsLoading(true);
 
       try {
 
-        const response = await fetch(
-          `${API_URL}/api/profile/clips/${activeClipId}/comments`,
-          { credentials: 'include', headers: { Accept: 'application/json' } }
-        );
-        const data = await response.json();
+        const response =
+          await fetch(
+            `${API_URL}/api/profile/clips/${activeClipId}/comments`,
+            {
+              credentials: 'include',
+              headers: {
+                Accept: 'application/json',
+              },
+            }
+          );
+
+        const data =
+          await response.json();
 
         if (!response.ok) {
-          throw new Error(data.message || 'Unable to load comments.');
+
+          throw new Error(
+            data.message ||
+            'Unable to load comments.'
+          );
         }
 
         if (!cancelled) {
-          setComments(data.comments || []);
+
+          setComments(
+            data.comments || []
+          );
         }
 
       } catch (error) {
 
         if (!cancelled) {
-          setCommentError(error.message || 'Unable to load comments.');
+
+          setCommentError(
+            error.message ||
+            'Unable to load comments.'
+          );
         }
 
       } finally {
 
         if (!cancelled) {
-          setCommentsLoading(false);
+
+          setCommentsLoading(
+            false
+          );
         }
 
       }
@@ -246,6 +383,7 @@ const DashboardHome = () => {
     loadComments();
 
     return () => {
+
       cancelled = true;
     };
 
@@ -253,39 +391,68 @@ const DashboardHome = () => {
 
 
   // =========================================================
-  // VIDEO PLAYBACK — only the centered clip plays
+  // VIDEO PLAYBACK
   // =========================================================
 
   useEffect(() => {
 
-    clips.forEach((clip, index) => {
+    clips.forEach(
+      (clip, index) => {
 
-      const video = videoRefs.current[clip.id];
+        const video =
+          videoRefs.current[
+          clip.id
+          ];
 
-      if (!video) return;
+        if (!video) {
+          return;
+        }
 
-      if (index === activeClipIndex) {
-        video.play().catch(() => { });
-      } else {
-        video.pause();
+        if (
+          index === activeClipIndex
+        ) {
+
+          video
+            .play()
+            .catch(() => { });
+
+        } else {
+
+          video.pause();
+        }
+
       }
+    );
 
-    });
+  }, [
+    clips,
+    activeClipIndex,
+  ]);
 
-  }, [clips, activeClipIndex]);
 
-  const togglePlayback = (clipId) => {
+  const togglePlayback = (
+    clipId
+  ) => {
 
-    const video = videoRefs.current[clipId];
+    const video =
+      videoRefs.current[
+      clipId
+      ];
 
-    if (!video) return;
-
-    if (video.paused) {
-      video.play().catch(() => { });
-    } else {
-      video.pause();
+    if (!video) {
+      return;
     }
 
+    if (video.paused) {
+
+      video
+        .play()
+        .catch(() => { });
+
+    } else {
+
+      video.pause();
+    }
   };
 
 
@@ -294,45 +461,94 @@ const DashboardHome = () => {
   // =========================================================
 
   const nextClip = () => {
-    if (!clips.length) return;
-    setActiveClipIndex((prev) => (prev + 1) % clips.length);
+
+    if (!clips.length) {
+      return;
+    }
+
+    setActiveClipIndex(
+      (previous) =>
+        (
+          previous + 1
+        ) % clips.length
+    );
   };
+
 
   const prevClip = () => {
-    if (!clips.length) return;
-    setActiveClipIndex((prev) => (prev - 1 + clips.length) % clips.length);
+
+    if (!clips.length) {
+      return;
+    }
+
+    setActiveClipIndex(
+      (previous) =>
+        (
+          previous - 1 + clips.length
+        ) % clips.length
+    );
   };
 
 
   // =========================================================
-  // LIKE CLIP
+  // LIKE / UNLIKE CLIP
   // =========================================================
 
-  const handleLikeClip = async (clipId) => {
+  const handleLikeClip = async (
+    clipId
+  ) => {
+
     try {
-      const response = await fetch(
-        `${API_URL}/api/profile/clips/${clipId}/like`,
-        {
-          method: 'POST',
-          credentials: 'include',
-          headers: { Accept: 'application/json' },
-        }
-      );
-      const data = await response.json();
+
+      const response =
+        await fetch(
+          `${API_URL}/api/profile/clips/${clipId}/like`,
+          {
+            method: 'POST',
+            credentials: 'include',
+            headers: {
+              Accept: 'application/json',
+            },
+          }
+        );
+
+      const data =
+        await response.json();
 
       if (!response.ok) {
-        throw new Error(data.message || 'Unable to like this clip.');
+
+        throw new Error(
+          data.message ||
+          'Unable to like this clip.'
+        );
       }
 
-      setClips((prevClips) =>
-        prevClips.map((clip) =>
-          clip.id === clipId
-            ? { ...clip, isLiked: Boolean(data.liked), likes: data.likes }
-            : clip
-        )
+      setClips(
+        (previousClips) =>
+          previousClips.map(
+            (clip) =>
+              clip.id === clipId
+                ? {
+                  ...clip,
+
+                  isLiked:
+                    Boolean(
+                      data.liked
+                    ),
+
+                  likes:
+                    data.likes,
+                }
+                : clip
+          )
       );
+
     } catch (error) {
-      console.error('Like failed:', error);
+
+      console.error(
+        'Like failed:',
+        error
+      );
     }
   };
 
@@ -343,55 +559,114 @@ const DashboardHome = () => {
 
   const submitComment = async () => {
 
-    if (!activeClip || !commentText.trim()) return;
+    if (
+      !activeClip ||
+      !commentText.trim()
+    ) {
 
-    const clipId = activeClip.id;
+      return;
+    }
+
+    const clipId =
+      activeClip.id;
 
     try {
-      const response = await fetch(
-        `${API_URL}/api/profile/clips/${clipId}/comments`,
-        {
-          method: 'POST',
-          credentials: 'include',
-          headers: {
-            'Content-Type': 'application/json',
-            Accept: 'application/json',
-          },
-          body: JSON.stringify({ content: commentText.trim() }),
-        }
-      );
-      const data = await response.json();
+
+      const response =
+        await fetch(
+          `${API_URL}/api/profile/clips/${clipId}/comments`,
+          {
+            method: 'POST',
+            credentials: 'include',
+            headers: {
+              'Content-Type':
+                'application/json',
+
+              Accept:
+                'application/json',
+            },
+
+            body: JSON.stringify({
+              content:
+                commentText.trim(),
+            }),
+          }
+        );
+
+      const data =
+        await response.json();
 
       if (!response.ok) {
-        throw new Error(data.message || 'Unable to post comment.');
+
+        throw new Error(
+          data.message ||
+          'Unable to post comment.'
+        );
       }
 
-      setClips((prevClips) =>
-        prevClips.map((clip) =>
-          clip.id === clipId
-            ? { ...clip, comments: (clip.comments || 0) + 1 }
-            : clip
-        )
+      setClips(
+        (previousClips) =>
+          previousClips.map(
+            (clip) =>
+              clip.id === clipId
+                ? {
+                  ...clip,
+
+                  comments:
+                    (
+                      clip.comments ||
+                      0
+                    ) + 1,
+                }
+                : clip
+          )
       );
 
-      // Only touch the visible list if the user is still on the same clip
-      if (activeClipIdRef.current === clipId) {
-        setComments((currentComments) => [...currentComments, data]);
+
+      // -----------------------------------------------------
+      // Only update visible comments if user is still on
+      // the same clip.
+      // -----------------------------------------------------
+
+      if (
+        activeClipIdRef.current ===
+        clipId
+      ) {
+
+        setComments(
+          (currentComments) => [
+            ...currentComments,
+            data,
+          ]
+        );
+
         setCommentText('');
+
         setCommentError('');
       }
+
     } catch (error) {
-      setCommentError(error.message || 'Unable to post comment.');
+
+      setCommentError(
+        error.message ||
+        'Unable to post comment.'
+      );
     }
   };
 
-  const handleCommentKeyDown = (event) => {
+
+  const handleCommentKeyDown = (
+    event
+  ) => {
+
     if (
       event.key === 'Enter' &&
       !event.shiftKey &&
       !event.nativeEvent.isComposing
     ) {
+
       event.preventDefault();
+
       submitComment();
     }
   };
@@ -402,7 +677,10 @@ const DashboardHome = () => {
   // =========================================================
 
   if (isAdmin) {
-    return <AdminDashboard />;
+
+    return (
+      <AdminDashboard />
+    );
   }
 
 
@@ -411,244 +689,736 @@ const DashboardHome = () => {
   // =========================================================
 
   return (
+
     <div className="bento-dashboard-wrapper">
 
 
       {/* =========================================
           COLUMN 2: MAIN LEFT
           ========================================= */}
+
       <div className="col-main-left">
 
-        {/* Greetings Pill */}
+
+        {/* =========================================
+            GREETINGS
+            ========================================= */}
+
         <div className="wire-block greetings-pill">
-          <h2 style={{ fontSize: '1.1rem', margin: 0 }}>
-            {getGreeting()}, <span className="text-highlight font-bold">{gametag}</span>
+
+          <h2
+            style={{
+              fontSize: '1.1rem',
+              margin: 0,
+            }}
+          >
+
+            {getGreeting()},{' '}
+
+            <span className="text-highlight font-bold">
+              {gametag}
+            </span>
+
           </h2>
+
         </div>
 
-        {/* Featured Tournaments (with popup render) */}
+
+        {/* =========================================
+            FEATURED TOURNAMENT
+            ========================================= */}
+
         <div className="wire-block tournaments-card">
-          <span className="live-badge"><span className="dot"></span> LIVE NOW</span>
-          <h1 className="block-title">SYNCO<br />Summer Cup</h1>
-          <p className="hero-comp-sub">Prize Pool: 50,000 CR</p>
-          <button className="join-btn">Register Roster</button>
 
-          <img src={killjoyRender} alt="Character Popup" className="hero-character-render" />
+          <span className="live-badge">
+
+            <span className="dot"></span>
+
+            LIVE NOW
+
+          </span>
+
+          <h1 className="block-title">
+
+            SYNCO
+            <br />
+            Summer Cup
+
+          </h1>
+
+          <p className="hero-comp-sub">
+
+            Prize Pool: 50,000 CR
+
+          </p>
+
+          <button className="join-btn">
+
+            Register Roster
+
+          </button>
+
+          <img
+            src={killjoyRender}
+            alt="Character Popup"
+            className="hero-character-render"
+          />
+
         </div>
 
-        {/* Coverflow Highlights Section */}
+
+        {/* =========================================
+            SYNCO MOMENTS
+            ========================================= */}
+
         <div className="bento-card highlights-section">
-          <h3 className="section-label">SYNCO MOMENTS</h3>
+
+          <h3 className="section-label">
+
+            SYNCO MOMENTS
+
+          </h3>
+
 
           <div className="coverflow-container">
 
             {activeClip ? (
+
               <>
-                {/* Left Overlay: Title & Details */}
+
+                {/* =====================================
+                    LEFT OVERLAY
+                    ===================================== */}
+
                 <div className="coverflow-left-overlay">
-                  <h2 className="clip-title-massive">{activeClip.title}</h2>
+
+                  <h2 className="clip-title-massive">
+
+                    {activeClip.title}
+
+                  </h2>
+
                   <div className="clip-author">
-                    Description: {activeClip.description || 'No description provided.'}
+
+                    Description:{' '}
+
+                    {
+                      activeClip.description ||
+                      'No description provided.'
+                    }
+
                   </div>
+
+
+                  {/* =================================
+                      LIKE BUTTON
+                      ================================= */}
+
                   <div className="clip-actions">
+
                     <button
                       type="button"
-                      onClick={() => handleLikeClip(activeClip.id)}
-                      aria-pressed={Boolean(activeClip.isLiked)}
-                      aria-label="Like this clip"
+
+                      onClick={() =>
+                        handleLikeClip(
+                          activeClip.id
+                        )
+                      }
+
+                      aria-pressed={
+                        Boolean(
+                          activeClip.isLiked
+                        )
+                      }
+
+                      aria-label={
+                        activeClip.isLiked
+                          ? 'Unlike this clip'
+                          : 'Like this clip'
+                      }
                     >
+
                       <Heart
                         size={18}
-                        fill={activeClip.isLiked ? '#ff4655' : 'none'}
-                        color={activeClip.isLiked ? '#ff4655' : 'currentColor'}
+
+                        fill={
+                          activeClip.isLiked
+                            ? '#ff4655'
+                            : 'none'
+                        }
+
+                        color={
+                          activeClip.isLiked
+                            ? '#ff4655'
+                            : 'currentColor'
+                        }
                       />
-                      {formatCount(activeClip.likes)}
+
+                      {formatCount(
+                        activeClip.likes
+                      )}
+
                     </button>
+
                   </div>
+
                 </div>
 
-                {/* The Videos */}
-                <div className="clip-game-tag">{activeClip.game || 'Unspecified'}</div>
+
+                {/* =====================================
+                    GAME TAG
+                    ===================================== */}
+
+                <div className="clip-game-tag">
+
+                  {
+                    activeClip.game ||
+                    'Unspecified'
+                  }
+
+                </div>
+
+
+                {/* =====================================
+                    VIDEOS
+                    ===================================== */}
+
                 <div className="coverflow-track">
-                  {clips.map((clip, index) => {
-                    let positionClass = 'clip-hidden';
-                    if (index === activeClipIndex) positionClass = 'clip-center';
-                    else if (index === (activeClipIndex - 1 + clips.length) % clips.length) positionClass = 'clip-left';
-                    else if (index === (activeClipIndex + 1) % clips.length) positionClass = 'clip-right';
 
-                    const isCenter = index === activeClipIndex;
+                  {clips.map(
+                    (clip, index) => {
 
-                    return (
-                      <div key={clip.id} className={`clip-card ${positionClass}`}>
-                        <video
-                          ref={(element) => {
-                            if (element) {
-                              videoRefs.current[clip.id] = element;
-                            } else {
-                              delete videoRefs.current[clip.id];
+                      let positionClass =
+                        'clip-hidden';
+
+                      if (
+                        index ===
+                        activeClipIndex
+                      ) {
+
+                        positionClass =
+                          'clip-center';
+
+                      } else if (
+                        index ===
+                        (
+                          activeClipIndex -
+                          1 +
+                          clips.length
+                        ) %
+                        clips.length
+                      ) {
+
+                        positionClass =
+                          'clip-left';
+
+                      } else if (
+                        index ===
+                        (
+                          activeClipIndex +
+                          1
+                        ) %
+                        clips.length
+                      ) {
+
+                        positionClass =
+                          'clip-right';
+                      }
+
+                      const isCenter =
+                        index ===
+                        activeClipIndex;
+
+
+                      return (
+
+                        <div
+                          key={clip.id}
+                          className={`clip-card ${positionClass}`}
+                        >
+
+                          <video
+                            ref={(element) => {
+
+                              if (element) {
+
+                                videoRefs.current[
+                                  clip.id
+                                ] = element;
+
+                              } else {
+
+                                delete videoRefs.current[
+                                  clip.id
+                                ];
+                              }
+
+                            }}
+
+                            src={clip.url}
+
+                            muted
+
+                            loop
+
+                            playsInline
+
+                            preload={
+                              isCenter
+                                ? 'auto'
+                                : 'metadata'
                             }
-                          }}
-                          src={clip.url}
-                          muted
-                          loop
-                          playsInline
-                          preload={isCenter ? 'auto' : 'metadata'}
-                        />
-                        {isCenter && (
-                          <div
-                            className="play-overlay"
-                            onClick={() => togglePlayback(clip.id)}
-                          >
-                            <Play size={32} />
-                          </div>
-                        )}
-                      </div>
-                    );
-                  })}
+                          />
+
+
+                          {isCenter && (
+
+                            <div
+                              className="play-overlay"
+
+                              onClick={() =>
+                                togglePlayback(
+                                  clip.id
+                                )
+                              }
+                            >
+
+                              <Play size={32} />
+
+                            </div>
+
+                          )}
+
+                        </div>
+
+                      );
+                    }
+                  )}
+
                 </div>
 
-                {/* Right Overlay: Comments */}
+
+                {/* =====================================
+                    RIGHT OVERLAY — COMMENTS
+                    ===================================== */}
+
                 <div className="coverflow-right-overlay comments-panel">
+
                   <h4 className="comments-header">
-                    <MessageSquare size={14} /> Comments ({activeClip.comments || 0})
+
+                    <MessageSquare size={14} />
+
+                    Comments (
+                    {activeClip.comments || 0}
+                    )
+
                   </h4>
+
+
                   <div className="comments-list">
+
                     {commentsLoading && (
-                      <p className="empty-comms">Loading comments...</p>
-                    )}
-                    {!commentsLoading && !commentError && comments.length === 0 && (
-                      <p className="empty-comms">No comments yet</p>
-                    )}
-                    {comments.map((comment) => (
-                      <div key={comment.id} className="comment-item">
-                        <span className="comment-user">{comment.author}:</span> {comment.content}
-                      </div>
-                    ))}
-                    {commentError && (
-                      <p className="empty-comms" style={{ color: '#ff4655' }}>
-                        {commentError}
+
+                      <p className="empty-comms">
+
+                        Loading comments...
+
                       </p>
+
                     )}
+
+
+                    {!commentsLoading &&
+                      !commentError &&
+                      comments.length === 0 && (
+
+                        <p className="empty-comms">
+
+                          No comments yet
+
+                        </p>
+
+                      )}
+
+
+                    {comments.map(
+                      (comment) => (
+
+                        <div
+                          key={comment.id}
+                          className="comment-item"
+                        >
+
+                          <span className="comment-user">
+
+                            {comment.author}:
+
+                          </span>{' '}
+
+                          {comment.content}
+
+                        </div>
+
+                      )
+                    )}
+
+
+                    {commentError && (
+
+                      <p
+                        className="empty-comms"
+
+                        style={{
+                          color: '#ff4655',
+                        }}
+                      >
+
+                        {commentError}
+
+                      </p>
+
+                    )}
+
                   </div>
+
+
                   <input
                     type="text"
                     placeholder="Add a comment"
                     className="comment-input"
                     value={commentText}
                     maxLength={1000}
-                    onChange={(event) => setCommentText(event.target.value)}
-                    onKeyDown={handleCommentKeyDown}
+
+                    onChange={(event) =>
+                      setCommentText(
+                        event.target.value
+                      )
+                    }
+
+                    onKeyDown={
+                      handleCommentKeyDown
+                    }
                   />
+
                 </div>
 
-                {/* Navigation Controls */}
+
+                {/* =====================================
+                    NAVIGATION
+                    ===================================== */}
+
                 {clips.length > 1 && (
+
                   <>
-                    <button type="button" className="nav-btn prev-btn" onClick={prevClip} aria-label="Previous clip">
+
+                    <button
+                      type="button"
+                      className="nav-btn prev-btn"
+                      onClick={prevClip}
+                      aria-label="Previous clip"
+                    >
+
                       <ChevronLeft />
+
                     </button>
-                    <button type="button" className="nav-btn next-btn" onClick={nextClip} aria-label="Next clip">
+
+
+                    <button
+                      type="button"
+                      className="nav-btn next-btn"
+                      onClick={nextClip}
+                      aria-label="Next clip"
+                    >
+
                       <ChevronRight />
+
                     </button>
+
                   </>
+
                 )}
+
               </>
+
             ) : (
-              <p className="empty-comms" style={{ textAlign: 'center' }}>
-                No clips yet. Add clips to your showcase and they will show up here.
+
+              <p
+                className="empty-comms"
+                style={{
+                  textAlign: 'center',
+                }}
+              >
+
+                No clips yet. Add clips to
+                your showcase and they will
+                show up here.
+
               </p>
+
             )}
 
           </div>
+
         </div>
+
       </div>
 
 
       {/* =========================================
           COLUMN 3: MAIN RIGHT
           ========================================= */}
+
       <div className="col-main-right">
 
-        {/* Premium Banner */}
+
+        {/* =========================================
+            PREMIUM BANNER
+            ========================================= */}
+
         <div className="wire-block premium-banner-pill">
-          <span style={{ fontWeight: 800, textTransform: 'uppercase', fontSize: '0.9rem' }}>
+
+          <span
+            style={{
+              fontWeight: 800,
+              textTransform: 'uppercase',
+              fontSize: '0.9rem',
+            }}
+          >
+
             Upgrade to SYNCO Premium
+
           </span>
-          <Crown size={20} className="text-highlight" />
+
+          <Crown
+            size={20}
+            className="text-highlight"
+          />
+
         </div>
 
-        {/* Mid Row: Games + Promo */}
+
+        {/* =========================================
+            GAMES + PROMO
+            ========================================= */}
+
         <div className="mid-grid-row">
+
+
           <div className="bento-card game-selector-card">
-            <h3 className="section-label">Your Games</h3>
-            <div className="game-list">
-              {gameOptions.length ? (
-                gameOptions.map((game) => (
-                  <button
-                    type="button"
-                    key={game}
-                    className={`game-option ${selectedGame === game ? 'active' : ''}`}
-                    onClick={() => setSelectedGame(game)}
-                  >
-                    <Target size={16} />
-                    <span>{game}</span>
-                  </button>
-                ))
-              ) : (
-                <p className="empty-comms">No games yet</p>
-              )}
-            </div>
-          </div>
-          <div className="wire-block synco-promo-card">
-            <h3 style={{ fontSize: '1rem', textTransform: 'uppercase', lineHeight: '1.4' }}>
-              synco<br />promotional<br />banner
+
+            <h3 className="section-label">
+
+              Your Games
+
             </h3>
+
+
+            <div className="game-list">
+
+              {gameOptions.length ? (
+
+                gameOptions.map(
+                  (game) => (
+
+                    <button
+                      type="button"
+                      key={game}
+
+                      className={`game-option ${selectedGame === game
+                          ? 'active'
+                          : ''
+                        }`}
+
+                      onClick={() =>
+                        setSelectedGame(
+                          game
+                        )
+                      }
+                    >
+
+                      <Target size={16} />
+
+                      <span>
+                        {game}
+                      </span>
+
+                    </button>
+
+                  )
+                )
+
+              ) : (
+
+                <p className="empty-comms">
+
+                  No games yet
+
+                </p>
+
+              )}
+
+            </div>
+
           </div>
+
+
+          <div className="wire-block synco-promo-card">
+
+            <h3
+              style={{
+                fontSize: '1rem',
+                textTransform: 'uppercase',
+                lineHeight: '1.4',
+              }}
+            >
+
+              synco
+              <br />
+              promotional
+              <br />
+              banner
+
+            </h3>
+
+          </div>
+
         </div>
 
-        {/* Visual Statistics Meter */}
+
+        {/* =========================================
+            SYNCO RATING
+            ========================================= */}
+
         <div className="bento-card stat-meter-card">
+
           <div className="stat-header-row">
-            <h3 className="section-label">SYNCO Rating</h3>
-            <Zap size={16} className="stat-icon" />
+
+            <h3 className="section-label">
+
+              SYNCO Rating
+
+            </h3>
+
+            <Zap
+              size={16}
+              className="stat-icon"
+            />
+
           </div>
+
 
           <div className="stat-meter-container">
+
             <div className="stat-glowing-blob"></div>
-            <div className="rating-number">{showValue(selectedStats?.rating)}</div>
+
+            <div className="rating-number">
+
+              {showValue(
+                selectedStats?.rating
+              )}
+
+            </div>
+
           </div>
 
+
           <div className="stat-breakdown">
+
             <div className="stat-pill">
-              <span className="label">Class</span>
-              <span className="value">{showValue(selectedStats?.rank)}</span>
+
+              <span className="label">
+
+                Class
+
+              </span>
+
+              <span className="value">
+
+                {showValue(
+                  selectedStats?.rank
+                )}
+
+              </span>
+
             </div>
+
+
             <div className="stat-pill">
-              <span className="label">Win R.</span>
-              <span className="value text-emerald">{showValue(selectedStats?.winRate)}</span>
+
+              <span className="label">
+
+                Win R.
+
+              </span>
+
+              <span className="value text-emerald">
+
+                {showValue(
+                  selectedStats?.winRate
+                )}
+
+              </span>
+
             </div>
+
+
             <div className="stat-pill">
-              <span className="label">K/D</span>
-              <span className="value">{showValue(selectedStats?.kd)}</span>
+
+              <span className="label">
+
+                K/D
+
+              </span>
+
+              <span className="value">
+
+                {showValue(
+                  selectedStats?.kd
+                )}
+
+              </span>
+
             </div>
+
           </div>
+
         </div>
+
       </div>
 
 
       {/* =========================================
           COLUMN 4: FAR RIGHT SIDEBAR
           ========================================= */}
+
       <div className="col-far-right">
+
         <div className="wire-block social-bar-top">
-          <span className="vertical-text">social right bar</span>
+
+          <span className="vertical-text">
+
+            social right bar
+
+          </span>
+
         </div>
+
+
         <div className="wire-block social-bar-bottom">
-          <span className="vertical-text">discord right bar</span>
+
+          <span className="vertical-text">
+
+            discord right bar
+
+          </span>
+
         </div>
+
       </div>
 
+
     </div>
+
   );
 };
 
