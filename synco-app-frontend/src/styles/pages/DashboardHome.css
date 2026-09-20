@@ -374,24 +374,19 @@ html {
   position: relative;
 
   display: flex;
-
   align-items: center;
   justify-content: center;
 
   width: 100%;
 
-  /*
-    The Coverflow itself takes all remaining space
-    underneath the section label.
-  */
   flex: 1 1 0;
 
   height: auto;
-
-  min-width: 0;
   min-height: 0;
 
-  margin-top: 1rem;
+  min-width: 0;
+
+  margin-top: 0.75rem;
 
   overflow: hidden;
 
@@ -1763,9 +1758,22 @@ html {
   }
 
   .highlights-section {
-    min-height:
-      clamp(360px, 65vw, 480px);
-  }
+  position: relative;
+
+  display: flex;
+  flex-direction: column;
+
+  flex: 0 1 auto;
+
+  width: 100%;
+  min-width: 0;
+
+  height: clamp(360px, 42vh, 480px);
+  min-height: 360px;
+  max-height: 480px;
+
+  overflow: hidden;
+}
 
   .stat-meter-card {
     min-height:
