@@ -13,7 +13,7 @@ import '../styles/pages/CompetitionEngine.css';
 
 import compHero from '../assets/comp-hero.png';
 import cardCharacter from '../assets/card-charcter-logo.png';
-import rosterCompBg from '../assets/roster-comp-bg.png';
+import rosterCompBg from '../assets/roster-comp-bg.jpeg';
 
 const API_URL =
   import.meta.env.VITE_API_URL ||
