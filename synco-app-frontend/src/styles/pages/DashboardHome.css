@@ -682,7 +682,7 @@ html {
   width:
     clamp(135px, 24%, 220px);
 
-  height: 82%;
+  height: clamp(200px, 82%, 400px);
 
   min-height: 0;
 }
@@ -1590,9 +1590,7 @@ html {
   min-width: 0;
   min-height: 0;
 
-  padding:
-    clamp(1rem, 2vw, 1.5rem)
-    0.4rem;
+  padding: 0;
 }
 
 .vertical-text {

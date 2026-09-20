@@ -1,593 +1,924 @@
 /* =========================================================
-   SYNCO FRIENDS — SOCIAL RIGHT CORNER ONLY
+   SYNCO FRIENDS — SOCIAL RIGHT CORNER
+   RESPONSIVE / FLUID
    ========================================================= */
 
 .synco-friends-column {
-    position: relative;
-    z-index: 80;
-    display: flex;
-    flex-direction: column;
-    gap: 10px;
-    min-width: 0;
+  position: relative;
+  z-index: 80;
+
+  display: flex;
+  flex-direction: column;
+  gap: clamp(0.5rem, 0.7vw, 0.75rem);
+
+  min-width: 0;
+  min-height: 0;
+  height: 100%;
 }
 
-/*
-   The existing social top block becomes the small friends area.
-   The rest of DashboardHome remains untouched.
-*/
+
+/* =========================================================
+   FRIENDS SOCIAL BLOCK
+   ========================================================= */
+
 .synco-social-friends-corner {
-    position: relative;
-    flex: 0 0 300px;
-    height: 300px;
-    min-height: 300px;
-    overflow: visible !important;
-    z-index: 90;
+  position: relative;
+
+  flex: 1 1 0;
+  min-width: 0;
+  min-height: clamp(220px, 34vh, 420px);
+
+  height: auto;
+
+  overflow: visible !important;
+  z-index: 90;
 }
+
 
 /* =========================================================
    FRIENDS SIDEBAR
    ========================================================= */
 
 .synco-friends-sidebar {
-    position: absolute;
-    top: 0;
-    right: 0;
-    bottom: 0;
-    width: 56px;
-    z-index: 120;
-    overflow: visible;
-    border: 1px solid rgba(20, 20, 20, 0.10);
-    border-radius: 16px;
-    background: rgba(255, 255, 255, 0.97);
-    box-shadow: 0 12px 32px rgba(0, 0, 0, 0.10);
-    transition: width 220ms ease, border-radius 220ms ease;
+  position: absolute;
+
+  top: 0;
+  right: 0;
+  bottom: 0;
+
+  width: clamp(46px, 3.8vw, 56px);
+
+  z-index: 120;
+
+  overflow: hidden;
+
+  box-sizing: border-box;
+
+  border: 1px solid rgba(255, 255, 255, 0.10);
+  border-radius: clamp(12px, 1vw, 16px);
+
+  background:
+    linear-gradient(
+      180deg,
+      rgba(25, 25, 25, 0.98),
+      rgba(10, 10, 10, 0.98)
+    );
+
+  box-shadow:
+    0 16px 40px rgba(0, 0, 0, 0.45),
+    inset 0 1px 0 rgba(255, 255, 255, 0.04);
+
+  transition:
+    width 260ms cubic-bezier(0.22, 1, 0.36, 1),
+    border-radius 220ms ease,
+    box-shadow 220ms ease;
 }
 
 .synco-friends-sidebar.is-open {
-    width: 320px;
-    border-radius: 18px;
+  width: clamp(220px, 22vw, 320px);
+
+  border-radius: clamp(14px, 1vw, 18px);
+
+  overflow: hidden;
 }
+
 
 /* =========================================================
    TOGGLE
    ========================================================= */
 
 .synco-friends-toggle {
-    position: absolute;
-    left: -11px;
-    top: 18px;
-    width: 23px;
-    height: 23px;
-    border: 1px solid #dddddd;
-    border-radius: 999px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    background: #ffffff;
-    color: #171717;
-    cursor: pointer;
-    box-shadow: 0 4px 14px rgba(0, 0, 0, 0.10);
-    transition: transform 180ms ease, background 180ms ease;
-    z-index: 130;
-    padding: 0;
+  position: absolute;
+
+  left: clamp(-11px, -0.7vw, -8px);
+  top: clamp(14px, 1.2vw, 18px);
+
+  width: clamp(22px, 1.8vw, 26px);
+  height: clamp(22px, 1.8vw, 26px);
+
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  border-radius: 999px;
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  background: #181818;
+  color: #ffffff;
+
+  cursor: pointer;
+
+  box-shadow:
+    0 5px 16px rgba(0, 0, 0, 0.45);
+
+  transition:
+    transform 180ms ease,
+    background 180ms ease,
+    border-color 180ms ease;
+
+  z-index: 130;
+
+  padding: 0;
 }
 
 .synco-friends-toggle:hover {
-    transform: scale(1.05);
-    background: #f4f4f4;
+  transform: scale(1.06);
+
+  background: #242424;
+
+  border-color: rgba(214, 201, 138, 0.4);
 }
+
 
 /* =========================================================
    COLLAPSED RAIL
    ========================================================= */
 
 .synco-friends-collapsed {
-    height: 100%;
-    min-height: 0;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    padding: 12px 7px 9px;
+  width: 100%;
+  height: 100%;
+
+  min-height: 0;
+
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+
+  padding:
+    clamp(10px, 1vw, 14px)
+    clamp(5px, 0.55vw, 8px)
+    clamp(8px, 0.7vw, 10px);
+
+  box-sizing: border-box;
 }
 
 .synco-friends-collapsed-header {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    width: 100%;
-    padding-bottom: 7px;
-    border-bottom: 1px solid #eeeeee;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  width: 100%;
+
+  padding-bottom: clamp(6px, 0.6vw, 8px);
+
+  border-bottom:
+    1px solid rgba(255, 255, 255, 0.08);
 }
 
 .synco-friends-online-count {
-    min-width: 21px;
-    height: 21px;
-    padding: 0 5px;
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    border-radius: 999px;
-    background: #f1f1f1;
-    color: #171717;
-    font-size: 9px;
-    font-weight: 900;
+  min-width: clamp(20px, 1.6vw, 24px);
+  height: clamp(20px, 1.6vw, 24px);
+
+  padding: 0 5px;
+
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+
+  border-radius: 999px;
+
+  background: rgba(214, 201, 138, 0.10);
+  color: #d6c98a;
+
+  border:
+    1px solid rgba(214, 201, 138, 0.20);
+
+  font-size: clamp(8px, 0.6vw, 10px);
+  font-weight: 900;
 }
 
+
+/* =========================================================
+   AVATAR STACK
+   ========================================================= */
+
 .synco-friends-avatar-stack {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    gap: 8px;
-    flex: 1;
-    min-height: 0;
-    overflow-y: auto;
-    padding: 10px 0 8px;
-    scrollbar-width: none;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+
+  gap: clamp(6px, 0.55vw, 9px);
+
+  flex: 1;
+
+  min-height: 0;
+
+  overflow-y: auto;
+
+  padding:
+    clamp(8px, 0.8vw, 11px)
+    0;
+
+  scrollbar-width: none;
 }
 
 .synco-friends-avatar-stack::-webkit-scrollbar {
-    display: none;
+  display: none;
 }
 
+
 .synco-friend-mini {
-    position: relative;
-    width: 32px;
-    height: 32px;
-    flex: 0 0 auto;
+  position: relative;
+
+  width: clamp(28px, 2.1vw, 34px);
+  height: clamp(28px, 2.1vw, 34px);
+
+  flex: 0 0 auto;
 }
+
+
+/* =========================================================
+   AVATARS
+   ========================================================= */
 
 .synco-friend-mini-avatar,
 .synco-friend-avatar,
 .synco-friend-search-avatar {
-    overflow: visible;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    background: #eeeeee;
-    color: #232323;
-    font-weight: 900;
+  overflow: hidden;
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  background: #252525;
+
+  color: #ffffff;
+
+  font-weight: 900;
+
+  border:
+    1px solid rgba(255, 255, 255, 0.08);
 }
 
 .synco-friend-mini-avatar {
-    width: 32px;
-    height: 32px;
-    border-radius: 10px;
-    font-size: 10px;
+  width: 100%;
+  height: 100%;
+
+  border-radius: clamp(8px, 0.7vw, 11px);
+
+  font-size: clamp(9px, 0.65vw, 11px);
 }
 
 .synco-friend-mini-avatar img,
 .synco-friend-avatar img,
 .synco-friend-search-avatar img {
-    width: 100%;
-    height: 100%;
-    object-fit: cover;
-    display: block;
+  width: 100%;
+  height: 100%;
+
+  object-fit: cover;
+
+  display: block;
 }
 
+
+/* =========================================================
+   PRESENCE
+   ========================================================= */
+
 .synco-presence-dot {
-    position: absolute;
-    right: -2px;
-    bottom: -2px;
-    width: 9px;
-    height: 9px;
-    border-radius: 999px;
-    border: 2px solid #ffffff;
-    box-sizing: border-box;
+  position: absolute;
+
+  right: -2px;
+  bottom: -2px;
+
+  width: clamp(8px, 0.65vw, 10px);
+  height: clamp(8px, 0.65vw, 10px);
+
+  border-radius: 999px;
+
+  border:
+    2px solid #151515;
+
+  box-sizing: border-box;
 }
 
 .synco-presence-dot.large {
-    width: 10px;
-    height: 10px;
-    right: -1px;
-    bottom: -1px;
+  width: clamp(9px, 0.7vw, 11px);
+  height: clamp(9px, 0.7vw, 11px);
+
+  right: -1px;
+  bottom: -1px;
 }
 
 .synco-presence-dot.online {
-    background: #22c55e;
+  background: #d6c98a;
+
+  box-shadow:
+    0 0 8px rgba(214, 201, 138, 0.45);
 }
 
 .synco-presence-dot.offline {
-    background: #ef4444;
+  background: #555555;
 }
 
+
+/* =========================================================
+   ADD FRIEND — COLLAPSED
+   ========================================================= */
+
 .synco-add-friend-mini {
-    width: 32px;
-    height: 32px;
-    flex: 0 0 auto;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    border: 1px dashed #bdbdbd;
-    border-radius: 10px;
-    background: #ffffff;
-    color: #171717;
-    cursor: pointer;
-    transition: background 180ms ease, border-color 180ms ease;
-    padding: 0;
+  width: clamp(28px, 2.1vw, 34px);
+  height: clamp(28px, 2.1vw, 34px);
+
+  flex: 0 0 auto;
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  border:
+    1px dashed rgba(214, 201, 138, 0.40);
+
+  border-radius: clamp(8px, 0.7vw, 11px);
+
+  background:
+    rgba(214, 201, 138, 0.05);
+
+  color: #d6c98a;
+
+  cursor: pointer;
+
+  transition:
+    background 180ms ease,
+    border-color 180ms ease,
+    transform 180ms ease;
+
+  padding: 0;
 }
 
 .synco-add-friend-mini:hover {
-    background: #f4f4f4;
-    border-color: #777777;
+  background:
+    rgba(214, 201, 138, 0.12);
+
+  border-color:
+    rgba(214, 201, 138, 0.65);
+
+  transform: translateY(-1px);
 }
+
 
 /* =========================================================
    OPEN PANEL
    ========================================================= */
 
 .synco-friends-open {
-    height: 100%;
-    min-height: 0;
-    display: flex;
-    flex-direction: column;
-    padding: 15px;
+  width: 100%;
+  height: 100%;
+
+  min-height: 0;
+
+  display: flex;
+  flex-direction: column;
+
+  padding: clamp(12px, 1.1vw, 16px);
+
+  box-sizing: border-box;
 }
 
+
+/* =========================================================
+   PANEL HEADER
+   ========================================================= */
+
 .synco-friends-panel-header {
-    display: flex;
-    align-items: flex-start;
-    justify-content: space-between;
-    gap: 10px;
-    padding-bottom: 11px;
-    border-bottom: 1px solid #ececec;
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+
+  gap: clamp(8px, 0.7vw, 12px);
+
+  padding-bottom:
+    clamp(8px, 0.7vw, 12px);
+
+  border-bottom:
+    1px solid rgba(255, 255, 255, 0.08);
 }
 
 .synco-friends-kicker {
-    margin: 0 0 3px;
-    color: #8b8b8b;
-    font-size: 8px;
-    font-weight: 900;
-    letter-spacing: 0.18em;
-    text-transform: uppercase;
+  margin: 0 0 3px;
+
+  color: #d6c98a;
+
+  font-size: clamp(7px, 0.55vw, 9px);
+  font-weight: 900;
+
+  letter-spacing: 0.18em;
+
+  text-transform: uppercase;
 }
 
 .synco-friends-panel-header h3 {
-    margin: 0;
-    color: #171717;
-    font-size: 19px;
-    line-height: 1.1;
-    font-weight: 900;
+  margin: 0;
+
+  color: #ffffff;
+
+  font-size: clamp(16px, 1.25vw, 20px);
+
+  line-height: 1.1;
+
+  font-weight: 900;
 }
 
 .synco-friends-meta {
-    margin: 5px 0 0;
-    color: #858585;
-    font-size: 9px;
-    font-weight: 700;
+  margin: 5px 0 0;
+
+  color: rgba(255, 255, 255, 0.40);
+
+  font-size: clamp(8px, 0.62vw, 10px);
+
+  font-weight: 700;
 }
 
+
+/* =========================================================
+   CLOSE
+   ========================================================= */
+
 .synco-friends-close-button {
-    width: 25px;
-    height: 25px;
-    flex: 0 0 auto;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    border: 1px solid #e0e0e0;
-    border-radius: 8px;
-    background: #ffffff;
-    color: #575757;
-    cursor: pointer;
-    padding: 0;
+  width: clamp(24px, 1.9vw, 28px);
+  height: clamp(24px, 1.9vw, 28px);
+
+  flex: 0 0 auto;
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  border:
+    1px solid rgba(255, 255, 255, 0.10);
+
+  border-radius: clamp(7px, 0.6vw, 9px);
+
+  background: #181818;
+
+  color: rgba(255, 255, 255, 0.60);
+
+  cursor: pointer;
+
+  padding: 0;
+
+  transition:
+    background 180ms ease,
+    color 180ms ease,
+    border-color 180ms ease;
 }
 
 .synco-friends-close-button:hover {
-    background: #f4f4f4;
-    color: #171717;
+  background: #242424;
+
+  color: #ffffff;
+
+  border-color:
+    rgba(255, 255, 255, 0.20);
 }
 
+
+/* =========================================================
+   ADD FRIEND BUTTON
+   ========================================================= */
+
 .synco-add-friend-button {
-    width: 100%;
-    margin-top: 10px;
-    min-height: 34px;
-    display: flex;
-    align-items: center;
-    gap: 7px;
-    padding: 0 10px;
-    border: 1px solid #dddddd;
-    border-radius: 9px;
-    background: #ffffff;
-    color: #171717;
-    font-size: 9px;
-    font-weight: 900;
-    letter-spacing: 0.02em;
-    cursor: pointer;
-    transition: background 180ms ease, border-color 180ms ease;
+  width: 100%;
+
+  margin-top: clamp(8px, 0.8vw, 11px);
+
+  min-height: clamp(32px, 2.4vw, 36px);
+
+  display: flex;
+  align-items: center;
+
+  gap: 7px;
+
+  padding: 0 10px;
+
+  border:
+    1px solid rgba(255, 255, 255, 0.10);
+
+  border-radius: clamp(8px, 0.7vw, 10px);
+
+  background: #181818;
+
+  color: #ffffff;
+
+  font-size: clamp(8px, 0.65vw, 10px);
+
+  font-weight: 900;
+
+  letter-spacing: 0.02em;
+
+  cursor: pointer;
+
+  transition:
+    background 180ms ease,
+    border-color 180ms ease;
 }
 
 .synco-add-friend-button:hover,
 .synco-add-friend-button.active {
-    background: #f4f4f4;
-    border-color: #cfcfcf;
+  background: #242424;
+
+  border-color:
+    rgba(214, 201, 138, 0.35);
 }
+
+
+/* =========================================================
+   ADD FRIEND SECTION
+   ========================================================= */
 
 .synco-add-friend-section {
-    margin-top: 8px;
-    padding: 9px;
-    border: 1px solid #ededed;
-    border-radius: 10px;
-    background: #fafafa;
+  margin-top: 8px;
+
+  padding: clamp(8px, 0.7vw, 10px);
+
+  border:
+    1px solid rgba(255, 255, 255, 0.08);
+
+  border-radius: clamp(8px, 0.7vw, 11px);
+
+  background: #111111;
 }
 
+
+/* =========================================================
+   SEARCH
+   ========================================================= */
+
 .synco-friend-search-wrap {
-    height: 33px;
-    display: flex;
-    align-items: center;
-    gap: 6px;
-    padding: 0 8px;
-    border: 1px solid #dddddd;
-    border-radius: 8px;
-    background: #ffffff;
-    color: #8a8a8a;
+  height: clamp(31px, 2.3vw, 35px);
+
+  display: flex;
+  align-items: center;
+
+  gap: 6px;
+
+  padding: 0 8px;
+
+  border:
+    1px solid rgba(255, 255, 255, 0.10);
+
+  border-radius: 8px;
+
+  background: #181818;
+
+  color: rgba(255, 255, 255, 0.45);
 }
 
 .synco-friend-search-wrap input {
-    width: 100%;
-    min-width: 0;
-    border: 0;
-    outline: none;
-    background: transparent;
-    color: #171717;
-    font-size: 9px;
-    font-weight: 700;
+  width: 100%;
+  min-width: 0;
+
+  border: 0;
+  outline: none;
+
+  background: transparent;
+
+  color: #ffffff;
+
+  font-size: clamp(8px, 0.65vw, 10px);
+
+  font-weight: 700;
 }
 
 .synco-friend-search-wrap input::placeholder {
-    color: #a5a5a5;
+  color: rgba(255, 255, 255, 0.30);
 }
 
+
+/* =========================================================
+   SEARCH RESULTS
+   ========================================================= */
+
 .synco-friend-search-results {
-    display: flex;
-    flex-direction: column;
-    gap: 6px;
-    margin-top: 8px;
-    max-height: 135px;
-    overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+
+  gap: 6px;
+
+  margin-top: 8px;
+
+  max-height: clamp(110px, 15vh, 150px);
+
+  overflow-y: auto;
 }
 
 .synco-friend-search-result {
-    display: flex;
-    align-items: center;
-    gap: 7px;
-    min-width: 0;
-    padding: 6px;
-    border: 1px solid #ececec;
-    border-radius: 9px;
-    background: #ffffff;
+  display: flex;
+  align-items: center;
+
+  gap: 7px;
+
+  min-width: 0;
+
+  padding: clamp(5px, 0.45vw, 7px);
+
+  border:
+    1px solid rgba(255, 255, 255, 0.07);
+
+  border-radius: 9px;
+
+  background: #181818;
 }
 
 .synco-friend-search-avatar {
-    width: 28px;
-    height: 28px;
-    flex: 0 0 auto;
-    border-radius: 8px;
-    font-size: 9px;
+  width: clamp(26px, 2vw, 30px);
+  height: clamp(26px, 2vw, 30px);
+
+  flex: 0 0 auto;
+
+  border-radius: 8px;
+
+  font-size: clamp(8px, 0.6vw, 10px);
 }
 
 .synco-friend-search-info {
-    min-width: 0;
-    flex: 1;
+  min-width: 0;
+  flex: 1;
 }
 
 .synco-friend-search-info p {
-    margin: 0;
-    color: #171717;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-    font-size: 9px;
-    font-weight: 900;
+  margin: 0;
+
+  color: #ffffff;
+
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+
+  font-size: clamp(8px, 0.65vw, 10px);
+
+  font-weight: 900;
 }
 
 .synco-friend-search-info span {
-    display: block;
-    margin-top: 2px;
-    color: #919191;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-    font-size: 7px;
-    font-weight: 800;
-    letter-spacing: 0.05em;
+  display: block;
+
+  margin-top: 2px;
+
+  color: rgba(255, 255, 255, 0.35);
+
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+
+  font-size: clamp(6px, 0.5vw, 8px);
+
+  font-weight: 800;
+
+  letter-spacing: 0.05em;
 }
 
 .synco-friend-search-action {
-    flex: 0 0 auto;
-    min-width: 40px;
-    height: 24px;
-    padding: 0 6px;
-    border: 1px solid #1b1b1b;
-    border-radius: 7px;
-    background: #1b1b1b;
-    color: #ffffff;
-    font-size: 7px;
-    font-weight: 900;
-    cursor: pointer;
+  flex: 0 0 auto;
+
+  min-width: clamp(38px, 3vw, 44px);
+
+  height: clamp(22px, 1.8vw, 26px);
+
+  padding: 0 6px;
+
+  border:
+    1px solid rgba(214, 201, 138, 0.55);
+
+  border-radius: 7px;
+
+  background: #d6c98a;
+
+  color: #111111;
+
+  font-size: clamp(6px, 0.5vw, 8px);
+
+  font-weight: 900;
+
+  cursor: pointer;
 }
 
 .synco-friend-search-action:disabled {
-    border-color: #d7d7d7;
-    background: #ededed;
-    color: #848484;
-    cursor: default;
+  border-color:
+    rgba(255, 255, 255, 0.08);
+
+  background: #252525;
+
+  color: rgba(255, 255, 255, 0.35);
+
+  cursor: default;
 }
+
+
+/* =========================================================
+   STATUS / MESSAGES
+   ========================================================= */
 
 .synco-friends-status-text,
 .synco-friends-message {
-    margin: 7px 0 0;
-    font-size: 8px;
-    line-height: 1.4;
-    font-weight: 700;
+  margin: 7px 0 0;
+
+  font-size: clamp(7px, 0.58vw, 9px);
+
+  line-height: 1.4;
+
+  font-weight: 700;
 }
 
 .synco-friends-status-text {
-    color: #929292;
+  color: rgba(255, 255, 255, 0.40);
 }
 
 .synco-friends-message.error {
-    color: #d93636;
+  color: #ef6b6b;
 }
 
 .synco-friends-message.success {
-    color: #238a4b;
+  color: #d6c98a;
 }
 
+
+/* =========================================================
+   FRIENDS LIST
+   ========================================================= */
+
 .synco-friends-list-header {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: 8px;
-    margin-top: 11px;
-    padding-bottom: 6px;
-    color: #777777;
-    font-size: 8px;
-    font-weight: 900;
-    letter-spacing: 0.14em;
-    text-transform: uppercase;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+
+  gap: 8px;
+
+  margin-top: clamp(9px, 0.8vw, 12px);
+
+  padding-bottom: 6px;
+
+  color: rgba(255, 255, 255, 0.40);
+
+  font-size: clamp(7px, 0.58vw, 9px);
+
+  font-weight: 900;
+
+  letter-spacing: 0.14em;
+
+  text-transform: uppercase;
 }
 
 .synco-friends-refreshing {
-    color: #b2b2b2;
-    letter-spacing: 0.02em;
-    text-transform: none;
+  color: rgba(255, 255, 255, 0.24);
+
+  letter-spacing: 0.02em;
+
+  text-transform: none;
 }
 
 .synco-friends-list {
-    min-height: 0;
-    flex: 1;
-    overflow-y: auto;
-    padding-right: 1px;
+  min-height: 0;
+
+  flex: 1;
+
+  overflow-y: auto;
+
+  padding-right: 1px;
 }
 
+
+/* =========================================================
+   FRIEND ROW
+   ========================================================= */
+
 .synco-friend-row {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    padding: 7px 4px;
-    border-top: 1px solid #efefef;
+  display: flex;
+  align-items: center;
+
+  gap: clamp(6px, 0.65vw, 9px);
+
+  padding:
+    clamp(6px, 0.55vw, 8px)
+    4px;
+
+  border-top:
+    1px solid rgba(255, 255, 255, 0.06);
 }
 
 .synco-friend-avatar {
-    position: relative;
-    width: 34px;
-    height: 34px;
-    flex: 0 0 auto;
-    border-radius: 10px;
-    font-size: 10px;
+  position: relative;
+
+  width: clamp(30px, 2.2vw, 36px);
+  height: clamp(30px, 2.2vw, 36px);
+
+  flex: 0 0 auto;
+
+  border-radius: clamp(8px, 0.7vw, 11px);
+
+  font-size: clamp(9px, 0.65vw, 11px);
 }
 
 .synco-friend-details {
-    min-width: 0;
-    flex: 1;
+  min-width: 0;
+  flex: 1;
 }
 
 .synco-friend-details p {
-    margin: 0;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-    color: #171717;
-    font-size: 9px;
-    font-weight: 900;
+  margin: 0;
+
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+
+  color: #ffffff;
+
+  font-size: clamp(8px, 0.65vw, 10px);
+
+  font-weight: 900;
 }
 
 .synco-friend-details span {
-    display: block;
-    margin-top: 3px;
-    color: #8f8f8f;
-    font-size: 8px;
-    font-weight: 700;
+  display: block;
+
+  margin-top: 3px;
+
+  color: rgba(255, 255, 255, 0.35);
+
+  font-size: clamp(7px, 0.55vw, 9px);
+
+  font-weight: 700;
 }
 
+
+/* =========================================================
+   EMPTY STATE
+   ========================================================= */
+
 .synco-friends-empty {
-    padding: 18px 6px;
-    text-align: center;
+  padding: clamp(14px, 1.2vw, 20px) 6px;
+
+  text-align: center;
 }
 
 .synco-friends-empty-icon {
-    width: 30px;
-    height: 30px;
-    margin: 0 auto 7px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    border-radius: 9px;
-    background: #f0f0f0;
-    color: #777777;
+  width: clamp(28px, 2.2vw, 34px);
+  height: clamp(28px, 2.2vw, 34px);
+
+  margin: 0 auto 7px;
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  border-radius: 9px;
+
+  background: #242424;
+
+  color: #d6c98a;
 }
 
 .synco-friends-empty p {
-    margin: 0;
-    color: #333333;
-    font-size: 9px;
-    font-weight: 900;
+  margin: 0;
+
+  color: #ffffff;
+
+  font-size: clamp(8px, 0.65vw, 10px);
+
+  font-weight: 900;
 }
 
 .synco-friends-empty span {
-    display: block;
-    margin-top: 5px;
-    color: #9a9a9a;
-    font-size: 8px;
-    line-height: 1.4;
+  display: block;
+
+  margin-top: 5px;
+
+  color: rgba(255, 255, 255, 0.35);
+
+  font-size: clamp(7px, 0.55vw, 9px);
+
+  line-height: 1.4;
 }
+
 
 /* =========================================================
-   DISCORD BLOCK — SMALL, ORIGINAL CONTENT UNTOUCHED
+   DISCORD BLOCK
    ========================================================= */
 
-.synco-friends-column>.social-bar-bottom {
-    flex: 0 0 58px !important;
-    height: 58px !important;
-    min-height: 58px !important;
-    overflow: hidden;
+.synco-friends-column > .social-bar-bottom {
+  flex: 0 0 clamp(46px, 4vw, 58px) !important;
+
+  height: clamp(46px, 4vw, 58px) !important;
+
+  min-height: clamp(46px, 4vw, 58px) !important;
+
+  overflow: hidden;
 }
+
 
 /* =========================================================
-   RESPONSIVE
+   REMOVE OLD VIEWPORT-LOCKING BEHAVIOR
    ========================================================= */
 
-@media (max-width: 1180px) {
-    .synco-social-friends-corner {
-        flex-basis: 250px;
-        height: 250px;
-        min-height: 250px;
-    }
+/*
+   Intentionally no max-width media-query resizing here.
 
-    .synco-friends-sidebar.is-open {
-        width: 300px;
-    }
-}
+   The Friends system follows the same responsive model as
+   the rest of DashboardHome:
 
-@media (max-width: 900px) {
-    .synco-social-friends-corner {
-        flex-basis: 220px;
-        height: 220px;
-        min-height: 220px;
-    }
-
-    .synco-friends-sidebar.is-open {
-        width: min(300px, calc(100vw - 70px));
-    }
-}
-
-@media (max-width: 700px) {
-    .synco-social-friends-corner {
-        flex-basis: 200px;
-        height: 200px;
-        min-height: 200px;
-    }
-
-    .synco-friends-sidebar {
-        width: 52px;
-    }
-
-    .synco-friends-sidebar.is-open {
-        width: min(290px, calc(100vw - 36px));
-    }
-
-    .synco-friends-column>.social-bar-bottom {
-        flex-basis: 52px !important;
-        height: 52px !important;
-        min-height: 52px !important;
-    }
-}
+   - clamp()
+   - percentages
+   - flex sizing
+   - available parent height
+   - no fixed 300/250/220/200px viewport jumps
+*/
