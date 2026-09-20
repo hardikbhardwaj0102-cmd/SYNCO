@@ -1,5 +1,6 @@
 /* =========================================================
-   GLOBAL
+   SYNCO DASHBOARD HOME
+   EDGE-TO-EDGE RESPONSIVE LAYOUT
    ========================================================= */
 
 html {
@@ -9,52 +10,74 @@ html {
 
 /* =========================================================
    DASHBOARD ROOT
-   EDGE-TO-EDGE CONTENT AREA
    ========================================================= */
 
 .bento-dashboard-wrapper {
   position: relative;
 
+  /*
+    IMPORTANT:
+    This page is allowed to occupy the entire width supplied
+    by the authenticated layout.
+
+    There is intentionally NO:
+      max-width
+      margin: 0 auto
+  */
   width: 100%;
   max-width: none;
 
   margin: 0;
-  padding: clamp(1rem, 1.35vw, 1.5rem);
+
+  /*
+    Responsive outer breathing room.
+
+    This is internal page padding, NOT a centered container.
+  */
+  padding:
+    clamp(1rem, 1.35vw, 1.5rem);
 
   box-sizing: border-box;
 
+  /*
+    Main desktop composition:
+
+      LEFT CONTENT      RIGHT CONTENT       SOCIAL RAIL
+
+    The first column is intentionally larger because the
+    tournament + moments area is visually dominant.
+  */
   display: grid;
 
-  /*
-    The visual relationship is:
-
-    LARGE LEFT AREA
-    MEDIUM RIGHT AREA
-    VERY NARROW SOCIAL RAIL
-
-    The social rail is intentionally narrow.
-  */
   grid-template-columns:
     minmax(0, 1.3fr)
     minmax(0, 1fr)
     clamp(60px, 4vw, 80px);
 
-  gap: clamp(1rem, 1.35vw, 1.5rem);
-
-  color: #fff;
-  font-family: "Inter", system-ui, sans-serif;
-
-  min-width: 0;
+  gap:
+    clamp(1rem, 1.35vw, 1.5rem);
 
   /*
-    Do not force the dashboard to be viewport height.
-    The content determines the required height.
+    Never allow children to force the page wider.
   */
+  min-width: 0;
   min-height: 0;
+
+  color: #fff;
+
+  font-family:
+    "Inter",
+    system-ui,
+    sans-serif;
 
   overflow-x: hidden;
   overflow-y: visible;
 }
+
+
+/*
+  Global box sizing inside dashboard.
+*/
 
 .bento-dashboard-wrapper *,
 .bento-dashboard-wrapper *::before,
@@ -63,17 +86,35 @@ html {
 }
 
 
+/*
+  Important for grid/flex descendants.
+
+  Without min-width: 0, long text/media can force a grid
+  column wider than its available space.
+*/
+
+.bento-dashboard-wrapper > *,
+.col-main-left > *,
+.col-main-right > *,
+.col-far-right > * {
+  min-width: 0;
+}
+
+
 /* =========================================================
-   SHARED CARDS
+   SHARED CARD SYSTEM
    ========================================================= */
 
 .bento-card,
 .wire-block {
-  border: 1px solid rgba(255, 255, 255, 0.08);
+  border:
+    1px solid rgba(255, 255, 255, 0.08);
 
-  border-radius: clamp(1rem, 2vw, 2rem);
+  border-radius:
+    clamp(1rem, 2vw, 2rem);
 
-  background: rgba(255, 255, 255, 0.025);
+  background:
+    rgba(255, 255, 255, 0.025);
 
   box-shadow:
     0 18px 50px rgba(0, 0, 0, 0.18),
@@ -83,7 +124,8 @@ html {
 }
 
 .bento-card {
-  padding: clamp(1rem, 1.8vw, 1.5rem);
+  padding:
+    clamp(1rem, 1.8vw, 1.5rem);
 
   backdrop-filter: blur(16px);
   -webkit-backdrop-filter: blur(16px);
@@ -109,9 +151,18 @@ html {
 .col-main-left,
 .col-main-right {
   display: flex;
+
   flex-direction: column;
 
-  gap: clamp(1rem, 1.35vw, 1.5rem);
+  gap:
+    clamp(1rem, 1.35vw, 1.5rem);
+
+  /*
+    Do not force column height to 100%.
+
+    Content and flex growth determine the height.
+  */
+  height: auto;
 }
 
 .col-main-left {
@@ -129,38 +180,46 @@ html {
   grid-row: 1;
 
   display: flex;
+
   flex-direction: column;
 
-  gap: clamp(1rem, 1.35vw, 1.5rem);
+  gap:
+    clamp(1rem, 1.35vw, 1.5rem);
 
   min-width: 0;
   min-height: 0;
+
+  height: auto;
 }
 
 
 /* =========================================================
-   TOP PILLS
+   TOP GREETING / PREMIUM
    ========================================================= */
 
 .greetings-pill,
 .premium-banner-pill {
   width: 100%;
 
-  min-height: clamp(52px, 5vw, 68px);
+  /*
+    This is a minimum visual size, not a fixed card height.
+  */
+  min-height:
+    clamp(52px, 5vw, 68px);
 
   flex: 0 0 auto;
 
   display: flex;
+
   align-items: center;
 
-  padding-inline: clamp(1rem, 1.8vw, 1.5rem);
+  padding-inline:
+    clamp(1rem, 1.8vw, 1.5rem);
 
   min-width: 0;
 }
 
 .premium-banner-pill {
-  flex-direction: row;
-
   gap: 0.6rem;
 }
 
@@ -177,21 +236,25 @@ html {
   position: relative;
 
   /*
-    This is responsive to viewport height rather than being
-    locked to one desktop pixel height.
+    Hero occupies a responsive amount of vertical space.
 
-    It is only the preferred/minimum size of this card.
-    Content can still determine its actual size.
+    It can grow/shrink with the available viewport while
+    still maintaining enough room for its content.
   */
-  flex: 0 1 clamp(260px, 34vh, 360px);
+  flex:
+    0 1 clamp(260px, 34vh, 360px);
 
-  min-height: clamp(260px, 34vh, 360px);
+  min-height:
+    clamp(260px, 34vh, 360px);
 
   display: flex;
+
   flex-direction: column;
+
   justify-content: center;
 
-  padding: clamp(1.5rem, 2.5vw, 2rem);
+  padding:
+    clamp(1.5rem, 2.5vw, 2rem);
 
   overflow: hidden !important;
 
@@ -209,17 +272,22 @@ html {
   z-index: 2;
 
   width: 100%;
+
   max-width: 64%;
 
   min-width: 0;
 }
 
 .block-title {
-  margin: 0 0 0.5rem;
+  margin:
+    0 0 0.5rem;
 
-  font-family: "Super Brigade", sans-serif;
+  font-family:
+    "Super Brigade",
+    sans-serif;
 
-  font-size: clamp(1.2rem, 2.3vw, 2rem);
+  font-size:
+    clamp(1.2rem, 2.3vw, 2rem);
 
   line-height: 1.1;
 
@@ -228,24 +296,31 @@ html {
   white-space: normal;
 
   overflow-wrap: anywhere;
-  word-wrap: break-word;
 }
 
 .hero-comp-sub {
-  margin: 0 0 clamp(1rem, 1.7vw, 1.5rem);
+  margin:
+    0 0 clamp(1rem, 1.7vw, 1.5rem);
 
   color: #d6c98a;
 
-  font-size: clamp(0.75rem, 1vw, 0.85rem);
+  font-size:
+    clamp(0.75rem, 1vw, 0.85rem);
 
   line-height: 1.4;
 }
 
+
+/*
+  Decorative character.
+
+  Absolute positioning is intentional because this is an
+  image overlay inside the hero.
+
+  It is NOT used to position the page itself.
+*/
+
 .hero-character-render {
-  /*
-    Absolute positioning is intentional here.
-    This is a decorative character overlay, not structural layout.
-  */
   position: absolute;
 
   right: -2%;
@@ -254,36 +329,44 @@ html {
   z-index: 1;
 
   /*
-    The card controls the available height.
-    The image itself has no fixed desktop pixel height.
+    The image scales relative to its responsive parent.
   */
   height: 100%;
+
   width: auto;
 
   max-width: 55%;
 
   object-fit: contain;
-  object-position: bottom right;
+
+  object-position:
+    bottom right;
 
   pointer-events: none;
 
   filter:
-    drop-shadow(0 20px 30px rgba(0, 0, 0, 0.35));
+    drop-shadow(
+      0 20px 30px rgba(0, 0, 0, 0.35)
+    );
 }
 
 .live-badge {
   width: fit-content;
+
   max-width: 100%;
 
-  margin-bottom: clamp(0.7rem, 1.3vw, 1rem);
+  margin-bottom:
+    clamp(0.7rem, 1.3vw, 1rem);
 
-  padding: 4px 10px;
+  padding:
+    4px 10px;
 
   border-radius: 20px;
 
   font-size: 0.6rem;
 
   display: flex;
+
   align-items: center;
 
   gap: 6px;
@@ -295,19 +378,23 @@ html {
   width: 6px;
   height: 6px;
 
-  flex: 0 0 6px;
+  flex:
+    0 0 6px;
 
   border-radius: 50%;
 }
 
 .join-btn {
   width: 100%;
+
   max-width: 250px;
 
   min-height: 50px;
 
   display: flex;
+
   align-items: center;
+
   justify-content: center;
 
   gap: 0.5rem;
@@ -315,27 +402,26 @@ html {
 
 
 /* =========================================================
-   HIGHLIGHTS / SYNCO MOMENTS
+   SYNCO MOMENTS
    ========================================================= */
 
 .highlights-section {
   position: relative;
 
   display: flex;
+
   flex-direction: column;
 
   /*
-    Takes the remaining available vertical space in the
-    left column instead of having a fixed desktop height.
+    Consume remaining space in the left column.
   */
-  flex: 1 1 0;
+  flex:
+    1 1 0;
 
   min-width: 0;
 
-  /*
-    Content still gets a usable minimum.
-  */
-  min-height: clamp(320px, 36vh, 420px);
+  min-height:
+    clamp(320px, 36vh, 420px);
 }
 
 .section-label {
@@ -350,7 +436,7 @@ html {
 
 
 /* =========================================================
-   COVERFLOW
+   COVERFLOW CONTAINER
    ========================================================= */
 
 .coverflow-container {
@@ -358,9 +444,11 @@ html {
 
   display: flex;
 
-  flex: 1 1 0;
+  flex:
+    1 1 0;
 
   align-items: center;
+
   justify-content: center;
 
   width: 100%;
@@ -379,19 +467,24 @@ html {
 
   z-index: 25;
 
-  max-width: calc(100% - 2rem);
+  max-width:
+    calc(100% - 2rem);
 
-  padding: 0.45rem 1.4rem;
+  padding:
+    0.45rem 1.4rem;
 
   border-radius: 999px;
 
-  font-size: clamp(1rem, 1.8vw, 1.25rem);
+  font-size:
+    clamp(1rem, 1.8vw, 1.25rem);
 
-  transform: translateX(-50%);
+  transform:
+    translateX(-50%);
 
   white-space: nowrap;
 
   overflow: hidden;
+
   text-overflow: ellipsis;
 }
 
@@ -401,6 +494,7 @@ html {
   display: flex;
 
   align-items: center;
+
   justify-content: center;
 
   width: 100%;
@@ -412,7 +506,7 @@ html {
 
 
 /* =========================================================
-   CLIP CARD
+   CLIP CARDS
    ========================================================= */
 
 .clip-card {
@@ -422,12 +516,15 @@ html {
   left: 50%;
 
   /*
-    Width scales with available viewport width.
-    Height comes from aspect-ratio.
-  */
-  width: clamp(145px, 11.5vw, 200px);
+    Width is fluid.
 
-  aspect-ratio: 9 / 16;
+    Height is generated from the 9:16 aspect ratio.
+  */
+  width:
+    clamp(145px, 11.5vw, 200px);
+
+  aspect-ratio:
+    9 / 16;
 
   height: auto;
 
@@ -437,7 +534,8 @@ html {
 
   background: #000;
 
-  transform: translate(-50%, -50%);
+  transform:
+    translate(-50%, -50%);
 
   transition:
     transform 0.6s ease,
@@ -482,7 +580,8 @@ html {
 
   opacity: 0.3;
 
-  filter: blur(4px);
+  filter:
+    blur(4px);
 
   z-index: 5;
 }
@@ -496,7 +595,8 @@ html {
 
   opacity: 0.3;
 
-  filter: blur(4px);
+  filter:
+    blur(4px);
 
   z-index: 5;
 }
@@ -511,7 +611,7 @@ html {
 
 
 /* =========================================================
-   COVERFLOW SIDE INFORMATION
+   COVERFLOW INFORMATION
    ========================================================= */
 
 .coverflow-left-overlay,
@@ -522,7 +622,8 @@ html {
 
   z-index: 20;
 
-  transform: translateY(-50%);
+  transform:
+    translateY(-50%);
 
   min-width: 0;
 }
@@ -530,15 +631,18 @@ html {
 .coverflow-left-overlay {
   left: 0;
 
-  width: clamp(135px, 24%, 220px);
+  width:
+    clamp(135px, 24%, 220px);
 
   pointer-events: none;
 }
 
 .coverflow-right-overlay {
-  right: clamp(0.5rem, 1vw, 1rem);
+  right:
+    clamp(0.5rem, 1vw, 1rem);
 
-  width: clamp(135px, 24%, 220px);
+  width:
+    clamp(135px, 24%, 220px);
 
   height: 82%;
 
@@ -546,11 +650,15 @@ html {
 }
 
 .clip-title-massive {
-  margin: 1rem 0;
+  margin:
+    1rem 0;
 
-  font-family: "Super Brigade", sans-serif;
+  font-family:
+    "Super Brigade",
+    sans-serif;
 
-  font-size: clamp(1.15rem, 1.7vw, 1.5rem);
+  font-size:
+    clamp(1.15rem, 1.7vw, 1.5rem);
 
   line-height: 1.1;
 
@@ -566,7 +674,8 @@ html {
 .clip-actions {
   display: flex;
 
-  gap: clamp(0.5rem, 0.9vw, 1rem);
+  gap:
+    clamp(0.5rem, 0.9vw, 1rem);
 
   min-width: 0;
 
@@ -577,6 +686,7 @@ html {
   min-width: 0;
 
   display: flex;
+
   align-items: center;
 
   gap: 0.3rem;
@@ -588,10 +698,13 @@ html {
   inset: 0;
 
   display: flex;
+
   align-items: center;
+
   justify-content: center;
 
-  background: rgba(0, 0, 0, 0.3);
+  background:
+    rgba(0, 0, 0, 0.3);
 
   opacity: 0;
 
@@ -627,6 +740,7 @@ html {
   display: flex;
 
   align-items: center;
+
   justify-content: space-between;
 
   gap: 0.5rem;
@@ -637,7 +751,8 @@ html {
 .comments-list {
   display: flex;
 
-  flex: 1 1 0;
+  flex:
+    1 1 0;
 
   flex-direction: column;
 
@@ -700,7 +815,7 @@ html {
 
 
 /* =========================================================
-   COVERFLOW NAVIGATION
+   COVERFLOW NAV BUTTONS
    ========================================================= */
 
 .nav-btn {
@@ -713,31 +828,41 @@ html {
   display: flex;
 
   align-items: center;
+
   justify-content: center;
 
   width: 40px;
   height: 40px;
 
-  flex: 0 0 40px;
+  flex:
+    0 0 40px;
 
   border-radius: 50%;
 }
 
 .prev-btn {
-  left: calc(50% - clamp(40px, 4vw, 55px));
+  left:
+    calc(
+      50% - clamp(40px, 4vw, 55px)
+    );
 
-  transform: translateX(-50%);
+  transform:
+    translateX(-50%);
 }
 
 .next-btn {
-  right: calc(50% - clamp(40px, 4vw, 55px));
+  right:
+    calc(
+      50% - clamp(40px, 4vw, 55px)
+    );
 
-  transform: translateX(50%);
+  transform:
+    translateX(50%);
 }
 
 
 /* =========================================================
-   RIGHT SIDE - GAME SELECTOR + PROMO
+   RIGHT SIDE MINI GRID
    ========================================================= */
 
 .mid-grid-row {
@@ -749,14 +874,16 @@ html {
       minmax(0, 1fr)
     );
 
-  gap: clamp(0.8rem, 1.35vw, 1.5rem);
+  gap:
+    clamp(0.8rem, 1.35vw, 1.5rem);
 
   width: 100%;
 
   min-width: 0;
   min-height: 0;
 
-  flex: 0 0 auto;
+  flex:
+    0 0 auto;
 }
 
 .game-selector-card {
@@ -781,9 +908,11 @@ html {
 
   min-width: 0;
 
-  max-height: clamp(160px, 20vh, 240px);
+  max-height:
+    clamp(160px, 20vh, 240px);
 
   overflow-y: auto;
+
   overflow-x: hidden;
 
   scrollbar-width: thin;
@@ -800,13 +929,16 @@ html {
 
   gap: 10px;
 
-  padding: 0.8rem 1rem;
+  padding:
+    0.8rem 1rem;
 
-  border: 1px solid rgba(255, 255, 255, 0.08);
+  border:
+    1px solid rgba(255, 255, 255, 0.08);
 
   border-radius: 0.75rem;
 
-  font-size: clamp(0.75rem, 1vw, 0.85rem);
+  font-size:
+    clamp(0.75rem, 1vw, 0.85rem);
 
   overflow: hidden;
 }
@@ -827,13 +959,14 @@ html {
   flex-direction: column;
 
   align-items: center;
+
   justify-content: center;
 
   min-width: 0;
-
   min-height: 0;
 
-  padding: clamp(1rem, 1.8vw, 1.5rem);
+  padding:
+    clamp(1rem, 1.8vw, 1.5rem);
 
   text-align: center;
 }
@@ -852,22 +985,21 @@ html {
 .stat-meter-card {
   display: flex;
 
-  flex: 1 1 0;
+  flex:
+    1 1 0;
 
   flex-direction: column;
 
   align-items: center;
+
   justify-content: space-between;
 
   width: 100%;
 
   min-width: 0;
 
-  /*
-    No fixed desktop height.
-    It consumes the remaining height after the upper cards.
-  */
-  min-height: clamp(300px, 38vh, 430px);
+  min-height:
+    clamp(300px, 38vh, 430px);
 }
 
 .stat-header-row {
@@ -885,21 +1017,26 @@ html {
 
   display: flex;
 
-  flex: 1 1 0;
+  flex:
+    1 1 0;
 
   align-items: center;
+
   justify-content: center;
 
   width: 100%;
 
   min-width: 0;
-  min-height: clamp(130px, 18vh, 190px);
+
+  min-height:
+    clamp(130px, 18vh, 190px);
 }
 
 .stat-glowing-blob {
   position: absolute;
 
-  width: clamp(120px, 12vw, 170px);
+  width:
+    clamp(120px, 12vw, 170px);
 
   aspect-ratio: 1;
 
@@ -913,7 +1050,8 @@ html {
 
   min-width: 0;
 
-  font-size: clamp(2.5rem, 4.5vw, 4rem);
+  font-size:
+    clamp(2.5rem, 4.5vw, 4rem);
 
   line-height: 1;
 }
@@ -925,7 +1063,8 @@ html {
 
   min-width: 0;
 
-  gap: clamp(0.5rem, 0.9vw, 1rem);
+  gap:
+    clamp(0.5rem, 0.9vw, 1rem);
 
   margin-top: auto;
 }
@@ -933,7 +1072,8 @@ html {
 .stat-pill {
   display: flex;
 
-  flex: 1 1 0;
+  flex:
+    1 1 0;
 
   flex-direction: column;
 
@@ -943,7 +1083,8 @@ html {
 
   gap: 0.3rem;
 
-  padding: clamp(0.5rem, 1.2vw, 0.8rem);
+  padding:
+    clamp(0.5rem, 1.2vw, 0.8rem);
 
   overflow: hidden;
 }
@@ -973,23 +1114,28 @@ html {
 
 .social-bar-top,
 .social-bar-bottom {
-  flex: 1 1 0;
+  flex:
+    1 1 0;
 
   display: flex;
 
   align-items: center;
+
   justify-content: center;
 
   min-width: 0;
   min-height: 0;
 
-  padding: clamp(1rem, 2vw, 1.5rem) 0.4rem;
+  padding:
+    clamp(1rem, 2vw, 1.5rem)
+    0.4rem;
 }
 
 .vertical-text {
   max-width: 100%;
 
-  font-size: clamp(0.65rem, 0.75vw, 0.75rem);
+  font-size:
+    clamp(0.65rem, 0.75vw, 0.75rem);
 
   writing-mode: vertical-rl;
 
@@ -1000,8 +1146,8 @@ html {
 
 
 /* =========================================================
-   1200px
-   TWO MAIN COLUMNS + SOCIAL RAIL HIDDEN
+   <= 1200px
+   TWO-COLUMN DASHBOARD
    ========================================================= */
 
 @media (max-width: 1200px) {
@@ -1017,23 +1163,26 @@ html {
 
   .coverflow-left-overlay,
   .coverflow-right-overlay {
-    width: clamp(125px, 23%, 190px);
+    width:
+      clamp(125px, 23%, 190px);
   }
 
   .clip-card {
-    width: clamp(135px, 13vw, 180px);
+    width:
+      clamp(135px, 13vw, 180px);
   }
 }
 
 
 /* =========================================================
-   900px
+   <= 900px
    SINGLE COLUMN
    ========================================================= */
 
 @media (max-width: 900px) {
   .bento-dashboard-wrapper {
-    grid-template-columns: minmax(0, 1fr);
+    grid-template-columns:
+      minmax(0, 1fr);
 
     gap: 1rem;
 
@@ -1052,7 +1201,8 @@ html {
   }
 
   .tournaments-card {
-    min-height: clamp(280px, 45vw, 360px);
+    min-height:
+      clamp(280px, 45vw, 360px);
   }
 
   .tournaments-card-content {
@@ -1067,9 +1217,11 @@ html {
 
     width: auto;
 
-    height: clamp(160px, 28vw, 220px);
+    height:
+      clamp(160px, 28vw, 220px);
 
     max-width: 100%;
+
     max-height: none;
 
     margin-top: 1rem;
@@ -1078,22 +1230,25 @@ html {
   }
 
   .highlights-section {
-    min-height: clamp(360px, 65vw, 480px);
+    min-height:
+      clamp(360px, 65vw, 480px);
   }
 
   .stat-meter-card {
-    min-height: clamp(300px, 60vw, 430px);
+    min-height:
+      clamp(300px, 60vw, 430px);
   }
 }
 
 
 /* =========================================================
-   650px
+   <= 650px
    ========================================================= */
 
 @media (max-width: 650px) {
   .mid-grid-row {
-    grid-template-columns: minmax(0, 1fr);
+    grid-template-columns:
+      minmax(0, 1fr);
   }
 
   .coverflow-left-overlay,
@@ -1102,7 +1257,8 @@ html {
   }
 
   .clip-card {
-    width: clamp(125px, 30vw, 165px);
+    width:
+      clamp(125px, 30vw, 165px);
   }
 
   .clip-title-massive {
@@ -1116,7 +1272,7 @@ html {
 
 
 /* =========================================================
-   VERY NARROW
+   <= 420px
    ========================================================= */
 
 @media (max-width: 420px) {
@@ -1124,25 +1280,24 @@ html {
     padding: 0.65rem;
   }
 
-  /*
-    On very narrow screens the side information is removed
-    because keeping it would compress the actual clip.
-  */
   .coverflow-left-overlay,
   .coverflow-right-overlay {
     display: none;
   }
 
   .clip-card {
-    width: min(48vw, 160px);
+    width:
+      min(48vw, 160px);
   }
 
   .prev-btn {
-    left: calc(50% - 35px);
+    left:
+      calc(50% - 35px);
   }
 
   .next-btn {
-    right: calc(50% - 35px);
+    right:
+      calc(50% - 35px);
   }
 
   .stat-breakdown {
