@@ -7,7 +7,7 @@ import {
   MessageSquare,
   Play,
   Target,
-  Zap, Play, Pause, Volume2, VolumeX
+  Zap, Pause, Volume2, VolumeX
 } from 'lucide-react';
 
 import '../styles/pages/DashboardHome.css';
