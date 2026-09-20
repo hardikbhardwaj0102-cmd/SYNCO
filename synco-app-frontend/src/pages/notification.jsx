@@ -41,6 +41,7 @@ const Notification = () => {
 
     const [actionId, setActionId] = useState(null);
     const [markingAll, setMarkingAll] = useState(false);
+    const [completedActions, setCompletedActions] = useState({});
 
     // =========================================================
     // API HELPER
@@ -97,11 +98,28 @@ const Notification = () => {
                 "/api/notifications"
             );
 
-            setNotifications(
+            const nextNotifications =
                 data.notifications ||
                 data.data ||
-                []
-            );
+                [];
+
+            setNotifications(nextNotifications);
+
+            setCompletedActions((previous) => {
+                const activeIds = new Set(
+                    nextNotifications
+                        .map((item) =>
+                            getNotificationKey(item)
+                        )
+                        .filter(Boolean)
+                );
+
+                return Object.fromEntries(
+                    Object.entries(previous).filter(
+                        ([key]) => activeIds.has(key)
+                    )
+                );
+            });
 
             setUnreadCount(
                 Number(data.unreadCount || 0)
@@ -241,6 +259,58 @@ const Notification = () => {
     };
 
     // =========================================================
+    // INTERACTIVE NOTIFICATION HELPERS
+    // =========================================================
+
+    const getNotificationKey = (notification) => {
+
+        if (!notification || notification.id == null) {
+            return null;
+        }
+
+        return String(notification.id);
+    };
+
+    const isActionCompleted = (notification) => {
+
+        const key = getNotificationKey(notification);
+
+        if (!key) {
+            return false;
+        }
+
+        const data = notification?.data || {};
+
+        const backendStatus = String(
+            data.actionStatus ??
+            data.action_status ??
+            notification.actionStatus ??
+            notification.action_status ??
+            ""
+        ).toLowerCase();
+
+        return Boolean(completedActions[key]) || [
+            "accepted", "accept", "declined", "decline",
+            "rejected", "cancelled", "canceled",
+            "completed", "closed", "handled",
+        ].includes(backendStatus);
+    };
+
+    const setActionCompleted = (notification, status) => {
+
+        const key = getNotificationKey(notification);
+
+        if (!key) {
+            return;
+        }
+
+        setCompletedActions((previous) => ({
+            ...previous,
+            [key]: status,
+        }));
+    };
+
+    // =========================================================
     // CLUB INVITE ACTION
     // =========================================================
 
@@ -269,9 +339,14 @@ const Notification = () => {
 
         try {
 
-            setActionId(
-                `${action}-${notification.id}`
-            );
+            const currentActionKey =
+                `${action}-${notification.id}`;
+
+            if (actionId === currentActionKey) {
+                return;
+            }
+
+            setActionId(currentActionKey);
 
             setError("");
             setSuccess("");
@@ -305,18 +380,24 @@ const Notification = () => {
                 )
             );
 
-            setUnreadCount((previous) => {
+            const wasUnread =
+                !(
+                    notification.isRead ||
+                    notification.is_read
+                );
 
-                const wasUnread =
-                    !(
-                        notification.isRead ||
-                        notification.is_read
-                    );
+            if (wasUnread) {
+                setUnreadCount((previous) =>
+                    Math.max(0, previous - 1)
+                );
+            }
 
-                return wasUnread
-                    ? Math.max(0, previous - 1)
-                    : previous;
-            });
+            setActionCompleted(
+                notification,
+                action === "accept"
+                    ? "accepted"
+                    : "declined"
+            );
 
             if (action === "accept") {
 
@@ -351,13 +432,174 @@ const Notification = () => {
 
         } catch (err) {
 
-            setError(
+            const message =
                 err.message ||
-                `Unable to ${action} invitation.`
-            );
+                `Unable to ${action} invitation.`;
+
+            if (
+                /no longer pending|already.*accepted|already.*declined|already.*handled|not pending/i
+                    .test(message)
+            ) {
+                setActionCompleted(
+                    notification,
+                    "completed"
+                );
+
+                setNotifications((previous) =>
+                    previous.map((item) =>
+                        Number(item.id) ===
+                            Number(notification.id)
+                            ? {
+                                ...item,
+                                isRead: true,
+                                is_read: true,
+                            }
+                            : item
+                    )
+                );
+
+                setSuccess(
+                    "This invitation has already been handled."
+                );
+            } else {
+                setError(message);
+            }
 
         } finally {
 
+            setActionId(null);
+        }
+    };
+
+    // =========================================================
+    // FRIEND REQUEST ACTION
+    // =========================================================
+
+    const handleFriendRequest = async (
+        notification,
+        action
+    ) => {
+
+        const data = notification?.data || {};
+
+        const requestId =
+            data.requestId ??
+            data.request_id ??
+            notification.referenceId ??
+            notification.reference_id;
+
+        if (!requestId) {
+            setError(
+                "This friend request is missing its request ID."
+            );
+            return;
+        }
+
+        const currentActionKey =
+            `friend-${action}-${notification.id}`;
+
+        if (actionId === currentActionKey) {
+            return;
+        }
+
+        try {
+
+            setActionId(currentActionKey);
+            setError("");
+            setSuccess("");
+
+            const endpoint =
+                action === "accept"
+                    ? `/api/friends/request/${requestId}/accept`
+                    : `/api/friends/request/${requestId}/decline`;
+
+            const response = await apiRequest(
+                endpoint,
+                { method: "POST" }
+            );
+
+            const senderName =
+                data.senderName ||
+                data.sender_name ||
+                "this player";
+
+            const newType =
+                action === "accept"
+                    ? "FRIEND_ACCEPTED"
+                    : "FRIEND_DECLINED";
+
+            const newTitle =
+                action === "accept"
+                    ? "Friend Request Accepted"
+                    : "Friend Request Declined";
+
+            const newMessage =
+                action === "accept"
+                    ? `You are now friends with ${senderName}.`
+                    : `The friend request from ${senderName} was declined.`;
+
+            setNotifications((previous) =>
+                previous.map((item) =>
+                    Number(item.id) === Number(notification.id)
+                        ? {
+                            ...item,
+                            type: newType,
+                            notificationType: newType,
+                            notification_type: newType,
+                            title: newTitle,
+                            message: newMessage,
+                            isRead: true,
+                            is_read: true,
+                            data: {
+                                ...(item.data || {}),
+                                actionStatus:
+                                    action === "accept"
+                                        ? "accepted"
+                                        : "declined",
+                                action_status:
+                                    action === "accept"
+                                        ? "accepted"
+                                        : "declined",
+                                requestStatus: newType,
+                                request_status: newType,
+                            },
+                        }
+                        : item
+                )
+            );
+
+            if (isUnread(notification)) {
+                setUnreadCount((previous) =>
+                    Math.max(0, previous - 1)
+                );
+            }
+
+            setSuccess(
+                response.message ||
+                (action === "accept"
+                    ? "Friend request accepted."
+                    : "Friend request declined.")
+            );
+
+        } catch (err) {
+
+            const message =
+                err.message ||
+                `Unable to ${action} friend request.`;
+
+            if (
+                /no longer pending|already.*friends|already.*handled|not pending/i
+                    .test(message)
+            ) {
+                await loadNotifications(true);
+                setSuccess(
+                    "This friend request has already been handled."
+                );
+            } else {
+                setError(message);
+            }
+
+        } finally {
             setActionId(null);
         }
     };
@@ -480,7 +722,9 @@ const Notification = () => {
             normalizedType ===
             "FRIEND_REQUEST" ||
             normalizedType ===
-            "FRIEND_ACCEPTED"
+            "FRIEND_ACCEPTED" ||
+            normalizedType ===
+            "FRIEND_DECLINED"
         ) {
 
             navigate("/friends");
@@ -1127,6 +1371,41 @@ const Notification = () => {
                                                 notification.referenceId ??
                                                 notification.reference_id;
 
+                                            const actionCompleted =
+                                                isActionCompleted(
+                                                    notification
+                                                );
+
+                                            const isFriendRequest =
+                                                type ===
+                                                "FRIEND_REQUEST";
+
+                                            const isFriendAccepted =
+                                                type ===
+                                                "FRIEND_ACCEPTED";
+
+                                            const isFriendDeclined =
+                                                type ===
+                                                "FRIEND_DECLINED";
+
+                                            const friendRequestId =
+                                                data.requestId ??
+                                                data.request_id ??
+                                                notification.referenceId ??
+                                                notification.reference_id;
+
+                                            const friendAcceptLoading =
+                                                actionId ===
+                                                `friend-accept-${notificationId}`;
+
+                                            const friendDeclineLoading =
+                                                actionId ===
+                                                `friend-decline-${notificationId}`;
+
+                                            const anyFriendAction =
+                                                friendAcceptLoading ||
+                                                friendDeclineLoading;
+
                                             const isOrganizerApplication =
                                                 type ===
                                                 "ORGANIZER_APPLICATION";
@@ -1310,7 +1589,7 @@ const Notification = () => {
                                                                 ================================================= */}
 
                                                                 {isInvite &&
-                                                                    inviteId && (
+                                                                    inviteId && !actionCompleted && (
 
                                                                         <div className="mt-4 flex flex-wrap gap-2">
 
@@ -1381,6 +1660,86 @@ const Notification = () => {
                                                                         </div>
 
                                                                     )}
+
+                                                                {isInvite &&
+                                                                    inviteId &&
+                                                                    actionCompleted && (
+
+                                                                        <div className="mt-4 inline-flex items-center gap-2 rounded-lg border border-neutral-200 bg-neutral-50 px-3.5 py-2.5">
+                                                                            <Check size={14} className="text-neutral-500" />
+                                                                            <span className="text-xs font-semibold text-neutral-700">
+                                                                                {completedActions[
+                                                                                    getNotificationKey(notification)
+                                                                                ] === "declined"
+                                                                                    ? "Invitation declined"
+                                                                                    : completedActions[
+                                                                                        getNotificationKey(notification)
+                                                                                    ] === "accepted"
+                                                                                        ? "Invitation accepted"
+                                                                                        : "Invitation already handled"}
+                                                                            </span>
+                                                                        </div>
+                                                                    )}
+
+                                                                {/* =========================================================
+                                                                     FRIEND REQUEST ACTIONS
+                                                                 ========================================================= */}
+
+                                                                {isFriendRequest &&
+                                                                    friendRequestId && (
+
+                                                                        <div className="mt-4 flex flex-wrap gap-2">
+                                                                            <button
+                                                                                type="button"
+                                                                                onClick={() =>
+                                                                                    handleFriendRequest(notification, "accept")
+                                                                                }
+                                                                                disabled={anyFriendAction}
+                                                                                className="inline-flex items-center gap-2 rounded-lg bg-black px-4 py-2.5 text-xs font-semibold text-white transition hover:bg-neutral-800 disabled:cursor-not-allowed disabled:opacity-50"
+                                                                            >
+                                                                                {friendAcceptLoading ? (
+                                                                                    <Loader2 size={14} className="animate-spin" />
+                                                                                ) : (
+                                                                                    <Check size={14} />
+                                                                                )}
+                                                                                Accept
+                                                                            </button>
+
+                                                                            <button
+                                                                                type="button"
+                                                                                onClick={() =>
+                                                                                    handleFriendRequest(notification, "decline")
+                                                                                }
+                                                                                disabled={anyFriendAction}
+                                                                                className="inline-flex items-center gap-2 rounded-lg border border-neutral-300 px-4 py-2.5 text-xs font-semibold text-neutral-700 transition hover:bg-neutral-100 disabled:cursor-not-allowed disabled:opacity-50"
+                                                                            >
+                                                                                {friendDeclineLoading ? (
+                                                                                    <Loader2 size={14} className="animate-spin" />
+                                                                                ) : (
+                                                                                    <X size={14} />
+                                                                                )}
+                                                                                Decline
+                                                                            </button>
+                                                                        </div>
+                                                                    )}
+
+                                                                {isFriendAccepted && (
+                                                                    <div className="mt-4 inline-flex items-center gap-2 rounded-lg border border-neutral-200 bg-neutral-50 px-3.5 py-2.5">
+                                                                        <Check size={14} className="text-neutral-500" />
+                                                                        <span className="text-xs font-semibold text-neutral-700">
+                                                                            Friend request accepted
+                                                                        </span>
+                                                                    </div>
+                                                                )}
+
+                                                                {isFriendDeclined && (
+                                                                    <div className="mt-4 inline-flex items-center gap-2 rounded-lg border border-neutral-200 bg-neutral-50 px-3.5 py-2.5">
+                                                                        <X size={14} className="text-neutral-500" />
+                                                                        <span className="text-xs font-semibold text-neutral-700">
+                                                                            Friend request declined
+                                                                        </span>
+                                                                    </div>
+                                                                )}
 
                                                                 {/* =================================================
                                                                     CLUB INFO

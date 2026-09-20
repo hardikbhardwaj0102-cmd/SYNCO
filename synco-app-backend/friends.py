@@ -205,6 +205,44 @@ def search_players():
 
 
 # =========================================================
+# UPDATE FRIEND REQUEST NOTIFICATION
+# =========================================================
+
+def update_friend_request_notification(
+    request_id,
+    user_id,
+    notification_type,
+    title,
+    message,
+    action_status,
+):
+
+    notification = Notification.query.filter_by(
+        user_id=user_id,
+        reference_type="FRIEND_REQUEST",
+        reference_id=request_id,
+    ).first()
+
+    if not notification:
+        return
+
+    existing_data = notification.data or {}
+
+    notification.data = {
+        **existing_data,
+        "actionStatus": action_status,
+        "action_status": action_status,
+        "requestStatus": notification_type,
+        "request_status": notification_type,
+    }
+
+    notification.notification_type = notification_type
+    notification.title = title
+    notification.message = message
+    notification.is_read = True
+
+
+# =========================================================
 # SEND FRIEND REQUEST
 # =========================================================
 
@@ -473,6 +511,18 @@ def accept_friend_request(request_id):
         friend_request.status = "ACCEPTED"
         friend_request.responded_at = datetime.utcnow()
 
+        update_friend_request_notification(
+            request_id=friend_request.id,
+            user_id=current_user.id,
+            notification_type="FRIEND_ACCEPTED",
+            title="Friend Request Accepted",
+            message=(
+                f"You are already friends with "
+                f"{friend_request.sender.name}."
+            ),
+            action_status="accepted",
+        )
+
         db.session.commit()
 
         return jsonify({
@@ -489,6 +539,18 @@ def accept_friend_request(request_id):
 
     friend_request.status = "ACCEPTED"
     friend_request.responded_at = datetime.utcnow()
+
+    update_friend_request_notification(
+        request_id=friend_request.id,
+        user_id=current_user.id,
+        notification_type="FRIEND_ACCEPTED",
+        title="Friend Request Accepted",
+        message=(
+            f"You are now friends with "
+            f"{friend_request.sender.name}."
+        ),
+        action_status="accepted",
+    )
 
     # -----------------------------------------------------
     # Create friendship for sender
@@ -608,6 +670,15 @@ def decline_friend_request(request_id):
 
     friend_request.status = "DECLINED"
     friend_request.responded_at = datetime.utcnow()
+
+    update_friend_request_notification(
+        request_id=friend_request.id,
+        user_id=current_user.id,
+        notification_type="FRIEND_DECLINED",
+        title="Friend Request Declined",
+        message="The friend request was declined.",
+        action_status="declined",
+    )
 
     db.session.commit()
 
