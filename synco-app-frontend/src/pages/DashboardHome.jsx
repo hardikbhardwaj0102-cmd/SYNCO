@@ -7,7 +7,7 @@ import {
   MessageSquare,
   Play,
   Target,
-  Zap,
+  Zap, Play, Pause, Volume2, VolumeX
 } from 'lucide-react';
 
 import '../styles/pages/DashboardHome.css';
@@ -212,6 +212,9 @@ const DashboardHome = () => {
   const [commentText, setCommentText] = useState('');
   const [commentsLoading, setCommentsLoading] = useState(false);
   const [commentError, setCommentError] = useState('');
+
+  const [playingStates, setPlayingStates] = useState({});
+  const [mutedStates, setMutedStates] = useState({});
 
   const videoRefs = useRef({});
   const activeClipIdRef = useRef(null);
@@ -590,6 +593,34 @@ const DashboardHome = () => {
       video.pause();
     }
   };
+
+  const toggleMute = (
+  clipId
+) => {
+
+  const video =
+    videoRefs.current[
+      clipId
+    ];
+
+  if (!video) {
+    return;
+  }
+
+  const nextMuted =
+    !video.muted;
+
+  video.muted =
+    nextMuted;
+
+  setMutedStates(
+    (prev) => ({
+      ...prev,
+      [clipId]:
+        nextMuted,
+    })
+  );
+};
 
 
   // =========================================================
@@ -1060,63 +1091,71 @@ const DashboardHome = () => {
 
                       return (
 
-                        <div
-                          key={clip.id}
-                          className={`clip-card ${positionClass}`}
-                        >
+                          <div
+                            key={clip.id}
+                            className={`clip-card ${positionClass}`}
+                          >
+                            <video
+                              ref={(element) => {
+                                if (element) {
+                                  videoRefs.current[clip.id] = element;
+                                } else {
+                                  delete videoRefs.current[clip.id];
+                                }
+                              }}
+                              src={clip.url}
+                              muted={mutedStates[clip.id] ?? true}
+                              loop
+                              playsInline
+                              preload={isCenter ? 'auto' : 'metadata'}
+                            />
 
-                          <video
-                            ref={(element) => {
+                            {isCenter && (
+                              <>
+                                {/* Play / Pause */}
+                                <button
+                                  type="button"
+                                  className="video-control play-control"
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    togglePlayback(clip.id);
+                                  }}
+                                  aria-label={
+                                    playingStates[clip.id]
+                                      ? 'Pause video'
+                                      : 'Play video'
+                                  }
+                                >
+                                  {playingStates[clip.id] ? (
+                                    <Pause size={28} />
+                                  ) : (
+                                    <Play size={28} />
+                                  )}
+                                </button>
 
-                              if (element) {
-
-                                videoRefs.current[
-                                  clip.id
-                                ] = element;
-
-                              } else {
-
-                                delete videoRefs.current[
-                                  clip.id
-                                ];
-                              }
-
-                            }}
-
-                            src={clip.url}
-
-                            muted
-
-                            loop
-
-                            playsInline
-
-                            preload={
-                              isCenter
-                                ? 'auto'
-                                : 'metadata'
-                            }
-                          />
-
-                          {isCenter && (
-
-                            <div
-                              className="play-overlay"
-
-                              onClick={() =>
-                                togglePlayback(
-                                  clip.id
-                                )
-                              }
-                            >
-
-                              <Play size={32} />
-
-                            </div>
-
-                          )}
-
-                        </div>
+                                {/* Mute / Unmute */}
+                                <button
+                                  type="button"
+                                  className="video-control mute-control"
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    toggleMute(clip.id);
+                                  }}
+                                  aria-label={
+                                    mutedStates[clip.id]
+                                      ? 'Unmute video'
+                                      : 'Mute video'
+                                  }
+                                >
+                                  {mutedStates[clip.id] ? (
+                                    <VolumeX size={17} />
+                                  ) : (
+                                    <Volume2 size={17} />
+                                  )}
+                                </button>
+                              </>
+                            )}
+                          </div>
 
                       );
                     }
