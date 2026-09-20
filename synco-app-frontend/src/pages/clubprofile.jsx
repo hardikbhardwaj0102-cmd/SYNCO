@@ -8,8 +8,6 @@ import {
     Clock3,
     Crown,
     Edit3,
-    Globe2,
-    Lock,
     MoreHorizontal,
     Plus,
     Search,
@@ -451,8 +449,6 @@ export default function ClubProfile() {
             banner: "",
             region: "Global",
             gameId: "",
-            privacy: "Public",
-            allowMemberInvites: true,
             isActive: true,
         });
 
@@ -1188,10 +1184,10 @@ export default function ClubProfile() {
 
 
     // =====================================================
-    // REJECT JOIN REQUEST
+    // DISMISS JOIN REQUEST
     // =====================================================
 
-    async function rejectJoinRequest(
+    async function dismissJoinRequest(
         requestId
     ) {
 
@@ -1202,7 +1198,7 @@ export default function ClubProfile() {
 
             const data =
                 await fetchJson(
-                    `${API}/clubs/join-requests/${requestId}/reject`,
+                    `${API}/clubs/join-requests/${requestId}/dismiss`,
                     {
                         method: "POST",
                     }
@@ -1214,7 +1210,7 @@ export default function ClubProfile() {
 
             showSuccessMessage(
                 data.message ||
-                "Join request rejected."
+                "Join request dismissed."
             );
 
         } catch (err) {
@@ -1634,14 +1630,6 @@ export default function ClubProfile() {
             gameId:
                 club?.gameId ||
                 "",
-
-            privacy:
-                club?.privacy ||
-                "Public",
-
-            allowMemberInvites:
-                club?.allowMemberInvites !==
-                false,
 
             isActive:
                 club?.isActive !==
@@ -2303,11 +2291,7 @@ export default function ClubProfile() {
                                             </span>
 
 
-                                            <span className="rounded-full border border-[#c7aa6a]/30 bg-[#c7aa6a]/10 px-3 py-1 text-[9px] font-black uppercase tracking-[0.18em] text-[#e0c78e]">
-                                                {
-                                                    club.privacy
-                                                }
-                                            </span>
+
 
                                         </div>
 
@@ -2380,9 +2364,7 @@ export default function ClubProfile() {
 
                                     {!isMember &&
                                         !isOwner &&
-                                        !hasPendingRequest &&
-                                        club.privacy !==
-                                        "Private" && (
+                                        !hasPendingRequest && (
 
                                             <button
                                                 type="button"
@@ -2467,7 +2449,7 @@ export default function ClubProfile() {
                                             <UserPlus
                                                 size={15}
                                             />
-                                            Invite Players
+                                            Invite Friends
                                         </button>
 
                                     )}
@@ -2901,13 +2883,13 @@ export default function ClubProfile() {
                                                                                 actionLoading
                                                                             }
                                                                             onClick={() =>
-                                                                                rejectJoinRequest(
+                                                                                dismissJoinRequest(
                                                                                     request.id
                                                                                 )
                                                                             }
                                                                             className="flex-1 rounded-lg border border-[#dedbd3] px-4 py-2.5 text-[10px] font-black uppercase tracking-wider text-[#555] hover:bg-[#f6f4ef] disabled:opacity-60"
                                                                         >
-                                                                            Reject
+                                                                            Dismiss
                                                                         </button>
 
                                                                     </div>
@@ -2974,34 +2956,7 @@ export default function ClubProfile() {
                                         </div>
 
 
-                                        <div className="flex items-center justify-between">
-                                            <span className="text-xs font-semibold text-[#85878e]">
-                                                Privacy
-                                            </span>
 
-                                            <span className="flex items-center gap-1.5 text-xs font-black">
-
-                                                {club.privacy ===
-                                                    "Private" ? (
-
-                                                    <Lock
-                                                        size={13}
-                                                    />
-
-                                                ) : (
-
-                                                    <Globe2
-                                                        size={13}
-                                                    />
-
-                                                )}
-
-                                                {
-                                                    club.privacy
-                                                }
-
-                                            </span>
-                                        </div>
 
 
                                         <div className="flex items-center justify-between">
@@ -3186,7 +3141,7 @@ export default function ClubProfile() {
                                             <UserPlus
                                                 size={15}
                                             />
-                                            Invite Player
+                                            Invite Friend
                                         </button>
 
 
@@ -4116,56 +4071,13 @@ export default function ClubProfile() {
                         </div>
 
 
-                        <SelectField
-                            label="Privacy"
-                            value={
-                                settingsForm.privacy
-                            }
-                            onChange={(event) =>
-                                setSettingsForm(
-                                    (
-                                        previous
-                                    ) => ({
-                                        ...previous,
-                                        privacy:
-                                            event.target.value,
-                                    })
-                                )
-                            }
-                        >
 
-                            <option value="Public">
-                                Public
-                            </option>
-
-                            <option value="Private">
-                                Private
-                            </option>
-
-                        </SelectField>
 
 
                         <div className="space-y-3">
 
 
-                            <Toggle
-                                label="Allow member invitations"
-                                description="Allow club managers to invite players into the club."
-                                checked={
-                                    settingsForm.allowMemberInvites
-                                }
-                                onChange={(value) =>
-                                    setSettingsForm(
-                                        (
-                                            previous
-                                        ) => ({
-                                            ...previous,
-                                            allowMemberInvites:
-                                                value,
-                                        })
-                                    )
-                                }
-                            />
+
 
 
                             <div className="rounded-xl border border-[#e1ded7] bg-[#faf9f6] p-4">
@@ -4189,7 +4101,7 @@ export default function ClubProfile() {
                                         </p>
 
                                         <p className="mt-1 text-xs leading-5 text-[#85878e]">
-                                            Public club members always require approval before entering the club.
+                                            Every player who requests to join is reviewed by the owner or an admin.
                                         </p>
 
                                     </div>
@@ -4544,8 +4456,8 @@ export default function ClubProfile() {
             {inviteModal && (
 
                 <Modal
-                    title="Invite Players"
-                    subtitle="Search for SYNCO players and invite them to this club."
+                    title="Invite Friends"
+                    subtitle="Search your friends and invite them to this club."
                     onClose={() => {
                         setInviteModal(
                             false
@@ -4575,7 +4487,7 @@ export default function ClubProfile() {
                                     event.target.value
                                 )
                             }
-                            placeholder="Search by username, name or SYNCO UID"
+                            placeholder="Search your friends by username, name or SYNCO UID"
                             className="w-full rounded-xl border border-[#dedbd3] bg-white py-3 pl-11 pr-4 text-sm outline-none focus:border-[#9b8148]"
                         />
 
@@ -4601,7 +4513,7 @@ export default function ClubProfile() {
                             0 && (
 
                                 <div className="rounded-xl border border-dashed border-[#dedbd3] py-10 text-center text-xs font-bold text-[#888]">
-                                    No players found.
+                                    No friends found.
                                 </div>
 
                             )}

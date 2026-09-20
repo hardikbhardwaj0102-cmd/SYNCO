@@ -17,6 +17,7 @@ from models import (
     ClubJoinRequest,
     ClubRecruitmentPost,
     Notification,
+    Friendship,
 )
 
 try:
@@ -115,6 +116,35 @@ def can_manage_club(club, user_id):
         membership
         and membership.role.upper() == "ADMIN"
     )
+
+
+def are_friends(user_id, other_user_id):
+    """
+    Invitations are intentionally limited to friends of the
+    person sending the invitation.
+    """
+
+    if not user_id or not other_user_id:
+        return False
+
+    friendship = (
+        Friendship.query
+        .filter(
+            db.or_(
+                db.and_(
+                    Friendship.user_id == user_id,
+                    Friendship.friend_id == other_user_id,
+                ),
+                db.and_(
+                    Friendship.user_id == other_user_id,
+                    Friendship.friend_id == user_id,
+                ),
+            )
+        )
+        .first()
+    )
+
+    return friendship is not None
 
 
 # =========================================================
@@ -459,10 +489,6 @@ def create_club():
             data.get("region", "Global")
         ).strip()
 
-        privacy = str(
-            data.get("privacy", "Public")
-        ).strip()
-
         avatar = data.get("avatar")
         banner = data.get("banner")
 
@@ -502,13 +528,6 @@ def create_club():
                 "message": "Selected game was not found."
             }), 404
 
-        if privacy not in [
-            "Public",
-            "Private"
-        ]:
-
-            privacy = "Public"
-
         existing_name = (
             Club.query
             .filter(
@@ -543,22 +562,29 @@ def create_club():
                 "message": "A club with this tag already exists."
             }), 409
 
+        # -------------------------------------------------
+        # PRIVACY HAS BEEN REMOVED FROM CLUB BEHAVIOR.
+        # -------------------------------------------------
+        # The legacy privacy column is kept at Public only as
+        # a compatibility value in case the existing database
+        # schema still requires it. It is never used to decide
+        # whether a player can request to join.
+        # -------------------------------------------------
+
         club = Club(
             name=name,
             tag=tag,
             description=description,
-            privacy=privacy,
+            privacy="Public",
             game_id=game_id,
             owner_id=user.id,
             avatar=avatar,
             banner=banner,
             region=region or "Global",
-            allow_member_invites=bool(
-                data.get(
-                    "allowMemberInvites",
-                    True
-                )
-            ),
+            # Legacy database field kept enabled for compatibility.
+            # Invitations are always controlled by owner/admin
+            # permissions and the friendship requirement.
+            allow_member_invites=True,
             require_join_approval=True,
             is_active=True,
         )
@@ -699,9 +725,38 @@ def search_users():
             )
         )
 
-        users = users_query.limit(20).all()
+        users = users_query.limit(50).all()
 
         if club_id:
+
+            # Only friends can be invited.
+            friend_ids = {
+                friendship.friend_id
+                for friendship in (
+                    Friendship.query
+                    .filter_by(
+                        user_id=user.id
+                    )
+                    .all()
+                )
+            }
+
+            friend_ids.update({
+                friendship.user_id
+                for friendship in (
+                    Friendship.query
+                    .filter_by(
+                        friend_id=user.id
+                    )
+                    .all()
+                )
+            })
+
+            users = [
+                found_user
+                for found_user in users
+                if found_user.id in friend_ids
+            ]
 
             existing_member_ids = {
                 member.user_id
@@ -762,6 +817,10 @@ def search_users():
                     "username": found_user.username,
                     "avatar": found_user.avatar,
                     "level": found_user.level,
+                    "isFriend": are_friends(
+                        user.id,
+                        found_user.id
+                    ),
                 }
                 for found_user in users
             ]
@@ -814,6 +873,7 @@ def send_club_invite(club_id):
                 "message": "This club is inactive."
             }), 400
 
+        # Owner OR Admin only.
         if not can_manage_club(
             club,
             user.id
@@ -821,15 +881,8 @@ def send_club_invite(club_id):
 
             return jsonify({
                 "success": False,
-                "message": "You do not have permission to invite players."
+                "message": "Only the owner or an admin can invite players."
             }), 403
-
-        if not club.allow_member_invites:
-
-            return jsonify({
-                "success": False,
-                "message": "Member invitations are disabled for this club."
-            }), 400
 
         data = request.get_json(
             silent=True
@@ -871,6 +924,21 @@ def send_club_invite(club_id):
                 "success": False,
                 "message": "Player not found."
             }), 404
+
+        # -------------------------------------------------
+        # NEW RULE:
+        # Owner/Admin can invite friends only.
+        # -------------------------------------------------
+
+        if not are_friends(
+            user.id,
+            invitee.id
+        ):
+
+            return jsonify({
+                "success": False,
+                "message": "You can only invite players who are your friends."
+            }), 403
 
         if is_member(
             club.id,
@@ -943,7 +1011,8 @@ def send_club_invite(club_id):
                 "inviterName": (
                     user.username
                     or user.name
-                )
+                ),
+                "inviteId": invite.id,
             }
         )
 
@@ -1102,7 +1171,6 @@ def accept_invite(invite_id):
 
         db.session.commit()
 
-        # Reward only after successful membership.
         if process_synco_event:
 
             try:
@@ -1258,13 +1326,11 @@ def request_to_join(club_id):
                 "message": "You are already a member."
             }), 400
 
-        # Private clubs are invitation-only.
-        if club.privacy.lower() == "private":
-
-            return jsonify({
-                "success": False,
-                "message": "This is a private club. You need an invitation to join."
-            }), 403
+        # -------------------------------------------------
+        # Public/private logic has been removed.
+        # Any non-member may request to join.
+        # Every request is reviewed by owner/admin.
+        # -------------------------------------------------
 
         pending_request = (
             ClubJoinRequest.query
@@ -1587,12 +1653,17 @@ def approve_join_request(request_id):
         join_request.responded_at = datetime.utcnow()
         join_request.responded_by = user.id
 
+        manager_ids = {
+            club.owner_id
+        }
+
+        for member in club.members:
+            if member.role.upper() == "ADMIN":
+                manager_ids.add(member.user_id)
+
         mark_join_request_notifications_read(
             request_id,
-            {
-                club.owner_id,
-                user.id
-            }
+            manager_ids
         )
 
         create_notification(
@@ -1652,11 +1723,15 @@ def approve_join_request(request_id):
 
 
 # =========================================================
-# REJECT JOIN REQUEST
+# REJECT / DISMISS JOIN REQUEST
 # =========================================================
 
 @clubs_bp.route(
     "/join-requests/<int:request_id>/reject",
+    methods=["POST"]
+)
+@clubs_bp.route(
+    "/join-requests/<int:request_id>/dismiss",
     methods=["POST"]
 )
 def reject_join_request(request_id):
@@ -1696,7 +1771,7 @@ def reject_join_request(request_id):
 
             return jsonify({
                 "success": False,
-                "message": "You do not have permission to reject requests."
+                "message": "You do not have permission to dismiss requests."
             }), 403
 
         if join_request.status != "PENDING":
@@ -1712,12 +1787,17 @@ def reject_join_request(request_id):
 
         requester_id = join_request.user_id
 
+        manager_ids = {
+            club.owner_id
+        }
+
+        for member in club.members:
+            if member.role.upper() == "ADMIN":
+                manager_ids.add(member.user_id)
+
         mark_join_request_notifications_read(
             request_id,
-            {
-                club.owner_id,
-                user.id
-            }
+            manager_ids
         )
 
         create_notification(
@@ -1740,7 +1820,7 @@ def reject_join_request(request_id):
 
         return jsonify({
             "success": True,
-            "message": "Join request rejected.",
+            "message": "Join request dismissed.",
             "request": join_request.to_dict()
         })
 
@@ -1750,7 +1830,7 @@ def reject_join_request(request_id):
 
         return jsonify({
             "success": False,
-            "message": "Unable to reject request.",
+            "message": "Unable to dismiss request.",
             "error": str(e),
         }), 500
 
@@ -2075,49 +2155,24 @@ def update_club_settings(club_id):
             club.game_id = game_id
 
         # -------------------------------------------------
-        # PRIVACY
+        # PRIVACY REMOVED
         # -------------------------------------------------
-
-        if "privacy" in data:
-
-            privacy = str(
-                data.get(
-                    "privacy",
-                    "Public"
-                )
-            ).strip()
-
-            if privacy not in [
-                "Public",
-                "Private"
-            ]:
-
-                return jsonify({
-                    "success": False,
-                    "message": "Privacy must be Public or Private."
-                }), 400
-
-            club.privacy = privacy
+        # Incoming privacy updates are intentionally ignored.
+        # New and existing clubs use the same join-request flow.
+        # -------------------------------------------------
 
         # -------------------------------------------------
         # MEMBER INVITES
         # -------------------------------------------------
 
-        if "allowMemberInvites" in data:
-
-            club.allow_member_invites = bool(
-                data.get(
-                    "allowMemberInvites"
-                )
-            )
+        # Invitations are always enabled for owner/admin.
+        # The legacy setting is no longer configurable.
+        club.allow_member_invites = True
 
         # -------------------------------------------------
         # JOIN APPROVAL
         # -------------------------------------------------
-        #
-        # SYNCO currently uses approval for every public
-        # club. We therefore keep this enabled.
-        #
+        # All join requests are reviewed by owner/admin.
         # -------------------------------------------------
 
         club.require_join_approval = True

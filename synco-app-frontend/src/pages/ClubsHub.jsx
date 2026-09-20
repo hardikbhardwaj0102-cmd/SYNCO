@@ -5,8 +5,6 @@ import {
   Shield,
   ChevronDown,
   Users,
-  Lock,
-  Globe,
   ArrowRight,
 } from 'lucide-react';
 import '../styles/pages/ClubsHub.css';
@@ -24,7 +22,6 @@ const ClubsHub = () => {
     description: '',
     game: '',
     gameId: '',
-    privacy: 'Public',
   });
 
   const [gameCatalog, setGameCatalog] = useState([]);
@@ -210,7 +207,6 @@ const ClubsHub = () => {
             description:
               newClub.description.trim(),
             gameId: newClub.gameId,
-            privacy: newClub.privacy,
           }),
         }
       );
@@ -252,7 +248,6 @@ const ClubsHub = () => {
           description: '',
           game: '',
           gameId: '',
-          privacy: 'Public',
         });
 
         setSuccess('');
@@ -419,23 +414,7 @@ const ClubsHub = () => {
 
                       </div>
 
-                      {/* PRIVACY */}
 
-                      <div className="flex items-center gap-1 text-[9px] font-bold uppercase tracking-wider text-gray-400">
-
-                        {club.privacy === 'Private' ? (
-                          <>
-                            <Lock size={11} />
-                            Private
-                          </>
-                        ) : (
-                          <>
-                            <Globe size={11} />
-                            Public
-                          </>
-                        )}
-
-                      </div>
 
                     </div>
 
