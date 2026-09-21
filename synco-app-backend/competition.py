@@ -46,6 +46,7 @@ from models import (
     VerificationRecord,
     CompetitionDispute,
     CompetitionAuditLog,
+    Notification,
 )
 
 
@@ -2299,13 +2300,45 @@ def _participant_captain_roster_status(participant, user_id):
 
 
 def _mark_participant_cancelled(participant):
-    """Synchronously cancel a participant and its pending invites."""
+    """Synchronously cancel a participant, roster state, and pending invites."""
 
     if not participant:
         return
 
     participant.registration_status = "CANCELLED"
     participant.accepted_at = None
+
+    # Persist a cancellation marker on the tournament-specific roster.
+    # This gives future re-registration attempts explicit evidence that this
+    # particular participant was withdrawn.
+    if getattr(participant, "user_id", None):
+        set_roster_player_status(
+            participant,
+            participant.user_id,
+            "CANCELLED",
+        )
+
+    roster = getattr(participant, "team_roster", None) or []
+    if isinstance(roster, list):
+        for item in roster:
+            if not isinstance(item, dict):
+                continue
+            try:
+                roster_user_id = int(item.get("userId"))
+            except (TypeError, ValueError):
+                continue
+            # Pending/unaccepted members are also part of the cancelled
+            # registration. Keep their final tournament-registration state
+            # explicit without changing historical accepted players.
+            if str(item.get("status") or "").upper() in {
+                "PENDING",
+                "ACCEPTED",
+                "DECLINED",
+                "EXPIRED",
+            }:
+                item["status"] = "CANCELLED"
+        # Reassign the list so SQLAlchemy reliably persists JSON changes.
+        participant.team_roster = copy.deepcopy(roster)
 
     invites = (
         CompetitionTeamInvite.query
@@ -2319,22 +2352,92 @@ def _mark_participant_cancelled(participant):
     for invite in invites:
         invite.status = "CANCELLED"
         invite.responded_at = datetime.utcnow()
-        set_roster_player_status(
-            participant,
-            invite.invited_user_id,
-            "CANCELLED",
+
+
+def _withdrawal_evidence_exists(competition, user_id, participant):
+    """
+    Return True only when the database contains explicit evidence that this
+    participant was withdrawn.
+
+    Evidence sources:
+      1. Tournament audit log created by the captain.
+      2. Cancellation notification generated for this participant.
+      3. Explicit CANCELLED status on the captain's roster entry.
+    """
+
+    if not competition or not participant:
+        return False
+
+    # 1) Tournament audit log.
+    audit_rows = (
+        CompetitionAuditLog.query
+        .filter_by(
+            competition_id=competition.id,
+            actor_id=user_id,
+            action="REGISTRATION_WITHDRAWN",
         )
+        .order_by(CompetitionAuditLog.created_at.desc())
+        .limit(100)
+        .all()
+    )
+
+    for audit in audit_rows:
+        metadata = getattr(audit, "audit_metadata", None) or {}
+        try:
+            audit_participant_id = int(metadata.get("participantId"))
+        except (TypeError, ValueError, AttributeError):
+            audit_participant_id = None
+
+        if audit_participant_id == participant.id:
+            return True
+
+    # 2) Cancellation notification.
+    notification_rows = (
+        Notification.query
+        .filter(
+            Notification.user_id == user_id,
+            Notification.notification_type == "COMPETITION_REGISTRATION_CANCELLED",
+        )
+        .order_by(Notification.created_at.desc())
+        .limit(100)
+        .all()
+    )
+
+    for notification in notification_rows:
+        data = getattr(notification, "data", None) or {}
+
+        try:
+            notification_participant_id = int(
+                data.get("participantId")
+            )
+        except (TypeError, ValueError, AttributeError):
+            notification_participant_id = None
+
+        if (
+            notification_participant_id == participant.id
+            and (
+                notification.reference_id == competition.id
+                or str(data.get("competitionId")) == str(competition.id)
+            )
+        ):
+            return True
+
+    # 3) Explicit roster cancellation marker.
+    roster_status = _participant_captain_roster_status(
+        participant,
+        user_id,
+    )
+
+    return roster_status == "CANCELLED"
 
 
 def _repair_withdrawn_registration_before_reregister(competition, user_id):
     """
-    Repair a very specific stale state created by older registration builds:
-    a captain withdrew, but the participant row remained active.
+    Repair stale active rows only when there is explicit withdrawal evidence.
 
-    We only repair rows when there is explicit evidence of withdrawal: either
-    the captain's stored roster status is CANCELLED, or an audit record already
-    records REGISTRATION_WITHDRAWN for that participant. A normal PENDING/ACCEPTED
-    team is never silently cancelled.
+    This is deliberately conservative: an ordinary active PENDING/ACCEPTED
+    registration is never silently cancelled. That preserves the rule that a
+    player may not create a second active commitment in the same competition.
     """
 
     participants = (
@@ -2359,38 +2462,11 @@ def _repair_withdrawn_registration_before_reregister(competition, user_id):
     repaired = []
 
     for participant in participants:
-
-        roster_status = _participant_captain_roster_status(
-            participant,
+        if _withdrawal_evidence_exists(
+            competition,
             user_id,
-        )
-
-        explicit_withdrawal = roster_status == "CANCELLED"
-
-        if not explicit_withdrawal:
-            audit_rows = (
-                CompetitionAuditLog.query
-                .filter_by(
-                    competition_id=competition.id,
-                    actor_id=user_id,
-                    action="REGISTRATION_WITHDRAWN",
-                )
-                .order_by(CompetitionAuditLog.created_at.desc())
-                .limit(20)
-                .all()
-            )
-
-            for audit in audit_rows:
-                metadata = getattr(audit, "audit_metadata", None) or {}
-                try:
-                    audit_participant_id = int(metadata.get("participantId"))
-                except (TypeError, ValueError, AttributeError):
-                    audit_participant_id = None
-                if audit_participant_id == participant.id:
-                    explicit_withdrawal = True
-                    break
-
-        if explicit_withdrawal:
+            participant,
+        ):
             _mark_participant_cancelled(participant)
             repaired.append(participant.id)
 
@@ -3377,6 +3453,15 @@ def get_registration_info(competition_id):
     process_competition_registration_timers(
         competition,
         commit=True,
+    )
+    db.session.refresh(competition)
+
+    # Clean up only stale registrations that have explicit withdrawal evidence.
+    # This makes the registration page and a fresh registration attempt agree
+    # on the same source of truth.
+    _repair_withdrawn_registration_before_reregister(
+        competition,
+        user.id,
     )
     db.session.refresh(competition)
 
@@ -5849,6 +5934,22 @@ def withdraw_registration(competition_id):
         )
 
         participant.registration_status = "CANCELLED"
+        participant.accepted_at = None
+        set_roster_player_status(
+            participant,
+            participant.user_id,
+            "CANCELLED",
+        )
+        # Also persist the state for every rostered player so a future
+        # re-registration repair can rely on durable evidence.
+        roster_cancelled = copy.deepcopy(roster_before)
+        for roster_item in roster_cancelled:
+            if not isinstance(roster_item, dict):
+                continue
+            roster_status = str(roster_item.get("status") or "").upper()
+            if roster_status in {"PENDING", "ACCEPTED", "DECLINED", "EXPIRED"}:
+                roster_item["status"] = "CANCELLED"
+        participant.team_roster = roster_cancelled
         cancelled_participant_ids.append(participant.id)
 
         invites = (
