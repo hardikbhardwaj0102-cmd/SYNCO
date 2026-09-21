@@ -1,5 +1,4 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
-
 import {
   Users,
   Gamepad2,
@@ -11,9 +10,7 @@ import {
   RefreshCw,
 } from 'lucide-react';
 
-
-// Shared hero / sticky-header / content classes
-// live in CompetitionEngine.css
+// Shared hero / sticky-header / content classes live in CompetitionEngine.css
 import '../styles/pages/CompetitionEngine.css';
 import '../styles/pages/Leaderboards.css';
 
@@ -23,20 +20,8 @@ import rank3Pose from '../assets/rank-3-pose.png';
 import rank4Pose from '../assets/rank-4-pose.png';
 import rank5Pose from '../assets/rank-5-pose.png';
 
-
-// =========================================================
-// API
-// =========================================================
-
 const API_URL = 'https://synco-backend-vi7b.onrender.com';
 
-
-// =========================================================
-// CONSTANTS
-// =========================================================
-
-// 'players' and 'game' both use the players endpoint;
-// 'game' adds the game filter
 const CATEGORY_TABS = [
   {
     id: 'players',
@@ -63,17 +48,7 @@ const RANK_POSES = {
   5: rank5Pose,
 };
 
-
-// V-shape display:
-// [Rank 4, Rank 2, Rank 1, Rank 3, Rank 5]
-//
-// These are indexes into the top-5 list.
 const PODIUM_ORDER = [3, 1, 0, 2, 4];
-
-
-// =========================================================
-// HELPERS
-// =========================================================
 
 const getInitial = (name) => {
   if (!name) {
@@ -83,7 +58,6 @@ const getInitial = (name) => {
   return name.trim().charAt(0).toUpperCase();
 };
 
-
 const getDisplayName = (item, isClubs) => {
   if (isClubs) {
     return item.name || 'Unknown Club';
@@ -92,28 +66,23 @@ const getDisplayName = (item, isClubs) => {
   return item.username || item.name || 'Unknown Player';
 };
 
-
 const getGameLabel = (item) =>
   item.game?.shortName ||
   item.game?.name ||
   'All Games';
-
 
 const getItemKey = (item, isClubs) =>
   isClubs
     ? `club-${item.clubId}`
     : `player-${item.playerId}-${item.game?.id}`;
 
-
 const formatPoints = (points) =>
   (points || 0).toLocaleString();
-
 
 const formatRank = (rank) =>
   Number.isFinite(rank)
     ? String(rank).padStart(3, '0')
     : '--';
-
 
 const getSecondaryLine = (item, isClubs) => {
   if (isClubs) {
@@ -125,16 +94,8 @@ const getSecondaryLine = (item, isClubs) => {
       .join(' · ');
   }
 
-  return item.uid
-    ? `UID: ${item.uid}`
-    : '';
+  return item.uid ? `UID: ${item.uid}` : '';
 };
-
-
-// =========================================================
-// INSIGNIA
-// Avatar with initial fallback
-// =========================================================
 
 const Insignia = ({ avatar, name }) => {
   const [failed, setFailed] = useState(false);
@@ -152,45 +113,21 @@ const Insignia = ({ avatar, name }) => {
   return getInitial(name);
 };
 
-
-// =========================================================
-// COMPONENT
-// =========================================================
-
 const Leaderboards = () => {
-
-  // Timeframe:
-  // 'WEEKLY' | 'SEASON'
   const [timeframe, setTimeframe] = useState('SEASON');
-
-  // Category:
-  // 'players' | 'game' | 'clubs'
   const [activeTab, setActiveTab] = useState('players');
-
-  // Filters
   const [selectedRegion, setSelectedRegion] = useState('');
   const [selectedGame, setSelectedGame] = useState('');
   const [searchQuery, setSearchQuery] = useState('');
-
-  // Data
   const [games, setGames] = useState([]);
   const [regions, setRegions] = useState([]);
   const [rankings, setRankings] = useState([]);
-
   const [rankingsLoading, setRankingsLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState('');
-
-  // Ignores responses from older requests
-  // when filters change quickly.
   const latestRequestId = useRef(0);
 
   const isClubs = activeTab === 'clubs';
-
-
-  // =======================================================
-  // LOAD FILTERS
-  // =======================================================
 
   const loadFilters = async () => {
     try {
@@ -208,14 +145,12 @@ const Leaderboards = () => {
 
       if (!data.success) {
         throw new Error(
-          data.message ||
-          'Failed to load filters.'
+          data.message || 'Failed to load filters.'
         );
       }
 
       setGames(data.games || []);
       setRegions(data.regions || []);
-
     } catch (err) {
       console.error(
         'Leaderboard filters error:',
@@ -223,12 +158,6 @@ const Leaderboards = () => {
       );
     }
   };
-
-
-  // =======================================================
-  // LOAD RANKINGS
-  // Players or clubs
-  // =======================================================
 
   const loadRankings = async () => {
     const requestId =
@@ -261,8 +190,6 @@ const Leaderboards = () => {
         );
       }
 
-      // Only sent for Weekly.
-      // Season totals are the default response.
       if (timeframe === 'WEEKLY') {
         params.append(
           'timeframe',
@@ -274,18 +201,17 @@ const Leaderboards = () => {
         params.toString();
 
       const url =
-        `${API_URL}/api/leaderboards/` +
-        `${isClubs ? 'clubs' : 'players'}` +
-        (
-          queryString
-            ? `?${queryString}`
-            : ''
-        );
+        `${API_URL}/api/leaderboards/${isClubs ? 'clubs' : 'players'}` +
+        (queryString
+          ? `?${queryString}`
+          : '');
 
       const response = await fetch(url);
 
       if (!response.ok) {
-        throw new Error(failureMessage);
+        throw new Error(
+          failureMessage
+        );
       }
 
       const data =
@@ -294,7 +220,7 @@ const Leaderboards = () => {
       if (!data.success) {
         throw new Error(
           data.message ||
-          failureMessage
+            failureMessage
         );
       }
 
@@ -308,7 +234,6 @@ const Leaderboards = () => {
       setRankings(
         data.rankings || []
       );
-
     } catch (err) {
       if (
         requestId !==
@@ -322,9 +247,11 @@ const Leaderboards = () => {
         err
       );
 
-      setError(err.message);
-      setRankings([]);
+      setError(
+        err.message
+      );
 
+      setRankings([]);
     } finally {
       if (
         requestId ===
@@ -335,19 +262,9 @@ const Leaderboards = () => {
     }
   };
 
-
-  // =======================================================
-  // INITIAL LOAD
-  // =======================================================
-
   useEffect(() => {
     loadFilters();
   }, []);
-
-
-  // =======================================================
-  // RELOAD WHEN TAB / FILTER / TIMEFRAME CHANGES
-  // =======================================================
 
   useEffect(() => {
     loadRankings();
@@ -357,11 +274,6 @@ const Leaderboards = () => {
     selectedRegion,
     timeframe,
   ]);
-
-
-  // =======================================================
-  // REFRESH
-  // =======================================================
 
   const handleRefresh = async () => {
     setRefreshing(true);
@@ -376,11 +288,6 @@ const Leaderboards = () => {
     }
   };
 
-
-  // =======================================================
-  // TAB CHANGE
-  // =======================================================
-
   const handleTabChange = (tab) => {
     if (tab === activeTab) {
       return;
@@ -391,21 +298,10 @@ const Leaderboards = () => {
     setSelectedRegion('');
     setSearchQuery('');
     setError('');
-
-    // Players and clubs have different fields,
-    // so don't render the old list.
     setRankings([]);
     setRankingsLoading(true);
   };
 
-
-  // =======================================================
-  // DERIVED DATA
-  // =======================================================
-
-  // Podium:
-  // Top 5 of the current tab + filters.
-  // Not affected by search.
   const podiumSlots = useMemo(() => {
     const top5 =
       rankings.slice(0, 5);
@@ -421,9 +317,6 @@ const Leaderboards = () => {
       }));
   }, [rankings]);
 
-
-  // Table:
-  // Client-side search over the loaded list.
   const visibleRows = useMemo(() => {
     const query =
       searchQuery
@@ -454,13 +347,39 @@ const Leaderboards = () => {
     searchQuery,
   ]);
 
-
-  // =======================================================
-  // TABLE BODY
-  // =======================================================
+  const renderCategoryTabs = (
+    extraClass = ''
+  ) => (
+    <div
+      className={`rank-tabs-container ${extraClass}`}
+    >
+      {CATEGORY_TABS.map(
+        (tab) => (
+          <button
+            type="button"
+            key={tab.id}
+            onClick={() =>
+              handleTabChange(
+                tab.id
+              )
+            }
+            className={`rank-tab-btn ${
+              activeTab === tab.id
+                ? 'active'
+                : ''
+            }`}
+          >
+            {tab.icon}
+            <span>
+              {tab.label}
+            </span>
+          </button>
+        )
+      )}
+    </div>
+  );
 
   const renderTableBody = () => {
-
     if (rankingsLoading) {
       return (
         <div className="rank-table-state">
@@ -471,32 +390,29 @@ const Leaderboards = () => {
       );
     }
 
-
     if (error) {
       return (
         <div className="rank-table-state is-error">
-
-          <p>
-            {error}
-          </p>
+          <p>{error}</p>
 
           <button
             type="button"
             className="rank-retry-btn"
-            onClick={loadRankings}
+            onClick={
+              loadRankings
+            }
           >
             Retry
           </button>
-
         </div>
       );
     }
 
-
-    if (visibleRows.length === 0) {
+    if (
+      visibleRows.length === 0
+    ) {
       return (
         <div className="rank-table-state">
-
           <h3>
             {rankings.length === 0
               ? 'No rankings available'
@@ -508,114 +424,100 @@ const Leaderboards = () => {
               ? 'There are no ranking records matching the selected filters yet.'
               : 'Nothing in this list matches your search.'}
           </p>
-
         </div>
       );
     }
 
-
-    return visibleRows.map((item) => {
-
-      const name =
-        getDisplayName(
-          item,
-          isClubs
-        );
-
-      const secondary =
-        getSecondaryLine(
-          item,
-          isClubs
-        );
-
-
-      return (
-        <div
-          key={getItemKey(
+    return visibleRows.map(
+      (item) => {
+        const name =
+          getDisplayName(
             item,
             isClubs
-          )}
-          className={
-            `rank-table-row ${
+          );
+
+        const secondary =
+          getSecondaryLine(
+            item,
+            isClubs
+          );
+
+        return (
+          <div
+            key={getItemKey(
+              item,
+              isClubs
+            )}
+            className={`rank-table-row ${
               item.rank <= 3
                 ? 'is-top'
                 : ''
-            }`
-          }
-        >
-
-          <div className="col-rank rank-number">
-            #{formatRank(item.rank)}
-          </div>
-
-
-          <div className="col-insignia">
-
-            <div className="player-insignia-badge">
-              <Insignia
-                avatar={item.avatar}
-                name={name}
-              />
+            }`}
+          >
+            <div className="col-rank rank-number">
+              #{formatRank(
+                item.rank
+              )}
             </div>
 
-          </div>
+            <div className="col-insignia">
+              <div className="player-insignia-badge">
+                <Insignia
+                  avatar={
+                    item.avatar
+                  }
+                  name={
+                    name
+                  }
+                />
+              </div>
+            </div>
 
-
-          <div className="col-player rank-player-info">
-
-            <span className="primary-name">
-              {name}
-            </span>
-
-            {secondary && (
-              <span className="secondary-alias">
-                {secondary}
+            <div className="col-player rank-player-info">
+              <span className="primary-name">
+                {name}
               </span>
-            )}
 
+              {secondary && (
+                <span className="secondary-alias">
+                  {secondary}
+                </span>
+              )}
+            </div>
+
+            <div className="col-region rank-region">
+              {item.region ||
+                'Global'}
+            </div>
+
+            <div className="col-game rank-game-tag">
+              {getGameLabel(
+                item
+              )}
+            </div>
+
+            <div className="col-points rank-synco-points">
+              {formatPoints(
+                item.syncoPoints
+              )}{' '}
+              XP
+            </div>
           </div>
-
-
-          <div className="col-region rank-region">
-            {item.region || 'Global'}
-          </div>
-
-
-          <div className="col-game rank-game-tag">
-            {getGameLabel(item)}
-          </div>
-
-
-          <div className="col-points rank-synco-points">
-            {formatPoints(
-              item.syncoPoints
-            )}{' '}
-            XP
-          </div>
-
-        </div>
-      );
-    });
+        );
+      }
+    );
   };
-
-
-  // =======================================================
-  // UI
-  // =======================================================
 
   return (
     <div className="comp-engine-wrapper leaderboards-page">
 
-      {/* ===================================================
-          1. HERO SECTION
-          =================================================== */}
+      {/* =================================================
+          HERO
+      ================================================= */}
 
       <div className="comp-hero-section rank-hero">
 
-        {/* Background Typography */}
-
         <div className="hero-bg-layer">
-
           <h1
             className="massive-bg-text"
             aria-hidden="true"
@@ -628,25 +530,26 @@ const Leaderboards = () => {
               FAME
             </span>
           </h1>
-
         </div>
 
 
-        {/* Timeframe Selector */}
+        {/* =================================================
+            TIMEFRAME
+        ================================================= */}
 
         <div className="timeframe-toggle-container">
 
           <button
             type="button"
-            className={
-              `timeframe-btn ${
-                timeframe === 'WEEKLY'
-                  ? 'active'
-                  : ''
-              }`
-            }
+            className={`timeframe-btn ${
+              timeframe === 'WEEKLY'
+                ? 'active'
+                : ''
+            }`}
             onClick={() =>
-              setTimeframe('WEEKLY')
+              setTimeframe(
+                'WEEKLY'
+              )
             }
           >
             <Flame size={14} />
@@ -656,18 +559,17 @@ const Leaderboards = () => {
             </span>
           </button>
 
-
           <button
             type="button"
-            className={
-              `timeframe-btn ${
-                timeframe === 'SEASON'
-                  ? 'active'
-                  : ''
-              }`
-            }
+            className={`timeframe-btn ${
+              timeframe === 'SEASON'
+                ? 'active'
+                : ''
+            }`}
             onClick={() =>
-              setTimeframe('SEASON')
+              setTimeframe(
+                'SEASON'
+              )
             }
           >
             <Trophy size={14} />
@@ -680,105 +582,106 @@ const Leaderboards = () => {
         </div>
 
 
-        {/* V-Shape Top 5 Showcase */}
+        {/* =================================================
+            PODIUM
+        ================================================= */}
 
-        <div className="v-shape-podium">
+        <div className="rank-podium-stage">
 
-          {rankingsLoading ? (
+          <div className="v-shape-podium">
 
-            <p className="podium-empty">
-              Loading rankings...
-            </p>
+            {rankingsLoading ? (
+              <p className="podium-empty">
+                Loading rankings...
+              </p>
+            ) : error ? (
+              <p className="podium-empty">
+                Rankings unavailable
+              </p>
+            ) : podiumSlots.length === 0 ? (
+              <p className="podium-empty">
+                No rankings yet
+              </p>
+            ) : (
+              podiumSlots.map(
+                ({
+                  item,
+                  position,
+                }) => (
+                  <div
+                    key={getItemKey(
+                      item,
+                      isClubs
+                    )}
+                    className={`podium-slot position-rank-${position}`}
+                  >
 
-          ) : error ? (
+                    <div className="podium-char-wrapper">
 
-            <p className="podium-empty">
-              Rankings unavailable
-            </p>
-
-          ) : podiumSlots.length === 0 ? (
-
-            <p className="podium-empty">
-              No rankings yet
-            </p>
-
-          ) : (
-
-            podiumSlots.map(
-              ({
-                item,
-                position,
-              }) => (
-
-                <div
-                  key={getItemKey(
-                    item,
-                    isClubs
-                  )}
-                  className={
-                    `podium-slot position-rank-${position}`
-                  }
-                >
-
-                  {/* Character Graphic */}
-
-                  <div className="podium-char-wrapper">
-
-                    <img
-                      src={
-                        RANK_POSES[position]
-                      }
-                      alt={`Rank ${position}`}
-                      className="podium-char-img"
-                    />
-
-                  </div>
-
-
-                  {/* Player / Club Rank Card */}
-
-                  <div className="podium-card">
-
-                    <div className="podium-badge">
-                      #
-                      {item.rank ??
-                        position}
-                    </div>
-
-
-                    <div className="podium-info">
-
-                      <span className="podium-name">
-                        {getDisplayName(
-                          item,
-                          isClubs
-                        )}
-                      </span>
-
-                      <span className="podium-meta">
-                        {item.region ||
-                          'Global'}
-                        {' • '}
-                        {getGameLabel(item)}
-                      </span>
+                      <img
+                        src={
+                          RANK_POSES[
+                            position
+                          ]
+                        }
+                        alt={`Rank ${position}`}
+                        className="podium-char-img"
+                      />
 
                     </div>
 
 
-                    <div className="podium-points">
-                      {formatPoints(
-                        item.syncoPoints
-                      )}{' '}
-                      XP
+                    <div className="podium-card">
+
+                      <div className="podium-badge">
+                        #
+                        {item.rank ??
+                          position}
+                      </div>
+
+                      <div className="podium-info">
+
+                        <span className="podium-name">
+                          {getDisplayName(
+                            item,
+                            isClubs
+                          )}
+                        </span>
+
+                        <span className="podium-meta">
+                          {item.region ||
+                            'Global'}{' '}
+                          •{' '}
+                          {getGameLabel(
+                            item
+                          )}
+                        </span>
+
+                      </div>
+
+                      <div className="podium-points">
+                        {formatPoints(
+                          item.syncoPoints
+                        )}{' '}
+                        XP
+                      </div>
+
                     </div>
 
                   </div>
-
-                </div>
-
+                )
               )
-            )
+            )}
 
+          </div>
+
+
+          {/* =================================================
+              HERO CATEGORY NAV
+          ================================================= */}
+
+          {renderCategoryTabs(
+            'rank-hero-tabs'
           )}
 
         </div>
@@ -786,62 +689,21 @@ const Leaderboards = () => {
       </div>
 
 
-      {/* ===================================================
-          2. MAIN CONTENT
-          Scrolls over the hero.
-          Background continues from .leaderboards-page.
-          =================================================== */}
+      {/* =================================================
+          POST HERO
+      ================================================= */}
 
       <div className="post-hero-content rank-content-bg">
 
-        {/* Sticky Controls Header */}
-
         <div className="competition-sticky-header rank-sticky-header">
 
-          {/* Main Category Tabs */}
+          {/* Centered category navigation */}
+          {renderCategoryTabs(
+            'rank-sticky-tabs'
+          )}
 
-          <div className="rank-tabs-container">
-
-            {CATEGORY_TABS.map(
-              (tab) => (
-
-                <button
-                  type="button"
-                  key={tab.id}
-                  onClick={() =>
-                    handleTabChange(
-                      tab.id
-                    )
-                  }
-                  className={
-                    `rank-tab-btn ${
-                      activeTab ===
-                      tab.id
-                        ? 'active'
-                        : ''
-                    }`
-                  }
-                >
-
-                  {tab.icon}
-
-                  <span>
-                    {tab.label}
-                  </span>
-
-                </button>
-
-              )
-            )}
-
-          </div>
-
-
-          {/* Dynamic Filters */}
 
           <div className="rank-toolbar">
-
-            {/* Search Input */}
 
             <div className="rank-search-box">
 
@@ -852,17 +714,17 @@ const Leaderboards = () => {
 
               <input
                 type="text"
-                placeholder={
-                  `Search ${
-                    isClubs
-                      ? 'clubs'
-                      : 'players'
-                  }...`
-                }
+                placeholder={`Search ${
+                  isClubs
+                    ? 'clubs'
+                    : 'players'
+                }...`}
                 value={
                   searchQuery
                 }
-                onChange={(e) =>
+                onChange={(
+                  e
+                ) =>
                   setSearchQuery(
                     e.target.value
                   )
@@ -872,43 +734,44 @@ const Leaderboards = () => {
             </div>
 
 
-            {/* Game Selector */}
-
-            {(activeTab === 'game' ||
+            {(activeTab ===
+              'game' ||
               isClubs) && (
-
               <div className="rank-filter-dropdown">
 
                 <select
                   value={
                     selectedGame
                   }
-                  onChange={(e) =>
+                  onChange={(
+                    e
+                  ) =>
                     setSelectedGame(
                       e.target.value
                     )
                   }
                 >
-
                   <option value="">
                     All Games
                   </option>
 
                   {games.map(
                     (game) => (
-
                       <option
-                        key={game.id}
-                        value={game.id}
+                        key={
+                          game.id
+                        }
+                        value={
+                          game.id
+                        }
                       >
-                        {game.name}
+                        {
+                          game.name
+                        }
                       </option>
-
                     )
                   )}
-
                 </select>
-
 
                 <ChevronDown
                   size={14}
@@ -916,11 +779,8 @@ const Leaderboards = () => {
                 />
 
               </div>
-
             )}
 
-
-            {/* Region Selector */}
 
             <div className="rank-filter-dropdown">
 
@@ -928,32 +788,35 @@ const Leaderboards = () => {
                 value={
                   selectedRegion
                 }
-                onChange={(e) =>
+                onChange={(
+                  e
+                ) =>
                   setSelectedRegion(
                     e.target.value
                   )
                 }
               >
-
                 <option value="">
                   All Regions
                 </option>
 
                 {regions.map(
                   (region) => (
-
                     <option
-                      key={region}
-                      value={region}
+                      key={
+                        region
+                      }
+                      value={
+                        region
+                      }
                     >
-                      {region}
+                      {
+                        region
+                      }
                     </option>
-
                   )
                 )}
-
               </select>
-
 
               <ChevronDown
                 size={14}
@@ -962,8 +825,6 @@ const Leaderboards = () => {
 
             </div>
 
-
-            {/* Refresh */}
 
             <button
               type="button"
@@ -977,7 +838,6 @@ const Leaderboards = () => {
               aria-label="Refresh leaderboard"
               title="Refresh"
             >
-
               <RefreshCw
                 size={16}
                 className={
@@ -986,7 +846,6 @@ const Leaderboards = () => {
                     : ''
                 }
               />
-
             </button>
 
           </div>
@@ -995,14 +854,12 @@ const Leaderboards = () => {
 
 
         {/* =================================================
-            3. LEADERBOARD TABLE
-            ================================================= */}
+            TABLE
+        ================================================= */}
 
         <div className="comp-main-content">
 
           <div className="rank-table-wrapper">
-
-            {/* Table Column Headers */}
 
             <div className="rank-table-header">
 
@@ -1035,8 +892,6 @@ const Leaderboards = () => {
             </div>
 
 
-            {/* Table Rows */}
-
             <div className="rank-table-body">
               {renderTableBody()}
             </div>
@@ -1050,6 +905,5 @@ const Leaderboards = () => {
     </div>
   );
 };
-
 
 export default Leaderboards;

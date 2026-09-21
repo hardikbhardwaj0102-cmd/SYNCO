@@ -21,20 +21,27 @@ const HybridLayout = () => {
   }, [pathname]);
 
   /*
-    Competition Engine gets its own full-viewport visual shell.
+    Special full-viewport authenticated pages.
 
-    The Sidebar remains fixed at 90px, but the Competition Engine
-    background is allowed to continue underneath it.
-
-    Only the Competition Engine itself receives this special
-    layout treatment. Other authenticated pages remain unchanged.
+    Both Competition Engine and Leaderboards need their
+    visual backgrounds to continue underneath the fixed
+    90px Sidebar.
   */
   const isCompetitionPage =
     pathname === '/competitions';
 
+  const isLeaderboardsPage =
+    pathname === '/leaderboards';
+
   if (isAuthenticated) {
     return (
-      <div className="hybrid-auth-container">
+      <div
+        className={`hybrid-auth-container ${
+          isLeaderboardsPage
+            ? 'hybrid-auth-container-leaderboards'
+            : ''
+        }`}
+      >
 
         <Sidebar />
 
@@ -43,6 +50,10 @@ const HybridLayout = () => {
             isCompetitionPage
               ? 'hybrid-auth-main-competition'
               : ''
+          } ${
+            isLeaderboardsPage
+              ? 'hybrid-auth-main-leaderboards'
+              : ''
           }`}
         >
 
@@ -50,6 +61,10 @@ const HybridLayout = () => {
             className={`hybrid-auth-content ${
               isCompetitionPage
                 ? 'hybrid-auth-content-competition'
+                : ''
+            } ${
+              isLeaderboardsPage
+                ? 'hybrid-auth-content-leaderboards'
                 : ''
             }`}
           >

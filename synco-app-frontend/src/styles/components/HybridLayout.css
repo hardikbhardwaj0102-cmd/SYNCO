@@ -13,6 +13,7 @@
 
   This remains the permanent SYNCO edge-to-edge layout model.
 */
+
 :root {
   --synco-sidebar-width: 90px;
 }
@@ -23,6 +24,7 @@
    ========================================================= */
 
 .hybrid-auth-container {
+
   display: flex;
 
   width: 100%;
@@ -41,6 +43,7 @@
     #0b0e14
     url("../../assets/global-dash-bg.png")
     center / cover fixed;
+
 }
 
 
@@ -49,6 +52,7 @@
    ========================================================= */
 
 .hybrid-auth-container::before {
+
   content: "";
 
   position: absolute;
@@ -65,6 +69,7 @@
       transparent 30%,
       rgba(0, 0, 0, 0.8) 100%
     );
+
 }
 
 
@@ -73,17 +78,20 @@
    ========================================================= */
 
 .hybrid-auth-main {
+
   /*
     Sidebar is fixed and therefore removed from flex flow.
 
     Reserve exactly the sidebar's horizontal area.
   */
+
   flex: 1 1 auto;
 
   min-width: 0;
   min-height: 0;
 
-  margin-left: var(--synco-sidebar-width);
+  margin-left:
+    var(--synco-sidebar-width);
 
   overflow-y: auto;
   overflow-x: hidden;
@@ -91,6 +99,7 @@
   position: relative;
 
   z-index: 1;
+
 }
 
 
@@ -99,13 +108,18 @@
    ========================================================= */
 
 .hybrid-auth-content {
+
   width: 100%;
+
   max-width: none;
+
   margin: 0;
+
   padding: 0;
 
   min-width: 0;
   min-height: 0;
+
 }
 
 
@@ -113,25 +127,15 @@
    COMPETITION ENGINE MAIN
    ========================================================= */
 
-/*
-  Competition Engine is different from normal authenticated
-  pages.
-
-  Its own wrapper becomes the vertical scroll container.
-
-  This allows:
-
-  1. Full-viewport competition backgrounds.
-  2. The background to continue underneath the fixed sidebar.
-  3. Reliable position: sticky behavior for the hero/header.
-*/
 .hybrid-auth-main-competition {
+
   overflow: visible;
 
   min-width: 0;
   min-height: 0;
 
   position: relative;
+
 }
 
 
@@ -139,21 +143,19 @@
    COMPETITION ENGINE CONTENT
    ========================================================= */
 
-/*
-  The main area normally begins at x = 90px because of the
-  fixed Sidebar.
-
-  Pull the Competition Engine back by exactly 90px so its
-  visual background can occupy the complete viewport.
-
-  The actual foreground/content receives its own 90px safety
-  offset inside CompetitionEngine.css.
-*/
 .hybrid-auth-content-competition {
-  width: calc(100% + var(--synco-sidebar-width));
+
+  width:
+    calc(
+      100% +
+      var(--synco-sidebar-width)
+    );
 
   margin-left:
-    calc(-1 * var(--synco-sidebar-width));
+    calc(
+      -1 *
+      var(--synco-sidebar-width)
+    );
 
   height: 100%;
 
@@ -161,6 +163,7 @@
   min-height: 0;
 
   padding: 0;
+
 }
 
 
@@ -168,15 +171,161 @@
    COMPETITION CONTENT SAFETY
    ========================================================= */
 
-/*
-  Utility value used by Competition Engine content.
-
-  The background is full-bleed, while foreground content must
-  never disappear beneath the fixed Sidebar.
-*/
 .hybrid-auth-content-competition {
+
   --competition-content-offset:
     var(--synco-sidebar-width);
+
+}
+
+
+/* =========================================================
+   LEADERBOARDS FULL-VIEWPORT SHELL
+   ========================================================= */
+
+/*
+  Leaderboards owns the authenticated application's
+  background while this page is active.
+
+  Because this background belongs to the outer shell,
+  it naturally extends underneath the fixed Sidebar.
+
+  There is no need for Leaderboards to use:
+
+      width: 100vw;
+      margin-left: -90px;
+
+  That was the source of the background/clipping conflict.
+*/
+
+.hybrid-auth-container-leaderboards {
+
+  background:
+    #0a0a0a
+    url("../../assets/rank-bg.png")
+    center top /
+    cover
+    fixed
+    no-repeat;
+
+}
+
+
+/*
+  Keep the vignette, but remove the generic
+  global-dashboard visual treatment.
+
+  The Leaderboards rank background remains visible.
+*/
+
+.hybrid-auth-container-leaderboards::before {
+
+  background:
+    radial-gradient(
+      circle at center,
+      transparent 28%,
+      rgba(0, 0, 0, 0.62) 100%
+    );
+
+}
+
+
+/* =========================================================
+   LEADERBOARDS MAIN SCROLL CONTAINER
+   ========================================================= */
+
+/*
+  IMPORTANT:
+
+  This is the ONLY vertical scroll container for
+  Leaderboards.
+
+  The hero itself does not scroll.
+
+  The user can use the mouse wheel anywhere over
+  the Leaderboards page and the page will move normally.
+*/
+
+.hybrid-auth-main-leaderboards {
+
+  flex: 1 1 auto;
+
+  min-width: 0;
+  min-height: 0;
+
+  margin-left:
+    var(--synco-sidebar-width);
+
+  overflow-y: auto;
+
+  overflow-x: hidden;
+
+  position: relative;
+
+  z-index: 1;
+
+  overscroll-behavior-y: auto;
+
+  scroll-behavior: auto;
+
+  touch-action: pan-y;
+
+}
+
+
+/* =========================================================
+   LEADERBOARDS CONTENT
+   ========================================================= */
+
+/*
+  Leaderboards itself stays inside the normal 90px-offset
+  content area.
+
+  Its outer shell/background is already handled by
+  .hybrid-auth-container-leaderboards.
+
+  This means the content does NOT need negative margins.
+*/
+
+.hybrid-auth-content-leaderboards {
+
+  width: 100%;
+
+  max-width: none;
+
+  margin: 0;
+
+  padding: 0;
+
+  min-width: 0;
+  min-height: 0;
+
+  background: transparent;
+
+}
+
+
+/* =========================================================
+   LEADERBOARDS PAGE SAFETY
+   ========================================================= */
+
+/*
+  The page itself must remain transparent so the
+  rank-bg.png from the authenticated shell continues
+  seamlessly behind it.
+*/
+
+.hybrid-auth-container-leaderboards
+.leaderboards-page {
+
+  width: 100%;
+
+  max-width: none;
+
+  margin: 0;
+
+  background: transparent;
+
 }
 
 
@@ -185,6 +334,7 @@
    ========================================================= */
 
 .hybrid-public-container {
+
   width: 100%;
   height: 100vh;
 
@@ -201,10 +351,12 @@
 
   display: flex;
   flex-direction: column;
+
 }
 
 
 .hybrid-public-main {
+
   flex: 1 1 auto;
 
   min-width: 0;
@@ -217,20 +369,25 @@
   overflow-x: hidden;
 
   padding-bottom: 0;
+
 }
 
 
 .hybrid-public-page-content {
+
   flex: 0 0 auto;
 
   width: 100%;
 
   min-width: 0;
+
 }
 
 
 .hybrid-public-main > .footer-wrapper {
+
   flex-shrink: 0;
 
   margin-top: 3rem;
+
 }
