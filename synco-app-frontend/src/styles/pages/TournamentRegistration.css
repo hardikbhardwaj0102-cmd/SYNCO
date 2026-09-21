@@ -1,0 +1,771 @@
+/* =========================================================
+   SYNCO — TOURNAMENT REGISTRATION
+   ========================================================= */
+
+.registration-page {
+    min-height: 100vh;
+    width: 100%;
+    background: #f5f5f3;
+    color: #111110;
+    font-family: Inter, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    padding-bottom: 60px;
+}
+
+.registration-header {
+    min-height: 76px;
+    padding: 0 32px;
+    background: #ffffff;
+    border-bottom: 1px solid #e3e3df;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 20px;
+    position: sticky;
+    top: 0;
+    z-index: 30;
+}
+
+.registration-header-left {
+    display: flex;
+    align-items: center;
+    gap: 15px;
+    min-width: 0;
+}
+
+.registration-header-left>div {
+    min-width: 0;
+}
+
+.registration-header-left span {
+    display: block;
+    margin-bottom: 3px;
+    color: #85857f;
+    font-size: 9px;
+    font-weight: 850;
+    letter-spacing: .15em;
+}
+
+.registration-header h1 {
+    margin: 0;
+    max-width: 700px;
+    font-size: 21px;
+    line-height: 1.15;
+    font-weight: 850;
+    letter-spacing: -.03em;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.registration-back,
+.registration-refresh,
+.registration-action-row button {
+    border: 1px solid #dcdcd7;
+    background: #ffffff;
+    color: #171715;
+    border-radius: 9px;
+    cursor: pointer;
+}
+
+.registration-back {
+    width: 38px;
+    height: 38px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.registration-refresh {
+    height: 36px;
+    padding: 0 13px;
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 11px;
+    font-weight: 800;
+}
+
+.registration-refresh:hover,
+.registration-back:hover,
+.registration-action-row button:hover {
+    background: #f2f2ef;
+}
+
+.registration-refresh:disabled {
+    opacity: .55;
+    cursor: not-allowed;
+}
+
+.registration-alert {
+    width: min(1240px, calc(100% - 48px));
+    margin: 18px auto 0;
+    min-height: 43px;
+    padding: 10px 13px;
+    border: 1px solid #dbdbd6;
+    border-radius: 9px;
+    display: flex;
+    align-items: center;
+    gap: 9px;
+    background: #ffffff;
+    font-size: 11px;
+    font-weight: 700;
+}
+
+.registration-alert.error {
+    background: #efefec;
+}
+
+.registration-alert.success {
+    background: #efefec;
+}
+
+.registration-alert button {
+    margin-left: auto;
+    border: 0;
+    background: transparent;
+    color: #5e5e59;
+    font-size: 10px;
+    font-weight: 800;
+    cursor: pointer;
+}
+
+.registration-content {
+    width: min(1240px, calc(100% - 48px));
+    margin: 24px auto 0;
+}
+
+.registration-summary {
+    display: grid;
+    grid-template-columns: 1.4fr repeat(3, 1fr);
+    background: #ffffff;
+    border: 1px solid #e4e4df;
+    border-radius: 11px;
+    overflow: hidden;
+}
+
+.registration-game-block,
+.registration-summary-item {
+    min-height: 82px;
+    padding: 15px 18px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    border-right: 1px solid #e9e9e4;
+}
+
+.registration-summary-item:last-child {
+    border-right: 0;
+}
+
+.registration-icon-box {
+    width: 36px;
+    height: 36px;
+    border: 1px solid #dcdcd7;
+    border-radius: 8px;
+    background: #f6f6f3;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.registration-game-block span,
+.registration-summary-item span {
+    display: block;
+    color: #8c8c87;
+    font-size: 8px;
+    font-weight: 850;
+    letter-spacing: .13em;
+    margin-bottom: 6px;
+}
+
+.registration-game-block strong,
+.registration-summary-item strong {
+    font-size: 13px;
+    font-weight: 850;
+}
+
+.registration-grid {
+    margin-top: 16px;
+    display: grid;
+    grid-template-columns: minmax(0, 1.5fr) minmax(320px, .7fr);
+    gap: 16px;
+    align-items: start;
+}
+
+.registration-main-card,
+.registration-side-card {
+    background: #ffffff;
+    border: 1px solid #e4e4df;
+    border-radius: 11px;
+}
+
+.registration-main-card {
+    padding: 22px;
+}
+
+.registration-card-heading {
+    display: flex;
+    justify-content: space-between;
+    gap: 20px;
+    align-items: flex-start;
+}
+
+.registration-card-heading>div:first-child {
+    min-width: 0;
+}
+
+.registration-card-heading>div:first-child>span {
+    display: block;
+    color: #8b8b85;
+    font-size: 8px;
+    font-weight: 850;
+    letter-spacing: .14em;
+    margin-bottom: 7px;
+}
+
+.registration-card-heading h2 {
+    margin: 0;
+    font-size: 25px;
+    line-height: 1.1;
+    font-weight: 850;
+    letter-spacing: -.04em;
+}
+
+.registration-card-heading p {
+    max-width: 720px;
+    margin: 8px 0 0;
+    color: #777771;
+    font-size: 12px;
+    line-height: 1.55;
+}
+
+.registration-open-pill {
+    flex-shrink: 0;
+    padding: 7px 9px;
+    border: 1px solid #d7d7d2;
+    border-radius: 999px;
+    background: #f6f6f3;
+    font-size: 8px;
+    font-weight: 850;
+    letter-spacing: .08em;
+}
+
+.registration-open-pill.closed {
+    background: #ededeb;
+}
+
+.registration-club-list {
+    margin-top: 20px;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.registration-club-card {
+    width: 100%;
+    padding: 15px;
+    border: 1px solid #dfdfda;
+    border-radius: 10px;
+    background: #ffffff;
+    text-align: left;
+    cursor: pointer;
+}
+
+.registration-club-card:hover:not(:disabled) {
+    background: #f8f8f5;
+    border-color: #cfcfc9;
+}
+
+.registration-club-card.selected {
+    border-color: #1d1d1b;
+    box-shadow: inset 0 0 0 1px #1d1d1b;
+}
+
+.registration-club-card.registered {
+    background: #f8f8f5;
+    cursor: default;
+}
+
+.registration-club-card:disabled {
+    opacity: .82;
+}
+
+.registration-club-top {
+    display: flex;
+    align-items: center;
+    gap: 11px;
+}
+
+.registration-club-avatar {
+    width: 39px;
+    height: 39px;
+    flex-shrink: 0;
+    border-radius: 8px;
+    background: #191918;
+    color: #ffffff;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 10px;
+    font-weight: 850;
+}
+
+.registration-club-name {
+    min-width: 0;
+    flex: 1;
+}
+
+.registration-club-name strong,
+.registration-club-name span {
+    display: block;
+}
+
+.registration-club-name strong {
+    font-size: 13px;
+    font-weight: 850;
+}
+
+.registration-club-name span {
+    margin-top: 3px;
+    color: #999993;
+    font-size: 9px;
+    font-weight: 650;
+}
+
+.registration-club-status {
+    color: #54544f;
+}
+
+.registration-roster {
+    margin-top: 13px;
+    padding-top: 12px;
+    border-top: 1px solid #ebebe6;
+}
+
+.registration-roster-heading {
+    display: flex;
+    justify-content: space-between;
+    gap: 15px;
+    align-items: center;
+}
+
+.registration-roster-heading span {
+    color: #8c8c86;
+    font-size: 8px;
+    font-weight: 850;
+    letter-spacing: .12em;
+}
+
+.registration-roster-heading strong {
+    font-size: 10px;
+    font-weight: 850;
+}
+
+.registration-roster-list {
+    margin-top: 8px;
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 6px 10px;
+}
+
+.registration-roster-row {
+    min-width: 0;
+    display: flex;
+    align-items: center;
+    gap: 7px;
+}
+
+.registration-mini-avatar {
+    width: 27px;
+    height: 27px;
+    flex-shrink: 0;
+    border: 1px solid #dfdfda;
+    border-radius: 7px;
+    background: #f7f7f4;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 8px;
+    font-weight: 850;
+}
+
+.registration-roster-row>div:last-child {
+    min-width: 0;
+}
+
+.registration-roster-row strong,
+.registration-roster-row span {
+    display: block;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.registration-roster-row strong {
+    font-size: 10px;
+    font-weight: 800;
+}
+
+.registration-roster-row span {
+    margin-top: 2px;
+    color: #9b9b95;
+    font-size: 8px;
+}
+
+.registration-card-warning {
+    margin-top: 10px;
+    padding: 9px 10px;
+    border: 1px solid #deded9;
+    border-radius: 7px;
+    background: #f2f2ef;
+    display: flex;
+    align-items: center;
+    gap: 7px;
+    color: #575750;
+    font-size: 9px;
+    font-weight: 750;
+}
+
+.registration-empty {
+    min-height: 240px;
+    padding: 25px;
+    border: 1px dashed #d7d7d1;
+    border-radius: 10px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    color: #878781;
+}
+
+.registration-empty strong {
+    margin-top: 10px;
+    color: #262623;
+    font-size: 13px;
+}
+
+.registration-empty p {
+    max-width: 470px;
+    margin: 7px auto 0;
+    font-size: 10px;
+    line-height: 1.6;
+}
+
+.registration-player-confirm {
+    margin-top: 20px;
+    padding: 16px;
+    border: 1px solid #deded9;
+    border-radius: 10px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    background: #f8f8f6;
+}
+
+.registration-confirm-icon {
+    width: 42px;
+    height: 42px;
+    flex-shrink: 0;
+    border: 1px solid #dadad5;
+    border-radius: 9px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.registration-player-confirm span {
+    display: block;
+    color: #8c8c85;
+    font-size: 8px;
+    font-weight: 850;
+    letter-spacing: .12em;
+    margin-bottom: 5px;
+}
+
+.registration-player-confirm strong {
+    font-size: 12px;
+    font-weight: 850;
+}
+
+.registration-player-confirm p {
+    margin: 5px 0 0;
+    color: #83837d;
+    font-size: 10px;
+    line-height: 1.5;
+}
+
+.registration-submit {
+    width: 100%;
+    height: 47px;
+    margin-top: 18px;
+    border: 1px solid #161614;
+    border-radius: 9px;
+    background: #161614;
+    color: #ffffff;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    font-size: 11px;
+    font-weight: 850;
+    cursor: pointer;
+}
+
+.registration-submit:hover:not(:disabled) {
+    background: #2a2a27;
+}
+
+.registration-submit:disabled {
+    opacity: .43;
+    cursor: not-allowed;
+}
+
+.registration-current-state {
+    margin-top: 18px;
+    padding: 13px 14px;
+    border: 1px solid #deded9;
+    border-radius: 9px;
+    background: #f7f7f5;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 14px;
+}
+
+.registration-current-state span {
+    display: block;
+    color: #8b8b85;
+    font-size: 8px;
+    font-weight: 850;
+    letter-spacing: .11em;
+    margin-bottom: 4px;
+}
+
+.registration-current-state strong {
+    font-size: 12px;
+    font-weight: 850;
+}
+
+.registration-current-state button {
+    border: 1px solid #dadad5;
+    background: #ffffff;
+    border-radius: 8px;
+    padding: 8px 10px;
+    font-size: 10px;
+    font-weight: 800;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    gap: 7px;
+}
+
+.registration-side {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.registration-side-card {
+    padding: 17px;
+}
+
+.registration-side-heading {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    color: #2e2e2b;
+    font-size: 9px;
+    font-weight: 850;
+    letter-spacing: .11em;
+}
+
+.registration-time-row {
+    margin-top: 14px;
+    padding-top: 12px;
+    border-top: 1px solid #eeeeea;
+}
+
+.registration-time-row span,
+.registration-time-row strong {
+    display: block;
+}
+
+.registration-time-row span {
+    color: #999993;
+    font-size: 8px;
+    font-weight: 800;
+}
+
+.registration-time-row strong {
+    margin-top: 5px;
+    font-size: 10px;
+    font-weight: 800;
+    line-height: 1.45;
+}
+
+.registration-rule-list {
+    margin-top: 13px;
+    display: flex;
+    flex-direction: column;
+    gap: 9px;
+}
+
+.registration-rule-list div {
+    display: flex;
+    align-items: flex-start;
+    gap: 7px;
+    color: #686861;
+    font-size: 10px;
+    line-height: 1.45;
+}
+
+.registration-format-grid {
+    margin-top: 13px;
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 8px;
+}
+
+.registration-format-grid>div {
+    padding: 10px;
+    border: 1px solid #ebebe6;
+    border-radius: 8px;
+    background: #fafaf8;
+}
+
+.registration-format-grid span,
+.registration-format-grid strong {
+    display: block;
+}
+
+.registration-format-grid span {
+    color: #999993;
+    font-size: 8px;
+    font-weight: 800;
+    letter-spacing: .08em;
+}
+
+.registration-format-grid strong {
+    margin-top: 5px;
+    font-size: 10px;
+    font-weight: 850;
+}
+
+.registration-loading,
+.registration-error-screen {
+    min-height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.registration-loading {
+    gap: 9px;
+    color: #75756f;
+    font-size: 12px;
+    font-weight: 700;
+}
+
+.registration-loading-icon {
+    animation: registrationSpin 1s linear infinite;
+}
+
+.registration-error-card {
+    width: min(460px, calc(100% - 40px));
+    padding: 25px;
+    border: 1px solid #dfdfda;
+    border-radius: 11px;
+    background: #ffffff;
+}
+
+.registration-error-card h2 {
+    margin: 11px 0 0;
+    font-size: 20px;
+}
+
+.registration-error-card p {
+    margin: 7px 0 0;
+    color: #7e7e78;
+    font-size: 11px;
+    line-height: 1.55;
+}
+
+.registration-action-row {
+    margin-top: 17px;
+    display: flex;
+    gap: 8px;
+}
+
+.registration-action-row button {
+    padding: 9px 12px;
+    display: inline-flex;
+    align-items: center;
+    gap: 7px;
+    font-size: 10px;
+    font-weight: 800;
+}
+
+.registration-action-row button.secondary {
+    background: #f3f3f0;
+}
+
+.registration-spin {
+    animation: registrationSpin .8s linear infinite;
+}
+
+@keyframes registrationSpin {
+    from {
+        transform: rotate(0deg);
+    }
+
+    to {
+        transform: rotate(360deg);
+    }
+}
+
+@media (max-width: 980px) {
+    .registration-grid {
+        grid-template-columns: 1fr;
+    }
+}
+
+@media (max-width: 760px) {
+
+    .registration-header,
+    .registration-content,
+    .registration-alert {
+        width: min(100% - 28px, 1240px);
+    }
+
+    .registration-header {
+        padding: 0 14px;
+    }
+
+    .registration-summary {
+        grid-template-columns: 1fr 1fr;
+    }
+
+    .registration-game-block,
+    .registration-summary-item {
+        border-bottom: 1px solid #e9e9e4;
+    }
+
+    .registration-game-block,
+    .registration-summary-item:nth-child(2) {
+        border-right: 1px solid #e9e9e4;
+    }
+
+    .registration-summary-item:nth-child(3),
+    .registration-summary-item:last-child {
+        border-right: 0;
+    }
+
+    .registration-card-heading {
+        flex-direction: column;
+    }
+
+    .registration-roster-list {
+        grid-template-columns: 1fr;
+    }
+}
