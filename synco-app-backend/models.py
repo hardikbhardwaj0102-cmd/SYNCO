@@ -3117,6 +3117,7 @@ class CompetitionParticipant(db.Model):
     # PENDING
     # ACCEPTED
     # REJECTED
+    # CANCELLED
     # LOCKED
     # DISQUALIFIED
     # ELIMINATED
@@ -3193,6 +3194,11 @@ class CompetitionParticipant(db.Model):
             "competition_id",
             "user_id",
             name="uq_competition_player_participant"
+        ),
+        db.CheckConstraint(
+            "(participant_type = 'PLAYER' AND user_id IS NOT NULL AND club_id IS NULL) "
+            "OR (participant_type = 'TEAM' AND club_id IS NOT NULL)",
+            name="competition_participants_check",
         ),
     )
 
