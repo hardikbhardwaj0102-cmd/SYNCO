@@ -109,10 +109,16 @@ function formatDate(value) {
     }
 
     return date.toLocaleString(
-        undefined,
+        "en-IN",
         {
-            dateStyle: "medium",
-            timeStyle: "short",
+            timeZone: "Asia/Kolkata",
+            day: "2-digit",
+            month: "short",
+            year: "numeric",
+            hour: "numeric",
+            minute: "2-digit",
+            hour12: true,
+            timeZoneName: "short",
         }
     );
 }

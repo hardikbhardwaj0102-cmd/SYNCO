@@ -663,11 +663,14 @@ def serialize_datetime(value):
     if not value:
         return None
 
-    utc_value = as_utc_naive(value)
+    # Database values remain UTC-naive for compatibility with the
+    # existing SQLAlchemy models. The public competition API, however,
+    # exposes all competition schedule times in Indian Standard Time.
+    # This keeps SYNCO's tournament scheduling unambiguous: IST only.
+    utc_value = as_utc_naive(value).replace(tzinfo=timezone.utc)
+    india_value = utc_value.astimezone(ZoneInfo("Asia/Kolkata"))
 
-    # Always expose competition schedule timestamps explicitly as UTC.
-    # The browser then converts them to the user's local timezone correctly.
-    return f"{utc_value.isoformat()}Z"
+    return india_value.isoformat(timespec="seconds")
 
 
 def serialize_game(game):
@@ -1188,15 +1191,11 @@ def serialize_competition(
         ),
 
         "createdAt": (
-            competition.created_at.isoformat()
-            if competition.created_at
-            else None
+            serialize_datetime(competition.created_at)
         ),
 
         "updatedAt": (
-            competition.updated_at.isoformat()
-            if competition.updated_at
-            else None
+            serialize_datetime(competition.updated_at)
         ),
     }
 
