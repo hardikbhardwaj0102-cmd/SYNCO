@@ -4230,8 +4230,13 @@ def register_team(competition_id):
     db.session.add(participant)
     try:
         db.session.flush()
-    except IntegrityError:
+    except IntegrityError as exc:
+        # Do not turn every database integrity error into an
+        # "already registered" message. A cancelled row should be
+        # allowed to be followed by a new registration when the
+        # active-only unique index is installed.
         db.session.rollback()
+
         existing_captain_entry = (
             CompetitionParticipant.query
             .filter_by(
@@ -4246,19 +4251,31 @@ def register_team(competition_id):
             .order_by(CompetitionParticipant.registered_at.desc())
             .first()
         )
+
+        if existing_captain_entry:
+            return jsonify({
+                "success": False,
+                "message": (
+                    "You already have an active registration in this competition. "
+                    "Open the existing registration instead of submitting another one."
+                ),
+                "participant": serialize_participant(existing_captain_entry),
+                "participantId": existing_captain_entry.id,
+                "code": "ACTIVE_REGISTRATION_EXISTS",
+            }), 409
+
+        current_app.logger.exception(
+            "Team registration insert failed for competition %s and user %s",
+            competition.id,
+            user.id,
+        )
+
         return jsonify({
             "success": False,
-            "message": "You already have an active registration in this competition. Open the existing registration instead of submitting another one.",
-            "participant": (
-                serialize_participant(existing_captain_entry)
-                if existing_captain_entry
-                else None
-            ),
-            "participantId": (
-                existing_captain_entry.id
-                if existing_captain_entry
-                else None
-            ),
+            "message": "Unable to create the team registration because of a database constraint.",
+            "error": str(exc),
+            "errorType": exc.__class__.__name__,
+            "code": "REGISTRATION_DATABASE_CONFLICT",
         }), 409
 
     # Registering a new team is a commitment for the captain. Any other
