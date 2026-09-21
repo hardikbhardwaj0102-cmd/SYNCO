@@ -3,7 +3,8 @@
 # Compatible with the Competition models previously provided
 # =========================================================
 
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
+from zoneinfo import ZoneInfo
 import math
 import random
 import re
@@ -343,24 +344,47 @@ def organizer_account_required():
 
 
 def parse_datetime(value):
+    """Parse frontend/API datetime values into naive UTC datetimes.
+
+    SYNCO's database uses SQLAlchemy DateTime columns without an explicit
+    timezone. Browser datetime-local values are interpreted as Asia/Kolkata
+    time, then normalized to UTC before being stored. Values that already
+    carry an offset are converted using that offset.
+    """
 
     if not value:
         return None
 
     if isinstance(value, datetime):
+        parsed = value
+    else:
+        value = str(value).strip()
+        if not value:
+            return None
+        try:
+            parsed = datetime.fromisoformat(value.replace("Z", "+00:00"))
+        except ValueError:
+            return None
+
+    if parsed.tzinfo is None:
+        parsed = parsed.replace(tzinfo=ZoneInfo("Asia/Kolkata"))
+
+    return parsed.astimezone(timezone.utc).replace(tzinfo=None)
+
+
+def utc_now():
+    """Return current UTC time as a naive datetime for DB compatibility."""
+    return datetime.now(timezone.utc).replace(tzinfo=None)
+
+
+def as_utc_naive(value):
+    if value is None:
+        return None
+
+    if value.tzinfo is None:
         return value
 
-    value = str(value).strip()
-
-    if not value:
-        return None
-
-    try:
-        return datetime.fromisoformat(
-            value.replace("Z", "+00:00")
-        )
-    except ValueError:
-        return None
+    return value.astimezone(timezone.utc).replace(tzinfo=None)
 
 
 def slugify(value):
@@ -1867,6 +1891,14 @@ def get_competitions():
         .all()
     )
 
+    changed = False
+    for competition in competitions:
+        if sync_registration_status(competition):
+            changed = True
+
+    if changed:
+        db.session.commit()
+
     return jsonify({
 
         "success": True,
@@ -1903,6 +1935,9 @@ def get_competition(
             "success": False,
             "message": "Competition not found."
         }), 404
+
+    if sync_registration_status(competition):
+        db.session.commit()
 
     return jsonify({
 
@@ -1946,26 +1981,44 @@ def open_registration(
     if error:
         return error
 
-    if competition.status != "DRAFT":
-
+    if str(competition.status or "").upper() not in (
+        "DRAFT",
+        "REGISTRATION_OPEN",
+        "REGISTRATION_CLOSED",
+    ):
         return jsonify({
             "success": False,
-            "message": (
-                "Only draft competitions "
-                "can open registration."
-            )
+            "message": "Registration cannot be opened from the current competition status.",
         }), 400
 
-    competition.status = (
-        "REGISTRATION_OPEN"
-    )
+    now = utc_now()
+    end = as_utc_naive(competition.registration_end)
+
+    # Explicit organizer action means registration should open now even if
+    # an older draft contained a future registrationStart value.
+    if not competition.registration_start or as_utc_naive(competition.registration_start) > now:
+        competition.registration_start = now
+
+    if end and now >= end:
+        return jsonify({
+            "success": False,
+            "message": "Registration end time has already passed. Extend the registration deadline first.",
+        }), 400
+
+    configuration = dict(competition.configuration or {})
+    registration_settings = dict(configuration.get("registration") or {})
+    registration_settings["manualClosed"] = False
+    configuration["registration"] = registration_settings
+    competition.configuration = configuration
+
+    competition.status = "REGISTRATION_OPEN"
 
     competition.is_published = True
 
     if not competition.registration_start:
 
         competition.registration_start = (
-            datetime.utcnow()
+            utc_now()
         )
 
     create_audit_log(
@@ -2038,21 +2091,88 @@ def _registration_settings(competition):
 
 
 def competition_registration_deadline(competition):
-    return getattr(
-        competition,
-        "registration_end",
-        None
-    )
+    deadline = getattr(competition, "registration_end", None)
+    return as_utc_naive(deadline)
+
+
+def registration_manual_closed(competition):
+    configuration = getattr(competition, "configuration", None) or {}
+    settings = configuration.get("registration", {})
+    return bool(isinstance(settings, dict) and settings.get("manualClosed", False))
+
+
+def sync_registration_status(competition):
+    """Keep persisted registration status aligned with the configured window.
+
+    This fixes competitions that were incorrectly left CLOSED/DRAFT while
+    their registration window is currently active. A deliberate organizer
+    close is protected with registration.manualClosed=True.
+    """
+
+    if not competition:
+        return False
+
+    status = str(getattr(competition, "status", "") or "").upper()
+    if status not in {"DRAFT", "REGISTRATION_OPEN", "REGISTRATION_CLOSED"}:
+        return False
+
+    if registration_manual_closed(competition):
+        return False
+
+    start = as_utc_naive(getattr(competition, "registration_start", None))
+    end = as_utc_naive(getattr(competition, "registration_end", None))
+    now = utc_now()
+    changed = False
+
+    # No start means the organizer can open registration immediately.
+    if start and now < start:
+        if status != "DRAFT":
+            competition.status = "DRAFT"
+            competition.is_published = False
+            changed = True
+        return changed
+
+    # The registration end is exclusive.
+    if end and now >= end:
+        if status != "REGISTRATION_CLOSED":
+            competition.status = "REGISTRATION_CLOSED"
+            competition.is_published = True
+            changed = True
+        return changed
+
+    # We are currently inside an active registration window.
+    if status != "REGISTRATION_OPEN":
+        competition.status = "REGISTRATION_OPEN"
+        competition.is_published = True
+        changed = True
+    elif not competition.is_published:
+        competition.is_published = True
+        changed = True
+
+    return changed
 
 
 def is_registration_open_now(competition):
 
-    if str(getattr(competition, "status", "")).upper() != "REGISTRATION_OPEN":
+    if not competition:
         return False
 
-    deadline = competition_registration_deadline(competition)
+    status = str(getattr(competition, "status", "") or "").upper()
 
-    if deadline and datetime.utcnow() >= deadline:
+    if status not in {"DRAFT", "REGISTRATION_OPEN", "REGISTRATION_CLOSED"}:
+        return False
+
+    if registration_manual_closed(competition):
+        return False
+
+    start = as_utc_naive(getattr(competition, "registration_start", None))
+    deadline = competition_registration_deadline(competition)
+    now = utc_now()
+
+    if start and now < start:
+        return False
+
+    if deadline and now >= deadline:
         return False
 
     return True
@@ -2700,7 +2820,7 @@ def cancel_pending_registration(
 
 def get_next_match_start(competition):
 
-    now = datetime.utcnow()
+    now = utc_now()
 
     row = (
         CompetitionMatch.query
@@ -2735,7 +2855,7 @@ def process_competition_registration_timers(competition, commit=True):
     info, notifications, a cron job, or an admin maintenance request.
     """
 
-    now = datetime.utcnow()
+    now = utc_now()
     changed = False
 
     if not competition:
@@ -2990,6 +3110,13 @@ def process_competition_registration_timers(competition, commit=True):
 
         if competition.status == "REGISTRATION_OPEN":
             competition.status = "REGISTRATION_CLOSED"
+
+            configuration = dict(competition.configuration or {})
+            registration_settings = dict(configuration.get("registration") or {})
+            registration_settings["manualClosed"] = False
+            configuration["registration"] = registration_settings
+            competition.configuration = configuration
+
             changed = True
 
         # Lock solo registrations as well.
@@ -3044,8 +3171,15 @@ def close_registration(competition_id):
             "message": "Registration is not open."
         }), 400
 
-    now = datetime.utcnow()
+    now = utc_now()
     competition.registration_end = now
+
+    configuration = dict(competition.configuration or {})
+    registration_settings = dict(configuration.get("registration") or {})
+    registration_settings["manualClosed"] = True
+    configuration["registration"] = registration_settings
+    competition.configuration = configuration
+
     process_competition_registration_timers(
         competition,
         commit=False,
@@ -3103,6 +3237,9 @@ def get_registration_info(competition_id):
             "success": False,
             "message": "Competition not found."
         }), 404
+
+    if sync_registration_status(competition):
+        db.session.commit()
 
     process_competition_registration_timers(
         competition,
@@ -3402,6 +3539,9 @@ def register_player(competition_id):
 
     process_competition_registration_timers(competition, commit=True)
 
+    if sync_registration_status(competition):
+        db.session.commit()
+
     if not is_registration_open_now(competition):
         return jsonify({
             "success": False,
@@ -3501,6 +3641,9 @@ def register_team(competition_id):
         }), 404
 
     process_competition_registration_timers(competition, commit=True)
+
+    if sync_registration_status(competition):
+        db.session.commit()
 
     if not is_registration_open_now(competition):
         return jsonify({
@@ -4347,6 +4490,9 @@ def replace_team_player(competition_id):
 
     process_competition_registration_timers(competition, commit=True)
     db.session.refresh(competition)
+
+    if sync_registration_status(competition):
+        db.session.commit()
 
     if not is_registration_open_now(competition):
         return jsonify({
@@ -5204,6 +5350,9 @@ def withdraw_registration(competition_id):
         }), 404
 
     process_competition_registration_timers(competition, commit=True)
+
+    if sync_registration_status(competition):
+        db.session.commit()
 
     if not is_registration_open_now(competition):
         return jsonify({
