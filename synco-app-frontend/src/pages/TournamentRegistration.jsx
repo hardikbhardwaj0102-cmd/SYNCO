@@ -883,7 +883,7 @@ export default function TournamentRegistration() {
 
                                         const unavailable =
                                             !!registration &&
-                                            status !== "REJECTED";
+                                            !["REJECTED", "CANCELLED"].includes(status);
 
                                         const selectedCount =
                                             isSelected
