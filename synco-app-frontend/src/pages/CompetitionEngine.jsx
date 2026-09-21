@@ -320,15 +320,41 @@ const CompetitionEngine = () => {
       tournamentView === 'coverflow' &&
       cardIndex === activeMatchIndex;
 
+    const competitionStatus =
+      String(
+        card.competition?.status || ''
+      ).toUpperCase();
+
+    const isRegistrationOpen =
+      competitionStatus.includes('REGISTRATION') ||
+      competitionStatus === 'OPEN' ||
+      competitionStatus === 'PUBLISHED';
+
+    const cardAction = isRegistrationOpen
+      ? () =>
+        navigate(
+          `/competitions/${encodeURIComponent(
+            String(card.id)
+          )}/register`
+        )
+      : () => openLiveTournament(card.id);
+
+    const cardActionLabel = isRegistrationOpen
+      ? 'REGISTER NOW'
+      : 'OPEN LIVE DASHBOARD';
+
     return (
       <button
         key={card.id}
         type="button"
-        className={`portrait-roster-card ${positionClass} ${
-          isActive ? 'active-tournament-card' : ''
-        }`}
-        onClick={() => openLiveTournament(card.id)}
-        aria-label={`Open ${card.title}`}
+        className={`portrait-roster-card ${positionClass} ${isActive ? 'active-tournament-card' : ''
+          }`}
+        onClick={cardAction}
+        aria-label={
+          isRegistrationOpen
+            ? `Register for ${card.title}`
+            : `Open ${card.title}`
+        }
       >
         <img
           src={cardCharacter}
@@ -346,12 +372,13 @@ const CompetitionEngine = () => {
           </p>
 
           <span className="card-open-label">
-            OPEN LIVE DASHBOARD
+            {cardActionLabel}
           </span>
         </div>
       </button>
     );
   };
+
 
 
   /* =====================================================
@@ -594,11 +621,10 @@ const CompetitionEngine = () => {
                 type="button"
                 key={tab}
                 onClick={() => setActiveTab(tab)}
-                className={`comp-tab-btn ${
-                  activeTab === tab
+                className={`comp-tab-btn ${activeTab === tab
                     ? 'active'
                     : ''
-                }`}
+                  }`}
               >
                 {tab}
               </button>
