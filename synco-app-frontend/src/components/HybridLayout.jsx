@@ -21,11 +21,10 @@ const HybridLayout = () => {
   }, [pathname]);
 
   /*
-    Special full-viewport authenticated pages.
+    Special authenticated visual shells.
 
-    Both Competition Engine and Leaderboards need their
-    visual backgrounds to continue underneath the fixed
-    90px Sidebar.
+    Competition Engine and Leaderboards both need their
+    backgrounds to continue underneath the fixed sidebar.
   */
   const isCompetitionPage =
     pathname === '/competitions';
@@ -37,6 +36,10 @@ const HybridLayout = () => {
     return (
       <div
         className={`hybrid-auth-container ${
+          isCompetitionPage
+            ? 'hybrid-auth-container-competition'
+            : ''
+        } ${
           isLeaderboardsPage
             ? 'hybrid-auth-container-leaderboards'
             : ''
