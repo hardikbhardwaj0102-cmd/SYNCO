@@ -12,7 +12,6 @@ import {
 } from 'lucide-react';
 
 // Shared hero / sticky-header / content classes live in CompetitionEngine.css
-import '../styles/pages/CompetitionEngine.css';
 import '../styles/pages/Leaderboards.css';
 
 import rank1Pose from '../assets/rank-1-pose.png';

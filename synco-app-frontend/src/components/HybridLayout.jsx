@@ -34,11 +34,25 @@ const HybridLayout = () => {
   }, [pathname]);
 
 
+  /*
+    Special authenticated visual shells.
+  */
+
   const isCompetitionPage =
     pathname === '/competitions';
 
+  /*
+    Support both:
+
+      /leaderboards
+      /leaderboards/
+
+    so the Leaderboards shell is always activated.
+  */
+
   const isLeaderboardsPage =
-    pathname === '/leaderboards';
+    pathname === '/leaderboards' ||
+    pathname.startsWith('/leaderboards/');
 
 
   if (isAuthenticated) {
@@ -59,21 +73,29 @@ const HybridLayout = () => {
               : ''
           }
         `}
-        style={
-          isLeaderboardsPage
-            ? {
-                backgroundImage:
-                  `url(${rankBg})`,
-                backgroundPosition:
-                  'center top',
-                backgroundSize:
-                  'cover',
-                backgroundRepeat:
-                  'no-repeat',
-              }
-            : undefined
-        }
       >
+
+        {/*
+          Dedicated Leaderboards background layer.
+
+          This is intentionally a real DOM element rather
+          than another CSS background so the shared
+          global-dash-bg cannot replace it.
+        */}
+
+        {isLeaderboardsPage && (
+
+          <div
+            className="leaderboards-shell-background"
+            style={{
+              backgroundImage:
+                `url(${rankBg})`,
+            }}
+            aria-hidden="true"
+          />
+
+        )}
+
 
         <Sidebar />
 

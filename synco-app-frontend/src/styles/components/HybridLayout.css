@@ -184,16 +184,6 @@
    LEADERBOARDS FULL-VIEWPORT SHELL
    ========================================================= */
 
-/*
-  Leaderboards background is supplied directly from
-  HybridLayout.jsx using the imported rank-bg.png asset.
-
-  This guarantees Vite resolves the asset correctly.
-
-  The background belongs to the OUTER shell, therefore
-  it continues underneath the fixed 90px Sidebar.
-*/
-
 .hybrid-auth-container-leaderboards {
 
   position: relative;
@@ -206,8 +196,49 @@
 
   overflow: hidden;
 
-  background-color:
+  background:
     #0a0a0a !important;
+
+  background-image:
+    none !important;
+
+}
+
+
+/* =========================================================
+   LEADERBOARDS ACTUAL BACKGROUND
+   ========================================================= */
+
+/*
+  rank-bg.png is rendered as a real DOM layer
+  from HybridLayout.jsx.
+
+  Fixed positioning guarantees that it covers the
+  complete viewport, including the 90px sidebar area.
+*/
+
+.hybrid-auth-container-leaderboards
+.leaderboards-shell-background {
+
+  position: fixed;
+
+  inset: 0;
+
+  width: 100vw;
+  height: 100vh;
+
+  z-index: 0;
+
+  pointer-events: none;
+
+  background-position:
+    center center;
+
+  background-size:
+    cover;
+
+  background-repeat:
+    no-repeat;
 
 }
 
@@ -220,19 +251,19 @@
 
   content: "";
 
-  position: absolute;
+  position: fixed;
 
   inset: 0;
 
-  z-index: 0;
+  z-index: 1;
 
   pointer-events: none;
 
   background:
     radial-gradient(
       circle at center,
-      transparent 28%,
-      rgba(0, 0, 0, 0.42) 100%
+      transparent 30%,
+      rgba(0, 0, 0, 0.38) 100%
     );
 
 }
@@ -243,6 +274,10 @@
    ========================================================= */
 
 .hybrid-auth-main-leaderboards {
+
+  position: relative;
+
+  z-index: 2;
 
   flex: 1 1 auto;
 
@@ -255,16 +290,6 @@
   overflow-y: auto;
 
   overflow-x: hidden;
-
-  position: relative;
-
-  z-index: 1;
-
-  overscroll-behavior-y: auto;
-
-  scroll-behavior: auto;
-
-  touch-action: pan-y;
 
   background:
     transparent !important;
@@ -296,29 +321,11 @@
 
 
 /* =========================================================
-   LEADERBOARDS PAGE SAFETY
+   REMOVE SHARED PAGE BACKGROUNDS
    ========================================================= */
 
 .hybrid-auth-container-leaderboards
-.leaderboards-page {
-
-  width: 100%;
-
-  max-width: none;
-
-  min-width: 0;
-
-  margin: 0;
-
-  background:
-    transparent !important;
-
-}
-
-
-/* =========================================================
-   REMOVE COMPETITION ENGINE BACKGROUNDS
-   ========================================================= */
+.leaderboards-page,
 
 .hybrid-auth-container-leaderboards
 .leaderboards-page.comp-engine-wrapper,
@@ -339,19 +346,66 @@
 
 
 /* =========================================================
-   IMPORTANT — REMOVE ANY CSS BACKGROUND IMAGE
+   IMPORTANT — REMOVE COMPETITION ENGINE OVERLAYS
    ========================================================= */
 
 /*
-  The actual rank background now comes from JSX.
+  CompetitionEngine.css may use pseudo-elements for its
+  global background / hero effects.
 
-  Prevent generic/shared styles from putting another
-  background image over or underneath it.
+  They must not exist on Leaderboards because rank-bg.png
+  is now the only background source.
 */
 
-.hybrid-auth-container-leaderboards {
+.hybrid-auth-container-leaderboards
+.leaderboards-page.comp-engine-wrapper::before,
 
-  background-image:
+.hybrid-auth-container-leaderboards
+.leaderboards-page.comp-engine-wrapper::after,
+
+.hybrid-auth-container-leaderboards
+.leaderboards-page .comp-hero-section::before,
+
+.hybrid-auth-container-leaderboards
+.leaderboards-page .comp-hero-section::after {
+
+  content: none !important;
+
+  display: none !important;
+
+  background:
     none !important;
+
+}
+
+
+/* =========================================================
+   HERO SAFETY
+   ========================================================= */
+
+.hybrid-auth-container-leaderboards
+.leaderboards-page
+.hero-bg-layer {
+
+  background:
+    transparent !important;
+
+}
+
+
+/* =========================================================
+   SIDEBAR SAFETY
+   ========================================================= */
+
+/*
+  Sidebar remains above the background and page content.
+*/
+
+.hybrid-auth-container-leaderboards
+.sidebar-container {
+
+  position: fixed;
+
+  z-index: 50;
 
 }
