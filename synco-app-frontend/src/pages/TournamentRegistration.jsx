@@ -431,8 +431,24 @@ export default function TournamentRegistration() {
             await loadRegistration(false);
         } catch (err) {
             console.error(`Tournament invitation ${action} failed:`, err);
+
+            const message = String(err?.message || "");
+            const alreadyAccepted =
+                action === "accept" &&
+                message.toLowerCase().includes("current state: accepted");
+
+            // Older backend deployments can return 400 after the first
+            // accept already committed. Treat that exact state as success
+            // and reload the authoritative registration.
+            if (alreadyAccepted) {
+                setSuccess("Tournament invitation accepted.");
+                setError("");
+                await loadRegistration(false);
+                return;
+            }
+
             setError(
-                err.message ||
+                message ||
                 `Unable to ${action} the tournament invitation.`
             );
 
@@ -884,11 +900,9 @@ export default function TournamentRegistration() {
 
                                         return (
                                             <div
-                                                className={`registration-club-card ${
-                                                    isSelected ? "selected" : ""
-                                                } ${
-                                                    unavailable ? "registered" : ""
-                                                }`}
+                                                className={`registration-club-card ${isSelected ? "selected" : ""
+                                                    } ${unavailable ? "registered" : ""
+                                                    }`}
                                                 key={club.id}
                                             >
 
@@ -951,15 +965,12 @@ export default function TournamentRegistration() {
 
                                                             return (
                                                                 <label
-                                                                    className={`registration-member-select ${
-                                                                        checked ? "selected" : ""
-                                                                    } ${
-                                                                        !isSelected || unavailable || member.eligible === false
+                                                                    className={`registration-member-select ${checked ? "selected" : ""
+                                                                        } ${!isSelected || unavailable || member.eligible === false
                                                                             ? "locked"
                                                                             : ""
-                                                                    } ${
-                                                                        member.eligible === false ? "ineligible" : ""
-                                                                    }`}
+                                                                        } ${member.eligible === false ? "ineligible" : ""
+                                                                        }`}
                                                                     key={member.id || member.userId}
                                                                     onClick={(event) => event.stopPropagation()}
                                                                 >
@@ -1012,11 +1023,10 @@ export default function TournamentRegistration() {
                                                 )}
 
                                                 {isSelected && !unavailable && memberOk && (
-                                                    <div className={`registration-selection-status ${
-                                                        selectedCount === teamSize
+                                                    <div className={`registration-selection-status ${selectedCount === teamSize
                                                             ? "complete"
                                                             : "incomplete"
-                                                    }`}>
+                                                        }`}>
                                                         <span>
                                                             {selectedCount === teamSize
                                                                 ? "Tournament roster ready"

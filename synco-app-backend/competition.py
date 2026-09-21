@@ -4196,10 +4196,84 @@ def accept_team_invite(competition_id, invite_id):
             "message": "You cannot accept this invitation."
         }), 403
 
+    # Accept is intentionally idempotent. A notification center, another
+    # browser tab, or a double-click can retry the same action after the first
+    # request has already committed. In that case the invitation is already
+    # accepted, so return the authoritative state instead of HTTP 400.
+    if invite.status == "ACCEPTED":
+        participant = invite.participant
+
+        if not participant:
+            return jsonify({
+                "success": False,
+                "message": "The team registration no longer exists.",
+            }), 400
+
+        if invite.invite_type == "SUBSTITUTION":
+            substitution = None
+            if invite.substitution_request_id:
+                substitution = db.session.get(
+                    CompetitionSubstitutionRequest,
+                    invite.substitution_request_id,
+                )
+
+            return jsonify({
+                "success": True,
+                "alreadyAccepted": True,
+                "message": (
+                    "This substitution invitation was already accepted."
+                    if substitution and substitution.status == "COMPLETED"
+                    else "This substitution invitation was already accepted."
+                ),
+                "participant": serialize_participant(participant),
+                "invite": serialize_team_invite(invite),
+                "substitution": (
+                    serialize_substitution_request(substitution)
+                    if substitution else None
+                ),
+            })
+
+        # For a replacement, the roster may already contain the replacement
+        # from the first successful request. Keep it accepted and return the
+        # current state on repeated clicks.
+        if invite.invite_type == "REPLACEMENT" and roster_player(participant, user.id):
+            set_roster_player_status(participant, user.id, "ACCEPTED")
+            confirm_team_if_complete(competition, participant)
+            mark_competition_notifications_read(user.id, invite_id=invite.id)
+            db.session.commit()
+            return jsonify({
+                "success": True,
+                "alreadyAccepted": True,
+                "message": "This replacement invitation was already accepted.",
+                "participant": serialize_participant(participant),
+                "invite": serialize_team_invite(invite),
+            })
+
+        # Normal TEAM_MEMBER invite. Repair the roster snapshot if an older
+        # deployment committed the invite but did not persist the roster state.
+        set_roster_player_status(participant, user.id, "ACCEPTED")
+        cancel_other_pending_competition_invites(
+            competition,
+            user.id,
+            accepted_invite_id=invite.id,
+        )
+        confirm_team_if_complete(competition, participant)
+        mark_competition_notifications_read(user.id, invite_id=invite.id)
+        db.session.commit()
+
+        return jsonify({
+            "success": True,
+            "alreadyAccepted": True,
+            "message": "This tournament invitation was already accepted.",
+            "participant": serialize_participant(participant),
+            "invite": serialize_team_invite(invite),
+        })
+
     if invite.status != "PENDING":
         return jsonify({
             "success": False,
-            "message": f"This invitation is no longer pending. Current state: {invite.status.lower()}."
+            "message": f"This invitation is no longer pending. Current state: {invite.status.lower()}.",
+            "currentState": invite.status,
         }), 400
 
     if not is_registration_open_now(competition) and invite.invite_type != "SUBSTITUTION":
