@@ -5611,96 +5611,183 @@ def withdraw_registration(competition_id):
             "message": "Registration withdrawal is closed."
         }), 400
 
-    participant = user_has_any_active_competition_entry(
-        competition,
-        user.id,
-    )
+    participant_type = str(
+        competition.participant_type or ""
+    ).upper()
 
-    if not participant:
-        return jsonify({
-            "success": False,
-            "message": "No active registration found for your account."
-        }), 404
+    # -----------------------------------------------------
+    # IMPORTANT: A previous version could leave more than one
+    # active participant row for the same captain after repeated
+    # test registrations.  The unique index now prevents new
+    # duplicates, but we also clean up any pre-existing active
+    # rows when the captain withdraws.
+    # -----------------------------------------------------
 
-    if (
-        str(participant.participant_type or "").upper() == "TEAM"
-        and participant.user_id != user.id
-    ):
-        return jsonify({
-            "success": False,
-            "message": "Only the team captain can withdraw the tournament registration."
-        }), 403
+    if participant_type == "TEAM":
 
-    if participant.registration_status not in ("PENDING", "ACCEPTED"):
-        return jsonify({
-            "success": False,
-            "message": "This registration cannot be withdrawn."
-        }), 400
-
-    roster_before = getattr(participant, "team_roster", None) or []
-
-    participant.registration_status = "CANCELLED"
-
-    invites = (
-        CompetitionTeamInvite.query
-        .filter_by(
-            participant_id=participant.id,
-            status="PENDING",
-        )
-        .all()
-    )
-
-    for invite in invites:
-        invite.status = "CANCELLED"
-        invite.responded_at = datetime.utcnow()
-        set_roster_player_status(
-            participant,
-            invite.invited_user_id,
-            "CANCELLED",
+        active_captain_participants = (
+            CompetitionParticipant.query
+            .filter_by(
+                competition_id=competition.id,
+                participant_type="TEAM",
+                user_id=user.id,
+            )
+            .filter(
+                CompetitionParticipant.registration_status.in_(
+                    ["PENDING", "ACCEPTED"]
+                )
+            )
+            .order_by(
+                CompetitionParticipant.registered_at.desc(),
+                CompetitionParticipant.id.desc(),
+            )
+            .all()
         )
 
-    notified_ids = {
-        participant.user_id,
-        *team_member_ids(participant, accepted_only=True),
-    }
+        if not active_captain_participants:
 
-    team_name = participant.club.name if participant.club else "Your tournament entry"
+            roster_membership_team = get_committed_team_for_user(
+                competition,
+                user.id,
+            )
 
-    for user_id in notified_ids:
-        if not user_id:
+            if roster_membership_team:
+                return jsonify({
+                    "success": False,
+                    "message": "Only the team captain can withdraw the tournament registration."
+                }), 403
+
+            return jsonify({
+                "success": False,
+                "message": "No active registration found for your account."
+            }), 404
+
+        participants_to_cancel = active_captain_participants
+
+    else:
+
+        participant = (
+            CompetitionParticipant.query
+            .filter_by(
+                competition_id=competition.id,
+                participant_type="PLAYER",
+                user_id=user.id,
+            )
+            .filter(
+                CompetitionParticipant.registration_status.in_(
+                    ["PENDING", "ACCEPTED"]
+                )
+            )
+            .order_by(
+                CompetitionParticipant.registered_at.desc(),
+                CompetitionParticipant.id.desc(),
+            )
+            .first()
+        )
+
+        if not participant:
+            return jsonify({
+                "success": False,
+                "message": "No active registration found for your account."
+            }), 404
+
+        participants_to_cancel = [participant]
+
+    notified_ids = set()
+    cancelled_participant_ids = []
+
+    for participant in participants_to_cancel:
+
+        if participant.registration_status not in ("PENDING", "ACCEPTED"):
             continue
-        create_competition_notification(
-            user_id,
-            "COMPETITION_REGISTRATION_CANCELLED",
-            "Tournament Registration Withdrawn",
-            f"{team_name} withdrew from {competition.title}.",
+
+        roster_before = (
+            list(getattr(participant, "team_roster", None) or [])
+            if isinstance(getattr(participant, "team_roster", None), list)
+            else []
+        )
+
+        accepted_members_before = team_member_ids(
+            participant,
+            accepted_only=True,
+        )
+
+        participant.registration_status = "CANCELLED"
+        cancelled_participant_ids.append(participant.id)
+
+        invites = (
+            CompetitionTeamInvite.query
+            .filter_by(
+                participant_id=participant.id,
+                status="PENDING",
+            )
+            .all()
+        )
+
+        for invite in invites:
+            invite.status = "CANCELLED"
+            invite.responded_at = datetime.utcnow()
+            set_roster_player_status(
+                participant,
+                invite.invited_user_id,
+                "CANCELLED",
+            )
+
+        participant_notified_ids = {
+            user_id
+            for user_id in [
+                participant.user_id,
+                *accepted_members_before,
+            ]
+            if user_id
+        }
+        notified_ids.update(participant_notified_ids)
+
+        team_name = (
+            participant.club.name
+            if participant.club
+            else "Your tournament entry"
+        )
+
+        for user_id in participant_notified_ids:
+            create_competition_notification(
+                user_id,
+                "COMPETITION_REGISTRATION_CANCELLED",
+                "Tournament Registration Withdrawn",
+                f"{team_name} withdrew from {competition.title}.",
+                competition.id,
+                data={
+                    "participantId": participant.id,
+                    "clubId": participant.club_id,
+                    "teamName": team_name,
+                    "actionStatus": "CANCELLED",
+                    "actionUrl": f"/competitions/{competition.id}/register",
+                },
+            )
+
+        create_audit_log(
             competition.id,
-            data={
+            user.id,
+            "REGISTRATION_WITHDRAWN",
+            metadata={
                 "participantId": participant.id,
+                "participantType": participant.participant_type,
                 "clubId": participant.club_id,
-                "teamName": team_name,
-                "actionStatus": "CANCELLED",
-                "actionUrl": f"/competitions/{competition.id}/register",
+                "roster": roster_before,
+                "cleanupDuplicateActiveRows": len(participants_to_cancel) > 1,
             },
         )
-
-    create_audit_log(
-        competition.id,
-        user.id,
-        "REGISTRATION_WITHDRAWN",
-        metadata={
-            "participantId": participant.id,
-            "participantType": participant.participant_type,
-            "clubId": participant.club_id,
-            "roster": roster_before,
-        },
-    )
 
     db.session.commit()
 
     return jsonify({
         "success": True,
-        "message": "Tournament registration withdrawn.",
+        "message": (
+            "Tournament registration withdrawn."
+            if len(cancelled_participant_ids) == 1
+            else "Tournament registrations withdrawn and stale duplicate registrations were cleaned up."
+        ),
+        "cancelledParticipantIds": cancelled_participant_ids,
     })
 
 
