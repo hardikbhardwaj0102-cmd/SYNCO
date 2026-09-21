@@ -2854,6 +2854,21 @@ class Competition(db.Model):
         lazy=True
     )
 
+    # Tournament registration invitations and host substitution requests.
+    team_invites = db.relationship(
+        "CompetitionTeamInvite",
+        back_populates="competition",
+        cascade="all, delete-orphan",
+        lazy=True
+    )
+
+    substitution_requests = db.relationship(
+        "CompetitionSubstitutionRequest",
+        back_populates="competition",
+        cascade="all, delete-orphan",
+        lazy=True
+    )
+
     # =====================================================
     # SERIALIZATION
     # =====================================================
@@ -3159,6 +3174,20 @@ class CompetitionParticipant(db.Model):
         lazy=True
     )
 
+    team_invites = db.relationship(
+        "CompetitionTeamInvite",
+        back_populates="participant",
+        cascade="all, delete-orphan",
+        lazy=True
+    )
+
+    substitution_requests = db.relationship(
+        "CompetitionSubstitutionRequest",
+        back_populates="participant",
+        cascade="all, delete-orphan",
+        lazy=True
+    )
+
     __table_args__ = (
         db.UniqueConstraint(
             "competition_id",
@@ -3187,6 +3216,11 @@ class CompetitionParticipant(db.Model):
             "participantType": self.participant_type,
 
             "userId": self.user_id,
+            "captainId": (
+                self.user_id
+                if self.participant_type == "TEAM"
+                else None
+            ),
             "clubId": self.club_id,
 
             "teamRoster": self.team_roster or [],
@@ -3227,6 +3261,377 @@ class CompetitionParticipant(db.Model):
                 if self.club
                 else None
             )
+        }
+
+
+# =========================================================
+# COMPETITION TEAM INVITE
+# =========================================================
+#
+# Tracks each teammate invitation for a tournament entry.
+# The actual accepted roster snapshot remains on
+# CompetitionParticipant.team_roster for compatibility with
+# the existing live tournament system.
+# =========================================================
+
+class CompetitionTeamInvite(db.Model):
+
+    __tablename__ = "competition_team_invites"
+
+    id = db.Column(
+        db.Integer,
+        primary_key=True
+    )
+
+    competition_id = db.Column(
+        db.Integer,
+        db.ForeignKey("competitions.id", ondelete="CASCADE"),
+        nullable=False,
+        index=True
+    )
+
+    participant_id = db.Column(
+        db.Integer,
+        db.ForeignKey(
+            "competition_participants.id",
+            ondelete="CASCADE"
+        ),
+        nullable=False,
+        index=True
+    )
+
+    invited_user_id = db.Column(
+        db.Integer,
+        db.ForeignKey("users.id", ondelete="CASCADE"),
+        nullable=False,
+        index=True
+    )
+
+    invited_by = db.Column(
+        db.Integer,
+        db.ForeignKey("users.id", ondelete="SET NULL"),
+        nullable=True,
+        index=True
+    )
+
+    slot_number = db.Column(
+        db.Integer,
+        nullable=False
+    )
+
+    invite_type = db.Column(
+        db.String(40),
+        nullable=False,
+        default="TEAM_MEMBER"
+    )
+    # TEAM_MEMBER
+    # REPLACEMENT
+    # SUBSTITUTION
+
+    status = db.Column(
+        db.String(20),
+        nullable=False,
+        default="PENDING",
+        index=True
+    )
+    # PENDING
+    # ACCEPTED
+    # DECLINED
+    # EXPIRED
+    # CANCELLED
+
+    replaces_user_id = db.Column(
+        db.Integer,
+        db.ForeignKey("users.id", ondelete="SET NULL"),
+        nullable=True,
+        index=True
+    )
+
+    substitution_request_id = db.Column(
+        db.Integer,
+        db.ForeignKey(
+            "competition_substitution_requests.id",
+            ondelete="SET NULL"
+        ),
+        nullable=True,
+        index=True
+    )
+
+    expires_at = db.Column(
+        db.DateTime,
+        nullable=False,
+        index=True
+    )
+
+    halfway_reminded_at = db.Column(
+        db.DateTime,
+        nullable=True
+    )
+
+    last_hour_reminded_at = db.Column(
+        db.DateTime,
+        nullable=True
+    )
+
+    responded_at = db.Column(
+        db.DateTime,
+        nullable=True
+    )
+
+    created_at = db.Column(
+        db.DateTime,
+        default=datetime.utcnow,
+        nullable=False,
+        index=True
+    )
+
+    competition = db.relationship(
+        "Competition",
+        back_populates="team_invites"
+    )
+
+    participant = db.relationship(
+        "CompetitionParticipant",
+        back_populates="team_invites"
+    )
+
+    invited_user = db.relationship(
+        "User",
+        foreign_keys=[invited_user_id]
+    )
+
+    inviter = db.relationship(
+        "User",
+        foreign_keys=[invited_by]
+    )
+
+    replaces_user = db.relationship(
+        "User",
+        foreign_keys=[replaces_user_id]
+    )
+
+    def to_dict(self):
+
+        return {
+            "id": self.id,
+            "competitionId": self.competition_id,
+            "participantId": self.participant_id,
+            "invitedUserId": self.invited_user_id,
+            "invitedBy": self.invited_by,
+            "slotNumber": self.slot_number,
+            "inviteType": self.invite_type,
+            "status": self.status,
+            "replacesUserId": self.replaces_user_id,
+            "substitutionRequestId": self.substitution_request_id,
+            "expiresAt": (
+                self.expires_at.isoformat()
+                if self.expires_at
+                else None
+            ),
+            "halfwayRemindedAt": (
+                self.halfway_reminded_at.isoformat()
+                if self.halfway_reminded_at
+                else None
+            ),
+            "lastHourRemindedAt": (
+                self.last_hour_reminded_at.isoformat()
+                if self.last_hour_reminded_at
+                else None
+            ),
+            "respondedAt": (
+                self.responded_at.isoformat()
+                if self.responded_at
+                else None
+            ),
+            "createdAt": (
+                self.created_at.isoformat()
+                if self.created_at
+                else None
+            ),
+            "user": (
+                {
+                    "id": self.invited_user.id,
+                    "uid": self.invited_user.uid,
+                    "name": self.invited_user.name,
+                    "username": self.invited_user.username,
+                    "avatar": self.invited_user.avatar,
+                }
+                if self.invited_user
+                else None
+            )
+        }
+
+
+# =========================================================
+# COMPETITION SUBSTITUTION REQUEST
+# =========================================================
+
+class CompetitionSubstitutionRequest(db.Model):
+
+    __tablename__ = "competition_substitution_requests"
+
+    id = db.Column(
+        db.Integer,
+        primary_key=True
+    )
+
+    competition_id = db.Column(
+        db.Integer,
+        db.ForeignKey("competitions.id", ondelete="CASCADE"),
+        nullable=False,
+        index=True
+    )
+
+    participant_id = db.Column(
+        db.Integer,
+        db.ForeignKey(
+            "competition_participants.id",
+            ondelete="CASCADE"
+        ),
+        nullable=False,
+        index=True
+    )
+
+    captain_id = db.Column(
+        db.Integer,
+        db.ForeignKey("users.id", ondelete="CASCADE"),
+        nullable=False,
+        index=True
+    )
+
+    outgoing_user_id = db.Column(
+        db.Integer,
+        db.ForeignKey("users.id", ondelete="SET NULL"),
+        nullable=True,
+        index=True
+    )
+
+    replacement_user_id = db.Column(
+        db.Integer,
+        db.ForeignKey("users.id", ondelete="SET NULL"),
+        nullable=True,
+        index=True
+    )
+
+    reason = db.Column(
+        db.Text,
+        nullable=False
+    )
+
+    status = db.Column(
+        db.String(30),
+        nullable=False,
+        default="PENDING",
+        index=True
+    )
+    # PENDING
+    # APPROVED
+    # REJECTED
+    # COMPLETED
+
+    requested_at = db.Column(
+        db.DateTime,
+        default=datetime.utcnow,
+        nullable=False,
+        index=True
+    )
+
+    decision_deadline = db.Column(
+        db.DateTime,
+        nullable=False,
+        index=True
+    )
+
+    decided_at = db.Column(
+        db.DateTime,
+        nullable=True
+    )
+
+    decided_by = db.Column(
+        db.Integer,
+        db.ForeignKey("users.id", ondelete="SET NULL"),
+        nullable=True,
+        index=True
+    )
+
+    rejection_reason = db.Column(
+        db.Text,
+        nullable=True
+    )
+
+    completed_at = db.Column(
+        db.DateTime,
+        nullable=True
+    )
+
+    replacement_invite_id = db.Column(
+        db.Integer,
+        nullable=True,
+        index=True
+    )
+
+    competition = db.relationship(
+        "Competition",
+        back_populates="substitution_requests"
+    )
+
+    participant = db.relationship(
+        "CompetitionParticipant",
+        back_populates="substitution_requests"
+    )
+
+    captain = db.relationship(
+        "User",
+        foreign_keys=[captain_id]
+    )
+
+    outgoing_user = db.relationship(
+        "User",
+        foreign_keys=[outgoing_user_id]
+    )
+
+    replacement_user = db.relationship(
+        "User",
+        foreign_keys=[replacement_user_id]
+    )
+
+    decider = db.relationship(
+        "User",
+        foreign_keys=[decided_by]
+    )
+
+    def to_dict(self):
+
+        def user_payload(user):
+            if not user:
+                return None
+            return {
+                "id": user.id,
+                "uid": user.uid,
+                "name": user.name,
+                "username": user.username,
+                "avatar": user.avatar,
+            }
+
+        return {
+            "id": self.id,
+            "competitionId": self.competition_id,
+            "participantId": self.participant_id,
+            "captainId": self.captain_id,
+            "outgoingUserId": self.outgoing_user_id,
+            "replacementUserId": self.replacement_user_id,
+            "reason": self.reason,
+            "status": self.status,
+            "requestedAt": self.requested_at.isoformat() if self.requested_at else None,
+            "decisionDeadline": self.decision_deadline.isoformat() if self.decision_deadline else None,
+            "decidedAt": self.decided_at.isoformat() if self.decided_at else None,
+            "decidedBy": self.decided_by,
+            "rejectionReason": self.rejection_reason,
+            "completedAt": self.completed_at.isoformat() if self.completed_at else None,
+            "replacementInviteId": self.replacement_invite_id,
+            "captain": user_payload(self.captain),
+            "outgoingUser": user_payload(self.outgoing_user),
+            "replacementUser": user_payload(self.replacement_user),
         }
 
 

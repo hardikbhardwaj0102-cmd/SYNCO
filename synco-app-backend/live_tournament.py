@@ -176,8 +176,8 @@ def get_team_participants(competition):
             participant_type="TEAM",
         )
         .filter(
-            CompetitionParticipant.registration_status.notin_(
-                ["REJECTED", "DISQUALIFIED"]
+            CompetitionParticipant.registration_status.in_(
+                ["ACCEPTED", "LOCKED", "ELIMINATED"]
             )
         )
         .order_by(
@@ -328,9 +328,9 @@ def team_points_for_competition(competition_id, participant_id):
 
 
 def serialize_member(competition, participant, user):
-    role = "MEMBER"
+    role = "CAPTAIN" if participant.user_id == user.id else "MEMBER"
 
-    if participant.club:
+    if participant.club and role != "CAPTAIN":
         membership = next(
             (
                 item

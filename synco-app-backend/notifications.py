@@ -6,6 +6,10 @@ from models import (
     Notification,
     FriendRequest,
     ClubInvite,
+    Competition,
+    CompetitionParticipant,
+    CompetitionTeamInvite,
+    CompetitionSubstitutionRequest,
 )
 
 
@@ -278,7 +282,185 @@ def serialize_notification(notification):
                     payload["isRead"] = True
                     payload["is_read"] = True
 
+    # =====================================================
+    # COMPETITION REGISTRATION / INVITE
+    # =====================================================
+
+    if (
+        reference_type == "COMPETITION"
+        or notification_type.startswith("COMPETITION_")
+    ):
+
+        invite_id = (
+            data.get("inviteId")
+            or data.get("invite_id")
+        )
+
+        substitution_id = (
+            data.get("substitutionRequestId")
+            or data.get("substitution_request_id")
+        )
+
+        if invite_id:
+
+            invite = db.session.get(
+                CompetitionTeamInvite,
+                invite_id,
+            )
+
+            if invite:
+
+                status = str(
+                    invite.status or ""
+                ).upper()
+
+                payload["actionStatus"] = status
+                payload["action_status"] = status
+
+                data["actionStatus"] = status
+                data["action_status"] = status
+                data["inviteStatus"] = status
+                data["invite_status"] = status
+                data["expiresAt"] = (
+                    invite.expires_at.isoformat()
+                    if invite.expires_at
+                    else data.get("expiresAt")
+                )
+
+                participant = invite.participant
+                data["participantId"] = (
+                    participant.id
+                    if participant
+                    else data.get("participantId")
+                )
+
+                data.setdefault(
+                    "actionUrl",
+                    f"/competitions/{invite.competition_id}/register"
+                )
+
+                payload["data"] = data
+
+                if status != "PENDING":
+                    payload["isRead"] = True
+                    payload["is_read"] = True
+
+        elif substitution_id:
+
+            substitution = db.session.get(
+                CompetitionSubstitutionRequest,
+                substitution_id,
+            )
+
+            if substitution:
+
+                status = str(
+                    substitution.status or ""
+                ).upper()
+
+                payload["actionStatus"] = status
+                payload["action_status"] = status
+
+                data["actionStatus"] = status
+                data["action_status"] = status
+                data["substitutionStatus"] = status
+                data["substitution_status"] = status
+                data["decisionDeadline"] = (
+                    substitution.decision_deadline.isoformat()
+                    if substitution.decision_deadline
+                    else data.get("decisionDeadline")
+                )
+
+                data.setdefault(
+                    "actionUrl",
+                    f"/competitions/{substitution.competition_id}/register"
+                )
+
+                payload["data"] = data
+
+                if status != "PENDING":
+                    payload["isRead"] = True
+                    payload["is_read"] = True
+
     return payload
+
+
+# =========================================================
+# COMPETITION TIMER MAINTENANCE FOR CURRENT USER
+# =========================================================
+
+def process_current_user_competition_timers(current_user):
+    """
+    Keep registration invite timers/reminders fresh whenever the current
+    user loads notifications. This is also safe to call repeatedly from a
+    scheduled maintenance job.
+    """
+
+    try:
+        from competition import process_competition_registration_timers
+    except Exception:
+        return
+
+    competition_ids = set()
+
+    pending_invites = (
+        CompetitionTeamInvite.query
+        .filter_by(
+            invited_user_id=current_user.id,
+            status="PENDING",
+        )
+        .all()
+    )
+
+    competition_ids.update(
+        invite.competition_id
+        for invite in pending_invites
+        if invite.competition_id
+    )
+
+    captain_entries = (
+        CompetitionParticipant.query
+        .filter_by(
+            user_id=current_user.id,
+            participant_type="TEAM",
+        )
+        .filter(
+            CompetitionParticipant.registration_status.in_([
+                "PENDING",
+                "ACCEPTED",
+                "LOCKED",
+            ])
+        )
+        .all()
+    )
+
+    competition_ids.update(
+        participant.competition_id
+        for participant in captain_entries
+        if participant.competition_id
+    )
+
+    for competition_id in competition_ids:
+        competition = db.session.get(
+            Competition,
+            competition_id,
+        )
+        if not competition:
+            continue
+
+        try:
+            process_competition_registration_timers(
+                competition,
+                commit=False,
+            )
+        except Exception:
+            db.session.rollback()
+
+    if competition_ids:
+        try:
+            db.session.commit()
+        except Exception:
+            db.session.rollback()
 
 
 # =========================================================
@@ -296,6 +478,8 @@ def get_notifications():
             "success": False,
             "message": "You must be logged in.",
         }), 401
+
+    process_current_user_competition_timers(current_user)
 
     notifications = Notification.query.filter_by(
         user_id=current_user.id,
@@ -342,6 +526,8 @@ def get_unread_count():
             "success": False,
             "message": "You must be logged in.",
         }), 401
+
+    process_current_user_competition_timers(current_user)
 
     notifications = Notification.query.filter_by(
         user_id=current_user.id,
