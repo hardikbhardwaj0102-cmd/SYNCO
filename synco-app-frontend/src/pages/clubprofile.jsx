@@ -422,6 +422,10 @@ export default function ClubProfile() {
         useState(false);
 
 
+    const [showDeleteClubConfirm, setShowDeleteClubConfirm] =
+        useState(false);
+
+
     const [showJoinRequestModal, setShowJoinRequestModal] =
         useState(false);
 
@@ -1727,6 +1731,51 @@ export default function ClubProfile() {
 
 
     // =====================================================
+    // DELETE CLUB
+    // OWNER / CREATOR ONLY
+    // =====================================================
+
+    async function deleteClub() {
+
+        if (!clubId || !isOwner) {
+            return;
+        }
+
+        try {
+
+            setActionLoading(true);
+
+            const data =
+                await fetchJson(
+                    `${API}/clubs/${clubId}`,
+                    {
+                        method: "DELETE",
+                    }
+                );
+
+            setShowDeleteClubConfirm(false);
+
+            showSuccessMessage(
+                data.message ||
+                "Club deleted successfully."
+            );
+
+            navigate("/clubs");
+
+        } catch (err) {
+
+            showErrorMessage(
+                err.message
+            );
+
+        } finally {
+
+            setActionLoading(false);
+        }
+    }
+
+
+    // =====================================================
     // RECRUITMENT CREATE
     // =====================================================
 
@@ -2450,6 +2499,27 @@ export default function ClubProfile() {
                                                 size={15}
                                             />
                                             Invite Friends
+                                        </button>
+
+                                    )}
+
+
+                                    {isOwner && (
+
+                                        <button
+                                            type="button"
+                                            disabled={actionLoading}
+                                            onClick={() =>
+                                                setShowDeleteClubConfirm(
+                                                    true
+                                                )
+                                            }
+                                            className="flex items-center gap-2 rounded-xl border border-red-400/30 bg-red-500/10 px-5 py-3 text-xs font-black uppercase tracking-wider text-red-200 transition hover:bg-red-500/20 disabled:cursor-not-allowed disabled:opacity-60"
+                                        >
+                                            <Trash2
+                                                size={15}
+                                            />
+                                            Delete Club
                                         </button>
 
                                     )}
@@ -4165,6 +4235,105 @@ export default function ClubProfile() {
                                 {actionLoading
                                     ? "Saving..."
                                     : "Save Changes"}
+                            </button>
+
+                        </div>
+
+                    </div>
+
+                </Modal>
+
+            )}
+
+
+            {/* =================================================
+                DELETE CLUB CONFIRMATION
+            ================================================= */}
+
+            {showDeleteClubConfirm && (
+
+                <Modal
+                    title="Delete Club"
+                    subtitle="This action is permanent."
+                    onClose={() => {
+                        if (!actionLoading) {
+                            setShowDeleteClubConfirm(
+                                false
+                            );
+                        }
+                    }}
+                    width="max-w-lg"
+                >
+
+                    <div className="space-y-6">
+
+                        <div className="rounded-xl border border-red-200 bg-red-50 p-5">
+
+                            <div className="flex items-start gap-3">
+
+                                <div className="mt-0.5 flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-white text-red-600 shadow-sm">
+                                    <Trash2
+                                        size={18}
+                                    />
+                                </div>
+
+                                <div>
+
+                                    <p className="text-sm font-black text-[#171717]">
+                                        Permanently delete {club.name}?
+                                    </p>
+
+                                    <p className="mt-2 text-xs leading-5 text-[#777a82]">
+                                        This will permanently remove the club and its club data. This action cannot be undone.
+                                    </p>
+
+                                </div>
+
+                            </div>
+
+                        </div>
+
+
+                        {error && (
+
+                            <div className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-xs font-semibold text-red-700">
+                                {error}
+                            </div>
+
+                        )}
+
+
+                        <div className="flex justify-end gap-3 border-t border-[#ebe8e1] pt-5">
+
+                            <button
+                                type="button"
+                                disabled={actionLoading}
+                                onClick={() =>
+                                    setShowDeleteClubConfirm(
+                                        false
+                                    )
+                                }
+                                className="rounded-xl border border-[#dedbd3] px-5 py-3 text-xs font-black uppercase tracking-wider text-[#555] disabled:opacity-60"
+                            >
+                                Cancel
+                            </button>
+
+
+                            <button
+                                type="button"
+                                disabled={actionLoading}
+                                onClick={
+                                    deleteClub
+                                }
+                                className="flex items-center gap-2 rounded-xl bg-red-600 px-5 py-3 text-xs font-black uppercase tracking-wider text-white transition hover:bg-red-700 disabled:cursor-not-allowed disabled:opacity-60"
+                            >
+                                <Trash2
+                                    size={14}
+                                />
+
+                                {actionLoading
+                                    ? "Deleting..."
+                                    : "Delete Club"}
                             </button>
 
                         </div>
