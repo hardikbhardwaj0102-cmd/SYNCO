@@ -9,6 +9,7 @@ import random
 import re
 
 from flask import Blueprint, current_app, jsonify, request, session
+from sqlalchemy import or_
 
 from models import (
     db,
@@ -2883,6 +2884,230 @@ def register_team(
             participant
         ),
     }), 201
+
+
+# =========================================================
+# WITHDRAW REGISTRATION
+# =========================================================
+
+@competition_bp.route(
+    "/<int:competition_id>/registration/withdraw",
+    methods=["DELETE", "POST"]
+)
+def withdraw_registration(
+    competition_id
+):
+
+    user = current_user()
+
+    if not user:
+
+        return jsonify({
+            "success": False,
+            "message": "Authentication required."
+        }), 401
+
+    competition = db.session.get(
+        Competition,
+        competition_id
+    )
+
+    if not competition:
+
+        return jsonify({
+            "success": False,
+            "message": "Competition not found."
+        }), 404
+
+    # A withdrawal is allowed before participant locking.
+    # Once the organizer locks the registration, the participant
+    # becomes part of the competition and cannot be removed here.
+    allowed_competition_statuses = {
+        "REGISTRATION_OPEN",
+        "REGISTRATION_CLOSED",
+    }
+
+    if competition.status not in allowed_competition_statuses:
+
+        return jsonify({
+            "success": False,
+            "message": (
+                "Registration cannot be withdrawn after the "
+                "competition has moved beyond the registration stage."
+            ),
+            "code": "WITHDRAWAL_CLOSED",
+        }), 400
+
+    participant = None
+
+    if str(competition.participant_type or "").upper() == "TEAM":
+
+        # The club owner is the only person who can withdraw
+        # the club's tournament registration.
+        owned_club_ids = [
+            club.id
+            for club in (
+                Club.query
+                .filter_by(
+                    owner_id=user.id,
+                    game_id=competition.game_id,
+                )
+                .all()
+            )
+        ]
+
+        if owned_club_ids:
+            participant = (
+                CompetitionParticipant.query
+                .filter_by(
+                    competition_id=competition.id,
+                    participant_type="TEAM",
+                )
+                .filter(
+                    CompetitionParticipant.club_id.in_(
+                        owned_club_ids
+                    )
+                )
+                .filter(
+                    CompetitionParticipant.registration_status
+                    .in_(["PENDING", "ACCEPTED"])
+                )
+                .order_by(
+                    CompetitionParticipant.registered_at.desc()
+                )
+                .first()
+            )
+
+    else:
+
+        participant = (
+            CompetitionParticipant.query
+            .filter_by(
+                competition_id=competition.id,
+                participant_type="PLAYER",
+                user_id=user.id,
+            )
+            .filter(
+                CompetitionParticipant.registration_status
+                .in_(["PENDING", "ACCEPTED"])
+            )
+            .order_by(
+                CompetitionParticipant.registered_at.desc()
+            )
+            .first()
+        )
+
+    if not participant:
+
+        return jsonify({
+            "success": False,
+            "message": "No active registration was found to withdraw."
+        }), 404
+
+    participant_status = str(
+        participant.registration_status or ""
+    ).upper()
+
+    if participant_status not in {"PENDING", "ACCEPTED"}:
+
+        return jsonify({
+            "success": False,
+            "message": "This registration can no longer be withdrawn.",
+            "code": "REGISTRATION_LOCKED",
+        }), 400
+
+    # -----------------------------------------------------
+    # Preserve the registration details in the audit trail
+    # before the participant row is deleted.
+    # -----------------------------------------------------
+
+    roster_snapshot = (
+        list(getattr(participant, "team_roster", None) or [])
+        if isinstance(
+            getattr(participant, "team_roster", None),
+            list
+        )
+        else []
+    )
+
+    club_id = getattr(
+        participant,
+        "club_id",
+        None
+    )
+
+    club_name = (
+        participant.club.name
+        if participant.club
+        else None
+    )
+
+    participant_id = participant.id
+
+    # -----------------------------------------------------
+    # Bracket nodes reference participants without ON DELETE
+    # CASCADE. Clear those references before removing the
+    # participant so a withdrawn registration cannot leave a
+    # broken foreign-key reference.
+    # -----------------------------------------------------
+
+    bracket_nodes = (
+        BracketNode.query
+        .filter(
+            or_(
+                BracketNode.side_a_participant_id == participant_id,
+                BracketNode.side_b_participant_id == participant_id,
+                BracketNode.winner_participant_id == participant_id,
+                BracketNode.bye_participant_id == participant_id,
+            )
+        )
+        .all()
+    )
+
+    for node in bracket_nodes:
+
+        if node.side_a_participant_id == participant_id:
+            node.side_a_participant_id = None
+
+        if node.side_b_participant_id == participant_id:
+            node.side_b_participant_id = None
+
+        if node.winner_participant_id == participant_id:
+            node.winner_participant_id = None
+
+        if node.bye_participant_id == participant_id:
+            node.bye_participant_id = None
+
+    create_audit_log(
+        competition.id,
+        user.id,
+        "TEAM_REGISTRATION_WITHDRAWN"
+        if str(competition.participant_type or "").upper() == "TEAM"
+        else "PLAYER_REGISTRATION_WITHDRAWN",
+        metadata={
+            "participantId": participant_id,
+            "participantType": participant.participant_type,
+            "registrationStatus": participant_status,
+            "clubId": club_id,
+            "clubName": club_name,
+            "teamRoster": roster_snapshot,
+        },
+    )
+
+    db.session.delete(participant)
+    db.session.commit()
+
+    return jsonify({
+        "success": True,
+        "message": (
+            "Team registration withdrawn successfully."
+            if str(competition.participant_type or "").upper() == "TEAM"
+            else "Player registration withdrawn successfully."
+        ),
+        "competitionId": competition.id,
+        "participantId": participant_id,
+        "clubId": club_id,
+    })
 
 
 # =========================================================

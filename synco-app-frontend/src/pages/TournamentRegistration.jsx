@@ -93,6 +93,8 @@ export default function TournamentRegistration() {
     const [loading, setLoading] = useState(true);
     const [submitting, setSubmitting] = useState(false);
     const [refreshing, setRefreshing] = useState(false);
+    const [withdrawing, setWithdrawing] = useState(false);
+    const [showWithdrawConfirm, setShowWithdrawConfirm] = useState(false);
     const [error, setError] = useState("");
     const [success, setSuccess] = useState("");
 
@@ -113,6 +115,7 @@ export default function TournamentRegistration() {
 
             const currentRegistration = response?.myRegistration;
             const currentClubId = currentRegistration?.clubId;
+
             if (currentClubId) {
                 setSelectedClubId(currentClubId);
                 setSelectedMemberIds(
@@ -120,6 +123,8 @@ export default function TournamentRegistration() {
                         .map((member) => Number(member.userId))
                         .filter((id) => Number.isFinite(id))
                 );
+            } else {
+                setSelectedMemberIds([]);
             }
         } catch (err) {
             console.error("Failed to load tournament registration:", err);
@@ -234,6 +239,42 @@ export default function TournamentRegistration() {
 
         setError("");
     };
+
+    const handleWithdrawRegistration = async () => {
+        setError("");
+        setSuccess("");
+
+        try {
+            setWithdrawing(true);
+
+            const response = await apiRequest(
+                `/api/competitions/${competitionId}/registration/withdraw`,
+                {
+                    method: "DELETE",
+                }
+            );
+
+            setShowWithdrawConfirm(false);
+            setSelectedMemberIds([]);
+            setSuccess(response.message || "Registration withdrawn successfully.");
+
+            await loadRegistration(false);
+        } catch (err) {
+            console.error("Tournament registration withdrawal failed:", err);
+            setError(
+                err.message ||
+                "Unable to withdraw tournament registration."
+            );
+        } finally {
+            setWithdrawing(false);
+        }
+    };
+
+    const canWithdrawRegistration =
+        ["PENDING", "ACCEPTED"].includes(currentStatus) &&
+        ["REGISTRATION_OPEN", "REGISTRATION_CLOSED"].includes(
+            String(competition.status || "").toUpperCase()
+        );
 
     const handleRegister = async () => {
         setError("");
@@ -391,7 +432,7 @@ export default function TournamentRegistration() {
                                 <h2>{isTeamCompetition ? "Choose your team" : "Confirm your participation"}</h2>
                                 <p>
                                     {isTeamCompetition
-                                        ? "Select one of your eligible clubs. The registered club roster will be used for the tournament."
+                                        ? "Select a club, then choose the exact players who will represent it in this tournament."
                                         : "Your authenticated SYNCO player account will be registered for this competition."}
                                 </p>
                             </div>
@@ -439,9 +480,11 @@ export default function TournamentRegistration() {
 
                                         return (
                                             <div
-                                                className={`registration-club-card ${isSelected ? "selected" : ""
-                                                    } ${unavailable ? "registered" : ""
-                                                    }`}
+                                                className={`registration-club-card ${
+                                                    isSelected ? "selected" : ""
+                                                } ${
+                                                    unavailable ? "registered" : ""
+                                                }`}
                                                 key={club.id}
                                             >
 
@@ -504,11 +547,13 @@ export default function TournamentRegistration() {
 
                                                             return (
                                                                 <label
-                                                                    className={`registration-member-select ${checked ? "selected" : ""
-                                                                        } ${!isSelected || unavailable
+                                                                    className={`registration-member-select ${
+                                                                        checked ? "selected" : ""
+                                                                    } ${
+                                                                        !isSelected || unavailable
                                                                             ? "locked"
                                                                             : ""
-                                                                        }`}
+                                                                    }`}
                                                                     key={member.id || member.userId}
                                                                     onClick={(event) => event.stopPropagation()}
                                                                 >
@@ -557,10 +602,11 @@ export default function TournamentRegistration() {
                                                 )}
 
                                                 {isSelected && !unavailable && memberOk && (
-                                                    <div className={`registration-selection-status ${selectedCount === teamSize
+                                                    <div className={`registration-selection-status ${
+                                                        selectedCount === teamSize
                                                             ? "complete"
                                                             : "incomplete"
-                                                        }`}>
+                                                    }`}>
                                                         <span>
                                                             {selectedCount === teamSize
                                                                 ? "Tournament roster ready"
@@ -603,10 +649,28 @@ export default function TournamentRegistration() {
                                     <span>CURRENT REGISTRATION</span>
                                     <strong>{statusLabel(currentStatus)}</strong>
                                 </div>
-                                <button type="button" onClick={() => navigate(`/competitions/${competitionId}`)}>
-                                    View Tournament
-                                    <ChevronRight size={15} />
-                                </button>
+
+                                <div className="registration-current-actions">
+                                    <button
+                                        type="button"
+                                        className="registration-view-button"
+                                        onClick={() => navigate(`/competitions/${competitionId}`)}
+                                    >
+                                        View Tournament
+                                        <ChevronRight size={15} />
+                                    </button>
+
+                                    {canWithdrawRegistration && (
+                                        <button
+                                            type="button"
+                                            className="registration-withdraw-button"
+                                            onClick={() => setShowWithdrawConfirm(true)}
+                                            disabled={withdrawing}
+                                        >
+                                            Withdraw Registration
+                                        </button>
+                                    )}
+                                </div>
                             </div>
                         ) : (
                             <button
@@ -676,6 +740,86 @@ export default function TournamentRegistration() {
                     </aside>
                 </div>
             </main>
+
+            {showWithdrawConfirm && (
+                <div
+                    className="registration-modal-backdrop"
+                    role="presentation"
+                    onMouseDown={(event) => {
+                        if (event.target === event.currentTarget && !withdrawing) {
+                            setShowWithdrawConfirm(false);
+                        }
+                    }}
+                >
+                    <div
+                        className="registration-confirm-modal"
+                        role="dialog"
+                        aria-modal="true"
+                        aria-labelledby="withdraw-registration-title"
+                    >
+                        <div className="registration-confirm-modal-header">
+                            <div>
+                                <span>TOURNAMENT REGISTRATION</span>
+                                <h3 id="withdraw-registration-title">Withdraw registration?</h3>
+                            </div>
+                            <button
+                                type="button"
+                                className="registration-modal-close"
+                                onClick={() => setShowWithdrawConfirm(false)}
+                                disabled={withdrawing}
+                                aria-label="Close confirmation"
+                            >
+                                ×
+                            </button>
+                        </div>
+
+                        <p className="registration-confirm-modal-copy">
+                            Your {isTeamCompetition ? "team" : "player"} registration will be removed from this tournament.
+                            You can register again while registration remains available.
+                        </p>
+
+                        {isTeamCompetition && currentRegistration?.club && (
+                            <div className="registration-confirm-modal-summary">
+                                <span>TEAM</span>
+                                <strong>{currentRegistration.club.name}</strong>
+                                {currentRegistration.teamRoster?.length > 0 && (
+                                    <small>
+                                        {currentRegistration.teamRoster.length} selected player{
+                                            currentRegistration.teamRoster.length === 1 ? "" : "s"
+                                        }
+                                    </small>
+                                )}
+                            </div>
+                        )}
+
+                        <div className="registration-confirm-modal-actions">
+                            <button
+                                type="button"
+                                className="registration-modal-cancel"
+                                onClick={() => setShowWithdrawConfirm(false)}
+                                disabled={withdrawing}
+                            >
+                                Cancel
+                            </button>
+                            <button
+                                type="button"
+                                className="registration-modal-confirm"
+                                onClick={handleWithdrawRegistration}
+                                disabled={withdrawing}
+                            >
+                                {withdrawing ? (
+                                    <>
+                                        <Loader2 size={15} className="registration-spin" />
+                                        Withdrawing...
+                                    </>
+                                ) : (
+                                    "Withdraw Registration"
+                                )}
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
         </div>
     );
 }
