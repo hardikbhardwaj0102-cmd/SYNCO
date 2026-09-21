@@ -211,7 +211,7 @@
       255,
       255,
       255,
-      0.075
+      0.16
     );
 
   font-family:
@@ -423,7 +423,7 @@
 
 }
 /* =========================================================
-   6. PODIUM STAGE
+   PODIUM STAGE — LARGER CHARACTER AREA
    ========================================================= */
 
 .leaderboards-page
@@ -435,9 +435,9 @@
 
   bottom:
     clamp(
-      5.75rem,
-      10vh,
-      7.5rem
+      5.5rem,
+      8vh,
+      7rem
     );
 
   transform:
@@ -445,15 +445,15 @@
 
   width:
     min(
-      94vw,
-      1280px
+      96vw,
+      1400px
     );
 
   height:
     clamp(
-      420px,
-      60vh,
-      600px
+      500px,
+      70vh,
+      760px
     );
 
   z-index: 10;
@@ -461,7 +461,6 @@
   overflow: visible;
 
 }
-
 
 /* =========================================================
    7. V-SHAPE PODIUM CONTAINER
@@ -537,16 +536,8 @@
 
 
 /* =========================================================
-   9. PODIUM SLOT BASE
+   PODIUM SLOT — MORE VERTICAL ROOM
    ========================================================= */
-
-/*
-  Every rank is independently positioned.
-
-  There is NO centered stack.
-
-  The V is created by the actual left/bottom positions.
-*/
 
 .leaderboards-page
 .podium-slot {
@@ -559,16 +550,16 @@
 
   width:
     clamp(
-      210px,
-      18vw,
-      285px
+      230px,
+      19vw,
+      300px
     );
 
   height:
     clamp(
-      340px,
-      48vh,
-      500px
+      430px,
+      58vh,
+      680px
     );
 
   display: flex;
@@ -590,7 +581,6 @@
     transform 0.3s ease;
 
 }
-
 
 /* =========================================================
    10. TRUE V-SHAPE POSITIONS
@@ -830,8 +820,13 @@
 }
 
 
+/* =========================================================
+   PODIUM CHARACTERS — LARGE HERO SCALE
+   ========================================================= */
+
+
 /* ---------------------------------------------------------
-   RANK 1 CHARACTER
+   RANK 1
    --------------------------------------------------------- */
 
 .leaderboards-page
@@ -840,16 +835,16 @@
 
   height:
     clamp(
-      345px,
-      49vh,
-      520px
+      480px,
+      63vh,
+      720px
     );
 
 }
 
 
 /* ---------------------------------------------------------
-   RANK 2 / 3 CHARACTER
+   RANK 2 / 3
    --------------------------------------------------------- */
 
 .leaderboards-page
@@ -862,16 +857,16 @@
 
   height:
     clamp(
-      280px,
-      38vh,
-      385px
+      390px,
+      52vh,
+      580px
     );
 
 }
 
 
 /* ---------------------------------------------------------
-   RANK 4 / 5 CHARACTER
+   RANK 4 / 5
    --------------------------------------------------------- */
 
 .leaderboards-page
@@ -884,13 +879,12 @@
 
   height:
     clamp(
-      225px,
-      31vh,
-      335px
+      315px,
+      43vh,
+      500px
     );
 
 }
-
 
 /* =========================================================
    13. PODIUM CARDS
@@ -2803,51 +2797,14 @@
   and (min-width: 901px) {
 
   .leaderboards-page
-  .rank-hero {
-
-    min-height:
-      560px;
-
-  }
-
-
-  .leaderboards-page
-  .rank-podium-stage {
-
-    bottom:
-      5.25rem;
-
-    height:
-      clamp(
-        370px,
-        61vh,
-        470px
-      );
-
-  }
-
-
-  .leaderboards-page
-  .position-rank-2,
-
-  .leaderboards-page
-  .position-rank-3 {
-
-    bottom:
-      2.25rem;
-
-  }
-
-
-  .leaderboards-page
   .position-rank-1
   .podium-char-img {
 
     height:
       clamp(
-        245px,
-        39vh,
-        350px
+        400px,
+        54vh,
+        600px
       );
 
   }
@@ -2863,9 +2820,9 @@
 
     height:
       clamp(
-        195px,
-        31vh,
-        290px
+        325px,
+        46vh,
+        485px
       );
 
   }
@@ -2881,15 +2838,14 @@
 
     height:
       clamp(
-        155px,
-        25vh,
-        235px
+        265px,
+        38vh,
+        420px
       );
 
   }
 
 }
-
 
 /* =========================================================
    34. MOBILE / SMALL TABLET
