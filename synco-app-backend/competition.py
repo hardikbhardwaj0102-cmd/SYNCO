@@ -5,6 +5,7 @@
 
 from datetime import datetime, timedelta, timezone
 from zoneinfo import ZoneInfo
+import copy
 import math
 import random
 import re
@@ -387,6 +388,21 @@ def as_utc_naive(value):
     return value.astimezone(timezone.utc).replace(tzinfo=None)
 
 
+def utc_iso(value):
+    """Serialize a DB UTC datetime as an explicit UTC ISO-8601 value.
+
+    The database stores naive UTC datetimes for compatibility. JavaScript
+    treats a timezone-less ISO string as browser-local time, which caused
+    tournament invite expiry/countdown values to appear several hours early.
+    Always expose these timestamps with an explicit UTC suffix.
+    """
+    if value is None:
+        return None
+
+    value = as_utc_naive(value)
+    return value.isoformat() + "Z"
+
+
 def slugify(value):
 
     value = str(value or "").strip().lower()
@@ -713,23 +729,11 @@ def serialize_participant(participant):
             participant.registration_status
         ),
 
-        "registeredAt": (
-            participant.registered_at.isoformat()
-            if participant.registered_at
-            else None
-        ),
+        "registeredAt": utc_iso(participant.registered_at),
 
-        "acceptedAt": (
-            participant.accepted_at.isoformat()
-            if participant.accepted_at
-            else None
-        ),
+        "acceptedAt": utc_iso(participant.accepted_at),
 
-        "eliminatedAt": (
-            participant.eliminated_at.isoformat()
-            if participant.eliminated_at
-            else None
-        ),
+        "eliminatedAt": utc_iso(participant.eliminated_at),
 
         "teamRoster": team_roster,
 
@@ -1123,41 +1127,17 @@ def serialize_competition(
             competition.is_published
         ),
 
-        "registrationStart": (
-            competition.registration_start.isoformat()
-            if competition.registration_start
-            else None
-        ),
+        "registrationStart": utc_iso(competition.registration_start),
 
-        "registrationEnd": (
-            competition.registration_end.isoformat()
-            if competition.registration_end
-            else None
-        ),
+        "registrationEnd": utc_iso(competition.registration_end),
 
-        "competitionStart": (
-            competition.competition_start.isoformat()
-            if competition.competition_start
-            else None
-        ),
+        "competitionStart": utc_iso(competition.competition_start),
 
-        "competitionEnd": (
-            competition.competition_end.isoformat()
-            if competition.competition_end
-            else None
-        ),
+        "competitionEnd": utc_iso(competition.competition_end),
 
-        "createdAt": (
-            competition.created_at.isoformat()
-            if competition.created_at
-            else None
-        ),
+        "createdAt": utc_iso(competition.created_at),
 
-        "updatedAt": (
-            competition.updated_at.isoformat()
-            if competition.updated_at
-            else None
-        ),
+        "updatedAt": utc_iso(competition.updated_at),
     }
 
     if include_children:
@@ -2379,9 +2359,12 @@ def set_roster_player_status(participant, user_id, status):
     if not isinstance(roster, list):
         return False
 
+    # JSON columns are not mutable-tracked by default. Rebuild the list so
+    # SQLAlchemy always sees a new value and persists the status change.
+    updated_roster = copy.deepcopy(roster)
     changed = False
 
-    for item in roster:
+    for item in updated_roster:
         if not isinstance(item, dict):
             continue
 
@@ -2394,7 +2377,9 @@ def set_roster_player_status(participant, user_id, status):
             item["status"] = str(status).upper()
             changed = True
 
-    participant.team_roster = roster
+    if changed:
+        participant.team_roster = updated_roster
+
     return changed
 
 
@@ -2450,6 +2435,12 @@ def serialize_team_invite(invite):
     invite_data = invite.to_dict()
     participant = invite.participant
     competition = invite.competition
+
+    invite_data["expiresAt"] = utc_iso(invite.expires_at)
+    invite_data["createdAt"] = utc_iso(invite.created_at)
+    invite_data["respondedAt"] = utc_iso(invite.responded_at)
+    invite_data["halfwayRemindedAt"] = utc_iso(invite.halfway_reminded_at)
+    invite_data["lastHourRemindedAt"] = utc_iso(invite.last_hour_reminded_at)
 
     invite_data["competitionTitle"] = (
         competition.title if competition else "Tournament"
@@ -2513,11 +2504,7 @@ def enrich_roster_with_invites(participant, roster_payload=None):
         item["inviteId"] = invite.id
         item["inviteStatus"] = invite.status
         item["inviteType"] = invite.invite_type
-        item["inviteExpiresAt"] = (
-            invite.expires_at.isoformat()
-            if invite.expires_at
-            else None
-        )
+        item["inviteExpiresAt"] = utc_iso(invite.expires_at)
         item["replacesUserId"] = invite.replaces_user_id
 
     return payload
@@ -3071,6 +3058,24 @@ def process_competition_registration_timers(competition, commit=True):
         changed = True
 
     # -----------------------------------------------------
+    # Normalize team state before confirming entries.
+    # Older registrations could be stored as ACCEPTED while one or more
+    # teammate invitations were still pending. That incorrectly consumes a
+    # confirmed slot and makes the UI show an accepted team with an incomplete
+    # roster. Treat such a team as pending until every roster slot is accepted.
+    # -----------------------------------------------------
+
+    for participant in get_team_participant_rows(competition):
+
+        if (
+            participant.registration_status == "ACCEPTED"
+            and not team_is_complete(participant, competition)
+        ):
+            participant.registration_status = "PENDING"
+            participant.accepted_at = None
+            changed = True
+
+    # -----------------------------------------------------
     # Confirm full pending teams
     # -----------------------------------------------------
 
@@ -3276,6 +3281,16 @@ def get_registration_info(competition_id):
         .first()
     )
 
+    # Team members do not have CompetitionParticipant.user_id pointing to
+    # themselves; only the captain owns that field. Once an invite is
+    # accepted, resolve the team through the accepted roster so the invited
+    # player sees the same confirmed/pending state as the captain.
+    if current_registration is None and is_team:
+        current_registration = get_committed_team_for_user(
+            competition,
+            user.id,
+        )
+
     # All current memberships for the competition game. Owner is simply
     # another membership; there is no special registration permission.
     memberships = (
@@ -3480,11 +3495,7 @@ def get_registration_info(competition_id):
         "success": True,
         "competition": serialize_competition(competition),
         "registrationOpen": registration_open,
-        "registrationDeadline": (
-            competition.registration_end.isoformat()
-            if competition.registration_end
-            else None
-        ),
+        "registrationDeadline": utc_iso(competition.registration_end),
         "full": capacity_full,
         "capacity": competition.max_participants,
         "registeredCount": confirmed_count,
@@ -3499,6 +3510,12 @@ def get_registration_info(competition_id):
         ),
         "modeConfig": mode_config,
         "registrationSettings": _registration_settings(competition),
+        "currentUserId": user.id,
+        "isCaptain": bool(
+            serialized_current_registration
+            and str(serialized_current_registration.get("participantType", "")).upper() == "TEAM"
+            and serialized_current_registration.get("captainId") == user.id
+        ),
         "currentUserGameLinked": user_has_linked_game(
             user,
             competition.game,
@@ -3931,7 +3948,7 @@ def register_team(competition_id):
                 "playerName": player_name,
                 "actionStatus": "PENDING",
                 "actionUrl": f"/competitions/{competition.id}/register",
-                "expiresAt": invite.expires_at.isoformat(),
+                "expiresAt": utc_iso(invite.expires_at),
             },
         )
 
@@ -3945,7 +3962,7 @@ def register_team(competition_id):
             "captainId": user.id,
             "selectedUserIds": member_ids,
             "inviteIds": [invite.id for invite in invite_rows],
-            "expiresAt": min((invite.expires_at for invite in invite_rows), default=created_at).isoformat(),
+            "expiresAt": utc_iso(min((invite.expires_at for invite in invite_rows), default=created_at)),
         },
     )
 
@@ -4171,7 +4188,8 @@ def accept_team_invite(competition_id, invite_id):
                 "message": "The player being replaced is no longer on this roster."
             }), 400
 
-        current_item.update({
+        replacement_item = dict(current_item)
+        replacement_item.update({
             "userId": user.id,
             "uid": user.uid,
             "name": user.username or user.name or f"Player {user.id}",
@@ -4182,7 +4200,11 @@ def accept_team_invite(competition_id, invite_id):
             "replacedFromUserId": outgoing_user_id,
         })
 
-        participant.team_roster = participant.team_roster or []
+        participant.team_roster = [
+            replacement_item if int(item.get("userId")) == int(outgoing_user_id) else dict(item)
+            for item in (participant.team_roster or [])
+            if isinstance(item, dict)
+        ]
         substitution.status = "COMPLETED"
         substitution.completed_at = datetime.utcnow()
         substitution.replacement_user_id = replacement_user_id
@@ -4278,9 +4300,9 @@ def accept_team_invite(competition_id, invite_id):
         }
 
         participant.team_roster = [
-            new_item if item is old_item else item
+            dict(new_item) if isinstance(item, dict) and int(item.get("userId")) == int(old_user_id) else dict(item)
             for item in (participant.team_roster or [])
-            if item is not None
+            if isinstance(item, dict)
         ]
 
         create_audit_log(
@@ -4660,7 +4682,7 @@ def replace_team_player(competition_id):
             "replacesUserId": outgoing_user_id,
             "actionStatus": "PENDING",
             "actionUrl": f"/competitions/{competition.id}/register",
-            "expiresAt": invite.expires_at.isoformat(),
+            "expiresAt": utc_iso(invite.expires_at),
         },
     )
 
@@ -4681,7 +4703,7 @@ def replace_team_player(competition_id):
             "replacementUserId": replacement_user_id,
             "actionStatus": "PENDING",
             "actionUrl": f"/competitions/{competition.id}/register",
-            "expiresAt": invite.expires_at.isoformat(),
+            "expiresAt": utc_iso(invite.expires_at),
         },
     )
 
@@ -4695,7 +4717,7 @@ def replace_team_player(competition_id):
             "outgoingUserId": outgoing_user_id,
             "replacementUserId": replacement_user_id,
             "inviteId": invite.id,
-            "expiresAt": invite.expires_at.isoformat(),
+            "expiresAt": utc_iso(invite.expires_at),
         },
     )
 
@@ -4975,7 +4997,7 @@ def request_substitution(competition_id):
             "teamName": team_name,
             "actionStatus": "PENDING",
             "actionUrl": f"/live-tournament/{competition.id}",
-            "decisionDeadline": decision_deadline.isoformat(),
+            "decisionDeadline": utc_iso(decision_deadline),
         },
     )
 
@@ -5002,7 +5024,7 @@ def request_substitution(competition_id):
                 "teamName": team_name,
                 "actionStatus": "PENDING",
                 "actionUrl": f"/competitions/{competition.id}/register",
-                "decisionDeadline": decision_deadline.isoformat(),
+                "decisionDeadline": utc_iso(decision_deadline),
             },
         )
 
@@ -5016,7 +5038,7 @@ def request_substitution(competition_id):
             "outgoingUserId": outgoing_user_id,
             "replacementUserId": replacement_user_id,
             "reason": reason,
-            "decisionDeadline": decision_deadline.isoformat(),
+            "decisionDeadline": utc_iso(decision_deadline),
         },
     )
 
@@ -5170,7 +5192,7 @@ def approve_substitution(competition_id, request_id):
             "teamName": team_name,
             "actionStatus": "PENDING",
             "actionUrl": f"/competitions/{competition.id}/register",
-            "expiresAt": invite.expires_at.isoformat(),
+            "expiresAt": utc_iso(invite.expires_at),
         },
     )
 
@@ -5370,6 +5392,15 @@ def withdraw_registration(competition_id):
             "success": False,
             "message": "No active registration found for your account."
         }), 404
+
+    if (
+        str(participant.participant_type or "").upper() == "TEAM"
+        and participant.user_id != user.id
+    ):
+        return jsonify({
+            "success": False,
+            "message": "Only the team captain can withdraw the tournament registration."
+        }), 403
 
     if participant.registration_status not in ("PENDING", "ACCEPTED"):
         return jsonify({

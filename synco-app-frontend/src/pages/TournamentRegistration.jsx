@@ -1,26 +1,18 @@
 import React, { useCallback, useEffect, useMemo, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import {
-    AlertCircle,
     ArrowLeft,
-    CalendarClock,
     Check,
     ChevronRight,
-    CircleDot,
     Clock3,
     Gamepad2,
-    Loader2,
-    LockKeyhole,
-    RefreshCw,
-    RotateCcw,
-    Send,
     ShieldCheck,
-    TimerReset,
-    Trophy,
-    UserCheck,
-    UserPlus,
-    UserX,
     Users,
+    Trophy,
+    AlertCircle,
+    Loader2,
+    RefreshCw,
+    UserPlus,
     X,
 } from "lucide-react";
 import "../styles/pages/TournamentRegistration.css";
@@ -55,12 +47,26 @@ async function apiRequest(path, options = {}) {
     return data;
 }
 
+const valueOrDash = (value) => value ?? "—";
+
+function parseApiDate(value) {
+    if (!value) return null;
+
+    const raw = String(value).trim();
+    if (!raw) return null;
+
+    // Tournament datetimes were historically stored as naive UTC in the DB.
+    // Treat timezone-less API values as UTC instead of browser-local time.
+    const hasTimezone = /(?:Z|[+\-]\d{2}:?\d{2})$/i.test(raw);
+    const date = new Date(hasTimezone ? raw : `${raw}Z`);
+
+    return Number.isNaN(date.getTime()) ? null : date;
+}
+
 function formatDate(value) {
     if (!value) return "—";
-
-    const date = new Date(value);
-    if (Number.isNaN(date.getTime())) return value;
-
+    const date = parseApiDate(value);
+    if (!date) return value;
     return date.toLocaleString("en-IN", {
         timeZone: "Asia/Kolkata",
         day: "2-digit",
@@ -73,25 +79,6 @@ function formatDate(value) {
     });
 }
 
-function formatRemaining(value, now = Date.now()) {
-    if (!value) return "No expiry";
-
-    const target = new Date(value).getTime();
-    if (Number.isNaN(target)) return "";
-
-    const diff = target - now;
-    if (diff <= 0) return "Expired";
-
-    const totalMinutes = Math.floor(diff / 60000);
-    const days = Math.floor(totalMinutes / 1440);
-    const hours = Math.floor((totalMinutes % 1440) / 60);
-    const minutes = totalMinutes % 60;
-
-    if (days > 0) return `${days}d ${hours}h left`;
-    if (hours > 0) return `${hours}h ${minutes}m left`;
-    return `${Math.max(1, minutes)}m left`;
-}
-
 function statusLabel(status) {
     return String(status || "")
         .replaceAll("_", " ")
@@ -99,51 +86,35 @@ function statusLabel(status) {
         .replace(/(^|\s)\S/g, (letter) => letter.toUpperCase());
 }
 
-function statusClass(status) {
-    return String(status || "")
-        .toLowerCase()
-        .replaceAll("_", "-");
-}
-
 function getGameName(competition) {
     if (!competition) return "Tournament";
-
     if (competition.game && typeof competition.game === "object") {
         return competition.game.name || competition.game.slug || "Game";
     }
-
     return competition.game || competition.gameId || "Game";
 }
 
-function userDisplayName(user) {
-    return user?.username || user?.name || `Player ${user?.id || ""}`.trim();
+function getMemberCountLabel(count, teamSize) {
+    if (!teamSize) return `${count} member${count === 1 ? "" : "s"}`;
+    return `${count}/${teamSize} players`;
 }
 
-function avatarText(name) {
-    return String(name || "P")
-        .trim()
-        .split(/\s+/)
-        .slice(0, 2)
-        .map((part) => part[0])
-        .join("")
-        .toUpperCase() || "P";
-}
+function formatRemaining(value, nowMs) {
+    const expiry = parseApiDate(value);
+    if (!expiry) return "—";
 
-function teamStatusDescription(status) {
-    switch (String(status || "").toUpperCase()) {
-        case "PENDING":
-            return "Waiting for selected teammates to accept their invitations.";
-        case "ACCEPTED":
-            return "Every required player has accepted. Your team is confirmed.";
-        case "LOCKED":
-            return "Roster locked for competition. Changes require host approval.";
-        case "CANCELLED":
-            return "This registration was cancelled before the roster was completed.";
-        case "REJECTED":
-            return "This registration was rejected.";
-        default:
-            return "";
-    }
+    const remainingMs = expiry.getTime() - nowMs;
+    if (remainingMs <= 0) return "Expired";
+
+    const totalSeconds = Math.floor(remainingMs / 1000);
+    const days = Math.floor(totalSeconds / 86400);
+    const hours = Math.floor((totalSeconds % 86400) / 3600);
+    const minutes = Math.floor((totalSeconds % 3600) / 60);
+    const seconds = totalSeconds % 60;
+
+    if (days > 0) return `${days}d ${hours}h ${minutes}m`;
+    if (hours > 0) return `${hours}h ${minutes}m ${seconds}s`;
+    return `${minutes}m ${seconds}s`;
 }
 
 export default function TournamentRegistration() {
@@ -153,26 +124,18 @@ export default function TournamentRegistration() {
     const [data, setData] = useState(null);
     const [selectedClubId, setSelectedClubId] = useState(null);
     const [selectedMemberIds, setSelectedMemberIds] = useState([]);
-
     const [loading, setLoading] = useState(true);
-    const [refreshing, setRefreshing] = useState(false);
     const [submitting, setSubmitting] = useState(false);
-    const [actionLoading, setActionLoading] = useState(false);
-
+    const [refreshing, setRefreshing] = useState(false);
+    const [withdrawing, setWithdrawing] = useState(false);
+    const [showWithdrawConfirm, setShowWithdrawConfirm] = useState(false);
+    const [showReplaceModal, setShowReplaceModal] = useState(false);
+    const [replacementOutgoingUserId, setReplacementOutgoingUserId] = useState(null);
+    const [replacementUserId, setReplacementUserId] = useState("");
+    const [replacing, setReplacing] = useState(false);
+    const [nowMs, setNowMs] = useState(() => Date.now());
     const [error, setError] = useState("");
     const [success, setSuccess] = useState("");
-
-    const [showWithdrawConfirm, setShowWithdrawConfirm] = useState(false);
-    const [showReplace, setShowReplace] = useState(false);
-    const [replaceTargetId, setReplaceTargetId] = useState(null);
-    const [replacementUserId, setReplacementUserId] = useState(null);
-
-    const [showSubstitution, setShowSubstitution] = useState(false);
-    const [substitutionOutgoingId, setSubstitutionOutgoingId] = useState(null);
-    const [substitutionReplacementId, setSubstitutionReplacementId] = useState(null);
-    const [substitutionReason, setSubstitutionReason] = useState("");
-
-    const [nowTick, setNowTick] = useState(Date.now());
 
     const loadRegistration = useCallback(async (showLoader = false) => {
         if (!competitionId) {
@@ -184,16 +147,23 @@ export default function TournamentRegistration() {
         try {
             if (showLoader) setLoading(true);
             setError("");
-
             const response = await apiRequest(
                 `/api/competitions/${competitionId}/registration-info`
             );
-
             setData(response);
 
-            const registration = response?.myRegistration;
-            if (registration?.clubId) {
-                setSelectedClubId(registration.clubId);
+            const currentRegistration = response?.myRegistration;
+            const currentClubId = currentRegistration?.clubId;
+
+            if (currentClubId) {
+                setSelectedClubId(currentClubId);
+                setSelectedMemberIds(
+                    (currentRegistration?.teamRoster || [])
+                        .map((member) => Number(member.userId))
+                        .filter((id) => Number.isFinite(id))
+                );
+            } else {
+                setSelectedMemberIds([]);
             }
         } catch (err) {
             console.error("Failed to load tournament registration:", err);
@@ -208,125 +178,39 @@ export default function TournamentRegistration() {
     }, [loadRegistration]);
 
     useEffect(() => {
-        const timer = window.setInterval(() => {
-            setNowTick(Date.now());
-        }, 30000);
+        const interval = window.setInterval(() => {
+            setNowMs(Date.now());
+        }, 1000);
 
-        return () => window.clearInterval(timer);
+        return () => window.clearInterval(interval);
     }, []);
 
-    const competition = data?.competition || {};
-    const clubs = data?.myClubs || [];
-    const myInvites = data?.myInvites || [];
-    const substitutionRequests = data?.substitutionRequests || [];
-    const modeConfig = data?.modeConfig || {};
-    const registrationSettings = data?.registrationSettings || {};
+    useEffect(() => {
+        const pendingInvites = data?.myInvites || [];
+        const roster = data?.myRegistration?.teamRoster || [];
+        const hasPendingInvite = pendingInvites.some(
+            (invite) => String(invite.status || "").toUpperCase() === "PENDING"
+        );
+        const hasPendingRosterInvite = roster.some(
+            (member) => String(member.status || "").toUpperCase() === "PENDING"
+        );
 
-    const isTeamCompetition =
-        String(competition.participantType || "").toUpperCase() === "TEAM";
+        if (!hasPendingInvite && !hasPendingRosterInvite) {
+            return undefined;
+        }
 
-    const teamSize = Number(competition.teamSize || 0);
-    const currentRegistration = data?.myRegistration || null;
-    const currentStatus = String(
-        currentRegistration?.registrationStatus || ""
-    ).toUpperCase();
+        // Keep captain and invitee views synchronized after an invitation is
+        // accepted/declined from another browser or from the notification UI.
+        const interval = window.setInterval(() => {
+            loadRegistration(false);
+        }, 12000);
 
-    const selectedClub = useMemo(
-        () => clubs.find(
-            (club) => String(club.id) === String(selectedClubId)
-        ) || null,
-        [clubs, selectedClubId]
-    );
-
-    const currentRoster = currentRegistration?.teamRoster || [];
-
-    const isCaptain =
-        isTeamCompetition &&
-        Number(currentRegistration?.captainId || currentRegistration?.userId) > 0;
-
-    const canModifyPreDeadline =
-        isTeamCompetition &&
-        ["PENDING", "ACCEPTED"].includes(currentStatus) &&
-        !!data?.registrationOpen;
-
-    const canWithdraw =
-        ["PENDING", "ACCEPTED"].includes(currentStatus) &&
-        !!data?.registrationOpen;
-
-    const acceptedRoster = useMemo(
-        () => currentRoster.filter(
-            (member) =>
-                String(member.status || "ACCEPTED").toUpperCase() === "ACCEPTED"
-        ),
-        [currentRoster]
-    );
-
-    const pendingRoster = useMemo(
-        () => currentRoster.filter(
-            (member) =>
-                String(member.status || "").toUpperCase() === "PENDING"
-        ),
-        [currentRoster]
-    );
-
-    const replaceableRoster = useMemo(
-        () => currentRoster.filter((member) => {
-            const status = String(member.status || "").toUpperCase();
-            const isCaptainMember = String(member.role || "").toUpperCase() === "CAPTAIN";
-            return !isCaptainMember && ["ACCEPTED", "DECLINED", "EXPIRED", "CANCELLED"].includes(status);
-        }),
-        [currentRoster]
-    );
-
-    const rosterUserIds = useMemo(
-        () => new Set(
-            currentRoster
-                .map((member) => Number(member.userId))
-                .filter((id) => Number.isFinite(id))
-        ),
-        [currentRoster]
-    );
-
-    const selectableMembers = useMemo(() => {
-        if (!selectedClub) return [];
-
-        return (selectedClub.members || []).filter((member) => {
-            if (member.isCurrentUser) return true;
-            return member.eligible !== false && !rosterUserIds.has(Number(member.userId));
-        });
-    }, [selectedClub, rosterUserIds]);
-
-    const selectedMemberCount = selectedMemberIds.length;
-
-    const selectedEligible =
-        !!selectedClub &&
-        selectedClub.eligible !== false &&
-        selectedMemberCount === teamSize &&
-        selectedMemberIds.every((id) => {
-            const member = selectedClub.members?.find(
-                (item) => Number(item.userId) === Number(id)
-            );
-            return member?.eligible !== false;
-        });
-
-    const replacementCandidates = useMemo(() => {
-        if (!currentRegistration || !selectedClub) return [];
-
-        return (selectedClub.members || []).filter((member) => {
-            const memberId = Number(member.userId);
-            return (
-                member.eligible !== false &&
-                !rosterUserIds.has(memberId) &&
-                memberId !== Number(currentRegistration.captainId || currentRegistration.userId)
-            );
-        });
-    }, [currentRegistration, selectedClub, rosterUserIds]);
-
-    const substitutionCandidates = replacementCandidates;
-
-    const currentSubstitutionRequest = substitutionRequests.find(
-        (request) => String(request.status || "").toUpperCase() === "PENDING"
-    );
+        return () => window.clearInterval(interval);
+    }, [
+        data?.myInvites,
+        data?.myRegistration?.teamRoster,
+        loadRegistration,
+    ]);
 
     const handleRefresh = async () => {
         setRefreshing(true);
@@ -338,28 +222,121 @@ export default function TournamentRegistration() {
         }
     };
 
+    const competition = data?.competition || {};
+    const modeConfig = data?.modeConfig || {};
+    const clubs = data?.myClubs || [];
+    const teamSize = Number(competition.teamSize || 0);
+    const isTeamCompetition =
+        String(competition.participantType || "").toUpperCase() === "TEAM";
+
+    const selectedClub = useMemo(
+        () => clubs.find((club) => String(club.id) === String(selectedClubId)) || null,
+        [clubs, selectedClubId]
+    );
+
+    const currentRegistration = data?.myRegistration || selectedClub?.registration || null;
+    const currentStatus = String(currentRegistration?.registrationStatus || "").toUpperCase();
+    const currentUserId = Number(data?.currentUserId || 0);
+    const isCaptain = Boolean(
+        data?.isCaptain ||
+        (currentRegistration?.participantType === "TEAM" &&
+            Number(currentRegistration?.captainId || currentRegistration?.userId || 0) === currentUserId)
+    );
+
+    const pendingInvites = (data?.myInvites || []).filter(
+        (invite) => String(invite.status || "").toUpperCase() === "PENDING"
+    );
+
+    const replacementCandidates = useMemo(() => {
+        if (!selectedClub || !currentRegistration || !isCaptain) return [];
+
+        const currentRosterIds = new Set(
+            (currentRegistration.teamRoster || [])
+                .map((member) => Number(member.userId))
+                .filter((id) => Number.isFinite(id))
+        );
+
+        return (selectedClub.members || []).filter((member) => {
+            const memberId = Number(member.userId);
+            if (!Number.isFinite(memberId)) return false;
+            if (memberId === currentUserId) return false;
+            if (memberId === Number(replacementOutgoingUserId)) return false;
+            if (currentRosterIds.has(memberId)) return false;
+
+            return (
+                member.eligible !== false &&
+                !member.committedParticipantId
+            );
+        });
+    }, [
+        selectedClub,
+        currentRegistration,
+        isCaptain,
+        currentUserId,
+        replacementOutgoingUserId,
+    ]);
+
+    const hasActiveRegistration = ["PENDING", "ACCEPTED", "LOCKED", "ELIMINATED"].includes(
+        currentStatus
+    );
+
+    const activeRegistrationStatus = String(
+        selectedClub?.registration?.registrationStatus ||
+        currentRegistration?.registrationStatus ||
+        ""
+    ).toUpperCase();
+
+    const hasSelectedClubRegistration = [
+        "PENDING",
+        "ACCEPTED",
+        "LOCKED",
+        "ELIMINATED",
+    ].includes(activeRegistrationStatus);
+
+    const selectedEligible =
+        !!selectedClub &&
+        selectedClub.eligible !== false &&
+        !hasSelectedClubRegistration &&
+        selectedMemberIds.length === teamSize;
+
     const handleClubSelect = (club) => {
-        if (!club?.eligible) return;
+        const registrationStatus = String(
+            club.registration?.registrationStatus ||
+            ""
+        ).toUpperCase();
+
+        if (
+            club.registration &&
+            registrationStatus !== "REJECTED"
+        ) {
+            return;
+        }
 
         setSelectedClubId(club.id);
 
-        const captain = (club.members || []).find(
-            (member) => member.isCurrentUser
-        );
+        const existingRoster =
+            club.registration?.teamRoster || [];
 
-        setSelectedMemberIds(
-            captain ? [Number(captain.userId)] : []
-        );
+        if (existingRoster.length > 0) {
+            setSelectedMemberIds(
+                existingRoster
+                    .map((member) => Number(member.userId))
+                    .filter((id) => Number.isFinite(id))
+            );
+        } else {
+            setSelectedMemberIds([]);
+        }
 
         setError("");
         setSuccess("");
     };
 
-    const toggleMember = (member) => {
-        const memberId = Number(member?.userId);
-        if (!Number.isFinite(memberId) || member.eligible === false) return;
+    const toggleMember = (memberUserId) => {
+        const memberId = Number(memberUserId);
 
-        if (member.isCurrentUser) return;
+        if (!Number.isFinite(memberId)) {
+            return;
+        }
 
         setSelectedMemberIds((previous) => {
             if (previous.includes(memberId)) {
@@ -372,7 +349,134 @@ export default function TournamentRegistration() {
 
             return [...previous, memberId];
         });
+
+        setError("");
     };
+
+    const respondToInvite = async (inviteId, action) => {
+        setError("");
+        setSuccess("");
+
+        try {
+            await apiRequest(
+                `/api/competitions/${competitionId}/registration/invites/${inviteId}/${action}`,
+                { method: "POST" }
+            );
+
+            setSuccess(
+                action === "accept"
+                    ? "Tournament invitation accepted."
+                    : "Tournament invitation declined."
+            );
+
+            await loadRegistration(false);
+        } catch (err) {
+            console.error(`Tournament invitation ${action} failed:`, err);
+            setError(
+                err.message ||
+                `Unable to ${action} the tournament invitation.`
+            );
+
+            // A response can race with another session. Refresh immediately
+            // so the screen shows the authoritative server state.
+            await loadRegistration(false);
+        }
+    };
+
+    const openReplaceModal = (userId) => {
+        setReplacementOutgoingUserId(Number(userId));
+        setReplacementUserId("");
+        setShowReplaceModal(true);
+        setError("");
+        setSuccess("");
+    };
+
+    const closeReplaceModal = () => {
+        if (replacing) return;
+        setShowReplaceModal(false);
+        setReplacementOutgoingUserId(null);
+        setReplacementUserId("");
+    };
+
+    const handleReplaceTeamPlayer = async () => {
+        if (!replacementOutgoingUserId || !replacementUserId) {
+            setError("Select a replacement player.");
+            return;
+        }
+
+        setError("");
+        setSuccess("");
+
+        try {
+            setReplacing(true);
+
+            const response = await apiRequest(
+                `/api/competitions/${competitionId}/registration/replace`,
+                {
+                    method: "POST",
+                    body: JSON.stringify({
+                        outgoingUserId: replacementOutgoingUserId,
+                        replacementUserId: Number(replacementUserId),
+                    }),
+                }
+            );
+
+            setSuccess(
+                response.message ||
+                "Replacement invitation sent. The current player remains until the replacement accepts."
+            );
+
+            setShowReplaceModal(false);
+            setReplacementOutgoingUserId(null);
+            setReplacementUserId("");
+            await loadRegistration(false);
+        } catch (err) {
+            console.error("Tournament team replacement failed:", err);
+            setError(
+                err.message ||
+                "Unable to send the replacement invitation."
+            );
+        } finally {
+            setReplacing(false);
+        }
+    };
+
+    const handleWithdrawRegistration = async () => {
+        setError("");
+        setSuccess("");
+
+        try {
+            setWithdrawing(true);
+
+            const response = await apiRequest(
+                `/api/competitions/${competitionId}/registration/withdraw`,
+                {
+                    method: "DELETE",
+                }
+            );
+
+            setShowWithdrawConfirm(false);
+            setSelectedMemberIds([]);
+            setSuccess(response.message || "Registration withdrawn successfully.");
+
+            await loadRegistration(false);
+        } catch (err) {
+            console.error("Tournament registration withdrawal failed:", err);
+            setError(
+                err.message ||
+                "Unable to withdraw tournament registration."
+            );
+        } finally {
+            setWithdrawing(false);
+        }
+    };
+
+    const canWithdrawRegistration =
+        ["PENDING", "ACCEPTED"].includes(currentStatus) &&
+        (!isTeamCompetition || isCaptain) &&
+        ["REGISTRATION_OPEN", "REGISTRATION_CLOSED"].includes(
+            String(competition.status || "").toUpperCase()
+        );
 
     const handleRegister = async () => {
         setError("");
@@ -380,11 +484,6 @@ export default function TournamentRegistration() {
 
         if (!data?.registrationOpen) {
             setError("Registration is not currently open.");
-            return;
-        }
-
-        if (!data?.currentUserGameLinked) {
-            setError("Link the tournament game to your SYNCO profile before registering.");
             return;
         }
 
@@ -396,7 +495,7 @@ export default function TournamentRegistration() {
 
             if (selectedMemberIds.length !== teamSize) {
                 setError(
-                    `Select exactly ${teamSize} players including yourself as captain.`
+                    `Select exactly ${teamSize} player${teamSize === 1 ? "" : "s"} for this tournament.`
                 );
                 return;
             }
@@ -421,155 +520,13 @@ export default function TournamentRegistration() {
                 body: JSON.stringify(body),
             });
 
-            setSuccess(
-                response.message || "Registration submitted successfully."
-            );
-
+            setSuccess(response.message || "Registration submitted successfully.");
             await loadRegistration(false);
         } catch (err) {
             console.error("Tournament registration failed:", err);
             setError(err.message || "Unable to register for this tournament.");
         } finally {
             setSubmitting(false);
-        }
-    };
-
-    const handleInviteAction = async (inviteId, action) => {
-        try {
-            setActionLoading(true);
-            setError("");
-            setSuccess("");
-
-            const response = await apiRequest(
-                `/api/competitions/${competitionId}/registration/invites/${inviteId}/${action}`,
-                {
-                    method: "POST",
-                }
-            );
-
-            setSuccess(response.message || `Invitation ${action}ed.`);
-            await loadRegistration(false);
-        } catch (err) {
-            console.error("Tournament invite action failed:", err);
-            setError(err.message || "Unable to update the tournament invitation.");
-            await loadRegistration(false);
-        } finally {
-            setActionLoading(false);
-        }
-    };
-
-    const handleWithdraw = async () => {
-        try {
-            setActionLoading(true);
-            setError("");
-            setSuccess("");
-
-            const response = await apiRequest(
-                `/api/competitions/${competitionId}/registration/withdraw`,
-                {
-                    method: "DELETE",
-                }
-            );
-
-            setShowWithdrawConfirm(false);
-            setSuccess(response.message || "Tournament registration withdrawn.");
-            setSelectedMemberIds([]);
-            await loadRegistration(false);
-        } catch (err) {
-            setError(err.message || "Unable to withdraw registration.");
-        } finally {
-            setActionLoading(false);
-        }
-    };
-
-    const openReplaceModal = (userId) => {
-        setReplaceTargetId(Number(userId));
-        setReplacementUserId(null);
-        setError("");
-        setSuccess("");
-        setShowReplace(true);
-    };
-
-    const handleReplacement = async () => {
-        if (!replaceTargetId || !replacementUserId) {
-            setError("Select a replacement player.");
-            return;
-        }
-
-        try {
-            setActionLoading(true);
-            setError("");
-            setSuccess("");
-
-            const response = await apiRequest(
-                `/api/competitions/${competitionId}/registration/replace`,
-                {
-                    method: "POST",
-                    body: JSON.stringify({
-                        outgoingUserId: replaceTargetId,
-                        replacementUserId,
-                    }),
-                }
-            );
-
-            setShowReplace(false);
-            setReplaceTargetId(null);
-            setReplacementUserId(null);
-            setSuccess(response.message || "Replacement invitation sent.");
-            await loadRegistration(false);
-        } catch (err) {
-            setError(err.message || "Unable to send replacement invitation.");
-        } finally {
-            setActionLoading(false);
-        }
-    };
-
-    const openSubstitutionModal = () => {
-        setSubstitutionOutgoingId(null);
-        setSubstitutionReplacementId(null);
-        setSubstitutionReason("");
-        setError("");
-        setSuccess("");
-        setShowSubstitution(true);
-    };
-
-    const handleSubstitutionRequest = async () => {
-        if (!substitutionOutgoingId || !substitutionReplacementId) {
-            setError("Select both the outgoing player and replacement player.");
-            return;
-        }
-
-        if (!substitutionReason.trim()) {
-            setError("Enter a reason for the substitution request.");
-            return;
-        }
-
-        try {
-            setActionLoading(true);
-            setError("");
-            setSuccess("");
-
-            const response = await apiRequest(
-                `/api/competitions/${competitionId}/registration/substitution-requests`,
-                {
-                    method: "POST",
-                    body: JSON.stringify({
-                        outgoingUserId: substitutionOutgoingId,
-                        replacementUserId: substitutionReplacementId,
-                        reason: substitutionReason.trim(),
-                    }),
-                }
-            );
-
-            setShowSubstitution(false);
-            setSuccess(
-                response.message || "Substitution request sent to the host."
-            );
-            await loadRegistration(false);
-        } catch (err) {
-            setError(err.message || "Unable to submit the substitution request.");
-        } finally {
-            setActionLoading(false);
         }
     };
 
@@ -593,18 +550,10 @@ export default function TournamentRegistration() {
                         <h2>Unable to load tournament</h2>
                         <p>{error}</p>
                         <div className="registration-action-row">
-                            <button
-                                onClick={() => loadRegistration(true)}
-                                type="button"
-                            >
-                                <RefreshCw size={15} />
-                                Retry
+                            <button onClick={() => loadRegistration(true)} type="button">
+                                <RefreshCw size={15} /> Retry
                             </button>
-                            <button
-                                onClick={() => navigate(-1)}
-                                type="button"
-                                className="secondary"
-                            >
+                            <button onClick={() => navigate(-1)} type="button" className="secondary">
                                 Go Back
                             </button>
                         </div>
@@ -626,7 +575,6 @@ export default function TournamentRegistration() {
                     >
                         <ArrowLeft size={18} />
                     </button>
-
                     <div>
                         <span>TOURNAMENT REGISTRATION</span>
                         <h1>{competition.title || "Tournament"}</h1>
@@ -639,10 +587,7 @@ export default function TournamentRegistration() {
                     onClick={handleRefresh}
                     disabled={refreshing}
                 >
-                    <RefreshCw
-                        size={15}
-                        className={refreshing ? "registration-spin" : ""}
-                    />
+                    <RefreshCw size={15} className={refreshing ? "registration-spin" : ""} />
                     Refresh
                 </button>
             </header>
@@ -651,13 +596,7 @@ export default function TournamentRegistration() {
                 <div className={`registration-alert ${error ? "error" : "success"}`}>
                     {error ? <AlertCircle size={15} /> : <Check size={15} />}
                     <span>{error || success}</span>
-                    <button
-                        type="button"
-                        onClick={() => {
-                            setError("");
-                            setSuccess("");
-                        }}
-                    >
+                    <button type="button" onClick={() => { setError(""); setSuccess(""); }}>
                         Dismiss
                     </button>
                 </div>
@@ -666,9 +605,7 @@ export default function TournamentRegistration() {
             <main className="registration-content">
                 <section className="registration-summary">
                     <div className="registration-game-block">
-                        <div className="registration-icon-box">
-                            <Gamepad2 size={20} />
-                        </div>
+                        <div className="registration-icon-box"><Gamepad2 size={20} /></div>
                         <div>
                             <span>GAME</span>
                             <strong>{getGameName(competition)}</strong>
@@ -677,25 +614,15 @@ export default function TournamentRegistration() {
 
                     <div className="registration-summary-item">
                         <span>FORMAT</span>
-                        <strong>
-                            {competition.gameMode || competition.competitionType || "—"}
-                        </strong>
+                        <strong>{valueOrDash(competition.gameMode || competition.competitionType)}</strong>
                     </div>
-
                     <div className="registration-summary-item">
                         <span>{isTeamCompetition ? "TEAM SIZE" : "PARTICIPANT TYPE"}</span>
-                        <strong>
-                            {isTeamCompetition
-                                ? `${teamSize} PLAYER${teamSize === 1 ? "" : "S"}`
-                                : "PLAYER"}
-                        </strong>
+                        <strong>{isTeamCompetition ? `${teamSize} PLAYER${teamSize === 1 ? "" : "S"}` : "PLAYER"}</strong>
                     </div>
-
                     <div className="registration-summary-item">
-                        <span>CONFIRMED</span>
-                        <strong>
-                            {Number(data?.registeredCount || 0)} / {Number(data?.capacity || 0)}
-                        </strong>
+                        <span>AVAILABLE</span>
+                        <strong>{Math.max(0, Number(data?.capacity || 0) - Number(data?.registeredCount || 0))}</strong>
                     </div>
                 </section>
 
@@ -704,84 +631,72 @@ export default function TournamentRegistration() {
                         <div className="registration-card-heading">
                             <div>
                                 <span>JOIN THIS TOURNAMENT</span>
-                                <h2>
-                                    {currentRegistration
-                                        ? "Your tournament entry"
-                                        : isTeamCompetition
-                                            ? "Build your team"
-                                            : "Confirm your participation"}
-                                </h2>
+                                <h2>{isTeamCompetition ? "Choose your team" : "Confirm your participation"}</h2>
                                 <p>
                                     {isTeamCompetition
-                                        ? "Choose a club you belong to, select the roster, and send invitations. You become captain automatically."
-                                        : "Your SYNCO account will register directly once the tournament game is linked to your profile."}
+                                        ? "Select a club, then choose the exact players who will represent it in this tournament."
+                                        : "Your authenticated SYNCO player account will be registered for this competition."}
                                 </p>
                             </div>
-
-                            <div
-                                className={`registration-open-pill ${data?.registrationOpen ? "open" : "closed"}`}
-                            >
-                                {data?.registrationOpen
-                                    ? "REGISTRATION OPEN"
-                                    : currentStatus === "LOCKED"
-                                        ? "ROSTER LOCKED"
-                                        : "REGISTRATION CLOSED"}
+                            <div className={`registration-open-pill ${data?.registrationOpen ? "open" : "closed"}`}>
+                                {data?.registrationOpen ? "REGISTRATION OPEN" : "REGISTRATION CLOSED"}
                             </div>
                         </div>
 
-                        {myInvites.length > 0 && (
-                            <section className="registration-section-block registration-invite-section">
-                                <div className="registration-section-heading">
+                        {pendingInvites.length > 0 && (
+                            <section className="registration-invite-panel">
+                                <div className="registration-invite-panel-heading">
                                     <div>
-                                        <span>INVITATIONS FOR YOU</span>
-                                        <h3>Pending team invites</h3>
+                                        <span>TOURNAMENT INVITATION</span>
+                                        <strong>You have a team invitation waiting for your response.</strong>
                                     </div>
-                                    <span className="registration-count-pill">
-                                        {myInvites.length}
-                                    </span>
+                                    <Clock3 size={17} />
                                 </div>
 
                                 <div className="registration-invite-list">
-                                    {myInvites.map((invite) => (
+                                    {pendingInvites.map((invite) => (
                                         <div className="registration-invite-card" key={invite.id}>
-                                            <div className="registration-invite-icon">
-                                                {invite.inviteType === "SUBSTITUTION"
-                                                    ? <RotateCcw size={17} />
-                                                    : <UserPlus size={17} />}
+                                            <div className="registration-invite-main">
+                                                <div className="registration-invite-avatar">
+                                                    {(invite.teamName || "TM").slice(0, 2).toUpperCase()}
+                                                </div>
+                                                <div>
+                                                    <strong>{invite.teamName || "Tournament Team"}</strong>
+                                                    <span>
+                                                        {invite.inviteType === "REPLACEMENT"
+                                                            ? "Replacement invitation"
+                                                            : invite.inviteType === "SUBSTITUTION"
+                                                                ? "Substitution invitation"
+                                                                : "Tournament team invitation"}
+                                                    </span>
+                                                </div>
                                             </div>
 
-                                            <div className="registration-invite-copy">
-                                                <strong>{invite.teamName || "Tournament Team"}</strong>
-                                                <span>
-                                                    {invite.inviteType === "SUBSTITUTION"
-                                                        ? "Approved substitution invitation"
-                                                        : invite.inviteType === "REPLACEMENT"
-                                                            ? "Replacement invitation"
-                                                            : "Tournament team invitation"}
-                                                </span>
-                                                <small>
-                                                    {formatRemaining(invite.expiresAt, nowTick)}
-                                                    {invite.expiresAt ? ` · expires ${formatDate(invite.expiresAt)}` : ""}
-                                                </small>
+                                            <div className="registration-invite-expiry">
+                                                <span>TIME LEFT</span>
+                                                <strong className={
+                                                    formatRemaining(invite.expiresAt, nowMs) === "Expired"
+                                                        ? "expired"
+                                                        : ""
+                                                }>
+                                                    {formatRemaining(invite.expiresAt, nowMs)}
+                                                </strong>
                                             </div>
 
                                             <div className="registration-invite-actions">
                                                 <button
                                                     type="button"
-                                                    className="registration-primary-mini"
-                                                    disabled={actionLoading}
-                                                    onClick={() => handleInviteAction(invite.id, "accept")}
+                                                    className="registration-invite-accept"
+                                                    onClick={() => respondToInvite(invite.id, "accept")}
                                                 >
                                                     <Check size={14} />
                                                     Accept
                                                 </button>
                                                 <button
                                                     type="button"
-                                                    className="registration-secondary-mini"
-                                                    disabled={actionLoading}
-                                                    onClick={() => handleInviteAction(invite.id, "decline")}
+                                                    className="registration-invite-decline"
+                                                    onClick={() => respondToInvite(invite.id, "decline")}
                                                 >
-                                                    <X size={14} />
                                                     Decline
                                                 </button>
                                             </div>
@@ -792,386 +707,316 @@ export default function TournamentRegistration() {
                         )}
 
                         {isTeamCompetition ? (
-                            <>
-                                {!currentRegistration && (
-                                    <section className="registration-section-block">
-                                        <div className="registration-section-heading">
-                                            <div>
-                                                <span>STEP 1</span>
-                                                <h3>Choose a club</h3>
-                                            </div>
-                                            <span className="registration-section-meta">
-                                                {clubs.length} available
-                                            </span>
-                                        </div>
+                            <div className="registration-club-list">
+                                {!clubs.length ? (
+                                    <div className="registration-empty">
+                                        <Users size={22} />
+                                        <strong>No clubs found for this game</strong>
+                                        <p>
+                                            Create a club for {getGameName(competition)} first.
+                                        </p>
+                                    </div>
+                                ) : (
+                                    clubs.map((club) => {
+                                        const isSelected =
+                                            String(selectedClubId) === String(club.id);
 
-                                        {!clubs.length ? (
-                                            <div className="registration-empty compact">
-                                                <Users size={21} />
-                                                <strong>No clubs found for this game</strong>
-                                                <p>
-                                                    Join or create a {getGameName(competition)} club before starting a team registration.
-                                                </p>
-                                            </div>
-                                        ) : (
-                                            <div className="registration-club-list">
-                                                {clubs.map((club) => {
-                                                    const isSelected = String(selectedClubId) === String(club.id);
-                                                    const disabled = !club.eligible;
+                                        const registration = club.registration;
+                                        const status = String(
+                                            registration?.registrationStatus || ""
+                                        ).toUpperCase();
 
-                                                    return (
-                                                        <div
-                                                            className={`registration-club-card ${isSelected ? "selected" : ""} ${disabled ? "is-disabled" : ""}`}
-                                                            key={club.id}
-                                                        >
-                                                            <button
-                                                                type="button"
-                                                                className="registration-club-select-button"
-                                                                onClick={() => handleClubSelect(club)}
-                                                                disabled={disabled}
-                                                            >
-                                                                <div className="registration-club-top">
-                                                                    <div className="registration-club-avatar">
-                                                                        {avatarText(club.name)}
-                                                                    </div>
+                                        const unavailable =
+                                            !!registration &&
+                                            status !== "REJECTED";
 
-                                                                    <div className="registration-club-name">
-                                                                        <strong>{club.name}</strong>
-                                                                        <span>
-                                                                            #{club.tag || "CLUB"} · {club.isOwner ? "Owner" : club.membershipRole || "Member"}
-                                                                        </span>
-                                                                    </div>
+                                        const selectedCount =
+                                            isSelected
+                                                ? selectedMemberIds.length
+                                                : 0;
 
-                                                                    <div className="registration-club-status">
-                                                                        {disabled ? (
-                                                                            <CircleDot size={16} />
-                                                                        ) : isSelected ? (
-                                                                            <Check size={16} />
-                                                                        ) : (
-                                                                            <ChevronRight size={16} />
-                                                                        )}
-                                                                    </div>
-                                                                </div>
-                                                            </button>
+                                        const memberOk =
+                                            club.memberCount >= teamSize;
 
-                                                            <div className="registration-club-availability">
-                                                                <span>
-                                                                    <UserCheck size={13} />
-                                                                    {club.eligibleMemberCount} eligible players
-                                                                </span>
-                                                                {club.unavailableReason && (
-                                                                    <strong>{club.unavailableReason}</strong>
-                                                                )}
-                                                            </div>
-                                                        </div>
-                                                    );
-                                                })}
-                                            </div>
-                                        )}
-                                    </section>
-                                )}
+                                        const selectedRosterIds =
+                                            isSelected
+                                                ? new Set(selectedMemberIds)
+                                                : new Set();
 
-                                {!currentRegistration && selectedClub && (
-                                    <section className="registration-section-block">
-                                        <div className="registration-section-heading">
-                                            <div>
-                                                <span>STEP 2</span>
-                                                <h3>Select the roster</h3>
-                                            </div>
-                                            <span className="registration-count-pill">
-                                                {selectedMemberCount} / {teamSize}
-                                            </span>
-                                        </div>
-
-                                        <div className="registration-captain-note">
-                                            <div className="registration-captain-icon">
-                                                <ShieldCheck size={16} />
-                                            </div>
-                                            <div>
-                                                <strong>You are the captain</strong>
-                                                <p>
-                                                    Your place is accepted automatically. Select {Math.max(0, teamSize - 1)} teammate{teamSize - 1 === 1 ? "" : "s"} from {selectedClub.name}.
-                                                </p>
-                                            </div>
-                                        </div>
-
-                                        <div className="registration-member-grid">
-                                            {(selectedClub.members || []).map((member) => {
-                                                const memberId = Number(member.userId);
-                                                const checked = selectedMemberIds.includes(memberId);
-                                                const isCaptainMember = !!member.isCurrentUser;
-                                                const disabled =
-                                                    isCaptainMember ||
-                                                    member.eligible === false ||
-                                                    (!checked && selectedMemberCount >= teamSize);
-
-                                                return (
-                                                    <button
-                                                        type="button"
-                                                        key={member.id}
-                                                        className={`registration-member-option ${checked ? "selected" : ""} ${member.eligible === false ? "is-unavailable" : ""}`}
-                                                        disabled={disabled}
-                                                        onClick={() => toggleMember(member)}
-                                                    >
-                                                        <div className="registration-member-check">
-                                                            {checked ? <Check size={13} /> : null}
-                                                        </div>
-
-                                                        <div className="registration-mini-avatar">
-                                                            {avatarText(member.name)}
-                                                        </div>
-
-                                                        <div className="registration-member-copy">
-                                                            <strong>{member.name}</strong>
-                                                            <span>
-                                                                {isCaptainMember
-                                                                    ? "CAPTAIN · YOU"
-                                                                    : member.uid || member.role || "MEMBER"}
-                                                            </span>
-                                                            {member.unavailableReason && (
-                                                                <small>{member.unavailableReason}</small>
-                                                            )}
-                                                        </div>
-                                                    </button>
-                                                );
-                                            })}
-                                        </div>
-
-                                        <div className="registration-selection-status">
-                                            <span>{selectedMemberCount}/{teamSize} selected</span>
-                                            <strong>
-                                                {selectedEligible
-                                                    ? "Ready to send invitations"
-                                                    : `Select ${teamSize - selectedMemberCount} more eligible player${teamSize - selectedMemberCount === 1 ? "" : "s"}`}
-                                            </strong>
-                                        </div>
-                                    </section>
-                                )}
-
-                                {currentRegistration && (
-                                    <section className="registration-section-block">
-                                        <div className="registration-team-header">
-                                            <div className="registration-team-identity">
-                                                <div className="registration-club-avatar large">
-                                                    {avatarText(currentRegistration.club?.name || selectedClub?.name)}
-                                                </div>
-                                                <div>
-                                                    <span>CLUB REPRESENTATION</span>
-                                                    <h3>{currentRegistration.club?.name || selectedClub?.name || "Tournament Team"}</h3>
-                                                    <p>{teamStatusDescription(currentStatus)}</p>
-                                                </div>
-                                            </div>
-
-                                            <div className={`registration-status-badge ${statusClass(currentStatus)}`}>
-                                                {currentStatus === "LOCKED" ? <LockKeyhole size={13} /> : <CircleDot size={13} />}
-                                                {statusLabel(currentStatus)}
-                                            </div>
-                                        </div>
-
-                                        <div className="registration-progress-strip">
-                                            <div>
-                                                <span>ROSTER</span>
-                                                <strong>{acceptedRoster.length} / {teamSize} accepted</strong>
-                                            </div>
-                                            <div>
-                                                <span>CAPTAIN</span>
-                                                <strong>{userDisplayName(currentRegistration.user)}</strong>
-                                            </div>
-                                            <div>
-                                                <span>REGISTERED</span>
-                                                <strong>{formatDate(currentRegistration.registeredAt)}</strong>
-                                            </div>
-                                        </div>
-
-                                        <div className="registration-roster-card">
-                                            {currentRoster.map((member) => {
-                                                const memberStatus = String(member.status || "ACCEPTED").toUpperCase();
-                                                const isCaptainMember = String(member.role || "").toUpperCase() === "CAPTAIN";
-                                                const replaceable = canModifyPreDeadline && !isCaptainMember && ["ACCEPTED", "DECLINED", "EXPIRED", "CANCELLED"].includes(memberStatus);
-
-                                                return (
-                                                    <div className="registration-roster-member" key={`${member.userId}-${member.rosterOrder}`}>
-                                                        <div className="registration-mini-avatar">
-                                                            {avatarText(member.name)}
-                                                        </div>
-
-                                                        <div className="registration-roster-member-copy">
-                                                            <strong>{member.name}</strong>
-                                                            <span>
-                                                                {isCaptainMember
-                                                                    ? "CAPTAIN"
-                                                                    : member.uid || member.role || "MEMBER"}
-                                                            </span>
-                                                        </div>
-
-                                                        <div className={`registration-member-state ${statusClass(memberStatus)}`}>
-                                                            {memberStatus === "ACCEPTED" && <UserCheck size={13} />}
-                                                            {memberStatus === "PENDING" && <Clock3 size={13} />}
-                                                            {memberStatus === "DECLINED" && <UserX size={13} />}
-                                                            {memberStatus === "EXPIRED" && <TimerReset size={13} />}
-                                                            {statusLabel(memberStatus)}
-                                                        </div>
-
-                                                        {replaceable && (
-                                                            <button
-                                                                type="button"
-                                                                className="registration-text-button"
-                                                                onClick={() => openReplaceModal(member.userId)}
-                                                            >
-                                                                Replace
-                                                            </button>
-                                                        )}
-                                                    </div>
-                                                );
-                                            })}
-                                        </div>
-
-                                        {pendingRoster.length > 0 && (
-                                            <div className="registration-pending-box">
-                                                <div className="registration-pending-box-heading">
-                                                    <Clock3 size={15} />
-                                                    <strong>Waiting for player responses</strong>
-                                                </div>
-                                                {pendingRoster.map((member) => {
-                                                    const matchingInvite = myInvites.find(
-                                                        (invite) =>
-                                                            Number(invite.invitedUserId) === Number(member.userId)
-                                                    );
-
-                                                    const expiry =
-                                                        matchingInvite?.expiresAt ||
-                                                        member.inviteExpiresAt;
-
-                                                    const inviteStatus = String(
-                                                        matchingInvite?.status ||
-                                                        member.inviteStatus ||
-                                                        "PENDING"
-                                                    ).toUpperCase();
-
-                                                    return (
-                                                        <div className="registration-pending-row" key={member.userId}>
-                                                            <span>{member.name}</span>
-                                                            <strong>
-                                                                {inviteStatus === "PENDING"
-                                                                    ? formatRemaining(expiry, nowTick) || "Invitation sent"
-                                                                    : statusLabel(inviteStatus)}
-                                                            </strong>
-                                                        </div>
-                                                    );
-                                                })}
-                                            </div>
-                                        )}
-
-                                        {canModifyPreDeadline && (
-                                            <div className="registration-entry-actions">
-                                                <div>
-                                                    <span>BEFORE DEADLINE</span>
-                                                    <strong>Replace a rostered player without losing the team slot.</strong>
-                                                </div>
-                                                {canWithdraw && (
-                                                    <button
-                                                        type="button"
-                                                        className="registration-danger-outline"
-                                                        onClick={() => setShowWithdrawConfirm(true)}
-                                                    >
-                                                        Withdraw Registration
-                                                    </button>
-                                                )}
-                                            </div>
-                                        )}
-
-                                        {currentStatus === "LOCKED" && (
-                                            <div className="registration-lock-panel">
-                                                <div className="registration-lock-panel-icon">
-                                                    <LockKeyhole size={17} />
-                                                </div>
-                                                <div>
-                                                    <span>ROSTER LOCKED</span>
-                                                    <strong>Changes now require host approval.</strong>
-                                                    <p>
-                                                        Substitution requests close {registrationSettings.substitutionCloseMinutes || 60} minutes before the next match. Team limit: {registrationSettings.maxSubstitutions ?? 1}.
-                                                    </p>
-                                                </div>
+                                        return (
+                                            <div
+                                                className={`registration-club-card ${
+                                                    isSelected ? "selected" : ""
+                                                } ${
+                                                    unavailable ? "registered" : ""
+                                                }`}
+                                                key={club.id}
+                                            >
 
                                                 <button
                                                     type="button"
-                                                    className="registration-submit small"
-                                                    disabled={!!currentSubstitutionRequest}
-                                                    onClick={openSubstitutionModal}
+                                                    className="registration-club-select-button"
+                                                    onClick={() => handleClubSelect(club)}
+                                                    disabled={unavailable || !memberOk}
                                                 >
-                                                    <RotateCcw size={15} />
-                                                    {currentSubstitutionRequest ? "Request Pending" : "Request Substitution"}
-                                                </button>
-                                            </div>
-                                        )}
+                                                    <div className="registration-club-top">
+                                                        <div className="registration-club-avatar">
+                                                            {club.name?.slice(0, 2).toUpperCase() || "CL"}
+                                                        </div>
 
-                                        {substitutionRequests.length > 0 && (
-                                            <div className="registration-substitution-list">
-                                                <div className="registration-section-heading">
-                                                    <div>
-                                                        <span>SUBSTITUTION HISTORY</span>
-                                                        <h3>Host decisions</h3>
+                                                        <div className="registration-club-name">
+                                                            <strong>{club.name}</strong>
+                                                            <span>
+                                                                {club.tag
+                                                                    ? `#${club.tag}`
+                                                                    : "SYNCO CLUB"}
+                                                            </span>
+                                                        </div>
+
+                                                        <div className="registration-club-status">
+                                                            {unavailable ? (
+                                                                <span>{statusLabel(status)}</span>
+                                                            ) : isSelected ? (
+                                                                <Check size={16} />
+                                                            ) : (
+                                                                <ChevronRight size={16} />
+                                                            )}
+                                                        </div>
+                                                    </div>
+                                                </button>
+
+                                                <div className="registration-roster">
+                                                    <div className="registration-roster-heading">
+                                                        <div>
+                                                            <span>TOURNAMENT SQUAD</span>
+                                                            <strong>
+                                                                {isSelected
+                                                                    ? `${selectedCount}/${teamSize} selected`
+                                                                    : `${club.memberCount} club member${club.memberCount === 1 ? "" : "s"}`}
+                                                            </strong>
+                                                        </div>
+
+                                                        {!unavailable && memberOk && (
+                                                            <span className="registration-roster-hint">
+                                                                {isSelected
+                                                                    ? "Choose players below"
+                                                                    : "Select club first"}
+                                                            </span>
+                                                        )}
+                                                    </div>
+
+                                                    <div className="registration-roster-list">
+                                                        {club.members?.map((member) => {
+                                                            const memberUserId = Number(member.userId);
+                                                            const checked = selectedRosterIds.has(memberUserId);
+
+                                                            return (
+                                                                <label
+                                                                    className={`registration-member-select ${
+                                                                        checked ? "selected" : ""
+                                                                    } ${
+                                                                        !isSelected || unavailable
+                                                                            ? "locked"
+                                                                            : ""
+                                                                    }`}
+                                                                    key={member.id || member.userId}
+                                                                    onClick={(event) => event.stopPropagation()}
+                                                                >
+                                                                    <input
+                                                                        type="checkbox"
+                                                                        checked={checked}
+                                                                        disabled={
+                                                                            !isSelected ||
+                                                                            unavailable ||
+                                                                            (!checked &&
+                                                                                selectedMemberIds.length >= teamSize)
+                                                                        }
+                                                                        onChange={() =>
+                                                                            toggleMember(memberUserId)
+                                                                        }
+                                                                    />
+
+                                                                    <div className="registration-mini-avatar">
+                                                                        {(member.name || "P").slice(0, 2).toUpperCase()}
+                                                                    </div>
+
+                                                                    <div className="registration-member-select-info">
+                                                                        <strong>{member.name}</strong>
+                                                                        {member.uid && (
+                                                                            <span>{member.uid}</span>
+                                                                        )}
+                                                                    </div>
+
+                                                                    <span className="registration-member-role">
+                                                                        {member.role || "MEMBER"}
+                                                                    </span>
+                                                                </label>
+                                                            );
+                                                        })}
                                                     </div>
                                                 </div>
 
-                                                {substitutionRequests.map((request) => (
-                                                    <div className="registration-substitution-row" key={request.id}>
+                                                {!memberOk && !unavailable && (
+                                                    <div className="registration-card-warning">
+                                                        <AlertCircle size={14} />
+                                                        <span>
+                                                            This club has only {club.memberCount} member{club.memberCount === 1 ? "" : "s"};
+                                                            this tournament requires {teamSize}.
+                                                        </span>
+                                                    </div>
+                                                )}
+
+                                                {isSelected && !unavailable && memberOk && (
+                                                    <div className={`registration-selection-status ${
+                                                        selectedCount === teamSize
+                                                            ? "complete"
+                                                            : "incomplete"
+                                                    }`}>
+                                                        <span>
+                                                            {selectedCount === teamSize
+                                                                ? "Tournament roster ready"
+                                                                : `${teamSize - selectedCount} more player${teamSize - selectedCount === 1 ? "" : "s"} required`}
+                                                        </span>
+                                                    </div>
+                                                )}
+
+                                                {unavailable && registration?.teamRoster?.length > 0 && (
+                                                    <div className="registration-locked-roster">
+                                                        <span>REGISTERED TOURNAMENT ROSTER</span>
                                                         <div>
-                                                            <strong>
-                                                                {request.outgoingUser?.name || "Player"} → {request.replacementUser?.name || "Replacement"}
-                                                            </strong>
-                                                            <span>{request.reason}</span>
-                                                        </div>
-                                                        <div className={`registration-status-badge ${statusClass(request.status)}`}>
-                                                            {statusLabel(request.status)}
+                                                            {registration.teamRoster.map((member) => (
+                                                                <span key={member.userId}>
+                                                                    {member.name}
+                                                                </span>
+                                                            ))}
                                                         </div>
                                                     </div>
-                                                ))}
+                                                )}
                                             </div>
-                                        )}
-                                    </section>
+                                        );
+                                    })
                                 )}
-                            </>
+                            </div>
                         ) : (
-                            <section className="registration-section-block">
-                                <div className="registration-player-confirm">
-                                    <div className="registration-confirm-icon">
-                                        <ShieldCheck size={22} />
-                                    </div>
-                                    <div>
-                                        <span>SOLO ENTRY</span>
-                                        <strong>
-                                            {data?.currentUserGameLinked
-                                                ? "Your game profile is eligible."
-                                                : "Your game profile is not linked yet."}
-                                        </strong>
-                                        <p>
-                                            {data?.currentUserGameLinked
-                                                ? `You can register directly for ${getGameName(competition)}.`
-                                                : `Link ${getGameName(competition)} in your profile first.`}
-                                        </p>
-                                    </div>
+                            <div className="registration-player-confirm">
+                                <div className="registration-confirm-icon"><ShieldCheck size={22} /></div>
+                                <div>
+                                    <span>PLAYER ACCOUNT</span>
+                                    <strong>Register with your current SYNCO account</strong>
+                                    <p>No extra player creation is required. The existing CompetitionParticipant record is used.</p>
                                 </div>
-
-                                {currentRegistration && (
-                                    <div className="registration-current-state">
-                                        <div>
-                                            <span>CURRENT REGISTRATION</span>
-                                            <strong>{statusLabel(currentStatus)}</strong>
-                                        </div>
-                                        <button
-                                            type="button"
-                                            onClick={() => navigate(`/competitions/${competitionId}`)}
-                                        >
-                                            View Tournament
-                                            <ChevronRight size={15} />
-                                        </button>
-                                    </div>
-                                )}
-                            </section>
+                            </div>
                         )}
 
-                        {!currentRegistration && (
+                        {hasActiveRegistration ? (
+                            <div className="registration-current-state">
+                                <div className="registration-current-state-top">
+                                    <div>
+                                        <span>CURRENT REGISTRATION</span>
+                                        <strong>{statusLabel(currentStatus)}</strong>
+                                    </div>
+
+                                    {isCaptain && isTeamCompetition && (
+                                        <span className="registration-captain-badge">CAPTAIN</span>
+                                    )}
+                                </div>
+
+                                {isTeamCompetition && currentRegistration?.teamRoster?.length > 0 && (
+                                    <div className="registration-team-management">
+                                        <div className="registration-team-management-heading">
+                                            <div>
+                                                <span>TEAM ROSTER</span>
+                                                <strong>
+                                                    {currentRegistration.teamRoster.filter((member) =>
+                                                        String(member.status || "").toUpperCase() === "ACCEPTED"
+                                                    ).length}/{teamSize} accepted
+                                                </strong>
+                                            </div>
+                                            {isCaptain && data?.registrationOpen && (
+                                                <small>Captain can replace an accepted player before the deadline.</small>
+                                            )}
+                                        </div>
+
+                                        <div className="registration-team-management-list">
+                                            {currentRegistration.teamRoster
+                                                .slice()
+                                                .sort((a, b) => Number(a.rosterOrder || 0) - Number(b.rosterOrder || 0))
+                                                .map((member) => {
+                                                    const memberStatus = String(member.status || "").toUpperCase();
+                                                    const isCurrentCaptain = Number(member.userId) === Number(currentRegistration.captainId);
+                                                    const hasPendingInvite = memberStatus === "PENDING";
+                                                    const inviteTimeLeft = formatRemaining(member.inviteExpiresAt, nowMs);
+
+                                                    return (
+                                                        <div className="registration-team-management-row" key={`${member.userId}-${member.rosterOrder}`}>
+                                                            <div className="registration-team-player">
+                                                                <div className="registration-mini-avatar">
+                                                                    {(member.name || "P").slice(0, 2).toUpperCase()}
+                                                                </div>
+                                                                <div>
+                                                                    <strong>{member.name || member.username || "Player"}</strong>
+                                                                    <span>{isCurrentCaptain ? "CAPTAIN" : (member.role || "MEMBER")}</span>
+                                                                </div>
+                                                            </div>
+
+                                                            <div className={`registration-team-player-status ${memberStatus.toLowerCase()}`}>
+                                                                {hasPendingInvite ? (
+                                                                    <>
+                                                                        <span>Pending</span>
+                                                                        <strong className={inviteTimeLeft === "Expired" ? "expired" : ""}>
+                                                                            {inviteTimeLeft === "Expired"
+                                                                                ? "Expired"
+                                                                                : `${inviteTimeLeft} left`}
+                                                                        </strong>
+                                                                    </>
+                                                                ) : (
+                                                                    <span>{statusLabel(memberStatus)}</span>
+                                                                )}
+                                                            </div>
+
+                                                            {isCaptain &&
+                                                                data?.registrationOpen &&
+                                                                !isCurrentCaptain &&
+                                                                memberStatus === "ACCEPTED" && (
+                                                                    <button
+                                                                        type="button"
+                                                                        className="registration-replace-button"
+                                                                        onClick={() => openReplaceModal(member.userId)}
+                                                                    >
+                                                                        <UserPlus size={13} />
+                                                                        Replace
+                                                                    </button>
+                                                                )}
+                                                        </div>
+                                                    );
+                                                })}
+                                        </div>
+                                    </div>
+                                )}
+
+                                <div className="registration-current-actions">
+                                    <button
+                                        type="button"
+                                        className="registration-view-button"
+                                        onClick={() => navigate(`/competitions/${competitionId}`)}
+                                    >
+                                        View Tournament
+                                        <ChevronRight size={15} />
+                                    </button>
+
+                                    {canWithdrawRegistration && (
+                                        <button
+                                            type="button"
+                                            className="registration-withdraw-button"
+                                            onClick={() => setShowWithdrawConfirm(true)}
+                                            disabled={withdrawing}
+                                        >
+                                            Withdraw Registration
+                                        </button>
+                                    )}
+                                </div>
+                            </div>
+                        ) : (
                             <button
                                 type="button"
                                 className="registration-submit"
@@ -1180,20 +1025,11 @@ export default function TournamentRegistration() {
                                     submitting ||
                                     !data?.registrationOpen ||
                                     !!data?.full ||
-                                    !data?.currentUserGameLinked ||
                                     (isTeamCompetition && !selectedEligible)
                                 }
                             >
-                                {submitting ? (
-                                    <Loader2 size={17} className="registration-spin" />
-                                ) : (
-                                    isTeamCompetition ? <Send size={17} /> : <Trophy size={17} />
-                                )}
-                                {submitting
-                                    ? "Submitting..."
-                                    : isTeamCompetition
-                                        ? "Start Team Registration"
-                                        : "Register for Tournament"}
+                                {submitting ? <Loader2 size={17} className="registration-spin" /> : <Trophy size={17} />}
+                                {submitting ? "Submitting..." : "Register for Tournament"}
                             </button>
                         )}
                     </section>
@@ -1204,19 +1040,16 @@ export default function TournamentRegistration() {
                                 <Clock3 size={17} />
                                 <span>TOURNAMENT SCHEDULE</span>
                             </div>
-
                             <div className="registration-time-row">
-                                <span>Registration deadline</span>
-                                <strong>{formatDate(competition.registrationEnd)}</strong>
+                                <span>Registration</span>
+                                <strong>{formatDate(competition.registrationStart)} — {formatDate(competition.registrationEnd)}</strong>
                             </div>
-
                             <div className="registration-time-row">
-                                <span>Competition starts</span>
+                                <span>Starts</span>
                                 <strong>{formatDate(competition.competitionStart)}</strong>
                             </div>
-
                             <div className="registration-time-row">
-                                <span>Competition ends</span>
+                                <span>Ends</span>
                                 <strong>{formatDate(competition.competitionEnd)}</strong>
                             </div>
                         </section>
@@ -1224,15 +1057,13 @@ export default function TournamentRegistration() {
                         <section className="registration-side-card">
                             <div className="registration-side-heading">
                                 <ShieldCheck size={17} />
-                                <span>REGISTRATION RULES</span>
+                                <span>TOURNAMENT RULES</span>
                             </div>
-
                             <div className="registration-rule-list">
-                                <div><Check size={13} /><span>Anyone can start a registration while the competition is open.</span></div>
-                                <div><Check size={13} /><span>Team registration requires membership in the selected club.</span></div>
-                                <div><Check size={13} /><span>Every selected teammate must have this game linked to their profile.</span></div>
-                                <div><Check size={13} /><span>Accepted invites reserve that player's place for this competition.</span></div>
-                                <div><Check size={13} /><span>Rosters lock at the registration deadline.</span></div>
+                                <div><Check size={13} /> <span>Only registered SYNCO teams/players can participate.</span></div>
+                                <div><Check size={13} /> <span>The club owner selects the exact tournament roster from current club members.</span></div>
+                                <div><Check size={13} /> <span>Organizer approval and tournament locking happen in the Competition Engine.</span></div>
+                                <div><Check size={13} /> <span>Matches are generated from the selected game format after registration closes.</span></div>
                             </div>
                         </section>
 
@@ -1242,7 +1073,6 @@ export default function TournamentRegistration() {
                                     <Gamepad2 size={17} />
                                     <span>FORMAT CONFIGURATION</span>
                                 </div>
-
                                 <div className="registration-format-grid">
                                     <div><span>TYPE</span><strong>{modeConfig.type || "—"}</strong></div>
                                     <div><span>STRUCTURE</span><strong>{modeConfig.structure || "—"}</strong></div>
@@ -1251,256 +1081,177 @@ export default function TournamentRegistration() {
                                 </div>
                             </section>
                         )}
-
-                        {isTeamCompetition && (
-                            <section className="registration-side-card">
-                                <div className="registration-side-heading">
-                                    <CalendarClock size={17} />
-                                    <span>TEAM INVITE POLICY</span>
-                                </div>
-
-                                <div className="registration-policy-grid">
-                                    <div>
-                                        <strong>{registrationSettings.inviteDurationHours || 5}h</strong>
-                                        <span>invite window</span>
-                                    </div>
-                                    <div>
-                                        <strong>2</strong>
-                                        <span>reminders</span>
-                                    </div>
-                                    <div>
-                                        <strong>{registrationSettings.maxSubstitutions ?? 1}</strong>
-                                        <span>substitutions</span>
-                                    </div>
-                                    <div>
-                                        <strong>{registrationSettings.substitutionCloseMinutes || 60}m</strong>
-                                        <span>match cutoff</span>
-                                    </div>
-                                </div>
-                            </section>
-                        )}
                     </aside>
                 </div>
             </main>
 
-            {showWithdrawConfirm && (
-                <div className="registration-modal-backdrop" role="presentation">
-                    <div className="registration-modal" role="dialog" aria-modal="true">
-                        <div className="registration-modal-top">
+            {showReplaceModal && (
+                <div
+                    className="registration-modal-backdrop"
+                    role="presentation"
+                    onMouseDown={(event) => {
+                        if (event.target === event.currentTarget && !replacing) {
+                            closeReplaceModal();
+                        }
+                    }}
+                >
+                    <div
+                        className="registration-confirm-modal registration-replace-modal"
+                        role="dialog"
+                        aria-modal="true"
+                        aria-labelledby="replace-player-title"
+                    >
+                        <div className="registration-confirm-modal-header">
                             <div>
-                                <span>WITHDRAW REGISTRATION</span>
-                                <h3>Leave this tournament?</h3>
+                                <span>TEAM MANAGEMENT</span>
+                                <h3 id="replace-player-title">Replace team member</h3>
                             </div>
                             <button
                                 type="button"
-                                onClick={() => setShowWithdrawConfirm(false)}
                                 className="registration-modal-close"
+                                onClick={closeReplaceModal}
+                                disabled={replacing}
+                                aria-label="Close replacement dialog"
                             >
-                                <X size={17} />
+                                <X size={16} />
                             </button>
                         </div>
 
-                        <p>
-                            Your active team entry will be cancelled and pending invitations will be closed. You can register again while registration remains open.
-                        </p>
+                        <div className="registration-replace-content">
+                            <p>
+                                The current player stays on the roster until the replacement accepts the new invitation.
+                            </p>
 
-                        <div className="registration-modal-actions">
-                            <button
-                                type="button"
-                                className="registration-secondary-mini"
-                                disabled={actionLoading}
-                                onClick={() => setShowWithdrawConfirm(false)}
-                            >
-                                Keep Registration
-                            </button>
-                            <button
-                                type="button"
-                                className="registration-danger-button"
-                                disabled={actionLoading}
-                                onClick={handleWithdraw}
-                            >
-                                {actionLoading ? <Loader2 size={15} className="registration-spin" /> : <UserX size={15} />}
-                                Withdraw
-                            </button>
-                        </div>
-                    </div>
-                </div>
-            )}
-
-            {showReplace && (
-                <div className="registration-modal-backdrop" role="presentation">
-                    <div className="registration-modal wide" role="dialog" aria-modal="true">
-                        <div className="registration-modal-top">
-                            <div>
-                                <span>PRE-DEADLINE REPLACEMENT</span>
-                                <h3>Choose a replacement</h3>
-                            </div>
-                            <button
-                                type="button"
-                                onClick={() => setShowReplace(false)}
-                                className="registration-modal-close"
-                            >
-                                <X size={17} />
-                            </button>
-                        </div>
-
-                        <p>
-                            The current player remains on your roster until the new player accepts. If the new invitation is declined or expires, nothing changes.
-                        </p>
-
-                        <div className="registration-replace-target">
-                            <span>PLAYER TO REPLACE</span>
-                            <strong>
-                                {currentRoster.find((member) => Number(member.userId) === Number(replaceTargetId))?.name || "Selected player"}
-                            </strong>
-                        </div>
-
-                        <div className="registration-modal-list">
-                            {replacementCandidates.length ? (
-                                replacementCandidates.map((member) => {
-                                    const selected = Number(replacementUserId) === Number(member.userId);
-                                    return (
-                                        <button
-                                            type="button"
-                                            key={member.id}
-                                            className={`registration-modal-player ${selected ? "selected" : ""}`}
-                                            onClick={() => setReplacementUserId(Number(member.userId))}
-                                        >
-                                            <div className="registration-mini-avatar">
-                                                {avatarText(member.name)}
-                                            </div>
-                                            <div>
-                                                <strong>{member.name}</strong>
-                                                <span>{member.uid || member.role || "MEMBER"}</span>
-                                            </div>
-                                            {selected && <Check size={16} />}
-                                        </button>
-                                    );
-                                })
-                            ) : (
-                                <div className="registration-empty compact">
-                                    <UserX size={20} />
-                                    <strong>No eligible replacement players</strong>
-                                    <p>
-                                        Every other club member is either already on this roster, missing the game profile link, or committed elsewhere in this competition.
-                                    </p>
-                                </div>
-                            )}
-                        </div>
-
-                        <div className="registration-modal-actions">
-                            <button
-                                type="button"
-                                className="registration-secondary-mini"
-                                disabled={actionLoading}
-                                onClick={() => setShowReplace(false)}
-                            >
-                                Cancel
-                            </button>
-                            <button
-                                type="button"
-                                className="registration-primary-mini"
-                                disabled={actionLoading || !replacementUserId}
-                                onClick={handleReplacement}
-                            >
-                                {actionLoading ? <Loader2 size={15} className="registration-spin" /> : <Send size={15} />}
-                                Send Replacement Invite
-                            </button>
-                        </div>
-                    </div>
-                </div>
-            )}
-
-            {showSubstitution && (
-                <div className="registration-modal-backdrop" role="presentation">
-                    <div className="registration-modal wide" role="dialog" aria-modal="true">
-                        <div className="registration-modal-top">
-                            <div>
-                                <span>HOST-APPROVED SUBSTITUTION</span>
-                                <h3>Request a roster swap</h3>
-                            </div>
-                            <button
-                                type="button"
-                                onClick={() => setShowSubstitution(false)}
-                                className="registration-modal-close"
-                            >
-                                <X size={17} />
-                            </button>
-                        </div>
-
-                        <p>
-                            Your current roster stays unchanged until the host approves the request and the replacement player accepts the resulting invitation.
-                        </p>
-
-                        <div className="registration-form-grid">
-                            <label>
-                                <span>PLAYER TO REMOVE</span>
+                            <label className="registration-replace-field">
+                                <span>REPLACEMENT PLAYER</span>
                                 <select
-                                    value={substitutionOutgoingId || ""}
-                                    onChange={(event) => setSubstitutionOutgoingId(Number(event.target.value) || null)}
+                                    value={replacementUserId}
+                                    onChange={(event) => setReplacementUserId(event.target.value)}
+                                    disabled={replacing}
                                 >
-                                    <option value="">Select player</option>
-                                    {acceptedRoster
-                                        .filter((member) => String(member.role || "").toUpperCase() !== "CAPTAIN")
-                                        .map((member) => (
-                                            <option key={member.userId} value={member.userId}>
-                                                {member.name}
-                                            </option>
-                                        ))}
-                                </select>
-                            </label>
-
-                            <label>
-                                <span>REPLACEMENT</span>
-                                <select
-                                    value={substitutionReplacementId || ""}
-                                    onChange={(event) => setSubstitutionReplacementId(Number(event.target.value) || null)}
-                                >
-                                    <option value="">Select player</option>
-                                    {substitutionCandidates.map((member) => (
+                                    <option value="">Select a club member</option>
+                                    {replacementCandidates.map((member) => (
                                         <option key={member.userId} value={member.userId}>
-                                            {member.name}
+                                            {member.name || member.username || `Player ${member.userId}`}
+                                            {member.uid ? ` — ${member.uid}` : ""}
                                         </option>
                                     ))}
                                 </select>
                             </label>
+
+                            {!replacementCandidates.length && (
+                                <div className="registration-replace-empty">
+                                    No eligible replacement player is currently available in this club.
+                                </div>
+                            )}
                         </div>
 
-                        <label className="registration-textarea-field">
-                            <span>REASON</span>
-                            <textarea
-                                value={substitutionReason}
-                                onChange={(event) => setSubstitutionReason(event.target.value)}
-                                maxLength={1000}
-                                placeholder="Explain why the substitution is required."
-                            />
-                            <small>{substitutionReason.length}/1000</small>
-                        </label>
-
-                        <div className="registration-substitution-note">
-                            <LockKeyhole size={15} />
-                            <span>
-                                Requests close {registrationSettings.substitutionCloseMinutes || 60} minutes before the next scheduled match. No host response by the approval deadline counts as rejected.
-                            </span>
-                        </div>
-
-                        <div className="registration-modal-actions">
+                        <div className="registration-confirm-modal-actions">
                             <button
                                 type="button"
-                                className="registration-secondary-mini"
-                                disabled={actionLoading}
-                                onClick={() => setShowSubstitution(false)}
+                                className="registration-modal-cancel"
+                                onClick={closeReplaceModal}
+                                disabled={replacing}
                             >
                                 Cancel
                             </button>
                             <button
                                 type="button"
-                                className="registration-primary-mini"
-                                disabled={actionLoading || !!currentSubstitutionRequest}
-                                onClick={handleSubstitutionRequest}
+                                className="registration-modal-confirm"
+                                onClick={handleReplaceTeamPlayer}
+                                disabled={replacing || !replacementUserId || !replacementCandidates.length}
                             >
-                                {actionLoading ? <Loader2 size={15} className="registration-spin" /> : <Send size={15} />}
-                                Send to Host
+                                {replacing ? (
+                                    <>
+                                        <Loader2 size={15} className="registration-spin" />
+                                        Sending...
+                                    </>
+                                ) : (
+                                    <>
+                                        <UserPlus size={15} />
+                                        Send Replacement Invite
+                                    </>
+                                )}
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {showWithdrawConfirm && (
+                <div
+                    className="registration-modal-backdrop"
+                    role="presentation"
+                    onMouseDown={(event) => {
+                        if (event.target === event.currentTarget && !withdrawing) {
+                            setShowWithdrawConfirm(false);
+                        }
+                    }}
+                >
+                    <div
+                        className="registration-confirm-modal"
+                        role="dialog"
+                        aria-modal="true"
+                        aria-labelledby="withdraw-registration-title"
+                    >
+                        <div className="registration-confirm-modal-header">
+                            <div>
+                                <span>TOURNAMENT REGISTRATION</span>
+                                <h3 id="withdraw-registration-title">Withdraw registration?</h3>
+                            </div>
+                            <button
+                                type="button"
+                                className="registration-modal-close"
+                                onClick={() => setShowWithdrawConfirm(false)}
+                                disabled={withdrawing}
+                                aria-label="Close confirmation"
+                            >
+                                ×
+                            </button>
+                        </div>
+
+                        <p className="registration-confirm-modal-copy">
+                            Your {isTeamCompetition ? "team" : "player"} registration will be removed from this tournament.
+                            You can register again while registration remains available.
+                        </p>
+
+                        {isTeamCompetition && currentRegistration?.club && (
+                            <div className="registration-confirm-modal-summary">
+                                <span>TEAM</span>
+                                <strong>{currentRegistration.club.name}</strong>
+                                {currentRegistration.teamRoster?.length > 0 && (
+                                    <small>
+                                        {currentRegistration.teamRoster.length} selected player{
+                                            currentRegistration.teamRoster.length === 1 ? "" : "s"
+                                        }
+                                    </small>
+                                )}
+                            </div>
+                        )}
+
+                        <div className="registration-confirm-modal-actions">
+                            <button
+                                type="button"
+                                className="registration-modal-cancel"
+                                onClick={() => setShowWithdrawConfirm(false)}
+                                disabled={withdrawing}
+                            >
+                                Cancel
+                            </button>
+                            <button
+                                type="button"
+                                className="registration-modal-confirm"
+                                onClick={handleWithdrawRegistration}
+                                disabled={withdrawing}
+                            >
+                                {withdrawing ? (
+                                    <>
+                                        <Loader2 size={15} className="registration-spin" />
+                                        Withdrawing...
+                                    </>
+                                ) : (
+                                    "Withdraw Registration"
+                                )}
                             </button>
                         </div>
                     </div>
