@@ -36,8 +36,8 @@ async function apiRequest(path, options = {}) {
 
     if (!response.ok || data?.success === false) {
         throw new Error(
-            data?.message ||
             data?.error ||
+            data?.message ||
             `Request failed with status ${response.status}`
         );
     }

@@ -1724,6 +1724,11 @@ def create_competition():
             ),
         )
 
+        # Immediately calculate the initial registration status so the
+        # create response is already correct when the registration window
+        # is currently active (or already ended).
+        sync_registration_status(competition)
+
         db.session.add(competition)
 
         creation_step = "flush competition"
@@ -1864,10 +1869,12 @@ def competition_unhandled_error(exc):
         "Unhandled competition blueprint error"
     )
 
+    error_text = str(exc).strip() or exc.__class__.__name__
+
     return jsonify({
         "success": False,
-        "message": "Competition API error.",
-        "error": str(exc).strip() or exc.__class__.__name__,
+        "message": f"Competition API error: {error_text}",
+        "error": error_text,
         "errorType": exc.__class__.__name__,
     }), 500
 
@@ -2496,220 +2503,212 @@ def register_player(
     "/<int:competition_id>/register/team",
     methods=["POST"]
 )
-def register_team(
-    competition_id
-):
+def register_team(competition_id):
 
     user = current_user()
 
     if not user:
-
         return jsonify({
             "success": False,
             "message": "Authentication required."
         }), 401
 
-    competition = db.session.get(
-        Competition,
-        competition_id
-    )
+    competition = db.session.get(Competition, competition_id)
 
     if not competition:
-
         return jsonify({
             "success": False,
             "message": "Competition not found."
         }), 404
 
-    if sync_registration_status(competition):
+    try:
+        # Keep the persisted status synchronized with the actual registration
+        # window before accepting a registration.
+        status_changed = sync_registration_status(competition)
+
+        if competition.status != "REGISTRATION_OPEN":
+            if competition.registration_start and utc_now() < as_utc_naive(competition.registration_start):
+                message = "Registration has not started yet."
+            elif competition.registration_end and utc_now() >= as_utc_naive(competition.registration_end):
+                message = "Registration has already ended."
+            else:
+                message = "Registration is not open."
+
+            if status_changed:
+                db.session.commit()
+
+            return jsonify({
+                "success": False,
+                "message": message,
+            }), 400
+
+        if str(competition.participant_type or "").upper() != "TEAM":
+            return jsonify({
+                "success": False,
+                "message": "This competition requires players."
+            }), 400
+
+        data = request.get_json(silent=True) or {}
+        club_id = data.get("clubId")
+
+        if club_id in (None, ""):
+            return jsonify({
+                "success": False,
+                "message": "clubId is required."
+            }), 400
+
+        try:
+            club_id = int(club_id)
+        except (TypeError, ValueError):
+            return jsonify({
+                "success": False,
+                "message": "clubId must be a valid integer."
+            }), 400
+
+        club = db.session.get(Club, club_id)
+
+        if not club:
+            return jsonify({
+                "success": False,
+                "message": "Club not found."
+            }), 404
+
+        if club.owner_id != user.id:
+            return jsonify({
+                "success": False,
+                "message": "Only the club owner can register this club."
+            }), 403
+
+        if str(getattr(club, "game_id", None)) != str(competition.game_id):
+            return jsonify({
+                "success": False,
+                "message": "This club is not eligible for the tournament's game."
+            }), 400
+
+        team_size = int(competition.team_size or 0)
+
+        member_count = (
+            ClubMember.query
+            .filter_by(club_id=club.id)
+            .count()
+        )
+
+        if team_size and member_count != team_size:
+            return jsonify({
+                "success": False,
+                "message": (
+                    f"This tournament requires exactly {team_size} "
+                    f"team member{'' if team_size == 1 else 's'}. "
+                    f"Your club currently has {member_count}."
+                ),
+                "requiredTeamSize": team_size,
+                "memberCount": member_count,
+            }), 400
+
+        existing = (
+            CompetitionParticipant.query
+            .filter_by(
+                competition_id=competition.id,
+                club_id=club.id,
+            )
+            .first()
+        )
+
+        if existing:
+            if str(existing.registration_status or "").upper() == "REJECTED":
+                existing.registration_status = "PENDING"
+                existing.seed = None
+                existing.accepted_at = None
+                create_audit_log(
+                    competition.id,
+                    user.id,
+                    "PARTICIPANT_REREGISTERED",
+                    metadata={
+                        "participantId": existing.id,
+                        "participantType": "TEAM",
+                        "clubId": club.id,
+                    },
+                )
+                db.session.commit()
+                return jsonify({
+                    "success": True,
+                    "message": "Team registration submitted again.",
+                    "participant": serialize_participant(existing),
+                }), 201
+
+            return jsonify({
+                "success": False,
+                "message": (
+                    f"This club is already registered with status "
+                    f"{existing.registration_status}."
+                ),
+            }), 409
+
+        active_registration_count = (
+            CompetitionParticipant.query
+            .filter_by(competition_id=competition.id)
+            .filter(
+                CompetitionParticipant.registration_status.notin_(["REJECTED"])
+            )
+            .count()
+        )
+
+        if (
+            competition.max_participants is not None
+            and active_registration_count >= int(competition.max_participants)
+        ):
+            return jsonify({
+                "success": False,
+                "message": "Competition is full."
+            }), 400
+
+        participant = CompetitionParticipant(
+            competition_id=competition.id,
+            participant_type="TEAM",
+            user_id=None,
+            club_id=club.id,
+            registration_status="PENDING",
+        )
+
+        db.session.add(participant)
+        db.session.flush()
+
+        create_audit_log(
+            competition.id,
+            user.id,
+            "PARTICIPANT_REGISTERED",
+            metadata={
+                "participantId": participant.id,
+                "participantType": "TEAM",
+                "clubId": club.id,
+            },
+        )
+
         db.session.commit()
 
-    if competition.status != (
-        "REGISTRATION_OPEN"
-    ):
-
         return jsonify({
-            "success": False,
-            "message": "Registration is not open."
-        }), 400
+            "success": True,
+            "message": "Team registered.",
+            "participant": serialize_participant(participant),
+        }), 201
 
-    if competition.participant_type != "TEAM":
-
-        return jsonify({
-            "success": False,
-            "message": (
-                "This competition requires players."
-            )
-        }), 400
-
-    data = request.get_json(
-        silent=True
-    ) or {}
-
-    club_id = data.get(
-        "clubId"
-    )
-
-    if not club_id:
-
-        return jsonify({
-            "success": False,
-            "message": "clubId is required."
-        }), 400
-
-    club = db.session.get(
-        Club,
-        club_id
-    )
-
-    if not club:
-
-        return jsonify({
-            "success": False,
-            "message": "Club not found."
-        }), 404
-
-    if club.owner_id != user.id:
-
-        return jsonify({
-            "success": False,
-            "message": (
-                "Only the club owner can "
-                "register this club."
-            )
-        }), 403
-
-    club_game_id = getattr(
-        club,
-        "game_id",
-        None
-    )
-
-    if str(club_game_id) != str(competition.game_id):
-
-        return jsonify({
-            "success": False,
-            "message": (
-                "This club is not registered for the "
-                "tournament's game."
-            ),
-        }), 400
-
-    team_size = int(competition.team_size or 0)
-
-    member_count = (
-        ClubMember.query
-        .filter_by(club_id=club.id)
-        .count()
-    )
-
-    if team_size and member_count != team_size:
-        return jsonify({
-            "success": False,
-            "message": (
-                f"This tournament requires exactly {team_size} "
-                f"team member{'' if team_size == 1 else 's'}. "
-                f"Your club currently has {member_count}."
-            ),
-            "requiredTeamSize": team_size,
-            "memberCount": member_count,
-        }), 400
-
-    count = (
-        CompetitionParticipant.query
-        .filter_by(competition_id=competition.id)
-        .filter(
-            CompetitionParticipant.registration_status.notin_(["REJECTED"])
+    except Exception as exc:
+        db.session.rollback()
+        current_app.logger.exception(
+            "Team registration failed for competition=%s club=%s user=%s",
+            competition_id,
+            request.get_json(silent=True) or {},
+            getattr(user, "id", None),
         )
-        .count()
-    )
 
-    if competition.max_participants is not None and count >= int(competition.max_participants):
-        return jsonify({
-            "success": False,
-            "message": "Competition is full."
-        }), 400
-
-    existing = (
-        CompetitionParticipant.query
-        .filter_by(
-            competition_id=competition.id,
-            club_id=club.id
-        )
-        .first()
-    )
-
-    if existing:
-        if existing.registration_status == "REJECTED":
-            existing.registration_status = "PENDING"
-            existing.seed = None
-            existing.accepted_at = None
-            create_audit_log(
-                competition.id,
-                user.id,
-                "PARTICIPANT_REREGISTERED",
-                metadata={
-                    "participantId": existing.id,
-                    "participantType": "TEAM",
-                    "clubId": club.id,
-                },
-            )
-            db.session.commit()
-            return jsonify({
-                "success": True,
-                "message": "Team registration submitted again.",
-                "participant": serialize_participant(existing),
-            }), 201
+        error_text = str(exc).strip() or exc.__class__.__name__
 
         return jsonify({
             "success": False,
-            "message": f"This club is already registered with status {existing.registration_status}.",
-        }), 409
-
-    participant = CompetitionParticipant(
-
-        competition_id=competition.id,
-
-        participant_type="TEAM",
-
-        user_id=None,
-
-        club_id=club.id,
-
-        registration_status="PENDING",
-    )
-
-    db.session.add(participant)
-
-    db.session.flush()
-
-    create_audit_log(
-
-        competition.id,
-
-        user.id,
-
-        "PARTICIPANT_REGISTERED",
-
-        metadata={
-            "participantId": participant.id,
-            "participantType": "TEAM",
-            "clubId": club.id,
-        },
-    )
-
-    db.session.commit()
-
-    return jsonify({
-
-        "success": True,
-
-        "message": "Team registered.",
-
-        "participant": serialize_participant(
-            participant
-        ),
-    }), 201
+            "message": f"Team registration failed: {error_text}",
+            "error": error_text,
+            "errorType": exc.__class__.__name__,
+        }), 500
 
 
 # =========================================================
