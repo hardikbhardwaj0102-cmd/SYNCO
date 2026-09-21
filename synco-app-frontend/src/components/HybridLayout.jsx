@@ -5,6 +5,9 @@ import Sidebar from './Sidebar';
 import { useAuth } from '../context/AuthContext';
 import { useLocation } from 'react-router-dom';
 import { useEffect, useRef } from 'react';
+
+import rankBg from '../assets/rank-bg.png';
+
 import '../styles/components/HybridLayout.css';
 
 
@@ -31,13 +34,6 @@ const HybridLayout = () => {
   }, [pathname]);
 
 
-  /*
-    Special authenticated visual shells.
-
-    Competition Engine and Leaderboards both need their
-    backgrounds to continue underneath the fixed sidebar.
-  */
-
   const isCompetitionPage =
     pathname === '/competitions';
 
@@ -63,6 +59,20 @@ const HybridLayout = () => {
               : ''
           }
         `}
+        style={
+          isLeaderboardsPage
+            ? {
+                backgroundImage:
+                  `url(${rankBg})`,
+                backgroundPosition:
+                  'center top',
+                backgroundSize:
+                  'cover',
+                backgroundRepeat:
+                  'no-repeat',
+              }
+            : undefined
+        }
       >
 
         <Sidebar />

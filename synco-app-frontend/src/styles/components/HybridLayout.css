@@ -185,18 +185,13 @@
    ========================================================= */
 
 /*
-  Leaderboards uses its own full-shell background.
+  Leaderboards background is supplied directly from
+  HybridLayout.jsx using the imported rank-bg.png asset.
 
-  The image is painted on a dedicated pseudo-element instead
-  of the normal background stack.
+  This guarantees Vite resolves the asset correctly.
 
-  This completely isolates Leaderboards from:
-    global-dash-bg.png
-    generic authenticated backgrounds
-    CompetitionEngine backgrounds
-
-  Because this layer belongs to the OUTER shell, it also
-  continues underneath the fixed 90px Sidebar.
+  The background belongs to the OUTER shell, therefore
+  it continues underneath the fixed 90px Sidebar.
 */
 
 .hybrid-auth-container-leaderboards {
@@ -211,39 +206,8 @@
 
   overflow: hidden;
 
-  background:
+  background-color:
     #0a0a0a !important;
-
-}
-
-
-/* =========================================================
-   LEADERBOARDS RANK BACKGROUND
-   ========================================================= */
-
-.hybrid-auth-container-leaderboards::after {
-
-  content: "";
-
-  position: absolute;
-
-  inset: 0;
-
-  z-index: 0;
-
-  pointer-events: none;
-
-  background-image:
-    url('../../assets/rank-bg.png');
-
-  background-position:
-    center top;
-
-  background-size:
-    cover;
-
-  background-repeat:
-    no-repeat;
 
 }
 
@@ -260,7 +224,7 @@
 
   inset: 0;
 
-  z-index: 1;
+  z-index: 0;
 
   pointer-events: none;
 
@@ -268,21 +232,15 @@
     radial-gradient(
       circle at center,
       transparent 28%,
-      rgba(0, 0, 0, 0.62) 100%
+      rgba(0, 0, 0, 0.42) 100%
     );
 
 }
 
 
 /* =========================================================
-   LEADERBOARDS MAIN SCROLL CONTAINER
+   LEADERBOARDS MAIN
    ========================================================= */
-
-/*
-  The main content sits above the dedicated rank-bg layer.
-
-  It remains the ONLY vertical scroll container.
-*/
 
 .hybrid-auth-main-leaderboards {
 
@@ -300,7 +258,7 @@
 
   position: relative;
 
-  z-index: 2;
+  z-index: 1;
 
   overscroll-behavior-y: auto;
 
@@ -359,23 +317,17 @@
 
 
 /* =========================================================
-   LEADERBOARDS BACKGROUND SAFETY
+   REMOVE COMPETITION ENGINE BACKGROUNDS
    ========================================================= */
-
-/*
-  CompetitionEngine.css and generic authenticated styles
-  must not introduce another background anywhere inside
-  the Leaderboards page.
-*/
 
 .hybrid-auth-container-leaderboards
 .leaderboards-page.comp-engine-wrapper,
 
 .hybrid-auth-container-leaderboards
-.leaderboards-page .rank-content-bg,
+.leaderboards-page .rank-hero,
 
 .hybrid-auth-container-leaderboards
-.leaderboards-page .rank-hero,
+.leaderboards-page .rank-content-bg,
 
 .hybrid-auth-container-leaderboards
 .leaderboards-page .hero-bg-layer {
@@ -387,92 +339,19 @@
 
 
 /* =========================================================
-   LEADERBOARDS BACKGROUND LAYER SAFETY
+   IMPORTANT — REMOVE ANY CSS BACKGROUND IMAGE
    ========================================================= */
 
 /*
-  Keep the two shell pseudo-elements behind every actual
-  page component.
+  The actual rank background now comes from JSX.
 
-  Sidebar itself remains above them through its own z-index.
+  Prevent generic/shared styles from putting another
+  background image over or underneath it.
 */
 
-.hybrid-auth-container-leaderboards
-.hybrid-auth-main-leaderboards {
+.hybrid-auth-container-leaderboards {
 
-  isolation:
-    isolate;
-
-}
-
-
-/* =========================================================
-   PUBLIC LAYOUT
-   ========================================================= */
-
-.hybrid-public-container {
-
-  width: 100%;
-
-  height: 100vh;
-
-  min-width: 0;
-
-  min-height: 0;
-
-  overflow: hidden;
-
-  background:
-    transparent;
-
-  color: #000;
-
-  font-family:
-    sans-serif;
-
-  display: flex;
-
-  flex-direction: column;
-
-}
-
-
-.hybrid-public-main {
-
-  flex: 1 1 auto;
-
-  min-width: 0;
-
-  min-height: 0;
-
-  display: flex;
-
-  flex-direction: column;
-
-  overflow-y: auto;
-
-  overflow-x: hidden;
-
-  padding-bottom: 0;
-
-}
-
-
-.hybrid-public-page-content {
-
-  flex: 0 0 auto;
-
-  width: 100%;
-
-  min-width: 0;
-
-}
-
-
-.hybrid-public-main > .footer-wrapper {
-
-  flex-shrink: 0;
-
-  margin-top: 3rem;
+  background-image:
+    none !important;
 
 }
