@@ -2,21 +2,18 @@
 # SYNCO LIVE TOURNAMENT DASHBOARD API
 # =========================================================
 #
-# Uses the EXISTING SYNCO competition schema.
+# Existing SYNCO competition schema only.
 #
-# No new tournament tables are required for this dashboard.
-# Teams come from CompetitionParticipant -> Club.
-# Team members come from ClubMember -> User.
-# Individual live points are stored in PlayerMatchStats.score.
-# Team match totals are synchronized to TeamMatchStats.total_points.
+# This dashboard:
+#   1. Locks the live dashboard until competition_start.
+#   2. Automatically activates the competition when start time arrives.
+#   3. Lets only the organizer enter match statistics.
+#   4. Records kills + placement per player in PlayerMatchStats.extra_stats.
+#   5. Keeps the existing PlayerMatchStats.score as the tournament score.
+#   6. Keeps TeamMatchStats / CompetitionStanding synchronized.
+#   7. Exposes Overview, Leaderboard, Matches and Final Results data.
 #
-# Endpoints provided here power four frontend sections/pages:
-#   1. Overview
-#   2. Live Leaderboard
-#   3. Match Management
-#   4. Final Results
-#
-# This file intentionally does NOT add/remove players.
+# No new database tables are required.
 # =========================================================
 
 from datetime import datetime
@@ -53,6 +50,28 @@ live_tournament_bp = Blueprint(
 
 
 # =========================================================
+# STATUS GROUPS
+# =========================================================
+
+TERMINAL_COMPETITION_STATUSES = {
+    "COMPLETED",
+    "CANCELLED",
+    "CANCELED",
+}
+
+PRE_LIVE_COMPETITION_STATUSES = {
+    "DRAFT",
+    "PENDING",
+    "READY",
+    "SCHEDULED",
+    "REGISTRATION_OPEN",
+    "REGISTRATION_CLOSED",
+    "PUBLISHED",
+    "OPEN",
+}
+
+
+# =========================================================
 # AUTH HELPERS
 # =========================================================
 
@@ -72,7 +91,11 @@ def current_user():
 
 
 def organizer_required(competition):
-    """Only the competition organizer may manage live scores."""
+    """
+    Only the competition organizer may start matches or save scores.
+
+    The tournament start time is always enforced server-side.
+    """
 
     user = current_user()
 
@@ -117,12 +140,42 @@ def organizer_required(competition):
             400,
         )
 
+    access = get_competition_access(
+        competition,
+        persist_live_state=True,
+    )
+
+    if access["phase"] != "LIVE":
+        return None, (
+            jsonify({
+                "success": False,
+                "message": access["message"],
+                "access": access,
+            }),
+            409,
+        )
+
     return user, None
 
 
 # =========================================================
 # GENERAL HELPERS
 # =========================================================
+
+def utc_now():
+    """
+    SYNCO currently uses naive UTC datetimes in the live dashboard code.
+    Keep that convention for compatibility with the existing schema.
+    """
+
+    return datetime.utcnow()
+
+
+def iso_datetime(value):
+    if not value:
+        return None
+    return value.isoformat()
+
 
 def get_competition(competition_id):
     return db.session.get(Competition, competition_id)
@@ -144,7 +197,10 @@ def get_stage(competition):
     return (
         CompetitionStage.query
         .filter_by(competition_id=competition.id)
-        .order_by(CompetitionStage.stage_order.asc(), CompetitionStage.id.asc())
+        .order_by(
+            CompetitionStage.stage_order.asc().nullslast(),
+            CompetitionStage.id.asc(),
+        )
         .first()
     )
 
@@ -153,7 +209,11 @@ def display_user_name(user):
     if not user:
         return "Unknown Player"
 
-    return user.username or user.name or f"Player {user.id}"
+    return (
+        user.username
+        or getattr(user, "name", None)
+        or f"Player {user.id}"
+    )
 
 
 def display_team_name(participant):
@@ -167,7 +227,12 @@ def display_team_name(participant):
 
 
 def get_team_participants(competition):
-    """Return accepted/locked team participants in the competition."""
+    """
+    Return registered team participants.
+
+    The existing registration system remains the source of truth.
+    This dashboard never adds/removes players or teams.
+    """
 
     return (
         CompetitionParticipant.query
@@ -200,13 +265,17 @@ def get_team_members(participant):
         ClubMember.query
         .filter_by(club_id=club_id)
         .order_by(
-            ClubMember.joined_at.asc(),
+            ClubMember.joined_at.asc().nullslast(),
             ClubMember.id.asc(),
         )
         .all()
     )
 
-    return [membership.user for membership in memberships if membership.user]
+    return [
+        membership.user
+        for membership in memberships
+        if membership.user
+    ]
 
 
 def get_player_match_stat(match_id, user_id):
@@ -220,7 +289,142 @@ def get_player_match_stat(match_id, user_id):
     )
 
 
-def player_points_for_competition(competition_id, participant_id, user_id):
+def as_non_negative_int(value, field_name, allow_blank=False):
+    if allow_blank and value in (None, ""):
+        return None
+
+    try:
+        parsed = int(value)
+    except (TypeError, ValueError):
+        raise ValueError(f"{field_name} must be a valid number.")
+
+    if parsed < 0:
+        raise ValueError(f"{field_name} cannot be negative.")
+
+    return parsed
+
+
+def stat_placement(stat):
+    extra = stat.extra_stats or {}
+
+    raw = (
+        extra.get("placement")
+        if isinstance(extra, dict)
+        else None
+    )
+
+    if raw in (None, ""):
+        return None
+
+    try:
+        placement = int(raw)
+    except (TypeError, ValueError):
+        return None
+
+    return placement if placement > 0 else None
+
+
+def competition_access_message(phase, seconds_until_start):
+    if phase == "UPCOMING":
+        if seconds_until_start is not None:
+            return "Tournament has not started yet."
+        return "Tournament start time is not available."
+
+    if phase == "LIVE":
+        return "Tournament is live."
+
+    if phase == "COMPLETED":
+        return "Tournament is completed."
+
+    if phase == "CANCELLED":
+        return "Tournament has been cancelled."
+
+    return "Tournament is not available."
+
+
+def get_competition_access(competition, persist_live_state=False):
+    """
+    Server-authoritative access state.
+
+    The UI may count down locally, but every protected write endpoint
+    checks this state again on the server.
+    """
+
+    now = utc_now()
+    status = str(competition.status or "").upper()
+    start_at = competition.competition_start
+
+    phase = None
+    seconds_until_start = None
+    changed = False
+
+    if status in TERMINAL_COMPETITION_STATUSES:
+        phase = (
+            "CANCELLED"
+            if status in {"CANCELLED", "CANCELED"}
+            else "COMPLETED"
+        )
+
+    elif start_at and now < start_at:
+        phase = "UPCOMING"
+        seconds_until_start = max(
+            0,
+            int((start_at - now).total_seconds()),
+        )
+
+    elif not start_at and status != "LIVE":
+        # Existing tournaments without a scheduled time keep their
+        # current status. The organizer can still use the old manual
+        # start flow when there is no competition_start value.
+        phase = "UPCOMING"
+
+    else:
+        phase = "LIVE"
+
+        if persist_live_state and status != "LIVE":
+            competition.status = "LIVE"
+
+            stage = get_stage(competition)
+
+            if stage and str(stage.status or "").upper() in {
+                "PENDING",
+                "READY",
+                "SCHEDULED",
+            }:
+                stage.status = "LIVE"
+
+            changed = True
+
+    if changed:
+        db.session.commit()
+
+    user = current_user()
+
+    can_enter = phase in {"LIVE", "COMPLETED"}
+    is_organizer = bool(
+        user and competition.organizer_id == user.id
+    )
+
+    return {
+        "phase": phase,
+        "canEnter": can_enter,
+        "isLive": phase == "LIVE",
+        "isOrganizer": is_organizer,
+        "startAt": iso_datetime(start_at),
+        "secondsUntilStart": seconds_until_start,
+        "serverNow": iso_datetime(now),
+        "message": competition_access_message(
+            phase,
+            seconds_until_start,
+        ),
+    }
+
+
+def player_points_for_competition(
+    competition_id,
+    participant_id,
+    user_id,
+):
     value = (
         db.session.query(
             func.coalesce(func.sum(PlayerMatchStats.score), 0)
@@ -241,10 +445,15 @@ def player_points_for_competition(competition_id, participant_id, user_id):
     return int(value or 0)
 
 
-def team_points_for_competition(competition_id, participant_id):
-    value = (
+def player_stats_for_competition(
+    competition_id,
+    participant_id,
+    user_id,
+):
+    rows = (
         db.session.query(
-            func.coalesce(func.sum(PlayerMatchStats.score), 0)
+            PlayerMatchStats,
+            CompetitionMatch,
         )
         .join(
             CompetitionMatch,
@@ -254,11 +463,36 @@ def team_points_for_competition(competition_id, participant_id):
             CompetitionMatch.competition_id == competition_id,
             CompetitionMatch.status != "CANCELLED",
             PlayerMatchStats.competition_participant_id == participant_id,
+            PlayerMatchStats.user_id == user_id,
         )
-        .scalar()
+        .order_by(
+            CompetitionMatch.round_number.asc().nullslast(),
+            CompetitionMatch.match_number.asc().nullslast(),
+            CompetitionMatch.id.asc(),
+        )
+        .all()
     )
 
-    return int(value or 0)
+    total_points = 0
+    total_kills = 0
+    placements = []
+
+    for stat, _match in rows:
+        total_points += int(stat.score or 0)
+        total_kills += int(stat.kills or 0)
+
+        placement = stat_placement(stat)
+
+        if placement is not None:
+            placements.append(placement)
+
+    return {
+        "matchesPlayed": len(rows),
+        "totalPoints": total_points,
+        "totalKills": total_kills,
+        "latestPlacement": placements[-1] if placements else None,
+        "bestPlacement": min(placements) if placements else None,
+    }
 
 
 def serialize_member(competition, participant, user):
@@ -277,18 +511,27 @@ def serialize_member(competition, participant, user):
         if membership and membership.role:
             role = membership.role
 
+    stats = player_stats_for_competition(
+        competition.id,
+        participant.id,
+        user.id,
+    )
+
     return {
         "userId": user.id,
+        "playerId": user.id,
         "uid": user.uid,
         "name": display_user_name(user),
         "username": user.username,
         "avatar": user.avatar,
         "role": role,
-        "individualPoints": player_points_for_competition(
-            competition.id,
-            participant.id,
-            user.id,
-        ),
+        "matchesPlayed": stats["matchesPlayed"],
+        "individualPoints": stats["totalPoints"],
+        "points": stats["totalPoints"],
+        "totalKills": stats["totalKills"],
+        "kills": stats["totalKills"],
+        "latestPlacement": stats["latestPlacement"],
+        "bestPlacement": stats["bestPlacement"],
     }
 
 
@@ -307,30 +550,68 @@ def build_leaderboard(competition):
             for user in members
         ]
 
-        # IMPORTANT: team total is derived from the individual members.
         total_points = sum(
             int(member["individualPoints"])
             for member in member_rows
         )
 
+        total_kills = sum(
+            int(member["totalKills"])
+            for member in member_rows
+        )
+
+        placements = [
+            member["latestPlacement"]
+            for member in member_rows
+            if member["latestPlacement"] is not None
+        ]
+
+        best_placement = min(placements) if placements else None
+
         rows.append({
             "participantId": participant.id,
             "teamId": participant.club_id,
             "teamName": display_team_name(participant),
-            "teamTag": participant.club.tag if participant.club else None,
-            "teamAvatar": participant.club.avatar if participant.club else None,
+            "teamTag": (
+                participant.club.tag
+                if participant.club
+                else None
+            ),
+            "teamAvatar": (
+                participant.club.avatar
+                if participant.club
+                else None
+            ),
             "seed": participant.seed,
             "status": participant.registration_status,
             "totalPoints": total_points,
+            "totalKills": total_kills,
+            "latestPlacement": (
+                placements[-1] if placements else None
+            ),
+            "bestPlacement": best_placement,
             "members": member_rows,
+            # Compatibility aliases for older frontend code.
+            "team_name": display_team_name(participant),
+            "team_id": participant.club_id,
         })
 
-    # Team total points are primary. Seed / participant id are deterministic
-    # fallbacks so equal scores do not randomly reorder the live table.
+    # Existing tournament score remains the primary ranking source.
+    # Kills / placement are deterministic secondary information.
     rows.sort(
         key=lambda row: (
             -row["totalPoints"],
-            row["seed"] if row["seed"] is not None else 10**9,
+            -row["totalKills"],
+            (
+                row["bestPlacement"]
+                if row["bestPlacement"] is not None
+                else 10**9
+            ),
+            (
+                row["seed"]
+                if row["seed"] is not None
+                else 10**9
+            ),
             row["participantId"],
         )
     )
@@ -350,6 +631,55 @@ def match_team_participants(match):
     ]
 
 
+def team_points_for_match(match_id, participant_id):
+    value = (
+        db.session.query(
+            func.coalesce(func.sum(PlayerMatchStats.score), 0)
+        )
+        .filter(
+            PlayerMatchStats.match_id == match_id,
+            PlayerMatchStats.competition_participant_id == participant_id,
+        )
+        .scalar()
+    )
+
+    return int(value or 0)
+
+
+def team_kills_for_match(match_id, participant_id):
+    value = (
+        db.session.query(
+            func.coalesce(func.sum(PlayerMatchStats.kills), 0)
+        )
+        .filter(
+            PlayerMatchStats.match_id == match_id,
+            PlayerMatchStats.competition_participant_id == participant_id,
+        )
+        .scalar()
+    )
+
+    return int(value or 0)
+
+
+def placement_for_team_match(match_id, participant_id):
+    rows = (
+        PlayerMatchStats.query
+        .filter_by(
+            match_id=match_id,
+            competition_participant_id=participant_id,
+        )
+        .all()
+    )
+
+    placements = [
+        stat_placement(row)
+        for row in rows
+        if stat_placement(row) is not None
+    ]
+
+    return min(placements) if placements else None
+
+
 def serialize_match(match, detailed=False):
     competition = match.competition
 
@@ -358,79 +688,125 @@ def serialize_match(match, detailed=False):
         "competitionId": match.competition_id,
         "stageId": match.stage_id,
         "matchNumber": match.match_number,
+        "match_number": match.match_number,
         "roundName": match.round_name,
         "roundNumber": match.round_number,
-        "scheduledAt": match.scheduled_at.isoformat() if match.scheduled_at else None,
-        "startedAt": match.started_at.isoformat() if match.started_at else None,
-        "completedAt": match.completed_at.isoformat() if match.completed_at else None,
+        "scheduledAt": iso_datetime(match.scheduled_at),
+        "startedAt": iso_datetime(match.started_at),
+        "completedAt": iso_datetime(match.completed_at),
         "status": match.status,
         "participants": [],
     }
 
+    flat_players = []
+
     for participant in match_team_participants(match):
+        match_points = team_points_for_match(
+            match.id,
+            participant.id,
+        )
+        match_kills = team_kills_for_match(
+            match.id,
+            participant.id,
+        )
+        team_placement = placement_for_team_match(
+            match.id,
+            participant.id,
+        )
+
         entry = {
             "participantId": participant.id,
             "teamId": participant.club_id,
             "teamName": display_team_name(participant),
-            "teamTag": participant.club.tag if participant.club else None,
-            "totalPoints": team_points_for_competition(
-                competition.id,
-                participant.id,
+            "teamTag": (
+                participant.club.tag
+                if participant.club
+                else None
             ),
+            "totalPoints": match_points,
+            "matchPoints": match_points,
+            "kills": match_kills,
+            "placement": team_placement,
         }
 
         if detailed:
             players = []
 
             for user in get_team_members(participant):
-                stat = get_player_match_stat(match.id, user.id)
+                stat = get_player_match_stat(
+                    match.id,
+                    user.id,
+                )
 
-                players.append({
+                points = int(stat.score or 0) if stat else 0
+                kills = int(stat.kills or 0) if stat else 0
+                assists = int(stat.assists or 0) if stat else 0
+                deaths = int(stat.deaths or 0) if stat else 0
+                placement = stat_placement(stat) if stat else None
+
+                player_row = {
                     "userId": user.id,
+                    "playerId": user.id,
+                    "player_id": user.id,
                     "uid": user.uid,
                     "name": display_user_name(user),
                     "username": user.username,
                     "avatar": user.avatar,
-                    "points": int(stat.score if stat else 0),
-                    "kills": int(stat.kills if stat else 0),
-                    "assists": int(stat.assists if stat else 0),
-                    "deaths": int(stat.deaths if stat else 0),
-                })
+                    "teamId": participant.club_id,
+                    "team_id": participant.club_id,
+                    "teamName": display_team_name(participant),
+                    "team_name": display_team_name(participant),
+                    "points": points,
+                    "kills": kills,
+                    "placement": placement,
+                    "assists": assists,
+                    "deaths": deaths,
+                }
+
+                players.append(player_row)
+                flat_players.append(player_row)
 
             entry["players"] = players
             entry["matchPoints"] = sum(
-                player["points"] for player in players
+                player["points"]
+                for player in players
+            )
+            entry["kills"] = sum(
+                player["kills"]
+                for player in players
             )
 
         result["participants"].append(entry)
+
+    if detailed:
+        result["players"] = flat_players
 
     return result
 
 
 def sync_team_match_stats(match):
-    """Synchronize TeamMatchStats from PlayerMatchStats for one match."""
+    """
+    Synchronize TeamMatchStats from PlayerMatchStats for one match.
+
+    Placement is copied into the existing TeamMatchStats. No new column
+    is required on PlayerMatchStats because player placement is retained
+    inside extra_stats.
+    """
 
     for participant in match_team_participants(match):
-        team_points = (
-            db.session.query(
-                func.coalesce(func.sum(PlayerMatchStats.score), 0)
-            )
-            .filter(
-                PlayerMatchStats.match_id == match.id,
-                PlayerMatchStats.competition_participant_id == participant.id,
-            )
-            .scalar()
+        team_points = team_points_for_match(
+            match.id,
+            participant.id,
         )
 
-        team_kills = (
-            db.session.query(
-                func.coalesce(func.sum(PlayerMatchStats.kills), 0)
-            )
-            .filter(
-                PlayerMatchStats.match_id == match.id,
-                PlayerMatchStats.competition_participant_id == participant.id,
-            )
-            .scalar()
+        team_kills = team_kills_for_match(
+            match.id,
+            participant.id,
+        )
+
+        placement = placement_for_team_match(
+            match.id,
+            participant.id,
         )
 
         row = (
@@ -452,10 +828,15 @@ def sync_team_match_stats(match):
         row.total_points = int(team_points or 0)
         row.kills = int(team_kills or 0)
 
+        # The existing model in SYNCO already exposes placement.
+        if hasattr(row, "placement"):
+            row.placement = placement
+
 
 def validate_match_players(match, payload_players):
     """
     Validate the exact roster already attached to the match.
+
     This deliberately prevents adding players through the dashboard.
     """
 
@@ -468,16 +849,24 @@ def validate_match_players(match, payload_players):
     received = set()
 
     for raw in payload_players:
+        raw_user_id = raw.get("userId", raw.get("player_id"))
+
         try:
-            user_id = int(raw.get("userId"))
+            user_id = int(raw_user_id)
         except (TypeError, ValueError):
             return None, "Each player needs a valid userId."
 
         if user_id in received:
-            return None, f"Player {user_id} was submitted more than once."
+            return (
+                None,
+                f"Player {user_id} was submitted more than once.",
+            )
 
         if user_id not in expected:
-            return None, f"Player {user_id} is not part of this match roster."
+            return (
+                None,
+                f"Player {user_id} is not part of this match roster.",
+            )
 
         received.add(user_id)
 
@@ -485,8 +874,8 @@ def validate_match_players(match, payload_players):
 
     if missing:
         return None, (
-            "Every participating team member needs a score before the match "
-            f"can be finalized. Missing user IDs: {missing}"
+            "Every participating team member needs a score before the "
+            f"match can be finalized. Missing user IDs: {missing}"
         )
 
     return expected, None
@@ -494,8 +883,8 @@ def validate_match_players(match, payload_players):
 
 def sync_classic_standings(competition):
     """
-    Keep the existing CompetitionStanding table aligned with the existing
-    competition.py rules, using only VERIFIED matches.
+    Keep the existing CompetitionStanding table aligned with verified
+    matches, using the existing competition schema.
     """
 
     if str(competition.competition_type or "").upper() != "CLASSIC":
@@ -545,19 +934,42 @@ def sync_classic_standings(competition):
         )
 
         row.matches_played = len(stats)
-        row.placement_points = sum(int(item.placement_points or 0) for item in stats)
-        row.kill_points = sum(int(item.kill_points or 0) for item in stats)
-        row.bonus_points = sum(int(item.bonus_points or 0) for item in stats)
-        row.total_points = sum(int(item.total_points or 0) for item in stats)
-        row.total_kills = sum(int(item.kills or 0) for item in stats)
+        row.placement_points = sum(
+            int(item.placement_points or 0)
+            for item in stats
+        )
+        row.kill_points = sum(
+            int(item.kill_points or 0)
+            for item in stats
+        )
+        row.bonus_points = sum(
+            int(item.bonus_points or 0)
+            for item in stats
+        )
+        row.total_points = sum(
+            int(item.total_points or 0)
+            for item in stats
+        )
+        row.total_kills = sum(
+            int(item.kills or 0)
+            for item in stats
+        )
         row.best_match_score = max(
-            (int(item.total_points or 0) for item in stats),
+            (
+                int(item.total_points or 0)
+                for item in stats
+            ),
             default=0,
         )
         row.wins = sum(
-            1 for item in stats if int(item.placement or 0) == 1
+            1
+            for item in stats
+            if int(item.placement or 0) == 1
         )
-        row.losses = max(0, row.matches_played - row.wins)
+        row.losses = max(
+            0,
+            row.matches_played - row.wins,
+        )
 
         standings.append(row)
 
@@ -574,13 +986,115 @@ def sync_classic_standings(competition):
         row.rank = rank
 
 
+def competition_payload(competition):
+    return {
+        "id": competition.id,
+        "title": competition.title,
+        "slug": competition.slug,
+        "gameId": competition.game_id,
+        "game": (
+            competition.game.to_dict()
+            if competition.game
+            else None
+        ),
+        "competitionType": competition.competition_type,
+        "gameMode": competition.game_mode,
+        "participantType": competition.participant_type,
+        "teamSize": competition.team_size,
+        "numberOfMatches": competition.number_of_matches,
+        "structure": competition.structure,
+        "status": competition.status,
+        "start": iso_datetime(competition.competition_start),
+        "end": iso_datetime(
+            competition.competition_end
+        ),
+        "organizerId": competition.organizer_id,
+    }
+
+
+def dashboard_payload(competition):
+    teams = build_leaderboard(competition)
+
+    matches = (
+        CompetitionMatch.query
+        .filter_by(competition_id=competition.id)
+        .order_by(
+            CompetitionMatch.round_number.asc().nullslast(),
+            CompetitionMatch.match_number.asc().nullslast(),
+            CompetitionMatch.id.asc(),
+        )
+        .all()
+    )
+
+    access = get_competition_access(
+        competition,
+        persist_live_state=True,
+    )
+
+    live_match = next(
+        (
+            item
+            for item in matches
+            if str(item.status or "").upper() == "LIVE"
+        ),
+        None,
+    )
+
+    # Before the scheduled start, keep the page in its locked state.
+    # Match/leaderboard details are not exposed as live data until start.
+    live_data_enabled = access["phase"] in {
+        "LIVE",
+        "COMPLETED",
+    }
+
+    dashboard_matches = (
+        [serialize_match(item) for item in matches]
+        if live_data_enabled
+        else [serialize_match(item) for item in matches]
+    )
+
+    leaderboard = teams if live_data_enabled else []
+
+    return {
+        "competition": competition_payload(competition),
+        "access": access,
+        "overview": {
+            "teams": len(teams),
+            "players": sum(
+                len(item["members"])
+                for item in teams
+            ),
+            "matches": len(matches),
+            "completedMatches": sum(
+                1
+                for item in matches
+                if str(item.status or "").upper() == "VERIFIED"
+            ),
+            "liveMatches": sum(
+                1
+                for item in matches
+                if str(item.status or "").upper() == "LIVE"
+            ),
+            "liveMatchId": (
+                live_match.id
+                if live_match
+                else None
+            ),
+        },
+        "leaderboard": leaderboard,
+        "matches": dashboard_matches,
+    }
+
+
 # =========================================================
-# FULL DASHBOARD
+# ACCESS
 # =========================================================
 
-@live_tournament_bp.route("/<int:competition_id>/dashboard", methods=["GET"])
-def dashboard(competition_id):
-
+@live_tournament_bp.route(
+    "/<int:competition_id>/access",
+    methods=["GET"],
+)
+def access(competition_id):
     competition = get_competition(competition_id)
 
     if not competition:
@@ -589,54 +1103,48 @@ def dashboard(competition_id):
             "message": "Competition not found.",
         }), 404
 
-    teams = build_leaderboard(competition)
-
-    matches = (
-        CompetitionMatch.query
-        .filter_by(competition_id=competition.id)
-        .order_by(
-            CompetitionMatch.round_number.asc().nullslast(),
-            CompetitionMatch.match_number.asc(),
-            CompetitionMatch.id.asc(),
-        )
-        .all()
-    )
-
-    live_match = next(
-        (item for item in matches if item.status == "LIVE"),
-        None,
+    access_data = get_competition_access(
+        competition,
+        persist_live_state=True,
     )
 
     return jsonify({
         "success": True,
-        "dashboard": {
-            "competition": {
-                "id": competition.id,
-                "title": competition.title,
-                "slug": competition.slug,
-                "gameId": competition.game_id,
-                "game": competition.game.to_dict() if competition.game else None,
-                "competitionType": competition.competition_type,
-                "gameMode": competition.game_mode,
-                "participantType": competition.participant_type,
-                "teamSize": competition.team_size,
-                "numberOfMatches": competition.number_of_matches,
-                "structure": competition.structure,
-                "status": competition.status,
-                "start": competition.competition_start.isoformat() if competition.competition_start else None,
-                "end": competition.competition_end.isoformat() if competition.competition_end else None,
-            },
-            "overview": {
-                "teams": len(teams),
-                "players": sum(len(item["members"]) for item in teams),
-                "matches": len(matches),
-                "completedMatches": sum(1 for item in matches if item.status == "VERIFIED"),
-                "liveMatchId": live_match.id if live_match else None,
-            },
-            "leaderboard": teams,
-            "matches": [serialize_match(item) for item in matches],
-        },
-        "updatedAt": datetime.utcnow().isoformat(),
+        "competition": competition_payload(competition),
+        "access": access_data,
+        "updatedAt": iso_datetime(utc_now()),
+    })
+
+
+# =========================================================
+# FULL DASHBOARD
+# =========================================================
+
+@live_tournament_bp.route(
+    "/<int:competition_id>/dashboard",
+    methods=["GET"],
+)
+def dashboard(competition_id):
+    competition = get_competition(competition_id)
+
+    if not competition:
+        return jsonify({
+            "success": False,
+            "message": "Competition not found.",
+        }), 404
+
+    if str(competition.participant_type or "").upper() != "TEAM":
+        return jsonify({
+            "success": False,
+            "message": "The live team dashboard requires a TEAM competition.",
+        }), 400
+
+    data = dashboard_payload(competition)
+
+    return jsonify({
+        "success": True,
+        "dashboard": data,
+        "updatedAt": iso_datetime(utc_now()),
     })
 
 
@@ -644,9 +1152,11 @@ def dashboard(competition_id):
 # PAGE 1 - OVERVIEW
 # =========================================================
 
-@live_tournament_bp.route("/<int:competition_id>/overview", methods=["GET"])
+@live_tournament_bp.route(
+    "/<int:competition_id>/overview",
+    methods=["GET"],
+)
 def overview(competition_id):
-
     competition = get_competition(competition_id)
 
     if not competition:
@@ -655,6 +1165,11 @@ def overview(competition_id):
             "message": "Competition not found.",
         }), 404
 
+    access_data = get_competition_access(
+        competition,
+        persist_live_state=True,
+    )
+
     teams = build_leaderboard(competition)
 
     matches = (
@@ -662,7 +1177,7 @@ def overview(competition_id):
         .filter_by(competition_id=competition.id)
         .order_by(
             CompetitionMatch.round_number.asc().nullslast(),
-            CompetitionMatch.match_number.asc(),
+            CompetitionMatch.match_number.asc().nullslast(),
             CompetitionMatch.id.asc(),
         )
         .all()
@@ -670,38 +1185,34 @@ def overview(competition_id):
 
     return jsonify({
         "success": True,
+        "access": access_data,
         "overview": {
-            "competition": {
-                "id": competition.id,
-                "title": competition.title,
-                "slug": competition.slug,
-                "status": competition.status,
-                "gameId": competition.game_id,
-                "game": competition.game.to_dict() if competition.game else None,
-                "gameMode": competition.game_mode,
-                "teamSize": competition.team_size,
-                "numberOfMatches": competition.number_of_matches,
-            },
+            "competition": competition_payload(competition),
             "teams": len(teams),
-            "players": sum(len(item["members"]) for item in teams),
+            "players": sum(
+                len(item["members"])
+                for item in teams
+            ),
             "matches": len(matches),
             "liveMatches": [
                 serialize_match(item)
                 for item in matches
-                if item.status == "LIVE"
+                if str(item.status or "").upper() == "LIVE"
             ],
             "upcomingMatches": [
                 serialize_match(item)
                 for item in matches
-                if item.status in ("READY", "SCHEDULED")
+                if str(item.status or "").upper()
+                in {"READY", "SCHEDULED"}
             ],
             "recentMatches": [
                 serialize_match(item)
                 for item in matches
-                if item.status in ("VERIFIED", "CANCELLED")
+                if str(item.status or "").upper()
+                in {"VERIFIED", "CANCELLED"}
             ][-5:],
         },
-        "updatedAt": datetime.utcnow().isoformat(),
+        "updatedAt": iso_datetime(utc_now()),
     })
 
 
@@ -709,9 +1220,11 @@ def overview(competition_id):
 # PAGE 2 - LIVE LEADERBOARD
 # =========================================================
 
-@live_tournament_bp.route("/<int:competition_id>/leaderboard", methods=["GET"])
+@live_tournament_bp.route(
+    "/<int:competition_id>/leaderboard",
+    methods=["GET"],
+)
 def leaderboard(competition_id):
-
     competition = get_competition(competition_id)
 
     if not competition:
@@ -726,16 +1239,21 @@ def leaderboard(competition_id):
             "message": "The live leaderboard is only available for TEAM competitions.",
         }), 400
 
+    access_data = get_competition_access(
+        competition,
+        persist_live_state=True,
+    )
+
     return jsonify({
         "success": True,
-        "competition": {
-            "id": competition.id,
-            "title": competition.title,
-            "status": competition.status,
-            "gameId": competition.game_id,
-        },
-        "leaderboard": build_leaderboard(competition),
-        "updatedAt": datetime.utcnow().isoformat(),
+        "access": access_data,
+        "competition": competition_payload(competition),
+        "leaderboard": (
+            build_leaderboard(competition)
+            if access_data["phase"] in {"LIVE", "COMPLETED"}
+            else []
+        ),
+        "updatedAt": iso_datetime(utc_now()),
     })
 
 
@@ -743,9 +1261,11 @@ def leaderboard(competition_id):
 # PAGE 3 - MATCH MANAGEMENT
 # =========================================================
 
-@live_tournament_bp.route("/<int:competition_id>/matches", methods=["GET"])
+@live_tournament_bp.route(
+    "/<int:competition_id>/matches",
+    methods=["GET"],
+)
 def matches(competition_id):
-
     competition = get_competition(competition_id)
 
     if not competition:
@@ -754,12 +1274,17 @@ def matches(competition_id):
             "message": "Competition not found.",
         }), 404
 
+    access_data = get_competition_access(
+        competition,
+        persist_live_state=True,
+    )
+
     rows = (
         CompetitionMatch.query
         .filter_by(competition_id=competition.id)
         .order_by(
             CompetitionMatch.round_number.asc().nullslast(),
-            CompetitionMatch.match_number.asc(),
+            CompetitionMatch.match_number.asc().nullslast(),
             CompetitionMatch.id.asc(),
         )
         .all()
@@ -767,14 +1292,23 @@ def matches(competition_id):
 
     return jsonify({
         "success": True,
-        "matches": [serialize_match(item, detailed=True) for item in rows],
-        "updatedAt": datetime.utcnow().isoformat(),
+        "access": access_data,
+        "matches": [
+            serialize_match(
+                item,
+                detailed=True,
+            )
+            for item in rows
+        ],
+        "updatedAt": iso_datetime(utc_now()),
     })
 
 
-@live_tournament_bp.route("/<int:competition_id>/matches/<int:match_id>", methods=["GET"])
+@live_tournament_bp.route(
+    "/<int:competition_id>/matches/<int:match_id>",
+    methods=["GET"],
+)
 def match_detail(competition_id, match_id):
-
     competition = get_competition(competition_id)
 
     if not competition:
@@ -800,7 +1334,10 @@ def match_detail(competition_id, match_id):
 
     return jsonify({
         "success": True,
-        "match": serialize_match(match, detailed=True),
+        "match": serialize_match(
+            match,
+            detailed=True,
+        ),
     })
 
 
@@ -809,7 +1346,6 @@ def match_detail(competition_id, match_id):
     methods=["POST"],
 )
 def start_match(competition_id, match_id):
-
     competition = get_competition(competition_id)
 
     if not competition:
@@ -838,30 +1374,50 @@ def start_match(competition_id, match_id):
             "message": "Match not found.",
         }), 404
 
-    if match.status == "LIVE":
+    status = str(match.status or "").upper()
+
+    if status == "LIVE":
         return jsonify({
             "success": True,
             "message": "Match is already live.",
-            "match": serialize_match(match, detailed=True),
+            "match": serialize_match(
+                match,
+                detailed=True,
+            ),
         })
 
-    if match.status not in ("READY", "SCHEDULED"):
+    if status not in {"READY", "SCHEDULED"}:
         return jsonify({
             "success": False,
-            "message": f"Match cannot be started from status {match.status}.",
+            "message": (
+                f"Match cannot be started from status "
+                f"{match.status}."
+            ),
         }), 400
 
-    match.status = "LIVE"
-    match.started_at = datetime.utcnow()
+    # Do not allow an individual match to bypass the tournament start.
+    access_data = get_competition_access(
+        competition,
+        persist_live_state=True,
+    )
 
-    if competition.status in (
-        "READY",
-        "REGISTRATION_CLOSED",
-    ):
-        competition.status = "LIVE"
+    if access_data["phase"] != "LIVE":
+        return jsonify({
+            "success": False,
+            "message": access_data["message"],
+            "access": access_data,
+        }), 409
+
+    match.status = "LIVE"
+    match.started_at = utc_now()
 
     stage = get_stage(competition)
-    if stage and stage.status in ("PENDING", "READY"):
+
+    if stage and str(stage.status or "").upper() in {
+        "PENDING",
+        "READY",
+        "SCHEDULED",
+    }:
         stage.status = "LIVE"
 
     db.session.commit()
@@ -869,7 +1425,10 @@ def start_match(competition_id, match_id):
     return jsonify({
         "success": True,
         "message": "Match started.",
-        "match": serialize_match(match, detailed=True),
+        "match": serialize_match(
+            match,
+            detailed=True,
+        ),
         "startedBy": user.id,
     })
 
@@ -879,7 +1438,6 @@ def start_match(competition_id, match_id):
     methods=["POST"],
 )
 def save_scores(competition_id, match_id):
-
     competition = get_competition(competition_id)
 
     if not competition:
@@ -889,6 +1447,7 @@ def save_scores(competition_id, match_id):
         }), 404
 
     user, error = organizer_required(competition)
+
     if error:
         return error
 
@@ -907,10 +1466,15 @@ def save_scores(competition_id, match_id):
             "message": "Match not found.",
         }), 404
 
-    if match.status not in ("LIVE", "RESULT_PENDING"):
+    status = str(match.status or "").upper()
+
+    if status not in {"LIVE", "RESULT_PENDING"}:
         return jsonify({
             "success": False,
-            "message": "Only LIVE or RESULT_PENDING matches can receive scores.",
+            "message": (
+                "Only LIVE or RESULT_PENDING matches "
+                "can receive scores."
+            ),
         }), 400
 
     payload = request.get_json(silent=True) or {}
@@ -923,7 +1487,10 @@ def save_scores(competition_id, match_id):
             "message": "players must be an array.",
         }), 400
 
-    expected, validation_error = validate_match_players(match, players)
+    expected, validation_error = validate_match_players(
+        match,
+        players,
+    )
 
     if validation_error:
         return jsonify({
@@ -931,20 +1498,88 @@ def save_scores(competition_id, match_id):
             "message": validation_error,
         }), 400
 
+    team_count = len(
+        match_team_participants(match)
+    )
+
     try:
         for raw in players:
-            user_id = int(raw.get("userId"))
-            points = int(raw.get("points", raw.get("score", 0)))
-            kills = int(raw.get("kills", 0))
-            assists = int(raw.get("assists", 0))
-            deaths = int(raw.get("deaths", 0))
+            raw_user_id = raw.get(
+                "userId",
+                raw.get("player_id"),
+            )
 
-            if points < 0 or kills < 0 or assists < 0 or deaths < 0:
-                raise ValueError("Scores and stats cannot be negative.")
-
+            user_id = int(raw_user_id)
             participant_id = expected[user_id]
 
-            stat = get_player_match_stat(match.id, user_id)
+            existing_stat = get_player_match_stat(
+                match.id,
+                user_id,
+            )
+
+            # Points remain compatible with the existing SYNCO
+            # scoring model. If the organizer does not submit a
+            # points value, retain the current score.
+            raw_points = raw.get(
+                "points",
+                raw.get("score", None),
+            )
+
+            if raw_points in (None, ""):
+                points = (
+                    int(existing_stat.score or 0)
+                    if existing_stat
+                    else 0
+                )
+            else:
+                points = as_non_negative_int(
+                    raw_points,
+                    "points",
+                )
+
+            kills = as_non_negative_int(
+                raw.get("kills", 0),
+                "kills",
+            )
+
+            placement = as_non_negative_int(
+                raw.get("placement"),
+                "placement",
+                allow_blank=True,
+            )
+
+            if placement == 0:
+                placement = None
+
+            if placement is not None and placement < 1:
+                raise ValueError(
+                    "Placement must be 1 or higher."
+                )
+
+            if finalize and placement is None:
+                raise ValueError(
+                    f"Player {user_id} needs a placement before "
+                    "the match can be finalized."
+                )
+
+            assists = as_non_negative_int(
+                raw.get("assists", 0),
+                "assists",
+            )
+
+            deaths = as_non_negative_int(
+                raw.get("deaths", 0),
+                "deaths",
+            )
+
+            if placement is not None and team_count:
+                if placement > team_count:
+                    raise ValueError(
+                        "Placement cannot be higher than the "
+                        f"number of teams in this match ({team_count})."
+                    )
+
+            stat = existing_stat
 
             if not stat:
                 stat = PlayerMatchStats(
@@ -959,16 +1594,26 @@ def save_scores(competition_id, match_id):
             stat.kills = kills
             stat.assists = assists
             stat.deaths = deaths
-            stat.extra_stats = {
-                **(stat.extra_stats or {}),
-                "source": "SYNCO_LIVE_DASHBOARD",
-            }
+
+            extra_stats = dict(
+                stat.extra_stats or {}
+            )
+
+            extra_stats["source"] = (
+                "SYNCO_LIVE_DASHBOARD"
+            )
+            extra_stats["placement"] = placement
+
+            stat.extra_stats = extra_stats
 
         sync_team_match_stats(match)
 
         if finalize:
             match.status = "VERIFIED"
-            match.completed_at = match.completed_at or datetime.utcnow()
+            match.completed_at = (
+                match.completed_at
+                or utc_now()
+            )
 
             result = (
                 MatchResult.query
@@ -985,19 +1630,54 @@ def save_scores(competition_id, match_id):
 
             result.submitted_by = user.id
             result.status = "VERIFIED"
-            result.submitted_at = datetime.utcnow()
-            result.verified_at = datetime.utcnow()
+            result.submitted_at = utc_now()
+            result.verified_at = utc_now()
             result.verified_by = user.id
             result.raw_result = {
-                "source": "SYNCO_LIVE_DASHBOARD",
+                "source": (
+                    "SYNCO_LIVE_DASHBOARD"
+                ),
                 "players": [
                     {
-                        "userId": int(raw.get("userId")),
-                        "participantId": expected[int(raw.get("userId"))],
-                        "points": int(raw.get("points", raw.get("score", 0))),
-                        "kills": int(raw.get("kills", 0)),
-                        "assists": int(raw.get("assists", 0)),
-                        "deaths": int(raw.get("deaths", 0)),
+                        "userId": int(
+                            raw.get(
+                                "userId",
+                                raw.get("player_id"),
+                            )
+                        ),
+                        "participantId": expected[
+                            int(
+                                raw.get(
+                                    "userId",
+                                    raw.get("player_id"),
+                                )
+                            )
+                        ],
+                        "points": int(
+                            raw.get(
+                                "points",
+                                raw.get("score", 0),
+                            )
+                            or 0
+                        ),
+                        "kills": int(
+                            raw.get("kills", 0)
+                            or 0
+                        ),
+                        "placement": (
+                            int(raw["placement"])
+                            if raw.get("placement")
+                            not in (None, "")
+                            else None
+                        ),
+                        "assists": int(
+                            raw.get("assists", 0)
+                            or 0
+                        ),
+                        "deaths": int(
+                            raw.get("deaths", 0)
+                            or 0
+                        ),
                     }
                     for raw in players
                 ],
@@ -1008,18 +1688,50 @@ def save_scores(competition_id, match_id):
                     match_id=match.id,
                     verifier_id=user.id,
                     action="VERIFIED",
-                    reason="Verified through SYNCO Live Tournament Dashboard.",
+                    reason=(
+                        "Verified through SYNCO Live "
+                        "Tournament Dashboard."
+                    ),
                 )
             )
 
-            competition.configuration = {
-                **(competition.configuration or {}),
-                "liveDashboard": {
-                    "lastUpdatedAt": datetime.utcnow().isoformat(),
-                },
+            configuration = (
+                competition.configuration
+                if isinstance(
+                    competition.configuration,
+                    dict,
+                )
+                else {}
+            )
+
+            existing_live_dashboard = (
+                configuration.get(
+                    "liveDashboard",
+                    {}
+                )
+                if isinstance(
+                    configuration.get(
+                        "liveDashboard",
+                        {},
+                    ),
+                    dict,
+                )
+                else {}
+            )
+
+            configuration["liveDashboard"] = {
+                **existing_live_dashboard,
+                "lastUpdatedAt": iso_datetime(
+                    utc_now()
+                ),
             }
 
-            sync_classic_standings(competition)
+            competition.configuration = configuration
+
+            sync_classic_standings(
+                competition
+            )
+
         else:
             match.status = "LIVE"
 
@@ -1027,6 +1739,7 @@ def save_scores(competition_id, match_id):
 
     except ValueError as exc:
         db.session.rollback()
+
         return jsonify({
             "success": False,
             "message": str(exc),
@@ -1034,6 +1747,7 @@ def save_scores(competition_id, match_id):
 
     except Exception as exc:
         db.session.rollback()
+
         return jsonify({
             "success": False,
             "message": "Unable to save live scores.",
@@ -1042,10 +1756,21 @@ def save_scores(competition_id, match_id):
 
     return jsonify({
         "success": True,
-        "message": "Match finalized." if finalize else "Live scores saved.",
-        "match": serialize_match(match, detailed=True),
-        "leaderboard": build_leaderboard(competition),
-        "updatedAt": datetime.utcnow().isoformat(),
+        "message": (
+            "Match finalized."
+            if finalize
+            else "Live scores saved."
+        ),
+        "match": serialize_match(
+            match,
+            detailed=True,
+        ),
+        "leaderboard": build_leaderboard(
+            competition
+        ),
+        "updatedAt": iso_datetime(
+            utc_now()
+        ),
     })
 
 
@@ -1053,9 +1778,11 @@ def save_scores(competition_id, match_id):
 # PAGE 4 - FINAL RESULTS
 # =========================================================
 
-@live_tournament_bp.route("/<int:competition_id>/results", methods=["GET"])
+@live_tournament_bp.route(
+    "/<int:competition_id>/results",
+    methods=["GET"],
+)
 def results(competition_id):
-
     competition = get_competition(competition_id)
 
     if not competition:
@@ -1069,59 +1796,118 @@ def results(competition_id):
         .filter_by(competition_id=competition.id)
         .order_by(
             CompetitionMatch.round_number.asc().nullslast(),
-            CompetitionMatch.match_number.asc(),
+            CompetitionMatch.match_number.asc().nullslast(),
             CompetitionMatch.id.asc(),
         )
         .all()
     )
 
-    verified_only = competition.status == "COMPLETED"
+    verified_only = (
+        str(competition.status or "").upper()
+        == "COMPLETED"
+    )
 
-    rows = []
+    rows = build_leaderboard(competition)
 
-    for team in build_leaderboard(competition):
-        if verified_only:
+    if verified_only:
+        # Rebuild team totals from verified match records only.
+        for team in rows:
             points = (
                 db.session.query(
-                    func.coalesce(func.sum(PlayerMatchStats.score), 0)
+                    func.coalesce(
+                        func.sum(
+                            PlayerMatchStats.score
+                        ),
+                        0,
+                    )
                 )
                 .join(
                     CompetitionMatch,
-                    CompetitionMatch.id == PlayerMatchStats.match_id,
+                    CompetitionMatch.id
+                    == PlayerMatchStats.match_id,
                 )
                 .filter(
-                    CompetitionMatch.competition_id == competition.id,
-                    CompetitionMatch.status == "VERIFIED",
-                    PlayerMatchStats.competition_participant_id == team["participantId"],
+                    CompetitionMatch.competition_id
+                    == competition.id,
+                    CompetitionMatch.status
+                    == "VERIFIED",
+                    PlayerMatchStats.competition_participant_id
+                    == team["participantId"],
                 )
                 .scalar()
             )
-            team["totalPoints"] = int(points or 0)
 
-        rows.append(team)
+            kills = (
+                db.session.query(
+                    func.coalesce(
+                        func.sum(
+                            PlayerMatchStats.kills
+                        ),
+                        0,
+                    )
+                )
+                .join(
+                    CompetitionMatch,
+                    CompetitionMatch.id
+                    == PlayerMatchStats.match_id,
+                )
+                .filter(
+                    CompetitionMatch.competition_id
+                    == competition.id,
+                    CompetitionMatch.status
+                    == "VERIFIED",
+                    PlayerMatchStats.competition_participant_id
+                    == team["participantId"],
+                )
+                .scalar()
+            )
+
+            team["totalPoints"] = int(
+                points or 0
+            )
+            team["totalKills"] = int(
+                kills or 0
+            )
 
     rows.sort(
         key=lambda row: (
-            -row["totalPoints"],
-            row["seed"] if row["seed"] is not None else 10**9,
+            -int(row["totalPoints"] or 0),
+            -int(row["totalKills"] or 0),
+            (
+                row["bestPlacement"]
+                if row["bestPlacement"] is not None
+                else 10**9
+            ),
             row["participantId"],
         )
     )
 
-    for rank, row in enumerate(rows, start=1):
+    for rank, row in enumerate(
+        rows,
+        start=1,
+    ):
         row["finalRank"] = rank
 
     return jsonify({
         "success": True,
+        "access": get_competition_access(
+            competition,
+            persist_live_state=True,
+        ),
         "competition": {
-            "id": competition.id,
-            "title": competition.title,
-            "status": competition.status,
-            "completedAt": competition.competition_end.isoformat() if competition.competition_end else None,
+            **competition_payload(competition),
+            "completedAt": iso_datetime(
+                competition.competition_end
+            ),
         },
         "results": rows,
-        "matches": [serialize_match(item) for item in matches],
-        "updatedAt": datetime.utcnow().isoformat(),
+        "matches": [
+            serialize_match(item)
+            for item in matches
+        ],
+        "updatedAt": iso_datetime(
+            utc_now()
+        ),
     })
 
 
@@ -1129,9 +1915,11 @@ def results(competition_id):
 # FINALIZE / LOCK COMPETITION
 # =========================================================
 
-@live_tournament_bp.route("/<int:competition_id>/finalize", methods=["POST"])
+@live_tournament_bp.route(
+    "/<int:competition_id>/finalize",
+    methods=["POST"],
+)
 def finalize_competition(competition_id):
-
     competition = get_competition(competition_id)
 
     if not competition:
@@ -1140,7 +1928,10 @@ def finalize_competition(competition_id):
             "message": "Competition not found.",
         }), 404
 
-    user, error = organizer_required(competition)
+    user, error = organizer_required(
+        competition
+    )
+
     if error:
         return error
 
@@ -1159,22 +1950,29 @@ def finalize_competition(competition_id):
     incomplete = [
         match.id
         for match in matches
-        if match.status not in ("VERIFIED", "CANCELLED")
+        if str(match.status or "").upper()
+        not in {"VERIFIED", "CANCELLED"}
     ]
 
     if incomplete:
         return jsonify({
             "success": False,
-            "message": "All matches must be verified or cancelled before finalization.",
+            "message": (
+                "All matches must be verified or "
+                "cancelled before finalization."
+            ),
             "incompleteMatches": incomplete,
         }), 400
 
-    sync_classic_standings(competition)
+    sync_classic_standings(
+        competition
+    )
 
     competition.status = "COMPLETED"
-    competition.competition_end = datetime.utcnow()
+    competition.competition_end = utc_now()
 
     stage = get_stage(competition)
+
     if stage:
         stage.status = "COMPLETED"
 
@@ -1186,8 +1984,12 @@ def finalize_competition(competition_id):
         "competition": {
             "id": competition.id,
             "status": competition.status,
-            "completedAt": competition.competition_end.isoformat(),
+            "completedAt": iso_datetime(
+                competition.competition_end
+            ),
         },
-        "finalResults": build_leaderboard(competition),
+        "finalResults": build_leaderboard(
+            competition
+        ),
         "finalizedBy": user.id,
     })
