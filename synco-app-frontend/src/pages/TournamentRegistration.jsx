@@ -366,11 +366,6 @@ export default function TournamentRegistration() {
             return;
         }
 
-        if (club.eligible === false) {
-            setError(club.unavailableReason || "This club is not eligible for this tournament.");
-            return;
-        }
-
         setSelectedClubId(club.id);
 
         const existingRoster =
@@ -910,7 +905,7 @@ export default function TournamentRegistration() {
                                                     type="button"
                                                     className="registration-club-select-button"
                                                     onClick={() => handleClubSelect(club)}
-                                                    disabled={unavailable || !memberOk || club.eligible === false}
+                                                    disabled={unavailable}
                                                 >
                                                     <div className="registration-club-top">
                                                         <div className="registration-club-avatar">
@@ -949,11 +944,11 @@ export default function TournamentRegistration() {
                                                             </strong>
                                                         </div>
 
-                                                        {!unavailable && memberOk && (
+                                                        {!unavailable && (
                                                             <span className="registration-roster-hint">
                                                                 {isSelected
-                                                                    ? "Choose players below"
-                                                                    : "Select club first"}
+                                                                    ? "Choose eligible players below"
+                                                                    : "Select club to view players"}
                                                             </span>
                                                         )}
                                                     </div>
