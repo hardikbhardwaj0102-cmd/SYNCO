@@ -3,7 +3,7 @@
 # Compatible with the Competition models previously provided
 # =========================================================
 
-from datetime import datetime
+from datetime import datetime, timezone
 import math
 import random
 import re
@@ -357,6 +357,42 @@ def parse_datetime(value):
     except ValueError:
         return None
 
+
+def utc_now():
+
+    return datetime.now(timezone.utc)
+
+
+def as_utc(value):
+
+    if value is None:
+        return None
+
+    if value.tzinfo is None:
+        return value.replace(tzinfo=timezone.utc)
+
+    return value.astimezone(timezone.utc)
+
+
+def sync_registration_status(competition):
+    """Open a DRAFT competition when its registration window is active."""
+
+    if not competition or competition.status != "DRAFT":
+        return False
+
+    now = utc_now()
+    registration_start = as_utc(competition.registration_start)
+    registration_end = as_utc(competition.registration_end)
+
+    if registration_start and now < registration_start:
+        return False
+
+    if registration_end and now > registration_end:
+        return False
+
+    competition.status = "REGISTRATION_OPEN"
+    competition.is_published = True
+    return True
 
 def slugify(value):
 
@@ -1691,6 +1727,8 @@ def create_competition():
             creation_step = "flush scoring rule"
             db.session.flush()
 
+        auto_opened = sync_registration_status(competition)
+
         creation_step = "create audit log"
 
         create_audit_log(
@@ -1708,6 +1746,16 @@ def create_competition():
                 "gameMode": game_mode,
             },
         )
+
+        if auto_opened:
+            create_audit_log(
+                competition.id,
+                user.id,
+                "REGISTRATION_OPENED",
+                metadata={
+                    "source": "AUTOMATIC_REGISTRATION_WINDOW"
+                },
+            )
 
         creation_step = "commit competition"
         db.session.commit()
@@ -1817,6 +1865,13 @@ def get_competitions():
         .all()
     )
 
+    status_changed = False
+    for competition in competitions:
+        status_changed = sync_registration_status(competition) or status_changed
+
+    if status_changed:
+        db.session.commit()
+
     return jsonify({
 
         "success": True,
@@ -1853,6 +1908,9 @@ def get_competition(
             "success": False,
             "message": "Competition not found."
         }), 404
+
+    if sync_registration_status(competition):
+        db.session.commit()
 
     return jsonify({
 
@@ -2131,6 +2189,9 @@ def get_registration_info(competition_id):
             "message": "Competition not found."
         }), 404
 
+    if sync_registration_status(competition):
+        db.session.commit()
+
     game = get_game(competition.game_id)
     game_config = get_game_configuration(game) or {}
     mode_config = (game_config.get("modes") or {}).get(
@@ -2242,6 +2303,9 @@ def register_player(
             "success": False,
             "message": "Competition not found."
         }), 404
+
+    if sync_registration_status(competition):
+        db.session.commit()
 
     if competition.status != (
         "REGISTRATION_OPEN"
@@ -2369,6 +2433,9 @@ def register_team(
             "success": False,
             "message": "Competition not found."
         }), 404
+
+    if sync_registration_status(competition):
+        db.session.commit()
 
     if competition.status != (
         "REGISTRATION_OPEN"

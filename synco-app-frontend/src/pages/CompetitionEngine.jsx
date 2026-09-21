@@ -195,7 +195,7 @@ const CompetitionEngine = () => {
           ).toUpperCase();
 
         return (
-          status.includes('REGISTRATION') ||
+          status === 'REGISTRATION_OPEN' ||
           status === 'OPEN' ||
           status === 'PUBLISHED'
         );
