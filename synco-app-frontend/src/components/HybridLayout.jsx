@@ -6,7 +6,7 @@ import { useAuth } from '../context/AuthContext';
 import { useLocation } from 'react-router-dom';
 import { useEffect, useRef } from 'react';
 
-import rankBg from '../assets/rank-bg.png';
+import rankBg from '../assets/comp-bg.png';
 
 import '../styles/components/HybridLayout.css';
 
