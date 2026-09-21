@@ -11,10 +11,13 @@
   Because position: fixed removes it from normal layout flow,
   the authenticated main area explicitly reserves that space.
 
-  This becomes the permanent SYNCO edge-to-edge layout model.
+  This remains the permanent SYNCO edge-to-edge layout model.
 */
+
 :root {
+
   --synco-sidebar-width: 90px;
+
 }
 
 
@@ -23,6 +26,7 @@
    ========================================================= */
 
 .hybrid-auth-container {
+
   display: flex;
 
   width: 100%;
@@ -41,6 +45,7 @@
     #0b0e14
     url("../../assets/global-dash-bg.png")
     center / cover fixed;
+
 }
 
 
@@ -49,6 +54,7 @@
    ========================================================= */
 
 .hybrid-auth-container::before {
+
   content: "";
 
   position: absolute;
@@ -65,6 +71,7 @@
       transparent 30%,
       rgba(0, 0, 0, 0.8) 100%
     );
+
 }
 
 
@@ -73,26 +80,20 @@
    ========================================================= */
 
 .hybrid-auth-main {
+
   /*
     Sidebar is fixed and therefore removed from flex flow.
 
     Reserve exactly the sidebar's horizontal area.
   */
+
   flex: 1 1 auto;
 
   min-width: 0;
   min-height: 0;
 
-  margin-left: var(--synco-sidebar-width);
-
-  /*
-    IMPORTANT:
-
-    Do NOT add width: 100%.
-
-    The flex item already occupies the remaining viewport
-    width after the sidebar offset.
-  */
+  margin-left:
+    var(--synco-sidebar-width);
 
   overflow-y: auto;
   overflow-x: hidden;
@@ -100,6 +101,7 @@
   position: relative;
 
   z-index: 1;
+
 }
 
 
@@ -107,24 +109,8 @@
    AUTHENTICATED PAGE CONTENT
    ========================================================= */
 
-/*
-  THIS IS THE IMPORTANT FIX.
-
-  Previously:
-
-      max-w-7xl
-      mx-auto
-      p-8
-
-  created a centered 1280px-ish content container.
-
-  That is completely removed.
-
-  Every authenticated page now receives the entire width
-  available beside the sidebar.
-*/
-
 .hybrid-auth-content {
+
   width: 100%;
 
   max-width: none;
@@ -135,37 +121,73 @@
 
   min-width: 0;
   min-height: 0;
+
 }
 
 
 /* =========================================================
-   COMPETITION CONTENT
+   COMPETITION ENGINE MAIN
    ========================================================= */
 
-/*
-  Keep this explicitly edge-to-edge as well so competition
-  pages follow the same global layout model.
-*/
+.hybrid-auth-main-competition {
 
-.competition-auth-content {
-  width: 100%;
-
-  max-width: none;
-
-  margin: 0;
-
-  padding: 0;
+  overflow: visible;
 
   min-width: 0;
   min-height: 0;
+
+  position: relative;
+
 }
 
 
 /* =========================================================
-   PUBLIC LAYOUT
+   COMPETITION ENGINE CONTENT
    ========================================================= */
 
-.hybrid-public-container {
+.hybrid-auth-content-competition {
+
+  width:
+    calc(
+      100% +
+      var(--synco-sidebar-width)
+    );
+
+  margin-left:
+    calc(
+      -1 *
+      var(--synco-sidebar-width)
+    );
+
+  height: 100%;
+
+  min-width: 0;
+  min-height: 0;
+
+  padding: 0;
+
+}
+
+
+/* =========================================================
+   COMPETITION CONTENT SAFETY
+   ========================================================= */
+
+.hybrid-auth-content-competition {
+
+  --competition-content-offset:
+    var(--synco-sidebar-width);
+
+}
+
+/* =========================================================
+   LEADERBOARDS FULL-VIEWPORT SHELL
+   ========================================================= */
+
+.hybrid-auth-container-leaderboards {
+
+  position: relative;
+
   width: 100%;
   height: 100vh;
 
@@ -174,44 +196,222 @@
 
   overflow: hidden;
 
-  background: transparent;
+  background:
+    #0a0a0a !important;
 
-  color: #000;
+  background-image:
+    none !important;
 
-  font-family: sans-serif;
-
-  display: flex;
-  flex-direction: column;
 }
 
 
-.hybrid-public-main {
+/* =========================================================
+   LEADERBOARDS ACTUAL BACKGROUND
+   ========================================================= */
+
+/*
+  Dedicated DOM background layer supplied by
+  HybridLayout.jsx.
+
+  It intentionally sits ABOVE the normal shell background
+  and BELOW every Leaderboards content layer.
+*/
+
+.hybrid-auth-container-leaderboards
+.leaderboards-shell-background {
+
+  position: fixed;
+
+  inset: 0;
+
+  width: 100vw;
+  height: 100vh;
+
+  z-index: 1;
+
+  display: block;
+
+  pointer-events: none;
+
+  overflow: hidden;
+
+}
+
+
+/* =========================================================
+   LEADERBOARDS BACKGROUND IMAGE
+   ========================================================= */
+
+/*
+  This rule is required if the JSX uses:
+
+      <img
+        className="leaderboards-shell-background-image"
+      />
+
+  It also guarantees the image itself fills the viewport.
+*/
+
+.hybrid-auth-container-leaderboards
+.leaderboards-shell-background-image {
+
+  display: block;
+
+  position: absolute;
+
+  inset: 0;
+
+  width: 100%;
+
+  height: 100%;
+
+  max-width: none;
+
+  object-fit: cover;
+
+  object-position: center center;
+
+  pointer-events: none;
+
+  user-select: none;
+
+}
+
+
+/* =========================================================
+   LEADERBOARDS VIGNETTE
+   ========================================================= */
+
+.hybrid-auth-container-leaderboards::before {
+
+  content: "";
+
+  position: fixed;
+
+  inset: 0;
+
+  z-index: 2;
+
+  pointer-events: none;
+
+  background:
+    radial-gradient(
+      circle at center,
+      transparent 30%,
+      rgba(0, 0, 0, 0.30) 100%
+    );
+
+}
+
+
+/* =========================================================
+   LEADERBOARDS MAIN
+   ========================================================= */
+
+.hybrid-auth-main-leaderboards {
+
+  position: relative;
+
+  z-index: 3;
+
   flex: 1 1 auto;
 
   min-width: 0;
   min-height: 0;
 
-  display: flex;
-  flex-direction: column;
+  margin-left:
+    var(--synco-sidebar-width);
 
   overflow-y: auto;
+
   overflow-x: hidden;
 
-  padding-bottom: 0;
+  background:
+    transparent !important;
+
 }
 
 
-.hybrid-public-page-content {
-  flex: 0 0 auto;
+/* =========================================================
+   LEADERBOARDS CONTENT
+   ========================================================= */
+
+.hybrid-auth-content-leaderboards {
 
   width: 100%;
 
+  max-width: none;
+
+  margin: 0;
+
+  padding: 0;
+
   min-width: 0;
+  min-height: 0;
+
+  background:
+    transparent !important;
+
 }
 
 
-.hybrid-public-main > .footer-wrapper {
-  flex-shrink: 0;
+/* =========================================================
+   LEADERBOARDS PAGE SAFETY
+   ========================================================= */
 
-  margin-top: 3rem;
+.hybrid-auth-container-leaderboards
+.leaderboards-page,
+
+.hybrid-auth-container-leaderboards
+.leaderboards-page.comp-engine-wrapper,
+
+.hybrid-auth-container-leaderboards
+.leaderboards-page .rank-hero,
+
+.hybrid-auth-container-leaderboards
+.leaderboards-page .rank-content-bg,
+
+.hybrid-auth-container-leaderboards
+.leaderboards-page .hero-bg-layer {
+
+  background:
+    transparent !important;
+
+}
+
+
+/* =========================================================
+   REMOVE COMPETITION ENGINE OVERLAYS
+   ========================================================= */
+
+.hybrid-auth-container-leaderboards
+.leaderboards-page.comp-engine-wrapper::before,
+
+.hybrid-auth-container-leaderboards
+.leaderboards-page.comp-engine-wrapper::after,
+
+.hybrid-auth-container-leaderboards
+.leaderboards-page .comp-hero-section::before,
+
+.hybrid-auth-container-leaderboards
+.leaderboards-page .comp-hero-section::after {
+
+  content: none !important;
+
+  display: none !important;
+
+}
+
+
+/* =========================================================
+   SIDEBAR
+   ========================================================= */
+
+.hybrid-auth-container-leaderboards
+.sidebar-container {
+
+  position: fixed;
+
+  z-index: 50;
+
 }

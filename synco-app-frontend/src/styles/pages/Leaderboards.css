@@ -1,77 +1,3285 @@
-@reference "../global.css";
+/* =========================================================
+   SYNCO — LEADERBOARDS
 
-.leaderboards-container {
-  @apply w-full max-w-[1000px] mx-auto bg-white rounded-2xl shadow-sm border border-synco-border p-8;
+   STANDALONE PAGE STYLES
+   NO COMPETITION ENGINE CSS DEPENDENCY
+   FULL-BLEED / RANK BACKGROUND
+   TRUE V-SHAPE PODIUM
+   OVERLAPPING RANK CARDS
+   RESPONSIVE / VIEWPORT-SAFE
+   ========================================================= */
+
+
+/* =========================================================
+   1. PAGE SHELL
+   ========================================================= */
+
+/*
+  Leaderboards previously inherited this structural layer
+  from CompetitionEngine.css.
+
+  It is now fully local to this page.
+
+  IMPORTANT:
+  The actual rank-bg.png is supplied by HybridLayout.jsx
+  on the outer authenticated shell.
+*/
+
+.leaderboards-page {
+
+  position: relative;
+
+  width: 100%;
+
+  max-width: none;
+
+  min-width: 0;
+
+  min-height: 100%;
+
+  margin: 0;
+
+  padding: 0;
+
+  box-sizing: border-box;
+
+  display: flex;
+
+  flex-direction: column;
+
+  color: #ffffff;
+
+  background:
+    transparent !important;
+
+  overflow: visible;
+
 }
 
-.leaderboards-header {
-  @apply mb-10;
+
+.leaderboards-page.comp-engine-wrapper {
+
+  position: relative;
+
+  width: 100%;
+
+  max-width: none;
+
+  height: auto;
+
+  min-height: 100%;
+
+  margin: 0;
+
+  padding: 0;
+
+  min-width: 0;
+
+  box-sizing: border-box;
+
+  display: flex;
+
+  flex-direction: column;
+
+  overflow: visible;
+
+  background:
+    transparent !important;
+
 }
 
-.leaderboards-title {
-  @apply font-header text-4xl font-bold text-black mb-2 uppercase;
+
+/* =========================================================
+   2. HERO BASE
+   ========================================================= */
+
+/*
+  Local replacement for .comp-hero-section.
+
+  Leaderboards does NOT use comp-bg.png.
+
+  rank-bg.png comes from the outer HybridLayout shell.
+*/
+
+.leaderboards-page
+.comp-hero-section {
+
+  position: relative;
+
+  width: 100%;
+
+  min-width: 0;
+
+  height: 100dvh;
+
+  min-height: 600px;
+
+  max-height: none;
+
+  margin: 0;
+
+  padding: 0;
+
+  box-sizing: border-box;
+
+  border: none;
+
+  border-radius: 0;
+
+  overflow: hidden;
+
+  display: flex;
+
+  align-items: center;
+
+  justify-content: center;
+
+  flex-shrink: 0;
+
+  background:
+    transparent !important;
+
+  z-index: 1;
+
 }
 
-.leaderboards-subtitle {
-  @apply text-synco-textMuted text-sm;
+
+/* =========================================================
+   3. HERO BACKGROUND LAYER
+   ========================================================= */
+
+/*
+  Local replacement for CompetitionEngine's shared
+  hero background layer.
+
+  It only contains HALL OF FAME typography on Leaderboards.
+*/
+
+.leaderboards-page
+.hero-bg-layer {
+
+  position: absolute;
+
+  inset: 0;
+
+  width: 100%;
+
+  height: 100%;
+
+  display: flex;
+
+  flex-direction: column;
+
+  align-items: center;
+
+  pointer-events: none;
+
+  z-index: 1;
+
+  background:
+    transparent !important;
+
 }
 
-.leaderboards-tabs {
-  @apply flex gap-2 mb-6;
+
+/* =========================================================
+   4. HERO BACKGROUND TYPOGRAPHY
+   ========================================================= */
+
+.leaderboards-page
+.massive-bg-text {
+
+  display: flex;
+
+  flex-direction: column;
+
+  align-items: center;
+
+  width: 100%;
+
+  margin: 0;
+
+  padding-top:
+    clamp(
+      5rem,
+      11vh,
+      8rem
+    );
+
+  color:
+    rgba(
+      255,
+      255,
+      255,
+      0.16
+    );
+
+  font-family:
+    'Super Brigade',
+    sans-serif;
+
+  font-size:
+    clamp(
+      5rem,
+      10vw,
+      10rem
+    );
+
+  font-weight: 700;
+
+  letter-spacing: 0.02em;
+
+  line-height: 0.72;
+
+  text-align: center;
+
+  white-space: nowrap;
+
+  user-select: none;
+
 }
 
-.leaderboards-tab-btn {
-  @apply px-6 py-2 rounded-lg text-xs font-bold transition-all;
+
+/* =========================================================
+   5. WEEKLY / SEASON TOGGLE
+   ========================================================= */
+
+/* =========================================================
+   HERO WEEKLY / SEASON BUTTONS
+   NO OUTER CONTAINER
+   ========================================================= */
+
+.leaderboards-page
+.timeframe-toggle-container {
+
+  position: absolute;
+
+  top:
+    clamp(
+      1.5rem,
+      4vh,
+      3rem
+    );
+
+  left: 50%;
+
+  transform:
+    translateX(-50%);
+
+  z-index: 40;
+
+  display: flex;
+
+  align-items: center;
+
+  justify-content: center;
+
+  gap:
+    0.35rem;
+
+  padding: 0;
+
+  background: transparent;
+
+  border: none;
+
+  box-shadow: none;
+
+  backdrop-filter: none;
+
+  -webkit-backdrop-filter: none;
+
 }
 
-.leaderboards-tab-active {
-  @apply bg-synco-dark text-white;
+
+.leaderboards-page
+.timeframe-btn {
+
+  min-width:
+    clamp(
+      125px,
+      11vw,
+      175px
+    );
+
+  min-height:
+    clamp(
+      40px,
+      3vw,
+      46px
+    );
+
+  display: inline-flex;
+
+  align-items: center;
+
+  justify-content: center;
+
+  gap: 0.45rem;
+
+  padding:
+    clamp(
+      0.7rem,
+      0.9vw,
+      0.95rem
+    )
+    clamp(
+      1.4rem,
+      2vw,
+      2.1rem
+    );
+
+  border: none;
+
+  border-radius: 0;
+
+  background:
+    rgba(
+      15,
+      15,
+      15,
+      0.72
+    );
+
+  color:
+    rgba(
+      255,
+      255,
+      255,
+      0.48
+    );
+
+  font-size:
+    clamp(
+      0.58rem,
+      0.7vw,
+      0.72rem
+    );
+
+  font-weight: 900;
+
+  letter-spacing: 0.12em;
+
+  cursor: pointer;
+
+  clip-path:
+    polygon(
+      8% 0,
+      100% 0,
+      92% 100%,
+      0% 100%
+    );
+
+  transition:
+    background 0.3s ease,
+    color 0.3s ease,
+    transform 0.3s ease,
+    box-shadow 0.3s ease;
+
 }
 
-.leaderboards-tab-inactive {
-  @apply bg-synco-light text-synco-textMuted hover:bg-gray-200;
+
+.leaderboards-page
+.timeframe-btn:hover {
+
+  background:
+    #ff5e6b;
+
+  color:
+    #ffffff;
+
+  transform:
+    scale(1.05);
+
 }
 
-.leaderboards-table-container {
-  @apply border border-synco-border rounded-xl overflow-hidden;
+
+.leaderboards-page
+.timeframe-btn.active {
+
+  background:
+    #ff4655;
+
+  color:
+    #ffffff;
+
+  box-shadow:
+    0 8px 25px
+    rgba(
+      255,
+      70,
+      85,
+      0.28
+    );
+
 }
 
-.leaderboards-table-header {
-  @apply bg-synco-light grid grid-cols-12 gap-4 p-4 text-[10px] font-bold text-synco-textMuted uppercase;
+
+.leaderboards-page
+.timeframe-btn.active:hover {
+
+  background:
+    #ff5e6b;
+
+}
+/* =========================================================
+   PODIUM STAGE — LARGER CHARACTER AREA
+   ========================================================= */
+
+.leaderboards-page
+.rank-podium-stage {
+
+  position: absolute;
+
+  left: 50%;
+
+  bottom:
+    clamp(
+      5.5rem,
+      8vh,
+      7rem
+    );
+
+  transform:
+    translateX(-50%);
+
+  width:
+    min(
+      96vw,
+      1400px
+    );
+
+  height:
+    clamp(
+      500px,
+      70vh,
+      760px
+    );
+
+  z-index: 10;
+
+  overflow: visible;
+
 }
 
-.leaderboards-col-rank {
-  @apply col-span-1 text-center;
+/* =========================================================
+   7. V-SHAPE PODIUM CONTAINER
+   ========================================================= */
+
+.leaderboards-page
+.v-shape-podium {
+
+  position: absolute;
+
+  inset: 0;
+
+  width: 100%;
+
+  height: 100%;
+
+  display: block;
+
+  overflow: visible;
+
 }
 
-.leaderboards-col-name {
-  @apply col-span-6;
+
+/* =========================================================
+   8. EMPTY PODIUM STATE
+   ========================================================= */
+
+.leaderboards-page
+.podium-empty {
+
+  position: absolute;
+
+  top: 50%;
+
+  left: 50%;
+
+  width: max-content;
+
+  max-width: 80%;
+
+  margin: 0;
+
+  transform:
+    translate(
+      -50%,
+      -50%
+    );
+
+  color:
+    rgba(
+      255,
+      255,
+      255,
+      0.55
+    );
+
+  font-size:
+    clamp(
+      0.75rem,
+      1vw,
+      0.95rem
+    );
+
+  font-weight: 800;
+
+  letter-spacing: 0.12em;
+
+  text-align: center;
+
+  text-transform: uppercase;
+
 }
 
-.leaderboards-col-region {
-  @apply col-span-3;
+
+/* =========================================================
+   PODIUM SLOT — MORE VERTICAL ROOM
+   ========================================================= */
+
+.leaderboards-page
+.podium-slot {
+
+  position: absolute;
+
+  left: 50%;
+
+  bottom: 0;
+
+  width:
+    clamp(
+      230px,
+      19vw,
+      300px
+    );
+
+  height:
+    clamp(
+      430px,
+      58vh,
+      680px
+    );
+
+  display: flex;
+
+  flex-direction: column;
+
+  align-items: center;
+
+  justify-content: flex-end;
+
+  pointer-events: auto;
+
+  transform-origin:
+    center bottom;
+
+  transition:
+    left 0.3s ease,
+    bottom 0.3s ease,
+    transform 0.3s ease;
+
 }
 
-.leaderboards-col-points {
-  @apply col-span-2 text-right;
+/* =========================================================
+   10. TRUE V-SHAPE POSITIONS
+   ========================================================= */
+
+/*
+                    RANK 1
+                  /         \
+              RANK 2       RANK 3
+                /             \
+            RANK 4           RANK 5
+
+
+  The horizontal distances intentionally create overlap.
+
+  Higher rank:
+      higher z-index
+
+  Therefore:
+
+      Rank 1 covers part of Rank 2 / 3
+      Rank 2 covers part of Rank 4
+      Rank 3 covers part of Rank 5
+*/
+
+
+/* ---------------------------------------------------------
+   RANK 1
+   --------------------------------------------------------- */
+
+.leaderboards-page
+.position-rank-1 {
+
+  left: 50%;
+
+  bottom: 0;
+
+  z-index: 50;
+
+  transform:
+    translateX(-50%)
+    scale(1);
+
 }
 
-.leaderboards-table-row {
-  @apply grid grid-cols-12 gap-4 p-4 border-t border-synco-border items-center hover:bg-gray-50 transition-colors;
+
+/* ---------------------------------------------------------
+   RANK 2
+   --------------------------------------------------------- */
+
+.leaderboards-page
+.position-rank-2 {
+
+  left: 39%;
+
+  bottom:
+    3.25rem;
+
+  z-index: 40;
+
+  transform:
+    translateX(-50%)
+    scale(0.88);
+
 }
 
-.leaderboards-cell-rank {
-  @apply col-span-1 text-center font-header text-xl font-bold text-black;
+
+/* ---------------------------------------------------------
+   RANK 3
+   --------------------------------------------------------- */
+
+.leaderboards-page
+.position-rank-3 {
+
+  left: 61%;
+
+  bottom:
+    3.25rem;
+
+  z-index: 40;
+
+  transform:
+    translateX(-50%)
+    scale(0.88);
+
 }
 
-.leaderboards-cell-name {
-  @apply col-span-6 font-bold text-sm text-black;
+
+/* ---------------------------------------------------------
+   RANK 4
+   --------------------------------------------------------- */
+
+.leaderboards-page
+.position-rank-4 {
+
+  left: 29%;
+
+  bottom: 0;
+
+  z-index: 30;
+
+  transform:
+    translateX(-50%)
+    scale(0.72);
+
 }
 
-.leaderboards-cell-region {
-  @apply col-span-3 text-xs font-bold text-gray-500;
+
+/* ---------------------------------------------------------
+   RANK 5
+   --------------------------------------------------------- */
+
+.leaderboards-page
+.position-rank-5 {
+
+  left: 71%;
+
+  bottom: 0;
+
+  z-index: 30;
+
+  transform:
+    translateX(-50%)
+    scale(0.72);
+
 }
 
-.leaderboards-cell-points {
-  @apply col-span-2 text-right text-sm font-bold text-orange-600;
+
+/* =========================================================
+   11. HOVER — BRING SELECTED RANK FORWARD
+   ========================================================= */
+
+.leaderboards-page
+.position-rank-2:hover {
+
+  z-index: 80;
+
+  transform:
+    translateX(-50%)
+    translateY(-8px)
+    scale(0.94);
+
+}
+
+
+.leaderboards-page
+.position-rank-3:hover {
+
+  z-index: 80;
+
+  transform:
+    translateX(-50%)
+    translateY(-8px)
+    scale(0.94);
+
+}
+
+
+.leaderboards-page
+.position-rank-4:hover {
+
+  z-index: 80;
+
+  transform:
+    translateX(-50%)
+    translateY(-8px)
+    scale(0.80);
+
+}
+
+
+.leaderboards-page
+.position-rank-5:hover {
+
+  z-index: 80;
+
+  transform:
+    translateX(-50%)
+    translateY(-8px)
+    scale(0.80);
+
+}
+
+
+/* =========================================================
+   12. PODIUM CHARACTERS
+   ========================================================= */
+
+.leaderboards-page
+.podium-char-wrapper {
+
+  position: relative;
+
+  width: 100%;
+
+  display: flex;
+
+  align-items: flex-end;
+
+  justify-content: center;
+
+  flex: 1 1 auto;
+
+  min-height: 0;
+
+  pointer-events: none;
+
+}
+
+
+.leaderboards-page
+.podium-char-img {
+
+  display: block;
+
+  width: auto;
+
+  max-width: none;
+
+  object-fit: contain;
+
+  object-position: bottom center;
+
+  filter:
+    drop-shadow(
+      0 18px 30px
+      rgba(
+        0,
+        0,
+        0,
+        0.58
+      )
+    );
+
+  pointer-events: none;
+
+}
+
+
+/* =========================================================
+   PODIUM CHARACTERS — LARGE HERO SCALE
+   ========================================================= */
+
+
+/* ---------------------------------------------------------
+   RANK 1
+   --------------------------------------------------------- */
+
+.leaderboards-page
+.position-rank-1
+.podium-char-img {
+
+  height:
+    clamp(
+      480px,
+      63vh,
+      720px
+    );
+
+}
+
+
+/* ---------------------------------------------------------
+   RANK 2 / 3
+   --------------------------------------------------------- */
+
+.leaderboards-page
+.position-rank-2
+.podium-char-img,
+
+.leaderboards-page
+.position-rank-3
+.podium-char-img {
+
+  height:
+    clamp(
+      390px,
+      52vh,
+      580px
+    );
+
+}
+
+
+/* ---------------------------------------------------------
+   RANK 4 / 5
+   --------------------------------------------------------- */
+
+.leaderboards-page
+.position-rank-4
+.podium-char-img,
+
+.leaderboards-page
+.position-rank-5
+.podium-char-img {
+
+  height:
+    clamp(
+      315px,
+      43vh,
+      500px
+    );
+
+}
+
+/* =========================================================
+   13. PODIUM CARDS
+   ========================================================= */
+
+.leaderboards-page
+.podium-card {
+
+  position: relative;
+
+  z-index: 5;
+
+  width:
+    clamp(
+      200px,
+      17vw,
+      270px
+    );
+
+  min-height:
+    clamp(
+      68px,
+      6vw,
+      86px
+    );
+
+  display: grid;
+
+  grid-template-columns:
+    auto
+    minmax(0, 1fr)
+    auto;
+
+  align-items: center;
+
+  gap:
+    clamp(
+      0.45rem,
+      0.7vw,
+      0.75rem
+    );
+
+  padding:
+    0.7rem
+    0.85rem;
+
+  box-sizing: border-box;
+
+  border:
+    1px solid
+    rgba(
+      255,
+      255,
+      255,
+      0.14
+    );
+
+  border-radius:
+    12px;
+
+  background:
+    rgba(
+      12,
+      12,
+      12,
+      0.84
+    );
+
+  backdrop-filter:
+    blur(14px);
+
+  -webkit-backdrop-filter:
+    blur(14px);
+
+  box-shadow:
+    0 16px 45px
+    rgba(
+      0,
+      0,
+      0,
+      0.45
+    );
+
+  overflow: hidden;
+
+  transition:
+    border-color 0.25s ease,
+    background 0.25s ease,
+    box-shadow 0.25s ease;
+
+}
+
+
+/*
+  Rank 1 is larger than every other card.
+*/
+
+.leaderboards-page
+.position-rank-1
+.podium-card {
+
+  width:
+    clamp(
+      230px,
+      20vw,
+      310px
+    );
+
+  min-height:
+    clamp(
+      82px,
+      7vw,
+      102px
+    );
+
+  border-color:
+    rgba(
+      214,
+      201,
+      138,
+      0.40
+    );
+
+  background:
+    rgba(
+      14,
+      14,
+      14,
+      0.94
+    );
+
+  box-shadow:
+    0 20px 55px
+    rgba(
+      0,
+      0,
+      0,
+      0.62
+    );
+
+}
+
+
+/* =========================================================
+   14. PODIUM CARD HOVER
+   ========================================================= */
+
+.leaderboards-page
+.position-rank-2:hover
+.podium-card,
+
+.leaderboards-page
+.position-rank-3:hover
+.podium-card,
+
+.leaderboards-page
+.position-rank-4:hover
+.podium-card,
+
+.leaderboards-page
+.position-rank-5:hover
+.podium-card {
+
+  border-color:
+    rgba(
+      214,
+      201,
+      138,
+      0.42
+    );
+
+  background:
+    rgba(
+      15,
+      15,
+      15,
+      0.96
+    );
+
+  box-shadow:
+    0 24px 65px
+    rgba(
+      0,
+      0,
+      0,
+      0.68
+    );
+
+}
+
+
+/* =========================================================
+   15. PODIUM BADGE
+   ========================================================= */
+
+.leaderboards-page
+.podium-badge {
+
+  min-width:
+    clamp(
+      28px,
+      2.5vw,
+      38px
+    );
+
+  height:
+    clamp(
+      28px,
+      2.5vw,
+      38px
+    );
+
+  display: flex;
+
+  align-items: center;
+
+  justify-content: center;
+
+  border-radius: 9px;
+
+  background:
+    rgba(
+      255,
+      255,
+      255,
+      0.08
+    );
+
+  color:
+    rgba(
+      255,
+      255,
+      255,
+      0.65
+    );
+
+  font-size:
+    clamp(
+      0.62rem,
+      0.75vw,
+      0.75rem
+    );
+
+  font-weight: 900;
+
+}
+
+
+.leaderboards-page
+.position-rank-1
+.podium-badge {
+
+  background:
+    rgba(
+      214,
+      201,
+      138,
+      0.14
+    );
+
+  color:
+    #d6c98a;
+
+}
+
+
+/* =========================================================
+   16. PODIUM INFORMATION
+   ========================================================= */
+
+.leaderboards-page
+.podium-info {
+
+  min-width: 0;
+
+  display: flex;
+
+  flex-direction: column;
+
+  gap: 0.2rem;
+
+}
+
+
+.leaderboards-page
+.podium-name {
+
+  display: block;
+
+  overflow: hidden;
+
+  color: #ffffff;
+
+  font-size:
+    clamp(
+      0.66rem,
+      0.8vw,
+      0.82rem
+    );
+
+  font-weight: 900;
+
+  line-height: 1.15;
+
+  text-overflow: ellipsis;
+
+  white-space: nowrap;
+
+}
+
+
+.leaderboards-page
+.podium-meta {
+
+  display: block;
+
+  overflow: hidden;
+
+  color:
+    rgba(
+      255,
+      255,
+      255,
+      0.42
+    );
+
+  font-size:
+    clamp(
+      0.48rem,
+      0.58vw,
+      0.62rem
+    );
+
+  font-weight: 700;
+
+  line-height: 1.2;
+
+  text-overflow: ellipsis;
+
+  white-space: nowrap;
+
+}
+
+
+.leaderboards-page
+.podium-points {
+
+  color:
+    #d6c98a;
+
+  font-size:
+    clamp(
+      0.55rem,
+      0.65vw,
+      0.7rem
+    );
+
+  font-weight: 900;
+
+  white-space: nowrap;
+
+}
+
+
+/* =========================================================
+   17. HERO CATEGORY NAV
+   ========================================================= */
+
+/*
+  This is its own bottom zone.
+
+  The podium stage ends above it.
+*/
+
+/* =========================================================
+   HERO CATEGORY BUTTONS
+   ========================================================= */
+
+.leaderboards-page
+.rank-hero-tabs {
+
+  position: absolute;
+
+  left: 50%;
+
+  bottom:
+    clamp(
+      1rem,
+      2.5vh,
+      1.75rem
+    );
+
+  transform:
+    translateX(-50%);
+
+  z-index: 100;
+
+  width:
+    min(
+      92vw,
+      680px
+    );
+
+  display: flex;
+
+  align-items: center;
+
+  justify-content: center;
+
+  padding: 0;
+
+  box-sizing: border-box;
+
+  background: transparent;
+
+}
+
+
+.leaderboards-page
+.rank-tabs-container {
+
+  width: 100%;
+
+  display: flex;
+
+  align-items: center;
+
+  justify-content: center;
+
+  gap:
+    clamp(
+      0.15rem,
+      0.35vw,
+      0.35rem
+    );
+
+}
+
+
+.leaderboards-page
+.rank-tab-btn {
+
+  flex:
+    1 1 0;
+
+  min-width: 0;
+
+  min-height:
+    clamp(
+      40px,
+      3vw,
+      46px
+    );
+
+  display: inline-flex;
+
+  align-items: center;
+
+  justify-content: center;
+
+  gap: 0.4rem;
+
+  padding:
+    clamp(
+      0.7rem,
+      0.9vw,
+      0.95rem
+    )
+    clamp(
+      1rem,
+      1.8vw,
+      2rem
+    );
+
+  border: none;
+
+  border-radius: 0;
+
+  background:
+    rgba(
+      15,
+      15,
+      15,
+      0.72
+    );
+
+  color:
+    rgba(
+      255,
+      255,
+      255,
+      0.48
+    );
+
+  font-size:
+    clamp(
+      0.52rem,
+      0.68vw,
+      0.7rem
+    );
+
+  font-weight: 900;
+
+  letter-spacing: 0.08em;
+
+  white-space: nowrap;
+
+  cursor: pointer;
+
+  clip-path:
+    polygon(
+      8% 0,
+      100% 0,
+      92% 100%,
+      0% 100%
+    );
+
+  transition:
+    background 0.3s ease,
+    color 0.3s ease,
+    transform 0.3s ease,
+    box-shadow 0.3s ease;
+
+}
+
+
+.leaderboards-page
+.rank-hero-tabs
+.rank-tab-btn:hover {
+
+  background:
+    rgba(
+      255,
+      255,
+      255,
+      0.12
+    );
+
+  color:
+    #ffffff;
+
+  transform:
+    scale(1.05);
+
+}
+
+
+/* =========================================================
+   HERO CATEGORY ACTIVE
+   ========================================================= */
+
+/*
+  Hero = PINK / RED
+  Sticky bar = GOLD
+*/
+
+.leaderboards-page
+.rank-hero-tabs
+.rank-tab-btn.active {
+
+  background:
+    #ff4655;
+
+  color:
+    #ffffff;
+
+  box-shadow:
+    0 8px 25px
+    rgba(
+      255,
+      70,
+      85,
+      0.28
+    );
+
+}
+
+
+.leaderboards-page
+.rank-hero-tabs
+.rank-tab-btn.active:hover {
+
+  background:
+    #ff5e6b;
+
+  color:
+    #ffffff;
+
+  transform:
+    scale(1.05);
+
+}
+
+
+/* =========================================================
+   STICKY CATEGORY ACTIVE
+   ========================================================= */
+
+/*
+  Keep the sticky navigation GOLD.
+*/
+
+.leaderboards-page
+.rank-sticky-tabs
+.rank-tab-btn.active {
+
+  color:
+    #d6c98a;
+
+  border:
+    1px solid
+    rgba(
+      214,
+      201,
+      138,
+      0.30
+    );
+
+  background:
+    rgba(
+      214,
+      201,
+      138,
+      0.10
+    );
+
+  clip-path: none;
+
+  box-shadow: none;
+
+}
+
+
+/* Sticky buttons should keep their normal shape. */
+
+.leaderboards-page
+.rank-sticky-tabs
+.rank-tab-btn {
+
+  clip-path: none;
+
+}
+/*
+  STICKY CATEGORY ACTIVE = GOLD
+*/
+
+.leaderboards-page
+.rank-sticky-tabs
+.rank-tab-btn.active {
+
+  color:
+    #d6c98a;
+
+  border-color:
+    rgba(
+      214,
+      201,
+      138,
+      0.30
+    );
+
+  background:
+    rgba(
+      214,
+      201,
+      138,
+      0.10
+    );
+
+}
+
+
+/* =========================================================
+   19. POST-HERO BASE
+   ========================================================= */
+
+/*
+  Local replacement for .post-hero-content.
+
+  Competition Engine's roster background is intentionally
+  NOT inherited.
+*/
+
+.leaderboards-page
+.post-hero-content {
+
+  position: relative;
+
+  width: 100%;
+
+  min-width: 0;
+
+  min-height: 0;
+
+  margin: 0;
+
+  padding: 0;
+
+  box-sizing: border-box;
+
+  background:
+    transparent !important;
+
+  overflow: visible;
+
+  z-index: 2;
+
+  flex-shrink: 0;
+
+}
+
+
+/* =========================================================
+   20. LOWER CONTENT
+   ========================================================= */
+
+.leaderboards-page
+.rank-content-bg {
+
+  position: relative;
+
+  width: 100%;
+
+  min-width: 0;
+
+  min-height: 100dvh;
+
+  margin: 0;
+
+  padding: 0;
+
+  box-sizing: border-box;
+
+  background:
+    transparent !important;
+
+  overflow: visible;
+
+}
+
+
+.leaderboards-page
+.rank-content-bg::before {
+
+  display: none !important;
+
+  content: none !important;
+
+}
+
+
+/* =========================================================
+   21. STICKY HEADER BASE
+   ========================================================= */
+
+/*
+  Local replacement for CompetitionEngine's generic
+  .competition-sticky-header.
+*/
+
+.leaderboards-page
+.competition-sticky-header {
+
+  position: sticky;
+
+  top: 0;
+
+  width: 100%;
+
+  min-height: 0;
+
+  height: auto;
+
+  box-sizing: border-box;
+
+  z-index: 50;
+
+  overflow-x: hidden;
+
+  overflow-y: visible;
+
+  background:
+    rgba(
+      10,
+      10,
+      10,
+      0.55
+    );
+
+  border-bottom:
+    1px solid
+    rgba(
+      255,
+      255,
+      255,
+      0.10
+    );
+
+  backdrop-filter:
+    blur(18px)
+    saturate(115%);
+
+  -webkit-backdrop-filter:
+    blur(18px)
+    saturate(115%);
+
+}
+
+
+/* =========================================================
+   22. LEADERBOARDS STICKY HEADER
+   ========================================================= */
+
+.leaderboards-page
+.rank-sticky-header {
+
+  position: sticky;
+
+  top: 0;
+
+  z-index: 60;
+
+  width: 100%;
+
+  min-height: 0;
+
+  display: flex;
+
+  flex-direction: column;
+
+  align-items: center;
+
+  justify-content: center;
+
+  gap:
+    0.75rem;
+
+  padding:
+    0.8rem
+    clamp(
+      0.75rem,
+      3vw,
+      3rem
+    );
+
+  box-sizing: border-box;
+
+  background:
+    rgba(
+      10,
+      10,
+      10,
+      0.55
+    );
+
+  border-bottom:
+    1px solid
+    rgba(
+      255,
+      255,
+      255,
+      0.10
+    );
+
+  backdrop-filter:
+    blur(18px)
+    saturate(115%);
+
+  -webkit-backdrop-filter:
+    blur(18px)
+    saturate(115%);
+
+}
+
+
+/* =========================================================
+   23. STICKY CATEGORY NAV
+   ========================================================= */
+
+.leaderboards-page
+.rank-sticky-tabs {
+
+  width:
+    min(
+      100%,
+      680px
+    );
+
+  margin:
+    0 auto;
+
+}
+
+
+/* =========================================================
+   24. TOOLBAR
+   ========================================================= */
+
+.leaderboards-page
+.rank-toolbar {
+
+  width:
+    min(
+      100%,
+      1200px
+    );
+
+  display: flex;
+
+  align-items: center;
+
+  justify-content: center;
+
+  flex-wrap: wrap;
+
+  gap:
+    clamp(
+      0.5rem,
+      0.8vw,
+      0.8rem
+    );
+
+}
+
+
+/* =========================================================
+   25. SEARCH
+   ========================================================= */
+
+.leaderboards-page
+.rank-search-box {
+
+  position: relative;
+
+  flex:
+    1 1 280px;
+
+  max-width: 420px;
+
+  min-width: 180px;
+
+}
+
+
+.leaderboards-page
+.rank-search-box input {
+
+  width: 100%;
+
+  height:
+    clamp(
+      38px,
+      3vw,
+      44px
+    );
+
+  padding:
+    0
+    0.85rem
+    0
+    2.4rem;
+
+  box-sizing: border-box;
+
+  border:
+    1px solid
+    rgba(
+      255,
+      255,
+      255,
+      0.10
+    );
+
+  border-radius: 8px;
+
+  outline: none;
+
+  background:
+    rgba(
+      255,
+      255,
+      255,
+      0.045
+    );
+
+  color: #ffffff;
+
+  font-size:
+    clamp(
+      0.65rem,
+      0.75vw,
+      0.75rem
+    );
+
+}
+
+
+.leaderboards-page
+.rank-search-box input::placeholder {
+
+  color:
+    rgba(
+      255,
+      255,
+      255,
+      0.32
+    );
+
+}
+
+
+.leaderboards-page
+.search-icon {
+
+  position: absolute;
+
+  top: 50%;
+
+  left: 0.8rem;
+
+  transform:
+    translateY(-50%);
+
+  color:
+    rgba(
+      255,
+      255,
+      255,
+      0.38
+    );
+
+  pointer-events: none;
+
+}
+
+
+/* =========================================================
+   26. FILTERS
+   ========================================================= */
+
+.leaderboards-page
+.rank-filter-dropdown {
+
+  position: relative;
+
+  flex:
+    0 1 180px;
+
+}
+
+
+.leaderboards-page
+.rank-filter-dropdown select {
+
+  width: 100%;
+
+  height:
+    clamp(
+      38px,
+      3vw,
+      44px
+    );
+
+  padding:
+    0
+    2rem
+    0
+    0.8rem;
+
+  box-sizing: border-box;
+
+  border:
+    1px solid
+    rgba(
+      255,
+      255,
+      255,
+      0.10
+    );
+
+  border-radius: 8px;
+
+  outline: none;
+
+  appearance: none;
+
+  background:
+    rgba(
+      255,
+      255,
+      255,
+      0.045
+    );
+
+  color: #ffffff;
+
+  font-size:
+    clamp(
+      0.62rem,
+      0.72vw,
+      0.75rem
+    );
+
+}
+
+
+.leaderboards-page
+.rank-filter-dropdown option {
+
+  background:
+    #111111;
+
+  color:
+    #ffffff;
+
+}
+
+
+.leaderboards-page
+.dropdown-arrow {
+
+  position: absolute;
+
+  top: 50%;
+
+  right: 0.7rem;
+
+  transform:
+    translateY(-50%);
+
+  color:
+    rgba(
+      255,
+      255,
+      255,
+      0.42
+    );
+
+  pointer-events: none;
+
+}
+
+
+/* =========================================================
+   27. REFRESH
+   ========================================================= */
+
+.leaderboards-page
+.rank-refresh-btn {
+
+  width:
+    clamp(
+      38px,
+      3vw,
+      44px
+    );
+
+  height:
+    clamp(
+      38px,
+      3vw,
+      44px
+    );
+
+  flex:
+    0 0 auto;
+
+  display: flex;
+
+  align-items: center;
+
+  justify-content: center;
+
+  border:
+    1px solid
+    rgba(
+      255,
+      255,
+      255,
+      0.10
+    );
+
+  border-radius: 8px;
+
+  background:
+    rgba(
+      255,
+      255,
+      255,
+      0.045
+    );
+
+  color:
+    rgba(
+      255,
+      255,
+      255,
+      0.65
+    );
+
+  cursor: pointer;
+
+}
+
+
+.leaderboards-page
+.rank-refresh-btn:hover {
+
+  color:
+    #d6c98a;
+
+  border-color:
+    rgba(
+      214,
+      201,
+      138,
+      0.35
+    );
+
+}
+
+
+.leaderboards-page
+.rank-refresh-btn:disabled {
+
+  opacity: 0.45;
+
+  cursor: default;
+
+}
+
+
+.leaderboards-page
+.spinning {
+
+  animation:
+    leaderboard-spin
+    0.8s linear
+    infinite;
+
+}
+
+
+@keyframes leaderboard-spin {
+
+  to {
+
+    transform:
+      rotate(360deg);
+
+  }
+
+}
+
+
+/* =========================================================
+   28. MAIN CONTENT
+   ========================================================= */
+
+/*
+  Local replacement for CompetitionEngine's
+  .comp-main-content.
+*/
+
+.leaderboards-page
+.comp-main-content {
+
+  width: 100%;
+
+  max-width: none;
+
+  margin: 0;
+
+  padding:
+    clamp(
+      1.25rem,
+      3vw,
+      3rem
+    )
+    clamp(
+      0.75rem,
+      3vw,
+      3rem
+    )
+    4rem;
+
+  box-sizing: border-box;
+
+}
+
+
+/* =========================================================
+   29. TABLE
+   ========================================================= */
+
+.leaderboards-page
+.rank-table-wrapper {
+
+  width: 100%;
+
+  overflow: hidden;
+
+  border:
+    1px solid
+    rgba(
+      255,
+      255,
+      255,
+      0.08
+    );
+
+  border-radius: 14px;
+
+  background:
+    rgba(
+      10,
+      10,
+      10,
+      0.40
+    );
+
+  backdrop-filter:
+    blur(12px);
+
+  -webkit-backdrop-filter:
+    blur(12px);
+
+}
+
+
+.leaderboards-page
+.rank-table-header,
+
+.leaderboards-page
+.rank-table-row {
+
+  display: grid;
+
+  grid-template-columns:
+    minmax(60px, 0.65fr)
+    minmax(70px, 0.8fr)
+    minmax(180px, 2.3fr)
+    minmax(100px, 1fr)
+    minmax(100px, 1fr)
+    minmax(120px, 1.2fr);
+
+  align-items: center;
+
+  column-gap:
+    clamp(
+      0.5rem,
+      1vw,
+      1rem
+    );
+
+}
+
+
+.leaderboards-page
+.rank-table-header {
+
+  min-height: 48px;
+
+  padding:
+    0
+    clamp(
+      0.65rem,
+      1.5vw,
+      1.25rem
+    );
+
+  box-sizing: border-box;
+
+  border-bottom:
+    1px solid
+    rgba(
+      255,
+      255,
+      255,
+      0.08
+    );
+
+  background:
+    rgba(
+      255,
+      255,
+      255,
+      0.025
+    );
+
+  color:
+    rgba(
+      255,
+      255,
+      255,
+      0.36
+    );
+
+  font-size:
+    clamp(
+      0.5rem,
+      0.6vw,
+      0.62rem
+    );
+
+  font-weight: 900;
+
+  letter-spacing: 0.1em;
+
+}
+
+
+.leaderboards-page
+.rank-table-row {
+
+  min-height: 72px;
+
+  padding:
+    0.55rem
+    clamp(
+      0.65rem,
+      1.5vw,
+      1.25rem
+    );
+
+  box-sizing: border-box;
+
+  border-bottom:
+    1px solid
+    rgba(
+      255,
+      255,
+      255,
+      0.05
+    );
+
+  color:
+    rgba(
+      255,
+      255,
+      255,
+      0.78
+    );
+
+}
+
+
+.leaderboards-page
+.rank-table-row:last-child {
+
+  border-bottom:
+    none;
+
+}
+
+
+.leaderboards-page
+.rank-table-row.is-top {
+
+  background:
+    rgba(
+      214,
+      201,
+      138,
+      0.025
+    );
+
+}
+
+
+/* =========================================================
+   30. TABLE CELLS
+   ========================================================= */
+
+.leaderboards-page
+.rank-number {
+
+  color:
+    rgba(
+      255,
+      255,
+      255,
+      0.42
+    );
+
+  font-size:
+    clamp(
+      0.65rem,
+      0.75vw,
+      0.8rem
+    );
+
+  font-weight: 900;
+
+}
+
+
+.leaderboards-page
+.col-insignia {
+
+  display: flex;
+
+  align-items: center;
+
+  justify-content: center;
+
+}
+
+
+.leaderboards-page
+.player-insignia-badge {
+
+  width:
+    clamp(
+      38px,
+      3vw,
+      46px
+    );
+
+  height:
+    clamp(
+      38px,
+      3vw,
+      46px
+    );
+
+  display: flex;
+
+  align-items: center;
+
+  justify-content: center;
+
+  overflow: hidden;
+
+  border:
+    1px solid
+    rgba(
+      255,
+      255,
+      255,
+      0.10
+    );
+
+  border-radius: 10px;
+
+  background:
+    rgba(
+      255,
+      255,
+      255,
+      0.05
+    );
+
+  color:
+    #d6c98a;
+
+  font-size:
+    0.75rem;
+
+  font-weight: 900;
+
+}
+
+
+.leaderboards-page
+.player-insignia-badge img {
+
+  width: 100%;
+
+  height: 100%;
+
+  object-fit: cover;
+
+  display: block;
+
+}
+
+
+.leaderboards-page
+.rank-player-info {
+
+  min-width: 0;
+
+  display: flex;
+
+  flex-direction: column;
+
+  gap: 0.25rem;
+
+}
+
+
+.leaderboards-page
+.primary-name {
+
+  overflow: hidden;
+
+  color:
+    #ffffff;
+
+  font-size:
+    clamp(
+      0.68rem,
+      0.82vw,
+      0.85rem
+    );
+
+  font-weight: 900;
+
+  text-overflow: ellipsis;
+
+  white-space: nowrap;
+
+}
+
+
+.leaderboards-page
+.secondary-alias {
+
+  overflow: hidden;
+
+  color:
+    rgba(
+      255,
+      255,
+      255,
+      0.35
+    );
+
+  font-size:
+    clamp(
+      0.5rem,
+      0.6vw,
+      0.62rem
+    );
+
+  font-weight: 700;
+
+  text-overflow: ellipsis;
+
+  white-space: nowrap;
+
+}
+
+
+.leaderboards-page
+.rank-region,
+
+.leaderboards-page
+.rank-game-tag {
+
+  overflow: hidden;
+
+  color:
+    rgba(
+      255,
+      255,
+      255,
+      0.46
+    );
+
+  font-size:
+    clamp(
+      0.55rem,
+      0.68vw,
+      0.7rem
+    );
+
+  font-weight: 700;
+
+  text-overflow: ellipsis;
+
+  white-space: nowrap;
+
+}
+
+
+.leaderboards-page
+.rank-synco-points {
+
+  color:
+    #d6c98a;
+
+  font-size:
+    clamp(
+      0.6rem,
+      0.72vw,
+      0.76rem
+    );
+
+  font-weight: 900;
+
+}
+
+
+/* =========================================================
+   31. TABLE STATES
+   ========================================================= */
+
+.leaderboards-page
+.rank-table-body {
+
+  min-height: 260px;
+
+}
+
+
+.leaderboards-page
+.rank-table-state {
+
+  min-height: 260px;
+
+  display: flex;
+
+  flex-direction: column;
+
+  align-items: center;
+
+  justify-content: center;
+
+  gap: 0.5rem;
+
+  padding: 2rem;
+
+  box-sizing: border-box;
+
+  text-align: center;
+
+}
+
+
+.leaderboards-page
+.rank-table-state h3 {
+
+  margin: 0;
+
+  color:
+    #ffffff;
+
+  font-family:
+    'Super Brigade',
+    sans-serif;
+
+  font-size:
+    clamp(
+      1rem,
+      1.5vw,
+      1.35rem
+    );
+
+  letter-spacing: 0.04em;
+
+}
+
+
+.leaderboards-page
+.rank-table-state p {
+
+  max-width: 460px;
+
+  margin: 0;
+
+  color:
+    rgba(
+      255,
+      255,
+      255,
+      0.42
+    );
+
+  font-size:
+    0.75rem;
+
+  line-height: 1.5;
+
+}
+
+
+.leaderboards-page
+.rank-table-state.is-error p {
+
+  color:
+    rgba(
+      255,
+      90,
+      100,
+      0.85
+    );
+
+}
+
+
+.leaderboards-page
+.rank-retry-btn {
+
+  margin-top: 0.4rem;
+
+  padding:
+    0.5rem
+    1.25rem;
+
+  border:
+    1px solid
+    rgba(
+      255,
+      255,
+      255,
+      0.16
+    );
+
+  border-radius: 999px;
+
+  background:
+    rgba(
+      255,
+      255,
+      255,
+      0.05
+    );
+
+  color:
+    #ffffff;
+
+  font-size:
+    0.65rem;
+
+  font-weight: 900;
+
+  cursor: pointer;
+
+}
+
+
+/* =========================================================
+   32. TABLET
+   ========================================================= */
+
+@media (max-width: 1100px) {
+
+  .leaderboards-page
+  .rank-podium-stage {
+
+    width:
+      98vw;
+
+  }
+
+
+  .leaderboards-page
+  .position-rank-2 {
+
+    left:
+      37%;
+
+  }
+
+
+  .leaderboards-page
+  .position-rank-3 {
+
+    left:
+      63%;
+
+  }
+
+
+  .leaderboards-page
+  .position-rank-4 {
+
+    left:
+      25%;
+
+  }
+
+
+  .leaderboards-page
+  .position-rank-5 {
+
+    left:
+      75%;
+
+  }
+
+
+  .leaderboards-page
+  .rank-table-header,
+
+  .leaderboards-page
+  .rank-table-row {
+
+    grid-template-columns:
+      55px
+      60px
+      minmax(150px, 2fr)
+      minmax(80px, 1fr)
+      minmax(90px, 1fr)
+      minmax(100px, 1fr);
+
+  }
+
+}
+
+
+/* =========================================================
+   33. SHORT DESKTOP VIEWPORT
+   ========================================================= */
+
+@media
+  (max-height: 760px)
+  and (min-width: 901px) {
+
+  .leaderboards-page
+  .position-rank-1
+  .podium-char-img {
+
+    height:
+      clamp(
+        400px,
+        54vh,
+        600px
+      );
+
+  }
+
+
+  .leaderboards-page
+  .position-rank-2
+  .podium-char-img,
+
+  .leaderboards-page
+  .position-rank-3
+  .podium-char-img {
+
+    height:
+      clamp(
+        325px,
+        46vh,
+        485px
+      );
+
+  }
+
+
+  .leaderboards-page
+  .position-rank-4
+  .podium-char-img,
+
+  .leaderboards-page
+  .position-rank-5
+  .podium-char-img {
+
+    height:
+      clamp(
+        265px,
+        38vh,
+        420px
+      );
+
+  }
+
+}
+
+/* =========================================================
+   34. MOBILE / SMALL TABLET
+   ========================================================= */
+
+@media (max-width: 700px) {
+
+  .leaderboards-page
+  .rank-hero {
+
+    min-height:
+      560px;
+
+  }
+
+
+  .leaderboards-page
+  .timeframe-toggle-container {
+
+    top:
+      1rem;
+
+  }
+
+
+  .leaderboards-page
+  .timeframe-btn {
+
+    min-width:
+      0;
+
+    padding:
+      0.5rem
+      0.7rem;
+
+  }
+
+
+  .leaderboards-page
+  .rank-podium-stage {
+
+    bottom:
+      5.5rem;
+
+    width:
+      100vw;
+
+    height:
+      400px;
+
+  }
+
+
+  .leaderboards-page
+  .podium-slot {
+
+    width:
+      175px;
+
+    height:
+      350px;
+
+  }
+
+
+  /* -------------------------------------------------------
+     MOBILE V POSITIONING
+     ------------------------------------------------------- */
+
+  .leaderboards-page
+  .position-rank-1 {
+
+    left:
+      50%;
+
+    bottom:
+      0;
+
+  }
+
+
+  .leaderboards-page
+  .position-rank-2 {
+
+    left:
+      33%;
+
+    bottom:
+      2rem;
+
+  }
+
+
+  .leaderboards-page
+  .position-rank-3 {
+
+    left:
+      67%;
+
+    bottom:
+      2rem;
+
+  }
+
+
+  .leaderboards-page
+  .position-rank-4 {
+
+    left:
+      16%;
+
+    bottom:
+      0;
+
+  }
+
+
+  .leaderboards-page
+  .position-rank-5 {
+
+    left:
+      84%;
+
+    bottom:
+      0;
+
+  }
+
+
+  .leaderboards-page
+  .position-rank-1
+  .podium-char-img {
+
+    height:
+      250px;
+
+  }
+
+
+  .leaderboards-page
+  .position-rank-2
+  .podium-char-img,
+
+  .leaderboards-page
+  .position-rank-3
+  .podium-char-img {
+
+    height:
+      205px;
+
+  }
+
+
+  .leaderboards-page
+  .position-rank-4
+  .podium-char-img,
+
+  .leaderboards-page
+  .position-rank-5
+  .podium-char-img {
+
+    height:
+      175px;
+
+  }
+
+
+  .leaderboards-page
+  .rank-hero-tabs {
+
+    width:
+      calc(
+        100vw - 1rem
+      );
+
+  }
+
+
+  .leaderboards-page
+  .rank-tab-btn {
+
+    padding:
+      0.5rem
+      0.35rem;
+
+    font-size:
+      0.48rem;
+
+    letter-spacing:
+      0.03em;
+
+  }
+
+
+  .leaderboards-page
+  .rank-sticky-tabs {
+
+    width:
+      100%;
+
+  }
+
+
+  .leaderboards-page
+  .rank-toolbar {
+
+    width:
+      100%;
+
+  }
+
+
+  .leaderboards-page
+  .rank-search-box {
+
+    flex:
+      1 1 100%;
+
+    max-width:
+      none;
+
+  }
+
+
+  .leaderboards-page
+  .rank-filter-dropdown {
+
+    flex:
+      1 1 0;
+
+  }
+
+
+  .leaderboards-page
+  .rank-table-wrapper {
+
+    overflow-x:
+      auto;
+
+  }
+
+
+  .leaderboards-page
+  .rank-table-header,
+
+  .leaderboards-page
+  .rank-table-row {
+
+    min-width:
+      760px;
+
+  }
+
+}
+
+
+/* =========================================================
+   35. VERY SMALL MOBILE
+   ========================================================= */
+
+@media (max-width: 480px) {
+
+  .leaderboards-page
+  .rank-hero {
+
+    min-height:
+      520px;
+
+  }
+
+
+  .leaderboards-page
+  .rank-podium-stage {
+
+    bottom:
+      5rem;
+
+    height:
+      350px;
+
+  }
+
+
+  .leaderboards-page
+  .podium-slot {
+
+    width:
+      150px;
+
+    height:
+      305px;
+
+  }
+
+
+  .leaderboards-page
+  .position-rank-1 {
+
+    left:
+      50%;
+
+  }
+
+
+  .leaderboards-page
+  .position-rank-2 {
+
+    left:
+      30%;
+
+    bottom:
+      1.5rem;
+
+  }
+
+
+  .leaderboards-page
+  .position-rank-3 {
+
+    left:
+      70%;
+
+    bottom:
+      1.5rem;
+
+  }
+
+
+  .leaderboards-page
+  .position-rank-4 {
+
+    left:
+      12%;
+
+  }
+
+
+  .leaderboards-page
+  .position-rank-5 {
+
+    left:
+      88%;
+
+  }
+
+
+  .leaderboards-page
+  .position-rank-1
+  .podium-char-img {
+
+    height:
+      220px;
+
+  }
+
+
+  .leaderboards-page
+  .position-rank-2
+  .podium-char-img,
+
+  .leaderboards-page
+  .position-rank-3
+  .podium-char-img {
+
+    height:
+      180px;
+
+  }
+
+
+  .leaderboards-page
+  .position-rank-4
+  .podium-char-img,
+
+  .leaderboards-page
+  .position-rank-5
+  .podium-char-img {
+
+    height:
+      150px;
+
+  }
+
+
+  .leaderboards-page
+  .podium-card {
+
+    width:
+      150px;
+
+    min-height:
+      58px;
+
+    grid-template-columns:
+      auto
+      minmax(0, 1fr);
+
+    gap:
+      0.4rem;
+
+    padding:
+      0.5rem;
+
+  }
+
+
+  .leaderboards-page
+  .position-rank-1
+  .podium-card {
+
+    width:
+      175px;
+
+    min-height:
+      68px;
+
+  }
+
+
+  .leaderboards-page
+  .podium-points {
+
+    display:
+      none;
+
+  }
+
+
+  .leaderboards-page
+  .rank-tab-btn svg {
+
+    display:
+      none;
+
+  }
+
 }
