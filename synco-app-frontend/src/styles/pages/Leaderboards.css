@@ -2,7 +2,8 @@
    SYNCO — LEADERBOARDS
 
    FULL-BLEED / RANK BACKGROUND
-   LAYERED V-SHAPE PODIUM
+   TRUE V-SHAPE PODIUM
+   OVERLAPPING RANK CARDS
    RESPONSIVE / VIEWPORT-SAFE
    ========================================================= */
 
@@ -31,17 +32,12 @@
 
   color: #ffffff;
 
-  background: transparent;
+  background: transparent !important;
 
   overflow: visible;
 
 }
 
-
-/*
-  The global CompetitionEngine wrapper should not
-  introduce another background behind Leaderboards.
-*/
 
 .leaderboards-page.comp-engine-wrapper {
 
@@ -53,7 +49,7 @@
 
   padding: 0;
 
-  background: transparent;
+  background: transparent !important;
 
 }
 
@@ -90,15 +86,14 @@
 
   overflow: hidden;
 
-  background: transparent;
+  background: transparent !important;
 
 }
 
 
-/*
-  The shared CompetitionEngine background layers should
-  remain purely decorative on Leaderboards.
-*/
+/* =========================================================
+   3. HERO BACKGROUND TEXT
+   ========================================================= */
 
 .leaderboards-page .hero-bg-layer {
 
@@ -116,10 +111,6 @@
 
 }
 
-
-/* =========================================================
-   3. HALL OF FAME TYPOGRAPHY
-   ========================================================= */
 
 .leaderboards-page .massive-bg-text {
 
@@ -319,25 +310,42 @@
 }
 
 
+/*
+  IMPORTANT:
+
+  Hero timeframe stays PINK / RED.
+
+  Gold is reserved for the sticky navigation.
+*/
+
 .leaderboards-page
 .timeframe-btn.active {
 
-  color: #d6c98a;
+  color: #ff6674;
 
   border-color:
     rgba(
-      214,
-      201,
-      138,
-      0.32
+      255,
+      78,
+      95,
+      0.42
     );
 
   background:
     rgba(
-      214,
-      201,
-      138,
-      0.10
+      255,
+      78,
+      95,
+      0.13
+    );
+
+  box-shadow:
+    0 0 22px
+    rgba(
+      255,
+      65,
+      82,
+      0.12
     );
 
 }
@@ -356,9 +364,9 @@
 
   bottom:
     clamp(
-      4.5rem,
-      8vh,
-      7rem
+      5.75rem,
+      10vh,
+      7.5rem
     );
 
   transform:
@@ -372,18 +380,20 @@
 
   height:
     clamp(
-      430px,
+      420px,
       60vh,
-      610px
+      600px
     );
 
   z-index: 10;
+
+  overflow: visible;
 
 }
 
 
 /* =========================================================
-   6. V-SHAPE PODIUM CONTAINER
+   6. V-SHAPE CONTAINER
    ========================================================= */
 
 .leaderboards-page
@@ -405,7 +415,7 @@
 
 
 /* =========================================================
-   7. PODIUM EMPTY STATE
+   7. EMPTY STATE
    ========================================================= */
 
 .leaderboards-page
@@ -459,6 +469,15 @@
    8. PODIUM SLOT BASE
    ========================================================= */
 
+/*
+  Every rank is an independent absolute-positioned
+  object.
+
+  This is what creates the real V.
+
+  The slots do NOT sit on top of one another.
+*/
+
 .leaderboards-page
 .podium-slot {
 
@@ -496,23 +515,45 @@
     center bottom;
 
   transition:
-    left 0.45s ease,
-    bottom 0.45s ease,
-    transform 0.45s ease,
-    z-index 0s linear 0.45s;
+    left 0.3s ease,
+    bottom 0.3s ease,
+    transform 0.3s ease;
 
 }
 
 
-/*
-  Every slot starts almost directly underneath
-  the center card.
+/* =========================================================
+   9. TRUE V-SHAPE POSITIONS
+   ========================================================= */
 
-  This creates the layered stack.
+/*
+                    RANK 1
+                      ▲
+
+             RANK 2       RANK 3
+                ▲           ▲
+
+         RANK 4                 RANK 5
+            ▲                       ▲
+
+
+  The cards overlap their neighbours.
+
+  Higher ranks have higher z-index so they naturally
+  cover part of the lower-ranked card.
 */
+
+
+/* ---------------------------------------------------------
+   RANK 1 — CENTER / LARGEST
+   --------------------------------------------------------- */
 
 .leaderboards-page
 .position-rank-1 {
+
+  left: 50%;
+
+  bottom: 0;
 
   z-index: 50;
 
@@ -523,59 +564,88 @@
 }
 
 
+/* ---------------------------------------------------------
+   RANK 2 — LEFT / MID HEIGHT
+   --------------------------------------------------------- */
+
 .leaderboards-page
 .position-rank-2 {
+
+  left: 36%;
+
+  bottom: 3.5rem;
+
+  z-index: 40;
+
+  transform:
+    translateX(-50%)
+    scale(0.88);
+
+}
+
+
+/* ---------------------------------------------------------
+   RANK 3 — RIGHT / MID HEIGHT
+   --------------------------------------------------------- */
+
+.leaderboards-page
+.position-rank-3 {
+
+  left: 64%;
+
+  bottom: 3.5rem;
+
+  z-index: 40;
+
+  transform:
+    translateX(-50%)
+    scale(0.88);
+
+}
+
+
+/* ---------------------------------------------------------
+   RANK 4 — FAR LEFT / LOWER
+   --------------------------------------------------------- */
+
+.leaderboards-page
+.position-rank-4 {
+
+  left: 21%;
+
+  bottom: 0;
 
   z-index: 30;
 
   transform:
     translateX(-50%)
-    scale(0.84);
+    scale(0.72);
 
 }
 
 
-.leaderboards-page
-.position-rank-3 {
-
-  z-index: 29;
-
-  transform:
-    translateX(-50%)
-    scale(0.84);
-
-}
-
-
-.leaderboards-page
-.position-rank-4 {
-
-  z-index: 20;
-
-  transform:
-    translateX(-50%)
-    scale(0.70);
-
-}
-
+/* ---------------------------------------------------------
+   RANK 5 — FAR RIGHT / LOWER
+   --------------------------------------------------------- */
 
 .leaderboards-page
 .position-rank-5 {
 
-  z-index: 19;
+  left: 79%;
+
+  bottom: 0;
+
+  z-index: 30;
 
   transform:
     translateX(-50%)
-    scale(0.70);
+    scale(0.72);
 
 }
 
 
 /* =========================================================
-   9. DEFAULT V-SHAPE POSITIONS
-
-   These are the actual spread positions used on hover.
-   The default state remains stacked underneath rank 1.
+   10. HOVER — BRING ANY CARD FORWARD
    ========================================================= */
 
 .leaderboards-page
@@ -584,24 +654,9 @@
   z-index: 80;
 
   transform:
-    translateX(
-      calc(
-        -50% -
-        clamp(
-          150px,
-          15vw,
-          220px
-        )
-      )
-    )
-    translateY(
-      clamp(
-        -12px,
-        -1vh,
-        -4px
-      )
-    )
-    scale(0.90);
+    translateX(-50%)
+    translateY(-8px)
+    scale(0.94);
 
 }
 
@@ -612,24 +667,9 @@
   z-index: 80;
 
   transform:
-    translateX(
-      calc(
-        -50% +
-        clamp(
-          150px,
-          15vw,
-          220px
-        )
-      )
-    )
-    translateY(
-      clamp(
-        -12px,
-        -1vh,
-        -4px
-      )
-    )
-    scale(0.90);
+    translateX(-50%)
+    translateY(-8px)
+    scale(0.94);
 
 }
 
@@ -637,27 +677,12 @@
 .leaderboards-page
 .position-rank-4:hover {
 
-  z-index: 90;
+  z-index: 80;
 
   transform:
-    translateX(
-      calc(
-        -50% -
-        clamp(
-          300px,
-          28vw,
-          390px
-        )
-      )
-    )
-    translateY(
-      clamp(
-        -25px,
-        -3vh,
-        -10px
-      )
-    )
-    scale(0.76);
+    translateX(-50%)
+    translateY(-8px)
+    scale(0.80);
 
 }
 
@@ -665,33 +690,18 @@
 .leaderboards-page
 .position-rank-5:hover {
 
-  z-index: 90;
+  z-index: 80;
 
   transform:
-    translateX(
-      calc(
-        -50% +
-        clamp(
-          300px,
-          28vw,
-          390px
-        )
-      )
-    )
-    translateY(
-      clamp(
-        -25px,
-        -3vh,
-        -10px
-      )
-    )
-    scale(0.76);
+    translateX(-50%)
+    translateY(-8px)
+    scale(0.80);
 
 }
 
 
 /* =========================================================
-   10. PODIUM CHARACTERS
+   11. PODIUM CHARACTERS
    ========================================================= */
 
 .leaderboards-page
@@ -745,9 +755,9 @@
 }
 
 
-/*
-  Rank 1 is intentionally dominant.
-*/
+/* ---------------------------------------------------------
+   RANK 1
+   --------------------------------------------------------- */
 
 .leaderboards-page
 .position-rank-1
@@ -755,18 +765,17 @@
 
   height:
     clamp(
-      310px,
-      45vh,
-      475px
+      300px,
+      44vh,
+      470px
     );
 
 }
 
 
-/*
-  Rank 2 / 3 are smaller than rank 1
-  but clearly larger than rank 4 / 5.
-*/
+/* ---------------------------------------------------------
+   RANK 2 / 3
+   --------------------------------------------------------- */
 
 .leaderboards-page
 .position-rank-2
@@ -778,17 +787,17 @@
 
   height:
     clamp(
-      245px,
-      36vh,
-      370px
+      235px,
+      35vh,
+      365px
     );
 
 }
 
 
-/*
-  Rank 4 / 5 are the smallest.
-*/
+/* ---------------------------------------------------------
+   RANK 4 / 5
+   --------------------------------------------------------- */
 
 .leaderboards-page
 .position-rank-4
@@ -800,16 +809,16 @@
 
   height:
     clamp(
-      195px,
-      29vh,
-      300px
+      185px,
+      28vh,
+      295px
     );
 
 }
 
 
 /* =========================================================
-   11. PODIUM CARD
+   12. PODIUM CARDS
    ========================================================= */
 
 .leaderboards-page
@@ -872,7 +881,7 @@
       12,
       12,
       12,
-      0.78
+      0.84
     );
 
   backdrop-filter:
@@ -893,16 +902,15 @@
   overflow: hidden;
 
   transition:
-    transform 0.3s ease,
-    border-color 0.3s ease,
-    background 0.3s ease,
-    box-shadow 0.3s ease;
+    border-color 0.25s ease,
+    background 0.25s ease,
+    box-shadow 0.25s ease;
 
 }
 
 
 /*
-  Rank 1 is the visual front card.
+  Rank 1 remains clearly dominant.
 */
 
 .leaderboards-page
@@ -936,7 +944,7 @@
       14,
       14,
       14,
-      0.92
+      0.94
     );
 
   box-shadow:
@@ -952,7 +960,10 @@
 
 
 /*
-  Lower-ranked cards are visually behind rank 1.
+  Lower cards stay slightly smaller.
+
+  Their SLOT positions provide the V shape.
+  Their z-index provides the overlapping effect.
 */
 
 .leaderboards-page
@@ -964,7 +975,7 @@
 .podium-card {
 
   transform:
-    scale(0.92);
+    scale(0.94);
 
 }
 
@@ -978,13 +989,59 @@
 .podium-card {
 
   transform:
-    scale(0.88);
+    scale(0.90);
+
+}
+
+
+/* Hovered card becomes fully readable. */
+
+.leaderboards-page
+.position-rank-2:hover
+.podium-card,
+
+.leaderboards-page
+.position-rank-3:hover
+.podium-card,
+
+.leaderboards-page
+.position-rank-4:hover
+.podium-card,
+
+.leaderboards-page
+.position-rank-5:hover
+.podium-card {
+
+  border-color:
+    rgba(
+      214,
+      201,
+      138,
+      0.42
+    );
+
+  background:
+    rgba(
+      15,
+      15,
+      15,
+      0.96
+    );
+
+  box-shadow:
+    0 24px 65px
+    rgba(
+      0,
+      0,
+      0,
+      0.68
+    );
 
 }
 
 
 /* =========================================================
-   12. PODIUM BADGE
+   13. PODIUM BADGE
    ========================================================= */
 
 .leaderboards-page
@@ -1059,7 +1116,7 @@
 
 
 /* =========================================================
-   13. PODIUM INFORMATION
+   14. PODIUM INFORMATION
    ========================================================= */
 
 .leaderboards-page
@@ -1157,8 +1214,15 @@
 
 
 /* =========================================================
-   14. HERO PODIUM CATEGORY TABS
+   15. HERO CATEGORY NAV
    ========================================================= */
+
+/*
+  This is a completely separate zone from the podium.
+
+  It cannot overlap the podium because the podium stage
+  terminates above this area.
+*/
 
 .leaderboards-page
 .rank-hero-tabs {
@@ -1169,9 +1233,9 @@
 
   bottom:
     clamp(
-      -1.2rem,
-      -1.5vh,
-      -0.5rem
+      1rem,
+      2.5vh,
+      1.75rem
     );
 
   transform:
@@ -1191,15 +1255,10 @@
 
   justify-content: center;
 
-  gap:
-    clamp(
-      0.35rem,
-      0.8vw,
-      0.7rem
-    );
-
   padding:
     0.35rem;
+
+  box-sizing: border-box;
 
   border:
     1px solid
@@ -1231,11 +1290,13 @@
 
 
 /* =========================================================
-   15. SHARED CATEGORY TABS
+   16. SHARED CATEGORY TABS
    ========================================================= */
 
 .leaderboards-page
 .rank-tabs-container {
+
+  width: 100%;
 
   display: flex;
 
@@ -1336,7 +1397,47 @@
 }
 
 
+/*
+  HERO CATEGORY ACTIVE STATE
+
+  Pink / red.
+
+  This intentionally overrides the old gold styling.
+*/
+
 .leaderboards-page
+.rank-hero-tabs
+.rank-tab-btn.active {
+
+  color: #ff6674;
+
+  border-color:
+    rgba(
+      255,
+      78,
+      95,
+      0.42
+    );
+
+  background:
+    rgba(
+      255,
+      78,
+      95,
+      0.13
+    );
+
+}
+
+
+/*
+  STICKY CATEGORY ACTIVE STATE
+
+  Gold ONLY here.
+*/
+
+.leaderboards-page
+.rank-sticky-tabs
 .rank-tab-btn.active {
 
   color: #d6c98a;
@@ -1361,7 +1462,7 @@
 
 
 /* =========================================================
-   16. POST-HERO
+   17. POST-HERO
    ========================================================= */
 
 .leaderboards-page
@@ -1382,17 +1483,12 @@
   box-sizing: border-box;
 
   background:
-    transparent;
+    transparent !important;
 
   overflow: visible;
 
 }
 
-
-/*
-  Do not let CompetitionEngine's generic lower
-  background appear through Leaderboards.
-*/
 
 .leaderboards-page
 .rank-content-bg::before {
@@ -1403,7 +1499,7 @@
 
 
 /* =========================================================
-   17. STICKY HEADER
+   18. STICKY HEADER
    ========================================================= */
 
 .leaderboards-page
@@ -1469,7 +1565,7 @@
 
 
 /*
-  Sticky tabs must stay centered.
+  Sticky tabs stay centered.
 */
 
 .leaderboards-page
@@ -1481,13 +1577,14 @@
       680px
     );
 
-  margin: 0 auto;
+  margin:
+    0 auto;
 
 }
 
 
 /* =========================================================
-   18. RANK TOOLBAR
+   19. TOOLBAR
    ========================================================= */
 
 .leaderboards-page
@@ -1518,7 +1615,7 @@
 
 
 /* =========================================================
-   19. SEARCH
+   20. SEARCH
    ========================================================= */
 
 .leaderboards-page
@@ -1629,7 +1726,7 @@
 
 
 /* =========================================================
-   20. FILTERS
+   21. FILTERS
    ========================================================= */
 
 .leaderboards-page
@@ -1734,7 +1831,7 @@
 
 
 /* =========================================================
-   21. REFRESH
+   22. REFRESH
    ========================================================= */
 
 .leaderboards-page
@@ -1845,7 +1942,7 @@
 
 
 /* =========================================================
-   22. MAIN TABLE CONTENT
+   23. MAIN TABLE CONTENT
    ========================================================= */
 
 .leaderboards-page
@@ -1876,7 +1973,7 @@
 
 
 /* =========================================================
-   23. TABLE
+   24. TABLE
    ========================================================= */
 
 .leaderboards-page
@@ -2054,7 +2151,7 @@
 
 
 /* =========================================================
-   24. TABLE CELLS
+   25. TABLE CELLS
    ========================================================= */
 
 .leaderboards-page
@@ -2276,7 +2373,7 @@
 
 
 /* =========================================================
-   25. TABLE STATES
+   26. TABLE STATES
    ========================================================= */
 
 .leaderboards-page
@@ -2412,85 +2509,6 @@
 
 
 /* =========================================================
-   26. DESKTOP HOVER SPREAD
-   ========================================================= */
-
-@media (min-width: 901px) {
-
-  .leaderboards-page
-  .v-shape-podium {
-
-    perspective:
-      1200px;
-
-  }
-
-
-  /*
-    When the user hovers the entire podium,
-    the cards remain layered.
-
-    Hovering a specific slot brings that slot
-    to the front.
-  */
-
-  .leaderboards-page
-  .podium-slot:hover
-  .podium-card {
-
-    border-color:
-      rgba(
-        214,
-        201,
-        138,
-        0.42
-      );
-
-    background:
-      rgba(
-        15,
-        15,
-        15,
-        0.94
-      );
-
-    box-shadow:
-      0 24px 65px
-      rgba(
-        0,
-        0,
-        0,
-        0.68
-      );
-
-  }
-
-
-  .leaderboards-page
-  .position-rank-2:hover
-  .podium-card,
-
-  .leaderboards-page
-  .position-rank-3:hover
-  .podium-card,
-
-  .leaderboards-page
-  .position-rank-4:hover
-  .podium-card,
-
-  .leaderboards-page
-  .position-rank-5:hover
-  .podium-card {
-
-    transform:
-      scale(1);
-
-  }
-
-}
-
-
-/* =========================================================
    27. TABLET
    ========================================================= */
 
@@ -2499,78 +2517,39 @@
   .leaderboards-page
   .rank-podium-stage {
 
-    width: 96vw;
-
-    height:
-      clamp(
-        400px,
-        58vh,
-        540px
-      );
+    width: 98vw;
 
   }
 
 
   .leaderboards-page
-  .position-rank-2:hover {
+  .position-rank-2 {
 
-    transform:
-      translateX(
-        calc(
-          -50% -
-          12vw
-        )
-      )
-      translateY(-5px)
-      scale(0.88);
+    left: 34%;
 
   }
 
 
   .leaderboards-page
-  .position-rank-3:hover {
+  .position-rank-3 {
 
-    transform:
-      translateX(
-        calc(
-          -50% +
-          12vw
-        )
-      )
-      translateY(-5px)
-      scale(0.88);
+    left: 66%;
 
   }
 
 
   .leaderboards-page
-  .position-rank-4:hover {
+  .position-rank-4 {
 
-    transform:
-      translateX(
-        calc(
-          -50% -
-          23vw
-        )
-      )
-      translateY(-8px)
-      scale(0.72);
+    left: 17%;
 
   }
 
 
   .leaderboards-page
-  .position-rank-5:hover {
+  .position-rank-5 {
 
-    transform:
-      translateX(
-        calc(
-          -50% +
-          23vw
-        )
-      )
-      translateY(-8px)
-      scale(0.72);
+    left: 83%;
 
   }
 
@@ -2613,14 +2592,30 @@
   .leaderboards-page
   .rank-podium-stage {
 
-    bottom: 4rem;
+    bottom: 5.25rem;
 
     height:
       clamp(
-        390px,
+        370px,
         61vh,
         470px
       );
+
+  }
+
+
+  .leaderboards-page
+  .position-rank-2 {
+
+    bottom: 2.25rem;
+
+  }
+
+
+  .leaderboards-page
+  .position-rank-3 {
+
+    bottom: 2.25rem;
 
   }
 
@@ -2631,8 +2626,8 @@
 
     height:
       clamp(
-        255px,
-        40vh,
+        245px,
+        39vh,
         350px
       );
 
@@ -2649,8 +2644,8 @@
 
     height:
       clamp(
-        205px,
-        32vh,
+        195px,
+        31vh,
         290px
       );
 
@@ -2667,8 +2662,8 @@
 
     height:
       clamp(
-        165px,
-        26vh,
+        155px,
+        25vh,
         235px
       );
 
@@ -2714,11 +2709,11 @@
   .leaderboards-page
   .rank-podium-stage {
 
-    bottom: 5rem;
+    bottom: 5.5rem;
 
     width: 100vw;
 
-    height: 410px;
+    height: 400px;
 
   }
 
@@ -2733,11 +2728,62 @@
   }
 
 
+  /*
+    Mobile V.
+
+    Keep enough spread to see all five cards while
+    allowing the cards to overlap.
+  */
+
+  .leaderboards-page
+  .position-rank-1 {
+
+    left: 50%;
+
+  }
+
+
+  .leaderboards-page
+  .position-rank-2 {
+
+    left: 32%;
+
+    bottom: 2rem;
+
+  }
+
+
+  .leaderboards-page
+  .position-rank-3 {
+
+    left: 68%;
+
+    bottom: 2rem;
+
+  }
+
+
+  .leaderboards-page
+  .position-rank-4 {
+
+    left: 13%;
+
+  }
+
+
+  .leaderboards-page
+  .position-rank-5 {
+
+    left: 87%;
+
+  }
+
+
   .leaderboards-page
   .position-rank-1
   .podium-char-img {
 
-    height: 260px;
+    height: 250px;
 
   }
 
@@ -2750,7 +2796,7 @@
   .position-rank-3
   .podium-char-img {
 
-    height: 215px;
+    height: 205px;
 
   }
 
@@ -2763,71 +2809,7 @@
   .position-rank-5
   .podium-char-img {
 
-    height: 180px;
-
-  }
-
-
-  .leaderboards-page
-  .position-rank-2:hover {
-
-    transform:
-      translateX(
-        calc(
-          -50% -
-          17vw
-        )
-      )
-      translateY(-5px)
-      scale(0.88);
-
-  }
-
-
-  .leaderboards-page
-  .position-rank-3:hover {
-
-    transform:
-      translateX(
-        calc(
-          -50% +
-          17vw
-        )
-      )
-      translateY(-5px)
-      scale(0.88);
-
-  }
-
-
-  .leaderboards-page
-  .position-rank-4:hover {
-
-    transform:
-      translateX(
-        calc(
-          -50% -
-          31vw
-        )
-      )
-      translateY(-8px)
-      scale(0.72);
-
-  }
-
-
-  .leaderboards-page
-  .position-rank-5:hover {
-
-    transform:
-      translateX(
-        calc(
-          -50% +
-          31vw
-        )
-      )
-      translateY(-8px)
-      scale(0.72);
+    height: 175px;
 
   }
 
@@ -2932,9 +2914,9 @@
   .leaderboards-page
   .rank-podium-stage {
 
-    bottom: 4.5rem;
+    bottom: 5rem;
 
-    height: 360px;
+    height: 350px;
 
   }
 
@@ -2944,7 +2926,51 @@
 
     width: 150px;
 
-    height: 315px;
+    height: 305px;
+
+  }
+
+
+  .leaderboards-page
+  .position-rank-1 {
+
+    left: 50%;
+
+  }
+
+
+  .leaderboards-page
+  .position-rank-2 {
+
+    left: 29%;
+
+    bottom: 1.5rem;
+
+  }
+
+
+  .leaderboards-page
+  .position-rank-3 {
+
+    left: 71%;
+
+    bottom: 1.5rem;
+
+  }
+
+
+  .leaderboards-page
+  .position-rank-4 {
+
+    left: 10%;
+
+  }
+
+
+  .leaderboards-page
+  .position-rank-5 {
+
+    left: 90%;
 
   }
 
@@ -2953,7 +2979,7 @@
   .position-rank-1
   .podium-char-img {
 
-    height: 225px;
+    height: 220px;
 
   }
 
@@ -2966,7 +2992,7 @@
   .position-rank-3
   .podium-char-img {
 
-    height: 185px;
+    height: 180px;
 
   }
 
@@ -2979,7 +3005,7 @@
   .position-rank-5
   .podium-char-img {
 
-    height: 155px;
+    height: 150px;
 
   }
 

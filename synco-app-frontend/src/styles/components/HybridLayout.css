@@ -15,7 +15,9 @@
 */
 
 :root {
+
   --synco-sidebar-width: 90px;
+
 }
 
 
@@ -184,39 +186,45 @@
    ========================================================= */
 
 /*
-  Leaderboards owns the authenticated application's
-  background while this page is active.
+  Leaderboards is intentionally different from normal
+  authenticated pages.
 
-  Because this background belongs to the outer shell,
-  it naturally extends underneath the fixed Sidebar.
+  The rank background belongs to the OUTER application
+  shell, not the page content.
 
-  There is no need for Leaderboards to use:
+  Therefore it naturally continues underneath the fixed
+  90px sidebar.
 
-      width: 100vw;
-      margin-left: -90px;
-
-  That was the source of the background/clipping conflict.
+  IMPORTANT:
+  global-dash-bg.png is explicitly removed here.
 */
 
 .hybrid-auth-container-leaderboards {
 
-  background:
-    #0a0a0a
-    url("../../assets/rank-bg.png")
-    center top /
-    cover
-    fixed
-    no-repeat;
+  background-color:
+    #0a0a0a !important;
+
+  background-image:
+    url("../../assets/rank-bg.png") !important;
+
+  background-position:
+    center top !important;
+
+  background-size:
+    cover !important;
+
+  background-repeat:
+    no-repeat !important;
+
+  background-attachment:
+    fixed !important;
 
 }
 
 
-/*
-  Keep the vignette, but remove the generic
-  global-dashboard visual treatment.
-
-  The Leaderboards rank background remains visible.
-*/
+/* =========================================================
+   LEADERBOARDS VIGNETTE
+   ========================================================= */
 
 .hybrid-auth-container-leaderboards::before {
 
@@ -235,15 +243,12 @@
    ========================================================= */
 
 /*
-  IMPORTANT:
+  This remains the only vertical scroll container.
 
-  This is the ONLY vertical scroll container for
-  Leaderboards.
+  The Sidebar stays fixed.
 
-  The hero itself does not scroll.
-
-  The user can use the mouse wheel anywhere over
-  the Leaderboards page and the page will move normally.
+  The rank background remains on the outer shell, so
+  scrolling the page does not reveal global-dash-bg.
 */
 
 .hybrid-auth-main-leaderboards {
@@ -270,22 +275,15 @@
 
   touch-action: pan-y;
 
+  background:
+    transparent !important;
+
 }
 
 
 /* =========================================================
    LEADERBOARDS CONTENT
    ========================================================= */
-
-/*
-  Leaderboards itself stays inside the normal 90px-offset
-  content area.
-
-  Its outer shell/background is already handled by
-  .hybrid-auth-container-leaderboards.
-
-  This means the content does NOT need negative margins.
-*/
 
 .hybrid-auth-content-leaderboards {
 
@@ -300,7 +298,8 @@
   min-width: 0;
   min-height: 0;
 
-  background: transparent;
+  background:
+    transparent !important;
 
 }
 
@@ -309,12 +308,6 @@
    LEADERBOARDS PAGE SAFETY
    ========================================================= */
 
-/*
-  The page itself must remain transparent so the
-  rank-bg.png from the authenticated shell continues
-  seamlessly behind it.
-*/
-
 .hybrid-auth-container-leaderboards
 .leaderboards-page {
 
@@ -322,9 +315,40 @@
 
   max-width: none;
 
+  min-width: 0;
+
   margin: 0;
 
-  background: transparent;
+  background:
+    transparent !important;
+
+}
+
+
+/* =========================================================
+   LEADERBOARDS BACKGROUND SAFETY
+   ========================================================= */
+
+/*
+  CompetitionEngine.css may provide backgrounds to generic
+  wrapper classes.
+
+  These rules make Leaderboards transparent at every
+  relevant layer so only rank-bg.png from the outer shell
+  is visible.
+*/
+
+.hybrid-auth-container-leaderboards
+.leaderboards-page.comp-engine-wrapper,
+
+.hybrid-auth-container-leaderboards
+.leaderboards-page .rank-content-bg,
+
+.hybrid-auth-container-leaderboards
+.leaderboards-page .rank-hero {
+
+  background:
+    transparent !important;
 
 }
 
@@ -350,6 +374,7 @@
   font-family: sans-serif;
 
   display: flex;
+
   flex-direction: column;
 
 }
@@ -363,6 +388,7 @@
   min-height: 0;
 
   display: flex;
+
   flex-direction: column;
 
   overflow-y: auto;
