@@ -89,6 +89,7 @@ export default function TournamentRegistration() {
 
     const [data, setData] = useState(null);
     const [selectedClubId, setSelectedClubId] = useState(null);
+    const [selectedMemberIds, setSelectedMemberIds] = useState([]);
     const [loading, setLoading] = useState(true);
     const [submitting, setSubmitting] = useState(false);
     const [refreshing, setRefreshing] = useState(false);
@@ -114,6 +115,11 @@ export default function TournamentRegistration() {
             const currentClubId = currentRegistration?.clubId;
             if (currentClubId) {
                 setSelectedClubId(currentClubId);
+                setSelectedMemberIds(
+                    (currentRegistration?.teamRoster || [])
+                        .map((member) => Number(member.userId))
+                        .filter((id) => Number.isFinite(id))
+                );
             }
         } catch (err) {
             console.error("Failed to load tournament registration:", err);
@@ -156,11 +162,78 @@ export default function TournamentRegistration() {
         currentStatus
     );
 
+    const activeRegistrationStatus = String(
+        selectedClub?.registration?.registrationStatus ||
+        currentRegistration?.registrationStatus ||
+        ""
+    ).toUpperCase();
+
+    const hasSelectedClubRegistration = [
+        "PENDING",
+        "ACCEPTED",
+        "LOCKED",
+        "ELIMINATED",
+    ].includes(activeRegistrationStatus);
+
     const selectedEligible =
         !!selectedClub &&
         selectedClub.eligible !== false &&
-        (!teamSize || selectedClub.memberCount === teamSize) &&
-        !selectedClub.registration;
+        !hasSelectedClubRegistration &&
+        selectedMemberIds.length === teamSize;
+
+    const handleClubSelect = (club) => {
+        const registrationStatus = String(
+            club.registration?.registrationStatus ||
+            ""
+        ).toUpperCase();
+
+        if (
+            club.registration &&
+            registrationStatus !== "REJECTED"
+        ) {
+            return;
+        }
+
+        setSelectedClubId(club.id);
+
+        const existingRoster =
+            club.registration?.teamRoster || [];
+
+        if (existingRoster.length > 0) {
+            setSelectedMemberIds(
+                existingRoster
+                    .map((member) => Number(member.userId))
+                    .filter((id) => Number.isFinite(id))
+            );
+        } else {
+            setSelectedMemberIds([]);
+        }
+
+        setError("");
+        setSuccess("");
+    };
+
+    const toggleMember = (memberUserId) => {
+        const memberId = Number(memberUserId);
+
+        if (!Number.isFinite(memberId)) {
+            return;
+        }
+
+        setSelectedMemberIds((previous) => {
+            if (previous.includes(memberId)) {
+                return previous.filter((id) => id !== memberId);
+            }
+
+            if (teamSize && previous.length >= teamSize) {
+                return previous;
+            }
+
+            return [...previous, memberId];
+        });
+
+        setError("");
+    };
 
     const handleRegister = async () => {
         setError("");
@@ -171,6 +244,20 @@ export default function TournamentRegistration() {
             return;
         }
 
+        if (isTeamCompetition) {
+            if (!selectedClubId) {
+                setError("Select a club first.");
+                return;
+            }
+
+            if (selectedMemberIds.length !== teamSize) {
+                setError(
+                    `Select exactly ${teamSize} player${teamSize === 1 ? "" : "s"} for this tournament.`
+                );
+                return;
+            }
+        }
+
         try {
             setSubmitting(true);
 
@@ -179,7 +266,10 @@ export default function TournamentRegistration() {
                 : `/api/competitions/${competitionId}/register/player`;
 
             const body = isTeamCompetition
-                ? { clubId: selectedClubId }
+                ? {
+                    clubId: selectedClubId,
+                    memberIds: selectedMemberIds,
+                }
                 : {};
 
             const response = await apiRequest(endpoint, {
@@ -315,73 +405,183 @@ export default function TournamentRegistration() {
                                 {!clubs.length ? (
                                     <div className="registration-empty">
                                         <Users size={22} />
-                                        <strong>No eligible clubs found</strong>
-                                        <p>Create a club for this game first, or make sure your existing club has exactly {teamSize} rostered player{teamSize === 1 ? "" : "s"}.</p>
+                                        <strong>No clubs found for this game</strong>
+                                        <p>
+                                            Create a club for {getGameName(competition)} first.
+                                        </p>
                                     </div>
                                 ) : (
                                     clubs.map((club) => {
-                                        const isSelected = String(selectedClubId) === String(club.id);
-                                        const memberOk = !teamSize || club.memberCount === teamSize;
+                                        const isSelected =
+                                            String(selectedClubId) === String(club.id);
+
                                         const registration = club.registration;
-                                        const status = String(registration?.registrationStatus || "").toUpperCase();
-                                        const unavailable = !!registration && !["REJECTED"].includes(status);
+                                        const status = String(
+                                            registration?.registrationStatus || ""
+                                        ).toUpperCase();
+
+                                        const unavailable =
+                                            !!registration &&
+                                            status !== "REJECTED";
+
+                                        const selectedCount =
+                                            isSelected
+                                                ? selectedMemberIds.length
+                                                : 0;
+
+                                        const memberOk =
+                                            club.memberCount >= teamSize;
+
+                                        const selectedRosterIds =
+                                            isSelected
+                                                ? new Set(selectedMemberIds)
+                                                : new Set();
 
                                         return (
-                                            <button
-                                                type="button"
+                                            <div
+                                                className={`registration-club-card ${isSelected ? "selected" : ""
+                                                    } ${unavailable ? "registered" : ""
+                                                    }`}
                                                 key={club.id}
-                                                className={`registration-club-card ${isSelected ? "selected" : ""} ${unavailable ? "registered" : ""}`}
-                                                onClick={() => {
-                                                    if (!unavailable) setSelectedClubId(club.id);
-                                                }}
-                                                disabled={unavailable}
                                             >
-                                                <div className="registration-club-top">
-                                                    <div className="registration-club-avatar">
-                                                        {club.name?.slice(0, 2).toUpperCase() || "CL"}
+
+                                                <button
+                                                    type="button"
+                                                    className="registration-club-select-button"
+                                                    onClick={() => handleClubSelect(club)}
+                                                    disabled={unavailable || !memberOk}
+                                                >
+                                                    <div className="registration-club-top">
+                                                        <div className="registration-club-avatar">
+                                                            {club.name?.slice(0, 2).toUpperCase() || "CL"}
+                                                        </div>
+
+                                                        <div className="registration-club-name">
+                                                            <strong>{club.name}</strong>
+                                                            <span>
+                                                                {club.tag
+                                                                    ? `#${club.tag}`
+                                                                    : "SYNCO CLUB"}
+                                                            </span>
+                                                        </div>
+
+                                                        <div className="registration-club-status">
+                                                            {unavailable ? (
+                                                                <span>{statusLabel(status)}</span>
+                                                            ) : isSelected ? (
+                                                                <Check size={16} />
+                                                            ) : (
+                                                                <ChevronRight size={16} />
+                                                            )}
+                                                        </div>
                                                     </div>
-                                                    <div className="registration-club-name">
-                                                        <strong>{club.name}</strong>
-                                                        <span>{club.tag ? `#${club.tag}` : "SYNCO CLUB"}</span>
-                                                    </div>
-                                                    <div className="registration-club-status">
-                                                        {unavailable ? (
-                                                            <span>{statusLabel(status)}</span>
-                                                        ) : isSelected ? (
-                                                            <Check size={16} />
-                                                        ) : (
-                                                            <ChevronRight size={16} />
-                                                        )}
-                                                    </div>
-                                                </div>
+                                                </button>
 
                                                 <div className="registration-roster">
                                                     <div className="registration-roster-heading">
-                                                        <span>ROSTER</span>
-                                                        <strong>{getMemberCountLabel(club.memberCount, teamSize)}</strong>
+                                                        <div>
+                                                            <span>TOURNAMENT SQUAD</span>
+                                                            <strong>
+                                                                {isSelected
+                                                                    ? `${selectedCount}/${teamSize} selected`
+                                                                    : `${club.memberCount} club member${club.memberCount === 1 ? "" : "s"}`}
+                                                            </strong>
+                                                        </div>
+
+                                                        {!unavailable && memberOk && (
+                                                            <span className="registration-roster-hint">
+                                                                {isSelected
+                                                                    ? "Choose players below"
+                                                                    : "Select club first"}
+                                                            </span>
+                                                        )}
                                                     </div>
+
                                                     <div className="registration-roster-list">
-                                                        {club.members?.map((member) => (
-                                                            <div className="registration-roster-row" key={member.id}>
-                                                                <div className="registration-mini-avatar">
-                                                                    {(member.name || "P").slice(0, 2).toUpperCase()}
-                                                                </div>
-                                                                <div>
-                                                                    <strong>{member.name}</strong>
-                                                                    {member.uid && <span>{member.uid}</span>}
-                                                                </div>
-                                                            </div>
-                                                        ))}
+                                                        {club.members?.map((member) => {
+                                                            const memberUserId = Number(member.userId);
+                                                            const checked = selectedRosterIds.has(memberUserId);
+
+                                                            return (
+                                                                <label
+                                                                    className={`registration-member-select ${checked ? "selected" : ""
+                                                                        } ${!isSelected || unavailable
+                                                                            ? "locked"
+                                                                            : ""
+                                                                        }`}
+                                                                    key={member.id || member.userId}
+                                                                    onClick={(event) => event.stopPropagation()}
+                                                                >
+                                                                    <input
+                                                                        type="checkbox"
+                                                                        checked={checked}
+                                                                        disabled={
+                                                                            !isSelected ||
+                                                                            unavailable ||
+                                                                            (!checked &&
+                                                                                selectedMemberIds.length >= teamSize)
+                                                                        }
+                                                                        onChange={() =>
+                                                                            toggleMember(memberUserId)
+                                                                        }
+                                                                    />
+
+                                                                    <div className="registration-mini-avatar">
+                                                                        {(member.name || "P").slice(0, 2).toUpperCase()}
+                                                                    </div>
+
+                                                                    <div className="registration-member-select-info">
+                                                                        <strong>{member.name}</strong>
+                                                                        {member.uid && (
+                                                                            <span>{member.uid}</span>
+                                                                        )}
+                                                                    </div>
+
+                                                                    <span className="registration-member-role">
+                                                                        {member.role || "MEMBER"}
+                                                                    </span>
+                                                                </label>
+                                                            );
+                                                        })}
                                                     </div>
                                                 </div>
 
                                                 {!memberOk && !unavailable && (
                                                     <div className="registration-card-warning">
                                                         <AlertCircle size={14} />
-                                                        <span>Requires exactly {teamSize} rostered player{teamSize === 1 ? "" : "s"}.</span>
+                                                        <span>
+                                                            This club has only {club.memberCount} member{club.memberCount === 1 ? "" : "s"};
+                                                            this tournament requires {teamSize}.
+                                                        </span>
                                                     </div>
                                                 )}
-                                            </button>
+
+                                                {isSelected && !unavailable && memberOk && (
+                                                    <div className={`registration-selection-status ${selectedCount === teamSize
+                                                            ? "complete"
+                                                            : "incomplete"
+                                                        }`}>
+                                                        <span>
+                                                            {selectedCount === teamSize
+                                                                ? "Tournament roster ready"
+                                                                : `${teamSize - selectedCount} more player${teamSize - selectedCount === 1 ? "" : "s"} required`}
+                                                        </span>
+                                                    </div>
+                                                )}
+
+                                                {unavailable && registration?.teamRoster?.length > 0 && (
+                                                    <div className="registration-locked-roster">
+                                                        <span>REGISTERED TOURNAMENT ROSTER</span>
+                                                        <div>
+                                                            {registration.teamRoster.map((member) => (
+                                                                <span key={member.userId}>
+                                                                    {member.name}
+                                                                </span>
+                                                            ))}
+                                                        </div>
+                                                    </div>
+                                                )}
+                                            </div>
                                         );
                                     })
                                 )}
@@ -453,7 +653,7 @@ export default function TournamentRegistration() {
                             </div>
                             <div className="registration-rule-list">
                                 <div><Check size={13} /> <span>Only registered SYNCO teams/players can participate.</span></div>
-                                <div><Check size={13} /> <span>Team roster is taken from the existing club roster.</span></div>
+                                <div><Check size={13} /> <span>The club owner selects the exact tournament roster from current club members.</span></div>
                                 <div><Check size={13} /> <span>Organizer approval and tournament locking happen in the Competition Engine.</span></div>
                                 <div><Check size={13} /> <span>Matches are generated from the selected game format after registration closes.</span></div>
                             </div>

@@ -3074,7 +3074,17 @@ class CompetitionParticipant(db.Model):
         nullable=True,
         index=True
     )
+        # -----------------------------------------------------
+    # TOURNAMENT-SPECIFIC TEAM ROSTER
+    # -----------------------------------------------------
+    # Exact players selected from the club for this
+    # particular tournament registration.
 
+    team_roster = db.Column(
+        db.JSON,
+        nullable=False,
+        default=list
+    )
     # -----------------------------------------------------
     # Registration
     # -----------------------------------------------------
@@ -3178,6 +3188,9 @@ class CompetitionParticipant(db.Model):
 
             "userId": self.user_id,
             "clubId": self.club_id,
+
+            "teamRoster": self.team_roster or [],
+            "rosterCount": len(self.team_roster or []),
 
             "seed": self.seed,
 

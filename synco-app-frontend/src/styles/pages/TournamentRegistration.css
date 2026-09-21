@@ -769,3 +769,157 @@
         grid-template-columns: 1fr;
     }
 }
+
+
+/* =========================================================
+   TOURNAMENT-SPECIFIC CLUB ROSTER SELECTION
+   ========================================================= */
+
+.registration-club-select-button {
+    width: 100%;
+    padding: 0;
+    border: 0;
+    background: transparent;
+    color: inherit;
+    text-align: left;
+    cursor: pointer;
+}
+
+.registration-club-select-button:disabled {
+    cursor: default;
+}
+
+.registration-roster-hint {
+    color: #9a9a94 !important;
+    font-size: 8px !important;
+    font-weight: 700 !important;
+    letter-spacing: .02em !important;
+    text-align: right;
+}
+
+.registration-member-select {
+    min-width: 0;
+    padding: 7px 8px;
+    border: 1px solid #e4e4df;
+    border-radius: 8px;
+    background: #fafaf8;
+    display: flex;
+    align-items: center;
+    gap: 7px;
+    cursor: pointer;
+    transition: border-color .15s ease, background .15s ease, box-shadow .15s ease;
+}
+
+.registration-member-select:hover {
+    border-color: #cfcfc9;
+    background: #f5f5f2;
+}
+
+.registration-member-select.selected {
+    border-color: #1d1d1b;
+    background: #f1f1ed;
+    box-shadow: inset 0 0 0 1px #1d1d1b;
+}
+
+.registration-member-select.locked {
+    cursor: default;
+}
+
+.registration-member-select input {
+    width: 14px;
+    height: 14px;
+    flex-shrink: 0;
+    accent-color: #1d1d1b;
+    cursor: pointer;
+}
+
+.registration-member-select input:disabled {
+    cursor: default;
+    opacity: .55;
+}
+
+.registration-member-select-info {
+    min-width: 0;
+    flex: 1;
+}
+
+.registration-member-select-info strong,
+.registration-member-select-info span {
+    display: block;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.registration-member-select-info strong {
+    font-size: 10px;
+    font-weight: 800;
+}
+
+.registration-member-select-info span {
+    margin-top: 2px;
+    color: #9b9b95;
+    font-size: 8px;
+}
+
+.registration-member-role {
+    flex-shrink: 0;
+    color: #8f8f89;
+    font-size: 7px;
+    font-weight: 850;
+    letter-spacing: .08em;
+    text-transform: uppercase;
+}
+
+.registration-selection-status {
+    margin-top: 9px;
+    padding: 8px 9px;
+    border-radius: 7px;
+    font-size: 8px;
+    font-weight: 800;
+    letter-spacing: .06em;
+    text-transform: uppercase;
+}
+
+.registration-selection-status.complete {
+    border: 1px solid #d4d4cf;
+    background: #eeeeeb;
+    color: #252522;
+}
+
+.registration-selection-status.incomplete {
+    border: 1px solid #e0e0db;
+    background: #f5f5f2;
+    color: #777771;
+}
+
+.registration-locked-roster {
+    margin-top: 10px;
+    padding-top: 10px;
+    border-top: 1px solid #e8e8e3;
+}
+
+.registration-locked-roster>span {
+    display: block;
+    color: #8a8a84;
+    font-size: 7px;
+    font-weight: 850;
+    letter-spacing: .1em;
+}
+
+.registration-locked-roster>div {
+    margin-top: 7px;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 5px;
+}
+
+.registration-locked-roster>div>span {
+    padding: 5px 7px;
+    border: 1px solid #deded9;
+    border-radius: 6px;
+    background: #f4f4f1;
+    color: #4d4d48;
+    font-size: 8px;
+    font-weight: 750;
+}

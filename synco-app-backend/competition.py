@@ -3,8 +3,7 @@
 # Compatible with the Competition models previously provided
 # =========================================================
 
-from datetime import datetime, timezone
-from zoneinfo import ZoneInfo
+from datetime import datetime
 import math
 import random
 import re
@@ -344,110 +343,20 @@ def parse_datetime(value):
         return None
 
     if isinstance(value, datetime):
-        parsed = value
-    else:
-        value = str(value).strip()
-
-        if not value:
-            return None
-
-        try:
-            parsed = datetime.fromisoformat(
-                value.replace("Z", "+00:00")
-            )
-        except ValueError:
-            return None
-
-    # datetime-local values from the SYNCO React UI do not carry a
-    # timezone. They represent the user's India/IST tournament time.
-    # Explicitly attach Asia/Kolkata before converting to UTC so Render
-    # (which normally runs on UTC) cannot shift the registration window.
-    if parsed.tzinfo is None:
-        parsed = parsed.replace(tzinfo=ZoneInfo("Asia/Kolkata"))
-
-    return (
-        parsed.astimezone(timezone.utc)
-        .replace(tzinfo=None)
-    )
-
-
-def utc_now():
-
-    # Keep database DateTime values naive/UTC to remain compatible with
-    # the existing SQLAlchemy model definitions.
-    return datetime.now(timezone.utc).replace(tzinfo=None)
-
-
-def as_utc_naive(value):
-
-    if value is None:
-        return None
-
-    if value.tzinfo is None:
         return value
 
-    return value.astimezone(timezone.utc).replace(tzinfo=None)
+    value = str(value).strip()
 
+    if not value:
+        return None
 
-def sync_registration_status(competition):
-    """Synchronize the persisted registration status with its time window.
+    try:
+        return datetime.fromisoformat(
+            value.replace("Z", "+00:00")
+        )
+    except ValueError:
+        return None
 
-    Rules:
-      * Before registrationStart -> DRAFT
-      * registrationStart <= now < registrationEnd -> REGISTRATION_OPEN
-      * At/after registrationEnd -> REGISTRATION_CLOSED
-
-    A competition that has already moved to READY/LIVE/etc. is never touched.
-    """
-
-    if not competition:
-        return False
-
-    status = str(competition.status or "").upper()
-
-    if status not in ("DRAFT", "REGISTRATION_OPEN"):
-        return False
-
-    start = as_utc_naive(competition.registration_start)
-    end = as_utc_naive(competition.registration_end)
-    now = utc_now()
-
-    changed = False
-
-    # No registration window at all: keep the competition as a draft.
-    if not start and not end:
-        if status == "REGISTRATION_OPEN":
-            competition.status = "DRAFT"
-            competition.is_published = False
-            changed = True
-        return changed
-
-    # Future start -> not open yet.
-    if start and now < start:
-        if status != "DRAFT":
-            competition.status = "DRAFT"
-            competition.is_published = False
-            changed = True
-        return changed
-
-    # End is exclusive: exactly at registrationEnd the window is closed.
-    if end and now >= end:
-        if status != "REGISTRATION_CLOSED":
-            competition.status = "REGISTRATION_CLOSED"
-            competition.is_published = True
-            changed = True
-        return changed
-
-    # We are inside the window.
-    if status != "REGISTRATION_OPEN":
-        competition.status = "REGISTRATION_OPEN"
-        competition.is_published = True
-        changed = True
-    elif not competition.is_published:
-        competition.is_published = True
-        changed = True
-
-    return changed
 
 def slugify(value):
 
@@ -530,46 +439,13 @@ def normalize_game_slug(game):
 
 
 def get_game_configuration(game):
+
     slug = normalize_game_slug(game)
 
     if not slug:
         return None
 
     return COMPETITION_CONFIG.get(slug)
-
-
-def serialize_registration_club(club, registration=None):
-    members = (
-        ClubMember.query
-        .filter_by(club_id=club.id)
-        .order_by(ClubMember.joined_at.asc(), ClubMember.id.asc())
-        .all()
-    )
-
-    member_rows = []
-    for membership in members:
-        user = membership.user
-        if not user:
-            continue
-        member_rows.append({
-            "id": user.id,
-            "uid": getattr(user, "uid", None),
-            "name": getattr(user, "name", None) or getattr(user, "username", None) or f"Player {user.id}",
-            "username": getattr(user, "username", None),
-            "avatar": getattr(user, "avatar", None),
-            "role": getattr(membership, "role", None),
-        })
-
-    return {
-        "id": club.id,
-        "name": getattr(club, "name", None) or f"Club {club.id}",
-        "tag": getattr(club, "tag", None),
-        "logo": getattr(club, "logo", None),
-        "gameId": getattr(club, "game_id", None),
-        "memberCount": len(member_rows),
-        "members": member_rows,
-        "registration": serialize_participant(registration) if registration else None,
-    }
 
 
 def get_main_stage(competition):
@@ -658,21 +534,6 @@ def serialize_user(user):
     }
 
 
-def serialize_datetime(value):
-
-    if not value:
-        return None
-
-    # Database values remain UTC-naive for compatibility with the
-    # existing SQLAlchemy models. The public competition API, however,
-    # exposes all competition schedule times in Indian Standard Time.
-    # This keeps SYNCO's tournament scheduling unambiguous: IST only.
-    utc_value = as_utc_naive(value).replace(tzinfo=timezone.utc)
-    india_value = utc_value.astimezone(ZoneInfo("Asia/Kolkata"))
-
-    return india_value.isoformat(timespec="seconds")
-
-
 def serialize_game(game):
 
     if not game:
@@ -720,6 +581,48 @@ def serialize_club(club):
     }
 
 
+def serialize_team_roster(participant):
+
+    roster = getattr(
+        participant,
+        "team_roster",
+        None
+    ) or []
+
+    result = []
+
+    if not isinstance(roster, list):
+        return result
+
+    for index, item in enumerate(roster, start=1):
+
+        if not isinstance(item, dict):
+            continue
+
+        try:
+            user_id = int(item.get("userId"))
+        except (TypeError, ValueError):
+            continue
+
+        result.append({
+            "userId": user_id,
+            "uid": item.get("uid"),
+            "name": item.get("name"),
+            "username": item.get("username"),
+            "avatar": item.get("avatar"),
+            "role": item.get("role") or "MEMBER",
+            "rosterOrder": item.get("rosterOrder", index),
+        })
+
+    result.sort(
+        key=lambda item: int(
+            item.get("rosterOrder") or 0
+        )
+    )
+
+    return result
+
+
 def serialize_participant(participant):
 
     user = getattr(
@@ -732,6 +635,10 @@ def serialize_participant(participant):
         participant,
         "club",
         None
+    )
+
+    team_roster = serialize_team_roster(
+        participant
     )
 
     return {
@@ -785,6 +692,10 @@ def serialize_participant(participant):
             if participant.eliminated_at
             else None
         ),
+
+        "teamRoster": team_roster,
+
+        "rosterCount": len(team_roster),
     }
 
 
@@ -1175,27 +1086,39 @@ def serialize_competition(
         ),
 
         "registrationStart": (
-            serialize_datetime(competition.registration_start)
+            competition.registration_start.isoformat()
+            if competition.registration_start
+            else None
         ),
 
         "registrationEnd": (
-            serialize_datetime(competition.registration_end)
+            competition.registration_end.isoformat()
+            if competition.registration_end
+            else None
         ),
 
         "competitionStart": (
-            serialize_datetime(competition.competition_start)
+            competition.competition_start.isoformat()
+            if competition.competition_start
+            else None
         ),
 
         "competitionEnd": (
-            serialize_datetime(competition.competition_end)
+            competition.competition_end.isoformat()
+            if competition.competition_end
+            else None
         ),
 
         "createdAt": (
-            serialize_datetime(competition.created_at)
+            competition.created_at.isoformat()
+            if competition.created_at
+            else None
         ),
 
         "updatedAt": (
-            serialize_datetime(competition.updated_at)
+            competition.updated_at.isoformat()
+            if competition.updated_at
+            else None
         ),
     }
 
@@ -1723,11 +1646,6 @@ def create_competition():
             ),
         )
 
-        # Immediately calculate the initial registration status so the
-        # create response is already correct when the registration window
-        # is currently active (or already ended).
-        sync_registration_status(competition)
-
         db.session.add(competition)
 
         creation_step = "flush competition"
@@ -1790,8 +1708,6 @@ def create_competition():
             creation_step = "flush scoring rule"
             db.session.flush()
 
-        auto_opened = sync_registration_status(competition)
-
         creation_step = "create audit log"
 
         create_audit_log(
@@ -1809,16 +1725,6 @@ def create_competition():
                 "gameMode": game_mode,
             },
         )
-
-        if auto_opened:
-            create_audit_log(
-                competition.id,
-                user.id,
-                "REGISTRATION_OPENED",
-                metadata={
-                    "source": "AUTOMATIC_REGISTRATION_WINDOW"
-                },
-            )
 
         creation_step = "commit competition"
         db.session.commit()
@@ -1868,12 +1774,10 @@ def competition_unhandled_error(exc):
         "Unhandled competition blueprint error"
     )
 
-    error_text = str(exc).strip() or exc.__class__.__name__
-
     return jsonify({
         "success": False,
-        "message": f"Competition API error: {error_text}",
-        "error": error_text,
+        "message": "Competition API error.",
+        "error": str(exc).strip() or exc.__class__.__name__,
         "errorType": exc.__class__.__name__,
     }), 500
 
@@ -1890,7 +1794,7 @@ def get_competitions():
 
     query = Competition.query
 
-    requested_status = request.args.get(
+    status = request.args.get(
         "status"
     )
 
@@ -1902,15 +1806,24 @@ def get_competitions():
         "competitionType"
     )
 
+    if status:
+
+        query = query.filter_by(
+            status=status.upper()
+        )
+
     if game_id:
+
         query = query.filter_by(
             game_id=game_id
         )
 
     if competition_type:
+
         query = query.filter_by(
-            competition_type=
+            competition_type=(
                 competition_type.upper()
+            )
         )
 
     competitions = (
@@ -1920,22 +1833,6 @@ def get_competitions():
         )
         .all()
     )
-
-    status_changed = False
-    for competition in competitions:
-        if sync_registration_status(competition):
-            status_changed = True
-
-    if status_changed:
-        db.session.commit()
-
-    if requested_status:
-        requested_status = requested_status.upper()
-        competitions = [
-            competition
-            for competition in competitions
-            if str(competition.status or "").upper() == requested_status
-        ]
 
     return jsonify({
 
@@ -1973,9 +1870,6 @@ def get_competition(
             "success": False,
             "message": "Competition not found."
         }), 404
-
-    if sync_registration_status(competition):
-        db.session.commit()
 
     return jsonify({
 
@@ -2019,32 +1913,27 @@ def open_registration(
     if error:
         return error
 
-    if str(competition.status or "").upper() not in (
-        "DRAFT",
-        "REGISTRATION_OPEN",
-    ):
-        return jsonify({
-            "success": False,
-            "message": "Registration cannot be changed from the current status.",
-        }), 400
-
-    status_changed = sync_registration_status(competition)
-
-    if competition.status != "REGISTRATION_OPEN":
-        if competition.registration_start and utc_now() < as_utc_naive(competition.registration_start):
-            message = "Registration has not started yet."
-        elif competition.registration_end and utc_now() >= as_utc_naive(competition.registration_end):
-            message = "Registration has already ended."
-        else:
-            message = "A valid registration window is required."
+    if competition.status != "DRAFT":
 
         return jsonify({
             "success": False,
-            "message": message,
+            "message": (
+                "Only draft competitions "
+                "can open registration."
+            )
         }), 400
 
-    if status_changed:
-        db.session.commit()
+    competition.status = (
+        "REGISTRATION_OPEN"
+    )
+
+    competition.is_published = True
+
+    if not competition.registration_start:
+
+        competition.registration_start = (
+            datetime.utcnow()
+        )
 
     create_audit_log(
         competition.id,
@@ -2125,243 +2014,285 @@ def close_registration(
             )
         }), 400
 
-    competition.status = "REGISTRATION_CLOSED"
-    competition.registration_end = datetime.utcnow()
-
-    accepted_participants = (
-        CompetitionParticipant.query
-        .filter_by(
-            competition_id=competition.id,
-            registration_status="ACCEPTED"
-        )
-        .order_by(CompetitionParticipant.registered_at.asc(), CompetitionParticipant.id.asc())
-        .all()
+    competition.status = (
+        "REGISTRATION_CLOSED"
     )
 
-    if len(accepted_participants) < 2:
-        db.session.rollback()
-        return jsonify({
-            "success": False,
-            "message": "At least 2 accepted participants are required to prepare the tournament."
-        }), 400
-
-    accepted_participants = accepted_participants[:competition.max_participants]
-
-    for index, participant in enumerate(accepted_participants, start=1):
-        participant.seed = index
-        participant.registration_status = "LOCKED"
-
-    stage = get_main_stage(competition)
-    if not stage:
-        db.session.rollback()
-        return jsonify({
-            "success": False,
-            "message": "Main stage not found."
-        }), 500
-
-    existing_count = (
-        CompetitionMatch.query
-        .filter_by(competition_id=competition.id)
-        .count()
-    )
-
-    generated_matches = []
-
-    if not existing_count:
-        if competition.competition_type == "CLASSIC":
-            generated_matches = generate_classic_matches(
-                competition,
-                stage,
-                accepted_participants,
-            )
-        else:
-            generate_versus_bracket(
-                competition,
-                stage,
-                accepted_participants,
-            )
-            generated_matches = (
-                CompetitionMatch.query
-                .filter_by(competition_id=competition.id)
-                .order_by(
-                    CompetitionMatch.round_number.asc(),
-                    CompetitionMatch.match_number.asc(),
-                )
-                .all()
-            )
-
-    stage.status = "READY"
-    competition.status = "READY"
-
-    create_audit_log(
-        competition.id,
-        user.id,
-        "REGISTRATION_CLOSED",
-        metadata={
-            "acceptedCount": len(accepted_participants),
-        },
+    competition.registration_end = (
+        datetime.utcnow()
     )
 
     create_audit_log(
         competition.id,
         user.id,
-        "PARTICIPANTS_LOCKED",
-        metadata={
-            "participantCount": len(accepted_participants),
-        },
+        "REGISTRATION_CLOSED"
     )
-
-    if not existing_count:
-        create_audit_log(
-            competition.id,
-            user.id,
-            "MATCHES_GENERATED",
-            metadata={
-                "matchCount": len(generated_matches),
-            },
-        )
 
     db.session.commit()
 
     return jsonify({
+
         "success": True,
-        "message": "Registration closed and tournament prepared.",
-        "participantCount": len(accepted_participants),
-        "matchCount": len(generated_matches) if not existing_count else existing_count,
-        "matchesGenerated": not bool(existing_count),
-        "competition": serialize_competition(competition, include_children=True),
+
+        "message": "Registration closed.",
+
+        "competition": serialize_competition(
+            competition
+        ),
     })
 
 
 # =========================================================
-# REGISTRATION INFO
+# TOURNAMENT REGISTRATION INFO
 # =========================================================
 
 @competition_bp.route(
     "/<int:competition_id>/registration-info",
     methods=["GET"]
 )
-def get_registration_info(competition_id):
+def get_registration_info(
+    competition_id
+):
 
     user = current_user()
 
     if not user:
+
         return jsonify({
             "success": False,
             "message": "Authentication required."
         }), 401
 
-    competition = db.session.get(Competition, competition_id)
+    competition = db.session.get(
+        Competition,
+        competition_id
+    )
 
     if not competition:
+
         return jsonify({
             "success": False,
             "message": "Competition not found."
         }), 404
 
-    if sync_registration_status(competition):
-        db.session.commit()
+    mode_config = {}
 
-    game = get_game(competition.game_id)
-    game_config = get_game_configuration(game) or {}
-    mode_config = (game_config.get("modes") or {}).get(
-        str(competition.game_mode or "").upper(),
-        {}
+    game_configuration = get_game_configuration(
+        competition.game
     )
 
-    registered_count = (
-        CompetitionParticipant.query
-        .filter_by(competition_id=competition.id)
-        .filter(
-            CompetitionParticipant.registration_status.notin_(["REJECTED"])
-        )
-        .count()
-    )
-
-    capacity = int(competition.max_participants or 0)
-    registration_open = competition.status == "REGISTRATION_OPEN"
-    full = capacity > 0 and registered_count >= capacity
-
-    payload = {
-        "success": True,
-        "registrationOpen": registration_open,
-        "full": full,
-        "registeredCount": registered_count,
-        "capacity": capacity,
-        "competition": serialize_competition(competition, include_children=False),
-        "modeConfig": mode_config,
-        "defaultScoring": DEFAULT_SCORING,
-        "myRegistration": None,
-        "myClubs": [],
-    }
-
-    if str(competition.participant_type or "").upper() == "PLAYER":
-        payload["myRegistration"] = serialize_participant(
-            CompetitionParticipant.query
-            .filter_by(
-                competition_id=competition.id,
-                user_id=user.id,
+    if game_configuration:
+        mode_config = (
+            game_configuration
+            .get("modes", {})
+            .get(
+                str(competition.game_mode or "").upper(),
+                {}
             )
-            .first()
-        ) if CompetitionParticipant.query.filter_by(
-            competition_id=competition.id,
-            user_id=user.id,
-        ).first() else None
+        )
 
-        return jsonify(payload)
+    registration_open = (
+        competition.status == "REGISTRATION_OPEN"
+    )
 
-    # TEAM competition: expose every owned club that actually satisfies
-    # the tournament's game + exact roster-size criteria. Registered clubs
-    # remain visible so their current status can be shown, but only eligible
-    # clubs can be selected in the UI.
-    owned_clubs = (
+    active_participants_query = (
+        CompetitionParticipant.query
+        .filter_by(
+            competition_id=competition.id
+        )
+        .filter(
+            CompetitionParticipant.registration_status
+            .notin_(["REJECTED", "DISQUALIFIED"])
+        )
+    )
+
+    registered_count = active_participants_query.count()
+
+    my_owned_clubs = (
         Club.query
-        .filter_by(owner_id=user.id)
-        .order_by(Club.name.asc(), Club.id.asc())
+        .filter_by(
+            owner_id=user.id,
+            game_id=competition.game_id,
+            is_active=True,
+        )
+        .order_by(
+            Club.created_at.desc()
+        )
         .all()
     )
 
-    required_team_size = int(competition.team_size or 0)
+    registration_map = {
+        participant.club_id: participant
+        for participant in (
+            CompetitionParticipant.query
+            .filter_by(
+                competition_id=competition.id
+            )
+            .filter(
+                CompetitionParticipant.club_id.isnot(None)
+            )
+            .all()
+        )
+    }
 
-    for club in owned_clubs:
-        # A club without the same game assignment is not eligible.
-        if str(getattr(club, "game_id", None)) != str(competition.game_id):
-            continue
+    clubs_payload = []
 
-        members = (
+    for club in my_owned_clubs:
+
+        memberships = (
             ClubMember.query
-            .filter_by(club_id=club.id)
+            .filter_by(
+                club_id=club.id
+            )
+            .order_by(
+                ClubMember.joined_at.asc(),
+                ClubMember.id.asc(),
+            )
             .all()
         )
 
-        member_count = len(
-            [member for member in members if getattr(member, "user", None)]
+        members_payload = []
+
+        for membership in memberships:
+
+            member_user = membership.user
+
+            if not member_user:
+                continue
+
+            members_payload.append({
+                "id": membership.id,
+                "userId": member_user.id,
+                "uid": member_user.uid,
+                "name": (
+                    member_user.username
+                    or member_user.name
+                    or f"Player {member_user.id}"
+                ),
+                "username": member_user.username,
+                "avatar": member_user.avatar,
+                "role": membership.role,
+                "joinedAt": (
+                    membership.joined_at.isoformat()
+                    if membership.joined_at
+                    else None
+                ),
+            })
+
+        participant = registration_map.get(
+            club.id
         )
 
-        # Team competitions require the exact configured roster size.
-        if required_team_size and member_count != required_team_size:
-            continue
+        registration_payload = (
+            serialize_participant(participant)
+            if participant
+            else None
+        )
 
-        registration = (
+        registration_status = str(
+            participant.registration_status
+            if participant
+            else ""
+        ).upper()
+
+        club_is_registered = (
+            bool(participant)
+            and registration_status
+            not in ["REJECTED", "DISQUALIFIED"]
+        )
+
+        eligible = (
+            len(members_payload)
+            >= int(competition.team_size or 0)
+        )
+
+        clubs_payload.append({
+            "id": club.id,
+            "name": club.name,
+            "tag": club.tag,
+            "avatar": club.avatar,
+            "banner": club.banner,
+            "ownerId": club.owner_id,
+            "gameId": club.game_id,
+            "memberCount": len(members_payload),
+            "members": members_payload,
+            "eligible": eligible,
+            "registration": registration_payload,
+            "registered": club_is_registered,
+        })
+
+    if str(competition.participant_type or "").upper() == "TEAM":
+
+        owned_club_ids = [
+            club.id
+            for club in my_owned_clubs
+        ]
+
+        if owned_club_ids:
+            current_registration = (
+                CompetitionParticipant.query
+                .filter_by(
+                    competition_id=competition.id,
+                    participant_type="TEAM",
+                )
+                .filter(
+                    CompetitionParticipant.club_id.in_(
+                        owned_club_ids
+                    )
+                )
+                .filter(
+                    CompetitionParticipant.registration_status
+                    .notin_(["REJECTED", "DISQUALIFIED"])
+                )
+                .order_by(
+                    CompetitionParticipant.registered_at.desc()
+                )
+                .first()
+            )
+        else:
+            current_registration = None
+
+    else:
+
+        current_registration = (
             CompetitionParticipant.query
             .filter_by(
                 competition_id=competition.id,
-                club_id=club.id,
+                participant_type="PLAYER",
+                user_id=user.id,
+            )
+            .filter(
+                CompetitionParticipant.registration_status
+                .notin_(["REJECTED", "DISQUALIFIED"])
+            )
+            .order_by(
+                CompetitionParticipant.registered_at.desc()
             )
             .first()
         )
 
-        club_payload = serialize_registration_club(
-            club,
-            registration=registration,
-        )
-        club_payload["eligible"] = True
-        club_payload["requiredTeamSize"] = required_team_size
-        club_payload["memberCount"] = member_count
-
-        payload["myClubs"].append(club_payload)
-
-    return jsonify(payload)
+    return jsonify({
+        "success": True,
+        "competition": serialize_competition(
+            competition
+        ),
+        "registrationOpen": registration_open,
+        "full": (
+            registered_count
+            >= int(competition.max_participants or 0)
+        ),
+        "capacity": competition.max_participants,
+        "registeredCount": registered_count,
+        "modeConfig": mode_config,
+        "myRegistration": (
+            serialize_participant(
+                current_registration
+            )
+            if current_registration
+            else None
+        ),
+        "myClubs": clubs_payload,
+    })
 
 
 # =========================================================
@@ -2396,9 +2327,6 @@ def register_player(
             "success": False,
             "message": "Competition not found."
         }), 404
-
-    if sync_registration_status(competition):
-        db.session.commit()
 
     if competition.status != (
         "REGISTRATION_OPEN"
@@ -2502,212 +2430,459 @@ def register_player(
     "/<int:competition_id>/register/team",
     methods=["POST"]
 )
-def register_team(competition_id):
+def register_team(
+    competition_id
+):
 
     user = current_user()
 
     if not user:
+
         return jsonify({
             "success": False,
             "message": "Authentication required."
         }), 401
 
-    competition = db.session.get(Competition, competition_id)
+    competition = db.session.get(
+        Competition,
+        competition_id
+    )
 
     if not competition:
+
         return jsonify({
             "success": False,
             "message": "Competition not found."
         }), 404
 
+    if competition.status != "REGISTRATION_OPEN":
+
+        return jsonify({
+            "success": False,
+            "message": "Registration is not open."
+        }), 400
+
+    if competition.participant_type != "TEAM":
+
+        return jsonify({
+            "success": False,
+            "message": "This competition requires players."
+        }), 400
+
+    data = request.get_json(
+        silent=True
+    ) or {}
+
+    club_id = data.get("clubId")
+    member_ids = data.get("memberIds")
+
+    if not club_id:
+
+        return jsonify({
+            "success": False,
+            "message": "clubId is required."
+        }), 400
+
+    if not isinstance(member_ids, list):
+
+        return jsonify({
+            "success": False,
+            "message": "memberIds must be an array."
+        }), 400
+
     try:
-        # Keep the persisted status synchronized with the actual registration
-        # window before accepting a registration.
-        status_changed = sync_registration_status(competition)
+        club_id = int(club_id)
+    except (TypeError, ValueError):
 
-        if competition.status != "REGISTRATION_OPEN":
-            if competition.registration_start and utc_now() < as_utc_naive(competition.registration_start):
-                message = "Registration has not started yet."
-            elif competition.registration_end and utc_now() >= as_utc_naive(competition.registration_end):
-                message = "Registration has already ended."
-            else:
-                message = "Registration is not open."
+        return jsonify({
+            "success": False,
+            "message": "Invalid clubId."
+        }), 400
 
-            if status_changed:
-                db.session.commit()
+    normalized_member_ids = []
 
-            return jsonify({
-                "success": False,
-                "message": message,
-            }), 400
-
-        if str(competition.participant_type or "").upper() != "TEAM":
-            return jsonify({
-                "success": False,
-                "message": "This competition requires players."
-            }), 400
-
-        data = request.get_json(silent=True) or {}
-        club_id = data.get("clubId")
-
-        if club_id in (None, ""):
-            return jsonify({
-                "success": False,
-                "message": "clubId is required."
-            }), 400
+    for member_id in member_ids:
 
         try:
-            club_id = int(club_id)
-        except (TypeError, ValueError):
-            return jsonify({
-                "success": False,
-                "message": "clubId must be a valid integer."
-            }), 400
-
-        club = db.session.get(Club, club_id)
-
-        if not club:
-            return jsonify({
-                "success": False,
-                "message": "Club not found."
-            }), 404
-
-        if club.owner_id != user.id:
-            return jsonify({
-                "success": False,
-                "message": "Only the club owner can register this club."
-            }), 403
-
-        if str(getattr(club, "game_id", None)) != str(competition.game_id):
-            return jsonify({
-                "success": False,
-                "message": "This club is not eligible for the tournament's game."
-            }), 400
-
-        team_size = int(competition.team_size or 0)
-
-        member_count = (
-            ClubMember.query
-            .filter_by(club_id=club.id)
-            .count()
-        )
-
-        if team_size and member_count != team_size:
-            return jsonify({
-                "success": False,
-                "message": (
-                    f"This tournament requires exactly {team_size} "
-                    f"team member{'' if team_size == 1 else 's'}. "
-                    f"Your club currently has {member_count}."
-                ),
-                "requiredTeamSize": team_size,
-                "memberCount": member_count,
-            }), 400
-
-        existing = (
-            CompetitionParticipant.query
-            .filter_by(
-                competition_id=competition.id,
-                club_id=club.id,
+            normalized_member_ids.append(
+                int(member_id)
             )
-            .first()
-        )
+        except (TypeError, ValueError):
 
-        if existing:
-            if str(existing.registration_status or "").upper() == "REJECTED":
-                existing.registration_status = "PENDING"
-                existing.seed = None
-                existing.accepted_at = None
-                create_audit_log(
-                    competition.id,
-                    user.id,
-                    "PARTICIPANT_REREGISTERED",
-                    metadata={
-                        "participantId": existing.id,
-                        "participantType": "TEAM",
-                        "clubId": club.id,
-                    },
-                )
-                db.session.commit()
-                return jsonify({
-                    "success": True,
-                    "message": "Team registration submitted again.",
-                    "participant": serialize_participant(existing),
-                }), 201
+            return jsonify({
+                "success": False,
+                "message": "Invalid member ID."
+            }), 400
+
+    # Preserve order while removing duplicates.
+    normalized_member_ids = list(
+        dict.fromkeys(normalized_member_ids)
+    )
+
+    required_size = int(
+        competition.team_size or 0
+    )
+
+    if required_size < 1:
+
+        return jsonify({
+            "success": False,
+            "message": "Invalid tournament team size."
+        }), 400
+
+    if len(normalized_member_ids) != required_size:
+
+        return jsonify({
+            "success": False,
+            "message": (
+                f"Exactly {required_size} players must be "
+                "selected for this tournament."
+            ),
+            "requiredTeamSize": required_size,
+            "selectedCount": len(normalized_member_ids),
+        }), 400
+
+    club = db.session.get(
+        Club,
+        club_id
+    )
+
+    if not club:
+
+        return jsonify({
+            "success": False,
+            "message": "Club not found."
+        }), 404
+
+    if not club.is_active:
+
+        return jsonify({
+            "success": False,
+            "message": "This club is inactive."
+        }), 400
+
+    # Only the creator/owner can register the club and select
+    # its tournament lineup.
+    if club.owner_id != user.id:
+
+        return jsonify({
+            "success": False,
+            "message": "Only the club owner can register this club."
+        }), 403
+
+    if str(club.game_id) != str(competition.game_id):
+
+        return jsonify({
+            "success": False,
+            "message": "This club belongs to a different game."
+        }), 400
+
+    memberships = (
+        ClubMember.query
+        .filter_by(
+            club_id=club.id
+        )
+        .filter(
+            ClubMember.user_id.in_(
+                normalized_member_ids
+            )
+        )
+        .order_by(
+            ClubMember.joined_at.asc(),
+            ClubMember.id.asc(),
+        )
+        .all()
+    )
+
+    membership_map = {
+        membership.user_id: membership
+        for membership in memberships
+    }
+
+    missing_member_ids = [
+        member_id
+        for member_id in normalized_member_ids
+        if member_id not in membership_map
+    ]
+
+    if missing_member_ids:
+
+        return jsonify({
+            "success": False,
+            "message": (
+                "Every selected player must be a current "
+                "member of the club."
+            ),
+            "invalidMemberIds": missing_member_ids,
+        }), 400
+
+    selected_memberships = [
+        membership_map[member_id]
+        for member_id in normalized_member_ids
+    ]
+
+    for membership in selected_memberships:
+
+        member_user = membership.user
+
+        if not member_user:
+            return jsonify({
+                "success": False,
+                "message": "One of the selected players no longer exists."
+            }), 400
+
+        account_status = str(
+            getattr(
+                member_user,
+                "account_status",
+                "active"
+            )
+            or "active"
+        ).lower()
+
+        if account_status != "active":
 
             return jsonify({
                 "success": False,
                 "message": (
-                    f"This club is already registered with status "
-                    f"{existing.registration_status}."
+                    f"{member_user.username or member_user.name} "
+                    "cannot be selected because the account is not active."
                 ),
+            }), 400
+
+    active_participant_count = (
+        CompetitionParticipant.query
+        .filter_by(
+            competition_id=competition.id
+        )
+        .filter(
+            CompetitionParticipant.registration_status
+            .notin_(["REJECTED", "DISQUALIFIED"])
+        )
+        .count()
+    )
+
+    existing = (
+        CompetitionParticipant.query
+        .filter_by(
+            competition_id=competition.id,
+            club_id=club.id
+        )
+        .first()
+    )
+
+    # A previously rejected registration can be submitted again.
+    # Active/accepted/locked/eliminated registrations cannot be
+    # replaced while registration is open.
+    if existing:
+
+        existing_status = str(
+            existing.registration_status
+            or ""
+        ).upper()
+
+        if existing_status != "REJECTED":
+
+            return jsonify({
+                "success": False,
+                "message": "This club is already registered for this tournament."
             }), 409
 
-        active_registration_count = (
-            CompetitionParticipant.query
-            .filter_by(competition_id=competition.id)
-            .filter(
-                CompetitionParticipant.registration_status.notin_(["REJECTED"])
+    if (
+        not existing
+        and active_participant_count
+        >= int(competition.max_participants or 0)
+    ):
+
+        return jsonify({
+            "success": False,
+            "message": "Competition is full."
+        }), 400
+
+    # -----------------------------------------------------
+    # A player may only represent one registered team in a
+    # given competition. This prevents duplicate lineups.
+    # -----------------------------------------------------
+
+    other_participants = (
+        CompetitionParticipant.query
+        .filter_by(
+            competition_id=competition.id,
+            participant_type="TEAM"
+        )
+        .filter(
+            CompetitionParticipant.registration_status
+            .notin_(["REJECTED", "DISQUALIFIED"])
+        )
+        .all()
+    )
+
+    selected_id_set = set(
+        normalized_member_ids
+    )
+
+    duplicate_players = []
+    duplicate_team_names = []
+
+    for participant in other_participants:
+
+        if existing and participant.id == existing.id:
+            continue
+
+        roster = getattr(
+            participant,
+            "team_roster",
+            None
+        ) or []
+
+        roster_ids = set()
+
+        if isinstance(roster, list):
+
+            for roster_item in roster:
+
+                if not isinstance(roster_item, dict):
+                    continue
+
+                try:
+                    roster_ids.add(
+                        int(
+                            roster_item.get(
+                                "userId"
+                            )
+                        )
+                    )
+                except (TypeError, ValueError):
+                    continue
+
+        overlap = selected_id_set & roster_ids
+
+        if overlap:
+
+            duplicate_players.extend(
+                sorted(overlap)
             )
-            .count()
+
+            duplicate_team_names.append(
+                participant.club.name
+                if participant.club
+                else "another team"
+            )
+
+    duplicate_players = list(
+        dict.fromkeys(duplicate_players)
+    )
+
+    if duplicate_players:
+
+        conflicting_users = (
+            User.query
+            .filter(
+                User.id.in_(duplicate_players)
+            )
+            .all()
         )
 
-        if (
-            competition.max_participants is not None
-            and active_registration_count >= int(competition.max_participants)
-        ):
-            return jsonify({
-                "success": False,
-                "message": "Competition is full."
-            }), 400
+        names = [
+            user_item.username
+            or user_item.name
+            or f"Player {user_item.id}"
+            for user_item
+            in conflicting_users
+        ]
+
+        return jsonify({
+            "success": False,
+            "message": (
+                "One or more selected players are already "
+                "registered for this tournament."
+            ),
+            "players": names,
+            "conflictingTeams": list(
+                dict.fromkeys(
+                    duplicate_team_names
+                )
+            ),
+            "code": "PLAYER_ALREADY_REGISTERED",
+        }), 409
+
+    team_roster = []
+
+    for roster_order, member_id in enumerate(
+        normalized_member_ids,
+        start=1
+    ):
+
+        membership = membership_map[
+            member_id
+        ]
+
+        member_user = membership.user
+
+        team_roster.append({
+            "userId": member_user.id,
+            "uid": member_user.uid,
+            "name": (
+                member_user.username
+                or member_user.name
+                or f"Player {member_user.id}"
+            ),
+            "username": member_user.username,
+            "avatar": member_user.avatar,
+            "role": membership.role,
+            "rosterOrder": roster_order,
+        })
+
+    if existing:
+
+        participant = existing
+
+        participant.registration_status = "PENDING"
+        participant.registered_at = datetime.utcnow()
+        participant.accepted_at = None
+        participant.eliminated_at = None
+        participant.seed = None
+        participant.team_roster = team_roster
+
+    else:
 
         participant = CompetitionParticipant(
             competition_id=competition.id,
             participant_type="TEAM",
             user_id=None,
             club_id=club.id,
+            team_roster=team_roster,
             registration_status="PENDING",
         )
 
-        db.session.add(participant)
-        db.session.flush()
-
-        create_audit_log(
-            competition.id,
-            user.id,
-            "PARTICIPANT_REGISTERED",
-            metadata={
-                "participantId": participant.id,
-                "participantType": "TEAM",
-                "clubId": club.id,
-            },
+        db.session.add(
+            participant
         )
 
-        db.session.commit()
+    db.session.flush()
 
-        return jsonify({
-            "success": True,
-            "message": "Team registered.",
-            "participant": serialize_participant(participant),
-        }), 201
+    create_audit_log(
+        competition.id,
+        user.id,
+        "PARTICIPANT_REGISTERED",
+        metadata={
+            "participantId": participant.id,
+            "participantType": "TEAM",
+            "clubId": club.id,
+            "selectedMemberIds": normalized_member_ids,
+            "teamSize": required_size,
+        },
+    )
 
-    except Exception as exc:
-        db.session.rollback()
-        current_app.logger.exception(
-            "Team registration failed for competition=%s club=%s user=%s",
-            competition_id,
-            request.get_json(silent=True) or {},
-            getattr(user, "id", None),
-        )
+    db.session.commit()
 
-        error_text = str(exc).strip() or exc.__class__.__name__
-
-        return jsonify({
-            "success": False,
-            "message": f"Team registration failed: {error_text}",
-            "error": error_text,
-            "errorType": exc.__class__.__name__,
-        }), 500
+    return jsonify({
+        "success": True,
+        "message": "Team registered with selected roster.",
+        "participant": serialize_participant(
+            participant
+        ),
+    }), 201
 
 
 # =========================================================
