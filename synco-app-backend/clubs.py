@@ -18,6 +18,7 @@ from models import (
     ClubRecruitmentPost,
     Notification,
     Friendship,
+    CompetitionParticipant,
 )
 
 try:
@@ -261,6 +262,8 @@ def get_clubs():
 
     try:
 
+        user = get_current_user()
+
         clubs = (
             Club.query
             .filter_by(is_active=True)
@@ -270,12 +273,35 @@ def get_clubs():
             .all()
         )
 
+        serialized_clubs = []
+
+        for club in clubs:
+
+            club_data = club.to_dict()
+
+            # -------------------------------------------------
+            # OWNER FLAG FOR FRONTEND
+            # -------------------------------------------------
+            # ClubsHub uses this to show Delete Club only
+            # for the creator/owner.
+            # -------------------------------------------------
+
+            club_data["isOwner"] = (
+                is_owner(
+                    club,
+                    user.id
+                )
+                if user
+                else False
+            )
+
+            serialized_clubs.append(
+                club_data
+            )
+
         return jsonify({
             "success": True,
-            "clubs": [
-                club.to_dict()
-                for club in clubs
-            ]
+            "clubs": serialized_clubs
         })
 
     except Exception as e:
@@ -531,12 +557,6 @@ def create_club():
         # -------------------------------------------------
         # ONE CLUB PER GAME PER USER
         # -------------------------------------------------
-        # A user may own multiple clubs, but only one club
-        # for each individual game. This check intentionally
-        # includes inactive clubs as well, so deactivating a
-        # club does not allow creating a second club for the
-        # same game.
-        # -------------------------------------------------
 
         existing_game_club = (
             Club.query
@@ -602,11 +622,6 @@ def create_club():
         # -------------------------------------------------
         # PRIVACY HAS BEEN REMOVED FROM CLUB BEHAVIOR.
         # -------------------------------------------------
-        # The legacy privacy column is kept at Public only as
-        # a compatibility value in case the existing database
-        # schema still requires it. It is never used to decide
-        # whether a player can request to join.
-        # -------------------------------------------------
 
         club = Club(
             name=name,
@@ -618,9 +633,6 @@ def create_club():
             avatar=avatar,
             banner=banner,
             region=region or "Global",
-            # Legacy database field kept enabled for compatibility.
-            # Invitations are always controlled by owner/admin
-            # permissions and the friendship requirement.
             allow_member_invites=True,
             require_join_approval=True,
             is_active=True,
@@ -682,11 +694,22 @@ def get_my_clubs():
             .all()
         )
 
-        clubs = [
-            membership.club.to_dict()
-            for membership in memberships
-            if membership.club
-        ]
+        clubs = []
+
+        for membership in memberships:
+
+            if not membership.club:
+                continue
+
+            club_data = membership.club.to_dict()
+
+            club_data["isOwner"] = (
+                membership.club.owner_id == user.id
+            )
+
+            clubs.append(
+                club_data
+            )
 
         owned_game_ids = [
             membership.club.game_id
@@ -978,8 +1001,7 @@ def send_club_invite(club_id):
             }), 404
 
         # -------------------------------------------------
-        # NEW RULE:
-        # Owner/Admin can invite friends only.
+        # OWNER/ADMIN CAN INVITE FRIENDS ONLY
         # -------------------------------------------------
 
         if not are_friends(
@@ -1379,9 +1401,7 @@ def request_to_join(club_id):
             }), 400
 
         # -------------------------------------------------
-        # Public/private logic has been removed.
-        # Any non-member may request to join.
-        # Every request is reviewed by owner/admin.
+        # EVERY NON-MEMBER MAY REQUEST TO JOIN
         # -------------------------------------------------
 
         pending_request = (
@@ -1710,6 +1730,7 @@ def approve_join_request(request_id):
         }
 
         for member in club.members:
+
             if member.role.upper() == "ADMIN":
                 manager_ids.add(member.user_id)
 
@@ -1844,6 +1865,7 @@ def reject_join_request(request_id):
         }
 
         for member in club.members:
+
             if member.role.upper() == "ADMIN":
                 manager_ids.add(member.user_id)
 
@@ -2209,22 +2231,15 @@ def update_club_settings(club_id):
         # -------------------------------------------------
         # PRIVACY REMOVED
         # -------------------------------------------------
-        # Incoming privacy updates are intentionally ignored.
-        # New and existing clubs use the same join-request flow.
-        # -------------------------------------------------
 
         # -------------------------------------------------
         # MEMBER INVITES
         # -------------------------------------------------
 
-        # Invitations are always enabled for owner/admin.
-        # The legacy setting is no longer configurable.
         club.allow_member_invites = True
 
         # -------------------------------------------------
         # JOIN APPROVAL
-        # -------------------------------------------------
-        # All join requests are reviewed by owner/admin.
         # -------------------------------------------------
 
         club.require_join_approval = True
@@ -2273,14 +2288,15 @@ def update_club_settings(club_id):
 
 
 # =========================================================
-# DEACTIVATE CLUB
+# DELETE CLUB
+# OWNER / CREATOR ONLY
 # =========================================================
 
 @clubs_bp.route(
     "/<int:club_id>",
     methods=["DELETE"]
 )
-def deactivate_club(club_id):
+def delete_club(club_id):
 
     try:
 
@@ -2301,6 +2317,12 @@ def deactivate_club(club_id):
                 "message": "Club not found."
             }), 404
 
+        # -------------------------------------------------
+        # ONLY THE CREATOR / OWNER CAN DELETE
+        # -------------------------------------------------
+        # Admins are intentionally NOT allowed to delete.
+        # -------------------------------------------------
+
         if not is_owner(
             club,
             user.id
@@ -2308,26 +2330,108 @@ def deactivate_club(club_id):
 
             return jsonify({
                 "success": False,
-                "message": "Only the owner can deactivate the club."
+                "message": (
+                    "Only the club creator can delete this club."
+                ),
+                "code": "OWNER_ONLY_DELETE"
             }), 403
 
-        club.is_active = False
-        club.updated_at = datetime.utcnow()
+        # -------------------------------------------------
+        # PROTECT TOURNAMENT HISTORY
+        # -------------------------------------------------
+        #
+        # CompetitionParticipant.club_id references
+        # clubs.id. Once the club is used in a competition,
+        # permanently deleting it would break tournament
+        # history.
+        # -------------------------------------------------
+
+        competition_registration = (
+            CompetitionParticipant.query
+            .filter_by(
+                club_id=club.id
+            )
+            .first()
+        )
+
+        if competition_registration:
+
+            return jsonify({
+                "success": False,
+                "message": (
+                    "This club cannot be deleted because it "
+                    "is already registered in a tournament."
+                ),
+                "code": "CLUB_HAS_COMPETITION_HISTORY"
+            }), 409
+
+        # -------------------------------------------------
+        # DELETE CLUB INVITES
+        # -------------------------------------------------
+
+        ClubInvite.query.filter_by(
+            club_id=club.id
+        ).delete(
+            synchronize_session=False
+        )
+
+        # -------------------------------------------------
+        # DELETE JOIN REQUESTS
+        # -------------------------------------------------
+
+        ClubJoinRequest.query.filter_by(
+            club_id=club.id
+        ).delete(
+            synchronize_session=False
+        )
+
+        # -------------------------------------------------
+        # DELETE RECRUITMENT POSTS
+        # -------------------------------------------------
+
+        ClubRecruitmentPost.query.filter_by(
+            club_id=club.id
+        ).delete(
+            synchronize_session=False
+        )
+
+        # -------------------------------------------------
+        # DELETE CLUB MEMBERS
+        # -------------------------------------------------
+
+        ClubMember.query.filter_by(
+            club_id=club.id
+        ).delete(
+            synchronize_session=False
+        )
+
+        # -------------------------------------------------
+        # DELETE CLUB
+        # -------------------------------------------------
+
+        db.session.delete(
+            club
+        )
 
         db.session.commit()
 
         return jsonify({
             "success": True,
-            "message": "Club deactivated."
-        })
+            "message": "Club deleted successfully."
+        }), 200
 
     except Exception as e:
 
         db.session.rollback()
 
+        print(
+            f"Delete club error for club {club_id}:",
+            str(e)
+        )
+
         return jsonify({
             "success": False,
-            "message": "Unable to deactivate club.",
+            "message": "Unable to delete club.",
             "error": str(e),
         }), 500
 
@@ -2574,7 +2678,10 @@ def leave_club(club_id):
 
             return jsonify({
                 "success": False,
-                "message": "The owner cannot leave the club. Transfer ownership or deactivate it."
+                "message": (
+                    "The owner cannot leave the club. "
+                    "Transfer ownership or deactivate it."
+                )
             }), 400
 
         membership = get_membership(
@@ -2647,7 +2754,10 @@ def create_recruitment_post(club_id):
 
             return jsonify({
                 "success": False,
-                "message": "Only the owner or an admin can create recruitment posts."
+                "message": (
+                    "Only the owner or an admin can create "
+                    "recruitment posts."
+                )
             }), 403
 
         data = request.get_json(
@@ -3043,10 +3153,7 @@ def update_recruitment_post(post_id):
                 or None
             )
 
-        if (
-            "rankRequirement"
-            in data
-        ):
+        if "rankRequirement" in data:
 
             post.rank_requirement = (
                 str(

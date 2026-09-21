@@ -6,6 +6,9 @@ import {
   ChevronDown,
   Users,
   ArrowRight,
+  Trash2,
+  X,
+  AlertTriangle,
 } from 'lucide-react';
 import '../styles/pages/ClubsHub.css';
 
@@ -32,6 +35,9 @@ const ClubsHub = () => {
   const [isLoadingGames, setIsLoadingGames] = useState(false);
   const [isLoadingClubs, setIsLoadingClubs] = useState(false);
   const [isCreatingClub, setIsCreatingClub] = useState(false);
+
+  const [deletingClubId, setDeletingClubId] = useState(null);
+  const [isDeletingClub, setIsDeletingClub] = useState(false);
 
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
@@ -109,6 +115,7 @@ const ClubsHub = () => {
       );
 
       setError(
+        err.message ||
         'Unable to load clubs.'
       );
     } finally {
@@ -192,6 +199,7 @@ const ClubsHub = () => {
       setError(
         `You already have a club for ${game.name}. You can create only one club per game.`
       );
+
       setIsGameMenuOpen(false);
       return;
     }
@@ -294,18 +302,10 @@ const ClubsHub = () => {
         'Club created successfully.'
       );
 
-      // -----------------------------------------------------
-      // REFRESH CLUB DIRECTORY + OWNED GAME LIST
-      // -----------------------------------------------------
-
       await Promise.all([
         loadClubs(),
         loadOwnedGameIds(),
       ]);
-
-      // -----------------------------------------------------
-      // RESET FORM
-      // -----------------------------------------------------
 
       setTimeout(() => {
         setIsCreating(false);
@@ -334,6 +334,117 @@ const ClubsHub = () => {
 
     } finally {
       setIsCreatingClub(false);
+    }
+  };
+
+  // =========================================================
+  // OPEN DELETE CONFIRMATION
+  // =========================================================
+
+  const handleRequestDelete = (clubId) => {
+    if (!clubId) {
+      console.error(
+        'Cannot delete club: missing club ID'
+      );
+      return;
+    }
+
+    setError('');
+    setSuccess('');
+    setDeletingClubId(clubId);
+  };
+
+  // =========================================================
+  // CANCEL DELETE
+  // =========================================================
+
+  const handleCancelDelete = () => {
+    if (isDeletingClub) {
+      return;
+    }
+
+    setDeletingClubId(null);
+  };
+
+  // =========================================================
+  // DELETE CLUB
+  // =========================================================
+
+  const handleDeleteClub = async () => {
+    if (!deletingClubId || isDeletingClub) {
+      return;
+    }
+
+    try {
+      setIsDeletingClub(true);
+      setError('');
+      setSuccess('');
+
+      const response = await fetch(
+        `${API_URL}/api/clubs/${deletingClubId}`,
+        {
+          method: 'DELETE',
+          credentials: 'include',
+        }
+      );
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(
+          data.message ||
+          'Unable to delete club.'
+        );
+      }
+
+      console.log(
+        'Club deleted:',
+        deletingClubId
+      );
+
+      // -----------------------------------------------------
+      // REMOVE CLUB FROM UI IMMEDIATELY
+      // -----------------------------------------------------
+
+      setClubs((previousClubs) =>
+        previousClubs.filter(
+          (club) =>
+            String(club.id) !==
+            String(deletingClubId)
+        )
+      );
+
+      // -----------------------------------------------------
+      // REFRESH OWNED GAME LIST
+      // -----------------------------------------------------
+      // This allows the creator to create another club for
+      // the same game after the old club has been deleted.
+      // -----------------------------------------------------
+
+      await loadOwnedGameIds();
+
+      setDeletingClubId(null);
+
+      setSuccess(
+        data.message ||
+        'Club deleted successfully.'
+      );
+
+    } catch (err) {
+      console.error(
+        'Delete club error:',
+        err
+      );
+
+      setError(
+        err.message ||
+        'Unable to delete club.'
+      );
+
+      setDeletingClubId(null);
+
+    } finally {
+      setIsDeletingClub(false);
     }
   };
 
@@ -367,6 +478,16 @@ const ClubsHub = () => {
 
     navigate(`/clubs/${clubId}`);
   };
+
+  // =========================================================
+  // CURRENT CLUB BEING DELETED
+  // =========================================================
+
+  const clubBeingDeleted = clubs.find(
+    (club) =>
+      String(club.id) ===
+      String(deletingClubId)
+  );
 
   // =========================================================
   // RENDER
@@ -407,6 +528,26 @@ const ClubsHub = () => {
             </button>
 
           </div>
+
+          {/* =================================================
+              SUCCESS MESSAGE
+          ================================================= */}
+
+          {success && (
+            <div className="mt-4 px-4 py-3 rounded-xl border border-green-200 bg-green-50 text-green-700 text-xs font-semibold">
+              {success}
+            </div>
+          )}
+
+          {/* =================================================
+              ERROR MESSAGE
+          ================================================= */}
+
+          {error && (
+            <div className="mt-4 px-4 py-3 rounded-xl border border-red-200 bg-red-50 text-red-600 text-xs font-semibold">
+              {error}
+            </div>
+          )}
 
           {/* =================================================
               CLUB DIRECTORY
@@ -482,8 +623,6 @@ const ClubsHub = () => {
 
                       </div>
 
-
-
                     </div>
 
                     {/* =================================================
@@ -508,32 +647,62 @@ const ClubsHub = () => {
                         FOOTER
                     ================================================= */}
 
-                    <div className="mt-6 pt-5 border-t border-gray-100 flex items-center justify-between">
+                    <div className="mt-6 pt-5 border-t border-gray-100">
 
-                      <div className="flex items-center gap-2 text-gray-500">
+                      <div className="flex items-center justify-between gap-3">
 
-                        <Users size={14} />
+                        <div className="flex items-center gap-2 text-gray-500">
 
-                        <span className="text-[10px] font-bold uppercase tracking-wider">
-                          {club.memberCount || 0} Members
-                        </span>
+                          <Users size={14} />
+
+                          <span className="text-[10px] font-bold uppercase tracking-wider">
+                            {club.memberCount || 0} Members
+                          </span>
+
+                        </div>
+
+                        {/* =================================================
+                            VIEW CLUB
+                        ================================================= */}
+
+                        <button
+                          type="button"
+                          onClick={() =>
+                            handleViewClub(
+                              club.id
+                            )
+                          }
+                          className="flex items-center gap-2 text-[10px] font-bold uppercase tracking-widest text-black hover:text-[#8d824e] transition-colors"
+                        >
+                          View Club
+                          <ArrowRight size={13} />
+                        </button>
 
                       </div>
 
                       {/* =================================================
-                          VIEW CLUB
+                          DELETE CLUB
+                          OWNER ONLY
                       ================================================= */}
 
-                      <button
-                        type="button"
-                        onClick={() =>
-                          handleViewClub(club.id)
-                        }
-                        className="flex items-center gap-2 text-[10px] font-bold uppercase tracking-widest text-black hover:text-[#8d824e] transition-colors"
-                      >
-                        View Club
-                        <ArrowRight size={13} />
-                      </button>
+                      {club.isOwner === true && (
+                        <div className="mt-4">
+
+                          <button
+                            type="button"
+                            onClick={() =>
+                              handleRequestDelete(
+                                club.id
+                              )
+                            }
+                            className="w-full h-10 flex items-center justify-center gap-2 rounded-xl border border-red-200 bg-red-50 text-red-600 text-[10px] font-bold uppercase tracking-widest hover:bg-red-100 hover:border-red-300 transition-colors"
+                          >
+                            <Trash2 size={14} />
+                            Delete Club
+                          </button>
+
+                        </div>
+                      )}
 
                     </div>
 
@@ -724,8 +893,8 @@ const ClubsHub = () => {
                     <ChevronDown
                       size={16}
                       className={`text-gray-400 transition-transform ${isGameMenuOpen
-                        ? 'rotate-180'
-                        : ''
+                          ? 'rotate-180'
+                          : ''
                         }`}
                     />
 
@@ -760,22 +929,32 @@ const ClubsHub = () => {
                         ) : (
 
                           gameCatalog.map((game) => {
-                            const alreadyOwned = ownedGameIds.some(
-                              (ownedGameId) =>
-                                String(ownedGameId) === String(game.id)
-                            );
+
+                            const alreadyOwned =
+                              ownedGameIds.some(
+                                (ownedGameId) =>
+                                  String(
+                                    ownedGameId
+                                  ) ===
+                                  String(
+                                    game.id
+                                  )
+                              );
 
                             return (
                               <button
                                 type="button"
                                 key={game.id}
-                                disabled={alreadyOwned}
+                                disabled={
+                                  alreadyOwned
+                                }
                                 className={`flex items-center justify-between gap-3 p-2 rounded-xl text-left transition-all ${alreadyOwned
-                                  ? 'cursor-not-allowed bg-gray-100 opacity-45'
-                                  : `hover:bg-white/40 ${newClub.gameId === game.id
-                                    ? 'bg-white/60 shadow-sm'
-                                    : ''
-                                  }`
+                                    ? 'cursor-not-allowed bg-gray-100 opacity-45'
+                                    : `hover:bg-white/40 ${newClub.gameId ===
+                                      game.id
+                                      ? 'bg-white/60 shadow-sm'
+                                      : ''
+                                    }`
                                   }`}
                                 onClick={() =>
                                   handleGameSelect(
@@ -829,6 +1008,115 @@ const ClubsHub = () => {
 
         </div>
 
+      )}
+
+      {/* =====================================================
+          DELETE CONFIRMATION MODAL
+      ===================================================== */}
+
+      {deletingClubId && (
+        <div
+          className="fixed inset-0 z-[100] flex items-center justify-center bg-black/50 px-4"
+          onClick={handleCancelDelete}
+        >
+
+          <div
+            className="w-full max-w-md rounded-2xl bg-white border border-gray-200 shadow-2xl p-6"
+            onClick={(e) =>
+              e.stopPropagation()
+            }
+          >
+
+            {/* =================================================
+                MODAL HEADER
+            ================================================= */}
+
+            <div className="flex items-start justify-between gap-4">
+
+              <div className="flex items-center gap-3">
+
+                <div className="w-11 h-11 rounded-xl bg-red-50 text-red-600 flex items-center justify-center">
+                  <AlertTriangle size={20} />
+                </div>
+
+                <div>
+
+                  <h3 className="text-lg font-bold uppercase tracking-wide text-black">
+                    Delete Club
+                  </h3>
+
+                  <p className="text-[10px] font-bold uppercase tracking-wider text-gray-400 mt-1">
+                    Permanent action
+                  </p>
+
+                </div>
+
+              </div>
+
+              <button
+                type="button"
+                onClick={handleCancelDelete}
+                disabled={isDeletingClub}
+                className="w-8 h-8 rounded-lg flex items-center justify-center text-gray-400 hover:bg-gray-100 hover:text-black transition-colors disabled:opacity-40"
+              >
+                <X size={17} />
+              </button>
+
+            </div>
+
+            {/* =================================================
+                MESSAGE
+            ================================================= */}
+
+            <div className="mt-6">
+
+              <p className="text-sm text-gray-700 leading-6">
+                You are about to permanently delete{' '}
+                <span className="font-bold text-black">
+                  {clubBeingDeleted?.name ||
+                    'this club'}
+                </span>
+                .
+              </p>
+
+              <p className="mt-3 text-xs text-gray-500 leading-5">
+                This action removes the club and its
+                club data. It cannot be undone.
+              </p>
+
+            </div>
+
+            {/* =================================================
+                ACTIONS
+            ================================================= */}
+
+            <div className="mt-7 flex gap-3">
+
+              <button
+                type="button"
+                onClick={handleCancelDelete}
+                disabled={isDeletingClub}
+                className="flex-1 h-11 rounded-xl border border-gray-200 bg-white text-black text-[10px] font-bold uppercase tracking-widest hover:bg-gray-50 transition-colors disabled:opacity-50"
+              >
+                Cancel
+              </button>
+
+              <button
+                type="button"
+                onClick={handleDeleteClub}
+                disabled={isDeletingClub}
+                className="flex-1 h-11 rounded-xl bg-red-600 text-white text-[10px] font-bold uppercase tracking-widest hover:bg-red-700 transition-colors disabled:opacity-60 disabled:cursor-not-allowed"
+              >
+                {isDeletingClub
+                  ? 'Deleting...'
+                  : 'Delete Club'}
+              </button>
+
+            </div>
+
+          </div>
+
+        </div>
       )}
 
     </div>
