@@ -26,6 +26,78 @@ const TABS = [
   'MY TOURNAMENTS',
 ];
 
+const getSchedulePhase = (competition, nowMs = Date.now()) => {
+  if (!competition) {
+    return '';
+  }
+
+  const persistedStatus = String(
+    competition.status ||
+    competition.registrationStatus ||
+    ''
+  ).toUpperCase();
+
+  const registrationStart = Date.parse(
+    competition.registrationStart || ''
+  );
+
+  const registrationEnd = Date.parse(
+    competition.registrationEnd || ''
+  );
+
+  const competitionStart = Date.parse(
+    competition.competitionStart || ''
+  );
+
+  const competitionEnd = Date.parse(
+    competition.competitionEnd || ''
+  );
+
+  const hasRegistrationWindow =
+    Number.isFinite(registrationStart) ||
+    Number.isFinite(registrationEnd);
+
+  // The schedule is the source of truth when dates are available.
+  if (hasRegistrationWindow) {
+    if (
+      Number.isFinite(registrationStart) &&
+      nowMs < registrationStart
+    ) {
+      return 'DRAFT';
+    }
+
+    if (
+      Number.isFinite(registrationEnd) &&
+      nowMs >= registrationEnd
+    ) {
+      if (
+        Number.isFinite(competitionStart) &&
+        nowMs >= competitionStart &&
+        persistedStatus &&
+        !['DRAFT', 'REGISTRATION_OPEN', 'REGISTRATION_CLOSED'].includes(
+          persistedStatus
+        )
+      ) {
+        return persistedStatus;
+      }
+
+      return 'REGISTRATION_CLOSED';
+    }
+
+    if (
+      Number.isFinite(competitionStart) &&
+      nowMs >= competitionStart
+    ) {
+      return persistedStatus || 'LIVE';
+    }
+
+    return 'REGISTRATION_OPEN';
+  }
+
+  // Fallback for legacy competitions that have no schedule.
+  return persistedStatus;
+};
+
 const CompetitionEngine = () => {
   const navigate = useNavigate();
 
@@ -39,6 +111,8 @@ const CompetitionEngine = () => {
 
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+
+  const [scheduleNow, setScheduleNow] = useState(() => Date.now());
 
   const latestRequestId = useRef(0);
 
@@ -160,6 +234,15 @@ const CompetitionEngine = () => {
   }, [activeGame]);
 
 
+  useEffect(() => {
+    const interval = window.setInterval(() => {
+      setScheduleNow(Date.now());
+    }, 30000);
+
+    return () => window.clearInterval(interval);
+  }, []);
+
+
   /* =====================================================
      GAME LIST FOR CAROUSEL
      ===================================================== */
@@ -187,25 +270,28 @@ const CompetitionEngine = () => {
 
     if (activeTab === 'OPEN REGISTRATION') {
       result = result.filter((competition) => {
-        const status =
-          String(
-            competition.status ||
-            competition.registrationStatus ||
-            ''
-          ).toUpperCase();
-
-        return status === 'REGISTRATION_OPEN';
+        return (
+          getSchedulePhase(competition, scheduleNow) ===
+          'REGISTRATION_OPEN'
+        );
       });
     }
 
     if (activeTab === 'LIVE BRACKETS') {
       result = result.filter((competition) => {
-        const status =
-          String(
-            competition.status || ''
-          ).toUpperCase();
+        const phase = getSchedulePhase(
+          competition,
+          scheduleNow
+        );
+
+        const status = String(
+          competition.status || ''
+        ).toUpperCase();
 
         return (
+          phase === 'LIVE' ||
+          phase === 'IN_PROGRESS' ||
+          phase === 'ONGOING' ||
           status === 'LIVE' ||
           status === 'IN_PROGRESS' ||
           status === 'ONGOING'
@@ -224,7 +310,7 @@ const CompetitionEngine = () => {
     }
 
     return result;
-  }, [competitions, activeTab]);
+  }, [competitions, activeTab, scheduleNow]);
 
 
   /* =====================================================
@@ -316,39 +402,36 @@ const CompetitionEngine = () => {
       tournamentView === 'coverflow' &&
       cardIndex === activeMatchIndex;
 
-    const competitionStatus =
-      String(
-        card.competition?.status || ''
-      ).toUpperCase();
+    const phase = getSchedulePhase(
+      card.competition,
+      scheduleNow
+    );
 
     const isRegistrationOpen =
-      competitionStatus === 'REGISTRATION_OPEN';
+      phase === 'REGISTRATION_OPEN';
 
-    const cardAction = isRegistrationOpen
-      ? () =>
+    const openCard = () => {
+      if (isRegistrationOpen) {
         navigate(
           `/competitions/${encodeURIComponent(
             String(card.id)
           )}/register`
-        )
-      : () => openLiveTournament(card.id);
+        );
+        return;
+      }
 
-    const cardActionLabel = isRegistrationOpen
-      ? 'REGISTER NOW'
-      : 'OPEN LIVE DASHBOARD';
+      openLiveTournament(card.id);
+    };
 
     return (
       <button
         key={card.id}
         type="button"
-        className={`portrait-roster-card ${positionClass} ${isActive ? 'active-tournament-card' : ''
-          }`}
-        onClick={cardAction}
-        aria-label={
-          isRegistrationOpen
-            ? `Register for ${card.title}`
-            : `Open ${card.title}`
-        }
+        className={`portrait-roster-card ${positionClass} ${
+          isActive ? 'active-tournament-card' : ''
+        }`}
+        onClick={openCard}
+        aria-label={`Open ${card.title}`}
       >
         <img
           src={cardCharacter}
@@ -366,13 +449,14 @@ const CompetitionEngine = () => {
           </p>
 
           <span className="card-open-label">
-            {cardActionLabel}
+            {isRegistrationOpen
+              ? 'REGISTER NOW'
+              : 'OPEN LIVE DASHBOARD'}
           </span>
         </div>
       </button>
     );
   };
-
 
 
   /* =====================================================
@@ -547,25 +631,10 @@ const CompetitionEngine = () => {
             type="button"
             className="hero-cta-btn"
             onClick={() => {
-              const activeCompetition =
-                cards[activeMatchIndex]?.competition;
-
-              if (!activeCompetition) {
-                return;
-              }
-
-              const status = String(
-                activeCompetition.status || ''
-              ).toUpperCase();
-
-              if (status === 'REGISTRATION_OPEN') {
-                navigate(
-                  `/competitions/${encodeURIComponent(
-                    String(activeCompetition.id)
-                  )}/register`
+              if (cards.length > 0) {
+                openLiveTournament(
+                  cards[activeMatchIndex]?.id
                 );
-              } else {
-                openLiveTournament(activeCompetition.id);
               }
             }}
           >
@@ -630,10 +699,11 @@ const CompetitionEngine = () => {
                 type="button"
                 key={tab}
                 onClick={() => setActiveTab(tab)}
-                className={`comp-tab-btn ${activeTab === tab
+                className={`comp-tab-btn ${
+                  activeTab === tab
                     ? 'active'
                     : ''
-                  }`}
+                }`}
               >
                 {tab}
               </button>
