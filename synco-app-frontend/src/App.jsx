@@ -9,6 +9,7 @@ import {
 import { AuthProvider, useAuth } from "./context/AuthContext";
 
 import LiveTournamentDashboard from "./pages/LiveTournamentDashboard";
+import TournamentRegistration from "./pages/TournamentRegistration";
 
 import OrganizerRegister from "./pages/OrganizerRegister";
 import OrganizerAdmin from "./pages/OrganizerAdmin";
@@ -255,6 +256,16 @@ function App() {
               <Route
                 path="/competitions"
                 element={<CompetitionEngine />}
+              />
+
+              {/* Tournament registration
+                  Example:
+                  /competitions/1/register
+                  /competitions/25/register
+              */}
+              <Route
+                path="/competitions/:competitionId/register"
+                element={<TournamentRegistration />}
               />
 
 
