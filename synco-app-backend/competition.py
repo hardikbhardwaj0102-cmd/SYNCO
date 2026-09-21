@@ -2273,6 +2273,133 @@ def get_committed_team_for_user(
     return None
 
 
+def _participant_captain_roster_status(participant, user_id):
+    """Return the stored roster status for the captain, if present."""
+
+    roster = getattr(participant, "team_roster", None) or []
+    if not isinstance(roster, list):
+        return None
+
+    try:
+        user_id = int(user_id)
+    except (TypeError, ValueError):
+        return None
+
+    for item in roster:
+        if not isinstance(item, dict):
+            continue
+        try:
+            roster_user_id = int(item.get("userId"))
+        except (TypeError, ValueError):
+            continue
+        if roster_user_id == user_id:
+            return str(item.get("status") or "").upper() or None
+
+    return None
+
+
+def _mark_participant_cancelled(participant):
+    """Synchronously cancel a participant and its pending invites."""
+
+    if not participant:
+        return
+
+    participant.registration_status = "CANCELLED"
+    participant.accepted_at = None
+
+    invites = (
+        CompetitionTeamInvite.query
+        .filter_by(
+            participant_id=participant.id,
+            status="PENDING",
+        )
+        .all()
+    )
+
+    for invite in invites:
+        invite.status = "CANCELLED"
+        invite.responded_at = datetime.utcnow()
+        set_roster_player_status(
+            participant,
+            invite.invited_user_id,
+            "CANCELLED",
+        )
+
+
+def _repair_withdrawn_registration_before_reregister(competition, user_id):
+    """
+    Repair a very specific stale state created by older registration builds:
+    a captain withdrew, but the participant row remained active.
+
+    We only repair rows when there is explicit evidence of withdrawal: either
+    the captain's stored roster status is CANCELLED, or an audit record already
+    records REGISTRATION_WITHDRAWN for that participant. A normal PENDING/ACCEPTED
+    team is never silently cancelled.
+    """
+
+    participants = (
+        CompetitionParticipant.query
+        .filter_by(
+            competition_id=competition.id,
+            user_id=user_id,
+        )
+        .filter(
+            CompetitionParticipant.registration_status.in_([
+                "PENDING",
+                "ACCEPTED",
+            ])
+        )
+        .order_by(
+            CompetitionParticipant.registered_at.desc(),
+            CompetitionParticipant.id.desc(),
+        )
+        .all()
+    )
+
+    repaired = []
+
+    for participant in participants:
+
+        roster_status = _participant_captain_roster_status(
+            participant,
+            user_id,
+        )
+
+        explicit_withdrawal = roster_status == "CANCELLED"
+
+        if not explicit_withdrawal:
+            audit_rows = (
+                CompetitionAuditLog.query
+                .filter_by(
+                    competition_id=competition.id,
+                    actor_id=user_id,
+                    action="REGISTRATION_WITHDRAWN",
+                )
+                .order_by(CompetitionAuditLog.created_at.desc())
+                .limit(20)
+                .all()
+            )
+
+            for audit in audit_rows:
+                metadata = getattr(audit, "audit_metadata", None) or {}
+                try:
+                    audit_participant_id = int(metadata.get("participantId"))
+                except (TypeError, ValueError, AttributeError):
+                    audit_participant_id = None
+                if audit_participant_id == participant.id:
+                    explicit_withdrawal = True
+                    break
+
+        if explicit_withdrawal:
+            _mark_participant_cancelled(participant)
+            repaired.append(participant.id)
+
+    if repaired:
+        db.session.commit()
+
+    return repaired
+
+
 def user_has_any_active_competition_entry(competition, user_id):
 
     # Captain / solo participant.
@@ -3774,6 +3901,13 @@ def register_team(competition_id):
             "success": False,
             "message": "The registering player must be included as the team captain."
         }), 400
+
+    # Repair only registrations that already carry explicit evidence of withdrawal.
+    # A normal active team is never silently cancelled.
+    _repair_withdrawn_registration_before_reregister(
+        competition,
+        user.id,
+    )
 
     existing_captain_entry = (
         CompetitionParticipant.query
@@ -5625,6 +5759,8 @@ def withdraw_registration(competition_id):
 
     if participant_type == "TEAM":
 
+        # Team registration is owned by its captain (participant.user_id).
+        # Club ownership is irrelevant to tournament registration.
         active_captain_participants = (
             CompetitionParticipant.query
             .filter_by(
