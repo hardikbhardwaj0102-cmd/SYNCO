@@ -245,8 +245,52 @@
    ========================================================= */
 
 /* =========================================================
-   HERO TIMEFRAME BUTTONS
+   HERO WEEKLY / SEASON BUTTONS
+   NO OUTER CONTAINER
    ========================================================= */
+
+.leaderboards-page
+.timeframe-toggle-container {
+
+  position: absolute;
+
+  top:
+    clamp(
+      1.5rem,
+      4vh,
+      3rem
+    );
+
+  left: 50%;
+
+  transform:
+    translateX(-50%);
+
+  z-index: 40;
+
+  display: flex;
+
+  align-items: center;
+
+  justify-content: center;
+
+  gap:
+    0.35rem;
+
+  padding: 0;
+
+  background: transparent;
+
+  border: none;
+
+  box-shadow: none;
+
+  backdrop-filter: none;
+
+  -webkit-backdrop-filter: none;
+
+}
+
 
 .leaderboards-page
 .timeframe-btn {
@@ -286,6 +330,8 @@
     );
 
   border: none;
+
+  border-radius: 0;
 
   background:
     rgba(
@@ -337,12 +383,7 @@
 .timeframe-btn:hover {
 
   background:
-    rgba(
-      255,
-      255,
-      255,
-      0.12
-    );
+    #ff5e6b;
 
   color:
     #ffffff;
@@ -352,10 +393,6 @@
 
 }
 
-
-/* =========================================================
-   ACTIVE HERO BUTTON
-   ========================================================= */
 
 .leaderboards-page
 .timeframe-btn.active {
@@ -384,56 +421,7 @@
   background:
     #ff5e6b;
 
-  transform:
-    scale(1.05);
-
 }
-
-
-/* =========================================================
-   HERO TOGGLE CONTAINER
-   ========================================================= */
-
-.leaderboards-page
-.timeframe-toggle-container {
-
-  display: flex;
-
-  align-items: center;
-
-  justify-content: center;
-
-  gap:
-    0.15rem;
-
-  padding:
-    0.25rem;
-
-  background:
-    rgba(
-      10,
-      10,
-      10,
-      0.42
-    );
-
-  border:
-    1px solid
-    rgba(
-      255,
-      255,
-      255,
-      0.10
-    );
-
-  backdrop-filter:
-    blur(14px);
-
-  -webkit-backdrop-filter:
-    blur(14px);
-
-}
-
 /* =========================================================
    6. PODIUM STAGE
    ========================================================= */
