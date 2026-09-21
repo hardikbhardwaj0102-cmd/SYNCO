@@ -345,11 +345,19 @@ export default function TournamentRegistration() {
         "ELIMINATED",
     ].includes(activeRegistrationStatus);
 
-    const selectedEligible =
+    const selectedClubEligibleCount = Number(
+        selectedClub?.eligibleMemberCount || 0
+    );
+
+    const selectedClubCanBeUsed =
         !!selectedClub &&
         selectedClub.eligible !== false &&
-        Number(selectedClub.eligibleMemberCount || 0) >= teamSize &&
-        !hasSelectedClubRegistration &&
+        selectedClubEligibleCount >= teamSize &&
+        !hasSelectedClubRegistration;
+
+    const selectedEligible =
+        selectedClubCanBeUsed &&
+        selectedMemberIds.includes(currentUserId) &&
         selectedMemberIds.length === teamSize;
 
     const handleClubSelect = (club) => {
@@ -372,13 +380,21 @@ export default function TournamentRegistration() {
             club.registration?.teamRoster || [];
 
         if (existingRoster.length > 0) {
-            setSelectedMemberIds(
-                existingRoster
-                    .map((member) => Number(member.userId))
-                    .filter((id) => Number.isFinite(id))
-            );
+            const rosterIds = existingRoster
+                .map((member) => Number(member.userId))
+                .filter((id) => Number.isFinite(id));
+
+            // The player starting the registration is always the captain
+            // and must always occupy a roster slot.
+            if (currentUserId && !rosterIds.includes(currentUserId)) {
+                setSelectedMemberIds([currentUserId, ...rosterIds]);
+            } else {
+                setSelectedMemberIds(rosterIds);
+            }
         } else {
-            setSelectedMemberIds([]);
+            // New team registration: the registering player is pre-selected
+            // automatically and cannot be removed from the roster.
+            setSelectedMemberIds(currentUserId ? [currentUserId] : []);
         }
 
         setError("");
@@ -389,6 +405,12 @@ export default function TournamentRegistration() {
         const memberId = Number(memberUserId);
 
         if (!Number.isFinite(memberId)) {
+            return;
+        }
+
+        // The registering player is always the captain and cannot be
+        // removed from the tournament roster.
+        if (memberId === currentUserId) {
             return;
         }
 
@@ -885,8 +907,21 @@ export default function TournamentRegistration() {
                                                 ? selectedMemberIds.length
                                                 : 0;
 
+                                        // A club is usable only when it has enough
+                                        // currently eligible players for the tournament.
+                                        // Eligible count already applies account-active,
+                                        // game-linked and competition-commitment rules
+                                        // from the backend.
+                                        const eligibleMemberCount = Number(
+                                            club.eligibleMemberCount || 0
+                                        );
                                         const memberOk =
-                                            Number(club.eligibleMemberCount || 0) >= teamSize;
+                                            eligibleMemberCount >= teamSize;
+
+                                        const insufficientPlayers =
+                                            isTeamCompetition &&
+                                            !unavailable &&
+                                            !memberOk;
 
                                         const selectedRosterIds =
                                             isSelected
@@ -897,6 +932,7 @@ export default function TournamentRegistration() {
                                             <div
                                                 className={`registration-club-card ${isSelected ? "selected" : ""
                                                     } ${unavailable ? "registered" : ""
+                                                    } ${insufficientPlayers ? "insufficient" : ""
                                                     }`}
                                                 key={club.id}
                                             >
@@ -905,7 +941,7 @@ export default function TournamentRegistration() {
                                                     type="button"
                                                     className="registration-club-select-button"
                                                     onClick={() => handleClubSelect(club)}
-                                                    disabled={unavailable}
+                                                    disabled={unavailable || insufficientPlayers}
                                                 >
                                                     <div className="registration-club-top">
                                                         <div className="registration-club-avatar">
@@ -940,7 +976,7 @@ export default function TournamentRegistration() {
                                                             <strong>
                                                                 {isSelected
                                                                     ? `${selectedCount}/${teamSize} selected`
-                                                                    : `${club.eligibleMemberCount || 0}/${club.memberCount} eligible member${club.memberCount === 1 ? "" : "s"}`}
+                                                                    : `${eligibleMemberCount}/${club.memberCount} eligible member${club.memberCount === 1 ? "" : "s"}`}
                                                             </strong>
                                                         </div>
 
@@ -965,24 +1001,32 @@ export default function TournamentRegistration() {
                                                                             ? "locked"
                                                                             : ""
                                                                         } ${member.eligible === false ? "ineligible" : ""
+                                                                        } ${memberUserId === currentUserId ? "captain" : ""
                                                                         }`}
                                                                     key={member.id || member.userId}
                                                                     onClick={(event) => event.stopPropagation()}
                                                                 >
-                                                                    <input
-                                                                        type="checkbox"
-                                                                        checked={checked}
-                                                                        disabled={
-                                                                            !isSelected ||
-                                                                            unavailable ||
-                                                                            member.eligible === false ||
-                                                                            (!checked &&
-                                                                                selectedMemberIds.length >= teamSize)
-                                                                        }
-                                                                        onChange={() =>
-                                                                            toggleMember(memberUserId)
-                                                                        }
-                                                                    />
+                                                                    {isSelected && (
+                                                                        <input
+                                                                            type="checkbox"
+                                                                            checked={checked}
+                                                                            disabled={
+                                                                                unavailable ||
+                                                                                member.eligible === false ||
+                                                                                memberUserId === currentUserId ||
+                                                                                (!checked &&
+                                                                                    selectedMemberIds.length >= teamSize)
+                                                                            }
+                                                                            onChange={() =>
+                                                                                toggleMember(memberUserId)
+                                                                            }
+                                                                            aria-label={
+                                                                                memberUserId === currentUserId
+                                                                                    ? `${member.name || "Player"} (Captain)`
+                                                                                    : `Select ${member.name || "player"}`
+                                                                            }
+                                                                        />
+                                                                    )}
 
                                                                     <div className="registration-mini-avatar">
                                                                         {(member.name || "P").slice(0, 2).toUpperCase()}
@@ -999,7 +1043,11 @@ export default function TournamentRegistration() {
                                                                     </div>
 
                                                                     <span className="registration-member-role">
-                                                                        {member.eligible === false ? "UNAVAILABLE" : (member.role || "MEMBER")}
+                                                                        {memberUserId === currentUserId
+                                                                            ? "CAPTAIN"
+                                                                            : member.eligible === false
+                                                                                ? "UNAVAILABLE"
+                                                                                : (member.role || "MEMBER")}
                                                                     </span>
                                                                 </label>
                                                             );
@@ -1007,7 +1055,7 @@ export default function TournamentRegistration() {
                                                     </div>
                                                 </div>
 
-                                                {(!memberOk || club.eligible === false) && !unavailable && (
+                                                {(insufficientPlayers || club.eligible === false) && !unavailable && (
                                                     <div className="registration-card-warning">
                                                         <AlertCircle size={14} />
                                                         <span>

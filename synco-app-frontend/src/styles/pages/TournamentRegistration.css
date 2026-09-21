@@ -32,7 +32,7 @@
     min-width: 0;
 }
 
-.registration-header-left > div {
+.registration-header-left>div {
     min-width: 0;
 }
 
@@ -210,11 +210,11 @@
     align-items: flex-start;
 }
 
-.registration-card-heading > div:first-child {
+.registration-card-heading>div:first-child {
     min-width: 0;
 }
 
-.registration-card-heading > div:first-child > span {
+.registration-card-heading>div:first-child>span {
     display: block;
     color: #8b8b85;
     font-size: 8px;
@@ -274,6 +274,34 @@
 .registration-club-card:hover:not(:disabled) {
     background: #f8f8f5;
     border-color: #cfcfc9;
+}
+
+/* Club does not have enough eligible players for this tournament. */
+.registration-club-card.insufficient {
+    background: #eeeeeb;
+    border-color: #d6d6d1;
+    color: #8b8b85;
+    cursor: default;
+}
+
+.registration-club-card.insufficient .registration-club-select-button {
+    cursor: default;
+}
+
+.registration-club-card.insufficient .registration-club-avatar {
+    background: #b8b8b2;
+    color: #ffffff;
+}
+
+.registration-club-card.insufficient .registration-club-name strong,
+.registration-club-card.insufficient .registration-club-name span,
+.registration-club-card.insufficient .registration-club-status {
+    color: #8d8d87;
+}
+
+.registration-member-select.captain {
+    cursor: default;
+    border-color: #d8d8d3;
 }
 
 .registration-club-card.selected {
@@ -389,7 +417,7 @@
     font-weight: 850;
 }
 
-.registration-roster-row > div:last-child {
+.registration-roster-row>div:last-child {
     min-width: 0;
 }
 
@@ -627,7 +655,7 @@
     gap: 8px;
 }
 
-.registration-format-grid > div {
+.registration-format-grid>div {
     padding: 10px;
     border: 1px solid #ebebe6;
     border-radius: 8px;
@@ -715,8 +743,13 @@
 }
 
 @keyframes registrationSpin {
-    from { transform: rotate(0deg); }
-    to { transform: rotate(360deg); }
+    from {
+        transform: rotate(0deg);
+    }
+
+    to {
+        transform: rotate(360deg);
+    }
 }
 
 @media (max-width: 980px) {
@@ -726,6 +759,7 @@
 }
 
 @media (max-width: 760px) {
+
     .registration-header,
     .registration-content,
     .registration-alert {
@@ -893,7 +927,7 @@
     border-top: 1px solid #e8e8e3;
 }
 
-.registration-locked-roster > span {
+.registration-locked-roster>span {
     display: block;
     color: #8a8a84;
     font-size: 7px;
@@ -901,14 +935,14 @@
     letter-spacing: .1em;
 }
 
-.registration-locked-roster > div {
+.registration-locked-roster>div {
     margin-top: 7px;
     display: flex;
     flex-wrap: wrap;
     gap: 5px;
 }
 
-.registration-locked-roster > div > span {
+.registration-locked-roster>div>span {
     padding: 5px 7px;
     border: 1px solid #deded9;
     border-radius: 6px;
@@ -1004,7 +1038,7 @@
     border-bottom: 1px solid #ecece7;
 }
 
-.registration-confirm-modal-header > div > span {
+.registration-confirm-modal-header>div>span {
     display: block;
     color: #999991;
     font-size: 8px;
@@ -1154,704 +1188,5 @@
     .registration-modal-cancel,
     .registration-modal-confirm {
         width: 100%;
-    }
-}
-
-/* =========================================================
-   V3 INVITATIONS / TEAM MANAGEMENT
-   ========================================================= */
-
-.registration-invite-panel {
-    margin: 0 0 18px;
-    padding: 15px;
-    border: 1px solid #deded9;
-    border-radius: 11px;
-    background: #fbfbf9;
-}
-
-.registration-invite-panel-heading {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: 14px;
-    margin-bottom: 11px;
-}
-
-.registration-invite-panel-heading > div > span,
-.registration-invite-panel-heading > div > strong {
-    display: block;
-}
-
-.registration-invite-panel-heading > div > span {
-    color: #96968f;
-    font-size: 7px;
-    font-weight: 850;
-    letter-spacing: .1em;
-    text-transform: uppercase;
-}
-
-.registration-invite-panel-heading > div > strong {
-    margin-top: 4px;
-    color: #242421;
-    font-size: 12px;
-    font-weight: 850;
-}
-
-.registration-invite-panel-heading > svg {
-    color: #777770;
-    flex: 0 0 auto;
-}
-
-.registration-invite-list {
-    display: grid;
-    gap: 8px;
-}
-
-.registration-invite-card {
-    display: grid;
-    grid-template-columns: minmax(0, 1fr) auto auto;
-    align-items: center;
-    gap: 13px;
-    padding: 11px;
-    border: 1px solid #e6e6e1;
-    border-radius: 9px;
-    background: #fff;
-}
-
-.registration-invite-main {
-    display: flex;
-    min-width: 0;
-    align-items: center;
-    gap: 9px;
-}
-
-.registration-invite-avatar {
-    display: grid;
-    flex: 0 0 auto;
-    place-items: center;
-    width: 32px;
-    height: 32px;
-    border-radius: 8px;
-    background: #1f1f1c;
-    color: #fff;
-    font-size: 9px;
-    font-weight: 900;
-}
-
-.registration-invite-main strong,
-.registration-invite-main span {
-    display: block;
-}
-
-.registration-invite-main strong {
-    overflow: hidden;
-    color: #262622;
-    font-size: 11px;
-    font-weight: 850;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-}
-
-.registration-invite-main span {
-    margin-top: 3px;
-    color: #91918a;
-    font-size: 8px;
-    font-weight: 700;
-}
-
-.registration-invite-expiry {
-    min-width: 95px;
-    text-align: right;
-}
-
-.registration-invite-expiry span,
-.registration-invite-expiry strong {
-    display: block;
-}
-
-.registration-invite-expiry span {
-    color: #9b9b94;
-    font-size: 7px;
-    font-weight: 850;
-    letter-spacing: .1em;
-}
-
-.registration-invite-expiry strong {
-    margin-top: 3px;
-    color: #33332f;
-    font-size: 10px;
-    font-weight: 900;
-    font-variant-numeric: tabular-nums;
-}
-
-.registration-invite-expiry strong.expired {
-    color: #9b4c46;
-}
-
-.registration-invite-actions {
-    display: flex;
-    align-items: center;
-    gap: 6px;
-}
-
-.registration-invite-accept,
-.registration-invite-decline {
-    min-height: 31px;
-    padding: 0 10px;
-    border-radius: 7px;
-    font-size: 8px;
-    font-weight: 850;
-    letter-spacing: .05em;
-    text-transform: uppercase;
-    cursor: pointer;
-}
-
-.registration-invite-accept {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    gap: 5px;
-    border: 1px solid #1f1f1c;
-    background: #1f1f1c;
-    color: #fff;
-}
-
-.registration-invite-decline {
-    border: 1px solid #d9d9d4;
-    background: #fff;
-    color: #5f5f58;
-}
-
-.registration-invite-accept:hover:not(:disabled) {
-    background: #30302c;
-}
-
-.registration-invite-decline:hover:not(:disabled) {
-    background: #f5f5f2;
-}
-
-.registration-current-state-top {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: 10px;
-}
-
-.registration-captain-badge {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    min-height: 25px;
-    padding: 0 8px;
-    border: 1px solid #d7d7d2;
-    border-radius: 999px;
-    color: #686861;
-    background: #f8f8f5;
-    font-size: 7px;
-    font-weight: 900;
-    letter-spacing: .08em;
-}
-
-.registration-team-management {
-    margin-top: 13px;
-    border-top: 1px solid #ecece7;
-    padding-top: 13px;
-}
-
-.registration-team-management-heading {
-    display: flex;
-    align-items: flex-end;
-    justify-content: space-between;
-    gap: 12px;
-    margin-bottom: 8px;
-}
-
-.registration-team-management-heading > div > span,
-.registration-team-management-heading > div > strong {
-    display: block;
-}
-
-.registration-team-management-heading > div > span {
-    color: #96968f;
-    font-size: 7px;
-    font-weight: 850;
-    letter-spacing: .1em;
-    text-transform: uppercase;
-}
-
-.registration-team-management-heading > div > strong {
-    margin-top: 4px;
-    color: #272723;
-    font-size: 11px;
-    font-weight: 900;
-}
-
-.registration-team-management-heading small {
-    max-width: 310px;
-    color: #8a8a83;
-    font-size: 8px;
-    font-weight: 700;
-    line-height: 1.5;
-    text-align: right;
-}
-
-.registration-team-management-list {
-    overflow: hidden;
-    border: 1px solid #e7e7e2;
-    border-radius: 9px;
-    background: #fff;
-}
-
-.registration-team-management-row {
-    display: grid;
-    grid-template-columns: minmax(0, 1fr) auto auto;
-    align-items: center;
-    gap: 10px;
-    min-height: 54px;
-    padding: 8px 10px;
-    border-bottom: 1px solid #efefeb;
-}
-
-.registration-team-management-row:last-child {
-    border-bottom: 0;
-}
-
-.registration-team-player {
-    display: flex;
-    min-width: 0;
-    align-items: center;
-    gap: 8px;
-}
-
-.registration-team-player > div:last-child {
-    min-width: 0;
-}
-
-.registration-team-player strong,
-.registration-team-player span {
-    display: block;
-}
-
-.registration-team-player strong {
-    overflow: hidden;
-    color: #292925;
-    font-size: 10px;
-    font-weight: 850;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-}
-
-.registration-team-player span {
-    margin-top: 3px;
-    color: #989891;
-    font-size: 7px;
-    font-weight: 850;
-    letter-spacing: .05em;
-}
-
-.registration-team-player-status {
-    min-width: 96px;
-    text-align: right;
-}
-
-.registration-team-player-status > span,
-.registration-team-player-status > strong {
-    display: block;
-}
-
-.registration-team-player-status > span {
-    color: #85857d;
-    font-size: 8px;
-    font-weight: 850;
-}
-
-.registration-team-player-status > strong {
-    margin-top: 2px;
-    color: #66665f;
-    font-size: 8px;
-    font-weight: 900;
-    font-variant-numeric: tabular-nums;
-}
-
-.registration-team-player-status.pending > span {
-    color: #777770;
-}
-
-.registration-team-player-status.pending > strong {
-    color: #3f3f3b;
-}
-
-.registration-team-player-status.pending > strong.expired {
-    color: #9b4c46;
-}
-
-.registration-replace-button {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    gap: 5px;
-    min-height: 30px;
-    padding: 0 9px;
-    border: 1px solid #d5d5d0;
-    border-radius: 7px;
-    background: #fff;
-    color: #4c4c47;
-    font-size: 8px;
-    font-weight: 850;
-    letter-spacing: .04em;
-    text-transform: uppercase;
-    cursor: pointer;
-}
-
-.registration-replace-button:hover {
-    background: #f5f5f2;
-    border-color: #c9c9c3;
-}
-
-.registration-replace-modal {
-    width: min(520px, calc(100vw - 30px));
-}
-
-.registration-replace-content {
-    padding: 16px 20px 2px;
-}
-
-.registration-replace-content > p {
-    margin: 0 0 15px;
-    color: #66665f;
-    font-size: 11px;
-    line-height: 1.65;
-}
-
-.registration-replace-field {
-    display: block;
-}
-
-.registration-replace-field > span {
-    display: block;
-    margin-bottom: 6px;
-    color: #96968f;
-    font-size: 7px;
-    font-weight: 850;
-    letter-spacing: .1em;
-}
-
-.registration-replace-field select {
-    width: 100%;
-    min-height: 40px;
-    padding: 0 11px;
-    border: 1px solid #dcdcd7;
-    border-radius: 8px;
-    outline: none;
-    background: #fff;
-    color: #2e2e2a;
-    font-size: 10px;
-    font-weight: 750;
-}
-
-.registration-replace-field select:focus {
-    border-color: #9e9e97;
-}
-
-.registration-replace-empty {
-    margin-top: 9px;
-    padding: 10px;
-    border: 1px solid #ecece7;
-    border-radius: 8px;
-    background: #fafaf8;
-    color: #898982;
-    font-size: 9px;
-    line-height: 1.5;
-}
-
-@media (max-width: 760px) {
-    .registration-invite-card {
-        grid-template-columns: 1fr;
-        align-items: stretch;
-    }
-
-    .registration-invite-expiry {
-        min-width: 0;
-        text-align: left;
-    }
-
-    .registration-invite-actions {
-        justify-content: stretch;
-    }
-
-    .registration-invite-accept,
-    .registration-invite-decline {
-        flex: 1;
-    }
-
-    .registration-team-management-heading {
-        align-items: flex-start;
-        flex-direction: column;
-    }
-
-    .registration-team-management-heading small {
-        max-width: none;
-        text-align: left;
-    }
-
-    .registration-team-management-row {
-        grid-template-columns: minmax(0, 1fr) auto;
-    }
-
-    .registration-team-player-status {
-        min-width: auto;
-    }
-
-    .registration-replace-button {
-        grid-column: 2;
-        grid-row: 2;
-    }
-}
-
-/* =========================================================
-   FINAL REGISTRATION RULES — V4
-   ========================================================= */
-
-.registration-member-select.ineligible {
-    opacity: 0.48;
-    cursor: not-allowed;
-}
-
-.registration-member-select-info small {
-    display: block;
-    margin-top: 3px;
-    font-size: 10px;
-    line-height: 1.35;
-    font-weight: 700;
-    color: #9a9a9a;
-}
-
-.registration-replacement-pending {
-    display: inline-flex;
-    align-items: center;
-    min-height: 30px;
-    padding: 0 10px;
-    border: 1px solid #dedede;
-    border-radius: 9px;
-    font-size: 10px;
-    font-weight: 800;
-    text-transform: uppercase;
-    letter-spacing: .08em;
-    color: #777;
-    white-space: nowrap;
-}
-
-.registration-substitution-tools {
-    margin-top: 14px;
-    padding: 14px 15px;
-    border: 1px solid #e3e3e3;
-    border-radius: 12px;
-    background: #fafafa;
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: 16px;
-}
-
-.registration-substitution-tools > div:first-child {
-    min-width: 0;
-    display: flex;
-    flex-direction: column;
-    gap: 3px;
-}
-
-.registration-substitution-tools span:first-child,
-.registration-host-panel-heading span {
-    font-size: 9px;
-    font-weight: 900;
-    letter-spacing: .13em;
-    text-transform: uppercase;
-    color: #999;
-}
-
-.registration-substitution-tools strong,
-.registration-host-panel-heading strong {
-    font-size: 12px;
-    color: #1b1b1b;
-}
-
-.registration-substitution-tools small {
-    font-size: 10px;
-    color: #858585;
-}
-
-.registration-substitution-button,
-.registration-host-approve,
-.registration-host-reject {
-    min-height: 34px;
-    border-radius: 9px;
-    padding: 0 12px;
-    border: 1px solid #1b1b1b;
-    background: #1b1b1b;
-    color: #fff;
-    font-size: 10px;
-    font-weight: 900;
-    letter-spacing: .05em;
-    text-transform: uppercase;
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    gap: 6px;
-    white-space: nowrap;
-    cursor: pointer;
-}
-
-.registration-substitution-button:disabled,
-.registration-host-approve:disabled,
-.registration-host-reject:disabled {
-    opacity: .55;
-    cursor: not-allowed;
-}
-
-.registration-substitution-closed {
-    font-size: 10px;
-    font-weight: 800;
-    color: #8f8f8f;
-    text-transform: uppercase;
-    letter-spacing: .05em;
-    text-align: right;
-}
-
-.registration-host-panel {
-    grid-column: 1 / -1;
-    padding: 18px;
-    border: 1px solid #dedede;
-    border-radius: 14px;
-    background: #fff;
-}
-
-.registration-host-panel-heading {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: 12px;
-    padding-bottom: 13px;
-    border-bottom: 1px solid #ececec;
-}
-
-.registration-host-panel-heading > div {
-    display: flex;
-    flex-direction: column;
-    gap: 4px;
-}
-
-.registration-host-request-list {
-    display: flex;
-    flex-direction: column;
-    gap: 10px;
-    margin-top: 14px;
-}
-
-.registration-host-request-card {
-    padding: 13px;
-    border: 1px solid #e5e5e5;
-    border-radius: 11px;
-    display: grid;
-    grid-template-columns: minmax(0, 1fr) auto;
-    gap: 12px;
-    align-items: center;
-}
-
-.registration-host-request-main {
-    display: flex;
-    flex-direction: column;
-    gap: 3px;
-    min-width: 0;
-}
-
-.registration-host-request-main strong {
-    font-size: 12px;
-    color: #1a1a1a;
-}
-
-.registration-host-request-main span {
-    font-size: 11px;
-    color: #555;
-}
-
-.registration-host-request-main small {
-    font-size: 10px;
-    line-height: 1.4;
-    color: #888;
-}
-
-.registration-host-request-status {
-    align-self: start;
-    padding: 5px 8px;
-    border-radius: 7px;
-    background: #f2f2f2;
-    font-size: 9px;
-    font-weight: 900;
-    text-transform: uppercase;
-    letter-spacing: .08em;
-    color: #777;
-}
-
-.registration-host-request-status.approved,
-.registration-host-request-status.completed {
-    background: #ededed;
-    color: #222;
-}
-
-.registration-host-request-status.rejected {
-    background: #f5f5f5;
-    color: #888;
-}
-
-.registration-host-request-actions {
-    grid-column: 1 / -1;
-    display: flex;
-    gap: 8px;
-}
-
-.registration-host-reject {
-    border-color: #ddd;
-    background: #fff;
-    color: #555;
-}
-
-.registration-substitution-modal {
-    max-width: 540px;
-}
-
-.registration-substitution-modal textarea,
-.registration-replace-field textarea {
-    width: 100%;
-    resize: vertical;
-    min-height: 92px;
-    border: 1px solid #dcdcdc;
-    border-radius: 9px;
-    padding: 10px 11px;
-    background: #fff;
-    color: #222;
-    font: inherit;
-    font-size: 12px;
-    outline: none;
-}
-
-.registration-substitution-modal textarea:focus,
-.registration-replace-field textarea:focus {
-    border-color: #999;
-}
-
-@media (max-width: 760px) {
-    .registration-substitution-tools {
-        align-items: flex-start;
-        flex-direction: column;
-    }
-
-    .registration-substitution-button,
-    .registration-substitution-closed {
-        width: 100%;
-        text-align: center;
-    }
-
-    .registration-host-request-card {
-        grid-template-columns: 1fr;
     }
 }
