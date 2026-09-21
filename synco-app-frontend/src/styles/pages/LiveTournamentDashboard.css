@@ -223,14 +223,17 @@
     margin: 20px auto 0;
     display: grid;
     grid-template-columns:
-        minmax(150px, 1.25fr) minmax(130px, 1fr) minmax(190px, 1.45fr) repeat(3, minmax(90px, 0.7fr));
+        minmax(150px, 1.25fr)
+        minmax(130px, 1fr)
+        minmax(190px, 1.45fr)
+        repeat(3, minmax(90px, 0.7fr));
     background: #ffffff;
     border: 1px solid #e3e3de;
     border-radius: 10px;
     overflow: hidden;
 }
 
-.live-info-grid>div {
+.live-info-grid > div {
     min-height: 74px;
     padding: 14px 16px;
     display: flex;
@@ -240,7 +243,7 @@
     border-right: 1px solid #ecece7;
 }
 
-.live-info-grid>div:last-child {
+.live-info-grid > div:last-child {
     border-right: 0;
 }
 
@@ -455,7 +458,7 @@
     padding: 5px 16px 8px;
 }
 
-.live-detail-list>div {
+.live-detail-list > div {
     min-height: 53px;
     display: flex;
     align-items: center;
@@ -464,7 +467,7 @@
     border-bottom: 1px solid #eeeeea;
 }
 
-.live-detail-list>div:last-child {
+.live-detail-list > div:last-child {
     border-bottom: 0;
 }
 
@@ -522,7 +525,7 @@
     background: #f7f7f4;
 }
 
-.live-match-overview-item>div {
+.live-match-overview-item > div {
     display: flex;
     align-items: center;
     gap: 12px;
@@ -682,7 +685,7 @@
     gap: 18px;
 }
 
-.live-player-metrics>div {
+.live-player-metrics > div {
     min-width: 55px;
     text-align: right;
 }
@@ -821,7 +824,7 @@
     border-bottom: 1px solid #ecece8;
 }
 
-.live-editor-header>div:first-child span {
+.live-editor-header > div:first-child span {
     display: block;
     margin-bottom: 5px;
     color: #93938d;
@@ -890,7 +893,7 @@
     background: #fafaf8;
 }
 
-.live-team-summary-card>span {
+.live-team-summary-card > span {
     display: block;
     max-width: 100%;
     color: #7d7d77;
@@ -901,7 +904,7 @@
     white-space: nowrap;
 }
 
-.live-team-summary-card>strong {
+.live-team-summary-card > strong {
     display: block;
     margin-top: 7px;
     color: #111110;
@@ -910,7 +913,7 @@
     font-weight: 900;
 }
 
-.live-team-summary-card>small {
+.live-team-summary-card > small {
     display: block;
     margin-top: 3px;
     color: #9a9a94;
@@ -918,14 +921,14 @@
     font-weight: 850;
 }
 
-.live-team-summary-card>div {
+.live-team-summary-card > div {
     margin-top: 9px;
     color: #666660;
     font-size: 8px;
     font-weight: 700;
 }
 
-.live-team-summary-card>div span {
+.live-team-summary-card > div span {
     display: inline-block;
     width: 3px;
     height: 3px;
@@ -1080,7 +1083,7 @@
     gap: 20px;
 }
 
-.live-result-stats>div {
+.live-result-stats > div {
     min-width: 60px;
     text-align: right;
 }
@@ -1251,7 +1254,7 @@
     letter-spacing: -0.04em;
 }
 
-.live-lock-card>p {
+.live-lock-card > p {
     max-width: 620px;
     margin: 11px auto 0;
     color: #777771;
@@ -1268,7 +1271,7 @@
     background: #fafaf8;
 }
 
-.live-countdown>span {
+.live-countdown > span {
     display: block;
     color: #92928c;
     font-size: 8px;
@@ -1303,12 +1306,12 @@
     overflow: hidden;
 }
 
-.live-lock-meta>div {
+.live-lock-meta > div {
     padding: 13px 12px;
     border-right: 1px solid #ecece8;
 }
 
-.live-lock-meta>div:last-child {
+.live-lock-meta > div:last-child {
     border-right: 0;
 }
 
@@ -1338,7 +1341,7 @@
         grid-template-columns: repeat(3, 1fr);
     }
 
-    .live-info-grid>div:nth-child(3) {
+    .live-info-grid > div:nth-child(3) {
         border-right: 0;
     }
 
@@ -1437,12 +1440,12 @@
         grid-template-columns: repeat(2, 1fr);
     }
 
-    .live-info-grid>div:nth-child(3),
-    .live-info-grid>div:nth-child(5) {
+    .live-info-grid > div:nth-child(3),
+    .live-info-grid > div:nth-child(5) {
         border-right: 1px solid #ecece8;
     }
 
-    .live-info-grid>div:nth-child(even) {
+    .live-info-grid > div:nth-child(even) {
         border-right: 0;
     }
 
@@ -1479,12 +1482,12 @@
         grid-template-columns: repeat(2, 1fr);
     }
 
-    .live-lock-meta>div:nth-child(2) {
+    .live-lock-meta > div:nth-child(2) {
         border-right: 0;
     }
 
-    .live-lock-meta>div:nth-child(3),
-    .live-lock-meta>div:nth-child(4) {
+    .live-lock-meta > div:nth-child(3),
+    .live-lock-meta > div:nth-child(4) {
         border-top: 1px solid #ecece8;
     }
 }
@@ -1511,7 +1514,7 @@
         width: calc(100% - 24px);
     }
 
-    .live-info-grid>div {
+    .live-info-grid > div {
         min-height: 68px;
         padding: 11px;
     }
@@ -1529,7 +1532,7 @@
         gap: 9px;
     }
 
-    .live-player-metrics>div {
+    .live-player-metrics > div {
         min-width: 42px;
     }
 

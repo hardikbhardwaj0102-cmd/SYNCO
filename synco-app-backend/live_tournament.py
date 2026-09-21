@@ -17,6 +17,7 @@
 # =========================================================
 
 from datetime import datetime
+from zoneinfo import ZoneInfo
 
 from flask import Blueprint, jsonify, request, session
 from sqlalchemy import func
@@ -162,19 +163,43 @@ def organizer_required(competition):
 # GENERAL HELPERS
 # =========================================================
 
-def utc_now():
-    """
-    SYNCO currently uses naive UTC datetimes in the live dashboard code.
-    Keep that convention for compatibility with the existing schema.
+SYNCO_TIMEZONE = ZoneInfo("Asia/Kolkata")
+
+
+def synco_now():
+    """Return the current SYNCO tournament time as a naive IST datetime.
+
+    Existing competition_start values are stored as naive datetimes and
+    represent the India time selected by the organizer. Therefore the live
+    dashboard must compare them against the current IST clock, not UTC.
     """
 
-    return datetime.utcnow()
+    return datetime.now(SYNCO_TIMEZONE).replace(tzinfo=None)
+
+
+def scheduled_time(value):
+    """Normalize a competition schedule value to naive Asia/Kolkata time."""
+
+    if not value:
+        return None
+
+    if value.tzinfo is not None:
+        return value.astimezone(SYNCO_TIMEZONE).replace(tzinfo=None)
+
+    return value
 
 
 def iso_datetime(value):
+    """Serialize tournament schedule values with an explicit IST offset."""
+
     if not value:
         return None
-    return value.isoformat()
+
+    local_value = scheduled_time(value)
+
+    return local_value.replace(
+        tzinfo=SYNCO_TIMEZONE
+    ).isoformat()
 
 
 def get_competition(competition_id):
@@ -350,9 +375,9 @@ def get_competition_access(competition, persist_live_state=False):
     checks this state again on the server.
     """
 
-    now = utc_now()
+    now = synco_now()
     status = str(competition.status or "").upper()
-    start_at = competition.competition_start
+    start_at = scheduled_time(competition.competition_start)
 
     phase = None
     seconds_until_start = None
@@ -1112,7 +1137,7 @@ def access(competition_id):
         "success": True,
         "competition": competition_payload(competition),
         "access": access_data,
-        "updatedAt": iso_datetime(utc_now()),
+        "updatedAt": iso_datetime(synco_now()),
     })
 
 
@@ -1144,7 +1169,7 @@ def dashboard(competition_id):
     return jsonify({
         "success": True,
         "dashboard": data,
-        "updatedAt": iso_datetime(utc_now()),
+        "updatedAt": iso_datetime(synco_now()),
     })
 
 
@@ -1212,7 +1237,7 @@ def overview(competition_id):
                 in {"VERIFIED", "CANCELLED"}
             ][-5:],
         },
-        "updatedAt": iso_datetime(utc_now()),
+        "updatedAt": iso_datetime(synco_now()),
     })
 
 
@@ -1253,7 +1278,7 @@ def leaderboard(competition_id):
             if access_data["phase"] in {"LIVE", "COMPLETED"}
             else []
         ),
-        "updatedAt": iso_datetime(utc_now()),
+        "updatedAt": iso_datetime(synco_now()),
     })
 
 
@@ -1300,7 +1325,7 @@ def matches(competition_id):
             )
             for item in rows
         ],
-        "updatedAt": iso_datetime(utc_now()),
+        "updatedAt": iso_datetime(synco_now()),
     })
 
 
