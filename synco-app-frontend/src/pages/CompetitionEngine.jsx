@@ -194,11 +194,7 @@ const CompetitionEngine = () => {
             ''
           ).toUpperCase();
 
-        return (
-          status === 'REGISTRATION_OPEN' ||
-          status === 'OPEN' ||
-          status === 'PUBLISHED'
-        );
+        return status === 'REGISTRATION_OPEN';
       });
     }
 
@@ -326,9 +322,7 @@ const CompetitionEngine = () => {
       ).toUpperCase();
 
     const isRegistrationOpen =
-      competitionStatus.includes('REGISTRATION') ||
-      competitionStatus === 'OPEN' ||
-      competitionStatus === 'PUBLISHED';
+      competitionStatus === 'REGISTRATION_OPEN';
 
     const cardAction = isRegistrationOpen
       ? () =>
@@ -553,10 +547,25 @@ const CompetitionEngine = () => {
             type="button"
             className="hero-cta-btn"
             onClick={() => {
-              if (cards.length > 0) {
-                openLiveTournament(
-                  cards[activeMatchIndex]?.id
+              const activeCompetition =
+                cards[activeMatchIndex]?.competition;
+
+              if (!activeCompetition) {
+                return;
+              }
+
+              const status = String(
+                activeCompetition.status || ''
+              ).toUpperCase();
+
+              if (status === 'REGISTRATION_OPEN') {
+                navigate(
+                  `/competitions/${encodeURIComponent(
+                    String(activeCompetition.id)
+                  )}/register`
                 );
+              } else {
+                openLiveTournament(activeCompetition.id);
               }
             }}
           >

@@ -155,6 +155,7 @@ export default function TournamentRegistration() {
 
     const selectedEligible =
         !!selectedClub &&
+        selectedClub.eligible !== false &&
         (!teamSize || selectedClub.memberCount === teamSize) &&
         !selectedClub.registration;
 

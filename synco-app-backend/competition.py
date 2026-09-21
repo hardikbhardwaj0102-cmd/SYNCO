@@ -4,6 +4,7 @@
 # =========================================================
 
 from datetime import datetime, timezone
+from zoneinfo import ZoneInfo
 import math
 import random
 import re
@@ -343,56 +344,110 @@ def parse_datetime(value):
         return None
 
     if isinstance(value, datetime):
-        return value
+        parsed = value
+    else:
+        value = str(value).strip()
 
-    value = str(value).strip()
+        if not value:
+            return None
 
-    if not value:
-        return None
+        try:
+            parsed = datetime.fromisoformat(
+                value.replace("Z", "+00:00")
+            )
+        except ValueError:
+            return None
 
-    try:
-        return datetime.fromisoformat(
-            value.replace("Z", "+00:00")
-        )
-    except ValueError:
-        return None
+    # datetime-local values from the SYNCO React UI do not carry a
+    # timezone. They represent the user's India/IST tournament time.
+    # Explicitly attach Asia/Kolkata before converting to UTC so Render
+    # (which normally runs on UTC) cannot shift the registration window.
+    if parsed.tzinfo is None:
+        parsed = parsed.replace(tzinfo=ZoneInfo("Asia/Kolkata"))
+
+    return (
+        parsed.astimezone(timezone.utc)
+        .replace(tzinfo=None)
+    )
 
 
 def utc_now():
 
-    return datetime.now(timezone.utc)
+    # Keep database DateTime values naive/UTC to remain compatible with
+    # the existing SQLAlchemy model definitions.
+    return datetime.now(timezone.utc).replace(tzinfo=None)
 
 
-def as_utc(value):
+def as_utc_naive(value):
 
     if value is None:
         return None
 
     if value.tzinfo is None:
-        return value.replace(tzinfo=timezone.utc)
+        return value
 
-    return value.astimezone(timezone.utc)
+    return value.astimezone(timezone.utc).replace(tzinfo=None)
 
 
 def sync_registration_status(competition):
-    """Open a DRAFT competition when its registration window is active."""
+    """Synchronize the persisted registration status with its time window.
 
-    if not competition or competition.status != "DRAFT":
+    Rules:
+      * Before registrationStart -> DRAFT
+      * registrationStart <= now < registrationEnd -> REGISTRATION_OPEN
+      * At/after registrationEnd -> REGISTRATION_CLOSED
+
+    A competition that has already moved to READY/LIVE/etc. is never touched.
+    """
+
+    if not competition:
         return False
 
+    status = str(competition.status or "").upper()
+
+    if status not in ("DRAFT", "REGISTRATION_OPEN"):
+        return False
+
+    start = as_utc_naive(competition.registration_start)
+    end = as_utc_naive(competition.registration_end)
     now = utc_now()
-    registration_start = as_utc(competition.registration_start)
-    registration_end = as_utc(competition.registration_end)
 
-    if registration_start and now < registration_start:
-        return False
+    changed = False
 
-    if registration_end and now > registration_end:
-        return False
+    # No registration window at all: keep the competition as a draft.
+    if not start and not end:
+        if status == "REGISTRATION_OPEN":
+            competition.status = "DRAFT"
+            competition.is_published = False
+            changed = True
+        return changed
 
-    competition.status = "REGISTRATION_OPEN"
-    competition.is_published = True
-    return True
+    # Future start -> not open yet.
+    if start and now < start:
+        if status != "DRAFT":
+            competition.status = "DRAFT"
+            competition.is_published = False
+            changed = True
+        return changed
+
+    # End is exclusive: exactly at registrationEnd the window is closed.
+    if end and now >= end:
+        if status != "REGISTRATION_CLOSED":
+            competition.status = "REGISTRATION_CLOSED"
+            competition.is_published = True
+            changed = True
+        return changed
+
+    # We are inside the window.
+    if status != "REGISTRATION_OPEN":
+        competition.status = "REGISTRATION_OPEN"
+        competition.is_published = True
+        changed = True
+    elif not competition.is_published:
+        competition.is_published = True
+        changed = True
+
+    return changed
 
 def slugify(value):
 
@@ -601,6 +656,18 @@ def serialize_user(user):
         "username": getattr(user, "username", None),
         "avatar": getattr(user, "avatar", None),
     }
+
+
+def serialize_datetime(value):
+
+    if not value:
+        return None
+
+    utc_value = as_utc_naive(value)
+
+    # Always expose competition schedule timestamps explicitly as UTC.
+    # The browser then converts them to the user's local timezone correctly.
+    return f"{utc_value.isoformat()}Z"
 
 
 def serialize_game(game):
@@ -1105,27 +1172,19 @@ def serialize_competition(
         ),
 
         "registrationStart": (
-            competition.registration_start.isoformat()
-            if competition.registration_start
-            else None
+            serialize_datetime(competition.registration_start)
         ),
 
         "registrationEnd": (
-            competition.registration_end.isoformat()
-            if competition.registration_end
-            else None
+            serialize_datetime(competition.registration_end)
         ),
 
         "competitionStart": (
-            competition.competition_start.isoformat()
-            if competition.competition_start
-            else None
+            serialize_datetime(competition.competition_start)
         ),
 
         "competitionEnd": (
-            competition.competition_end.isoformat()
-            if competition.competition_end
-            else None
+            serialize_datetime(competition.competition_end)
         ),
 
         "createdAt": (
@@ -1825,7 +1884,7 @@ def get_competitions():
 
     query = Competition.query
 
-    status = request.args.get(
+    requested_status = request.args.get(
         "status"
     )
 
@@ -1837,24 +1896,15 @@ def get_competitions():
         "competitionType"
     )
 
-    if status:
-
-        query = query.filter_by(
-            status=status.upper()
-        )
-
     if game_id:
-
         query = query.filter_by(
             game_id=game_id
         )
 
     if competition_type:
-
         query = query.filter_by(
-            competition_type=(
+            competition_type=
                 competition_type.upper()
-            )
         )
 
     competitions = (
@@ -1867,10 +1917,19 @@ def get_competitions():
 
     status_changed = False
     for competition in competitions:
-        status_changed = sync_registration_status(competition) or status_changed
+        if sync_registration_status(competition):
+            status_changed = True
 
     if status_changed:
         db.session.commit()
+
+    if requested_status:
+        requested_status = requested_status.upper()
+        competitions = [
+            competition
+            for competition in competitions
+            if str(competition.status or "").upper() == requested_status
+        ]
 
     return jsonify({
 
@@ -1954,27 +2013,32 @@ def open_registration(
     if error:
         return error
 
-    if competition.status != "DRAFT":
+    if str(competition.status or "").upper() not in (
+        "DRAFT",
+        "REGISTRATION_OPEN",
+    ):
+        return jsonify({
+            "success": False,
+            "message": "Registration cannot be changed from the current status.",
+        }), 400
+
+    status_changed = sync_registration_status(competition)
+
+    if competition.status != "REGISTRATION_OPEN":
+        if competition.registration_start and utc_now() < as_utc_naive(competition.registration_start):
+            message = "Registration has not started yet."
+        elif competition.registration_end and utc_now() >= as_utc_naive(competition.registration_end):
+            message = "Registration has already ended."
+        else:
+            message = "A valid registration window is required."
 
         return jsonify({
             "success": False,
-            "message": (
-                "Only draft competitions "
-                "can open registration."
-            )
+            "message": message,
         }), 400
 
-    competition.status = (
-        "REGISTRATION_OPEN"
-    )
-
-    competition.is_published = True
-
-    if not competition.registration_start:
-
-        competition.registration_start = (
-            datetime.utcnow()
-        )
+    if status_changed:
+        db.session.commit()
 
     create_audit_log(
         competition.id,
@@ -2240,7 +2304,10 @@ def get_registration_info(competition_id):
 
         return jsonify(payload)
 
-    # TEAM competition: expose only clubs owned by the logged-in user.
+    # TEAM competition: expose every owned club that actually satisfies
+    # the tournament's game + exact roster-size criteria. Registered clubs
+    # remain visible so their current status can be shown, but only eligible
+    # clubs can be selected in the UI.
     owned_clubs = (
         Club.query
         .filter_by(owner_id=user.id)
@@ -2248,8 +2315,25 @@ def get_registration_info(competition_id):
         .all()
     )
 
+    required_team_size = int(competition.team_size or 0)
+
     for club in owned_clubs:
-        if getattr(club, "game_id", None) not in (None, competition.game_id):
+        # A club without the same game assignment is not eligible.
+        if str(getattr(club, "game_id", None)) != str(competition.game_id):
+            continue
+
+        members = (
+            ClubMember.query
+            .filter_by(club_id=club.id)
+            .all()
+        )
+
+        member_count = len(
+            [member for member in members if getattr(member, "user", None)]
+        )
+
+        # Team competitions require the exact configured roster size.
+        if required_team_size and member_count != required_team_size:
             continue
 
         registration = (
@@ -2261,12 +2345,15 @@ def get_registration_info(competition_id):
             .first()
         )
 
-        payload["myClubs"].append(
-            serialize_registration_club(
-                club,
-                registration=registration,
-            )
+        club_payload = serialize_registration_club(
+            club,
+            registration=registration,
         )
+        club_payload["eligible"] = True
+        club_payload["requiredTeamSize"] = required_team_size
+        club_payload["memberCount"] = member_count
+
+        payload["myClubs"].append(club_payload)
 
     return jsonify(payload)
 
@@ -2498,18 +2585,14 @@ def register_team(
         None
     )
 
-    if club_game_id and str(
-        club_game_id
-    ) != str(
-        competition.game_id
-    ):
+    if str(club_game_id) != str(competition.game_id):
 
         return jsonify({
             "success": False,
             "message": (
-                "This club belongs to a "
-                "different game."
-            )
+                "This club is not registered for the "
+                "tournament's game."
+            ),
         }), 400
 
     team_size = int(competition.team_size or 0)
