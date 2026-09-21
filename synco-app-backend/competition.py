@@ -2478,27 +2478,59 @@ def _repair_withdrawn_registration_before_reregister(competition, user_id):
 
 def user_has_any_active_competition_entry(competition, user_id):
 
-    # Captain / solo participant.
-    participant = (
+    # First clean up any stale captain/solo rows for which the database
+    # already contains explicit evidence that this user withdrew. This is
+    # important for registrations created by older versions of the flow,
+    # where the participant row could survive the withdrawal action.
+    try:
+        normalized_user_id = int(user_id)
+    except (TypeError, ValueError):
+        return None
+
+    active_rows = (
         CompetitionParticipant.query
         .filter_by(
             competition_id=competition.id,
-            user_id=user_id,
+            user_id=normalized_user_id,
         )
         .filter(
             CompetitionParticipant.registration_status.notin_(
                 ["REJECTED", "CANCELLED", "DISQUALIFIED"]
             )
         )
-        .first()
+        .order_by(
+            CompetitionParticipant.registered_at.desc(),
+            CompetitionParticipant.id.desc(),
+        )
+        .all()
     )
 
-    if participant:
-        return participant
+    stale_rows = []
+    remaining_rows = []
 
+    for participant in active_rows:
+        if _withdrawal_evidence_exists(
+            competition,
+            normalized_user_id,
+            participant,
+        ):
+            _mark_participant_cancelled(participant)
+            stale_rows.append(participant)
+        else:
+            remaining_rows.append(participant)
+
+    # Persist the repaired state before returning a conflict to the caller.
+    if stale_rows:
+        db.session.flush()
+
+    if remaining_rows:
+        return remaining_rows[0]
+
+    # The user may still be committed as an accepted roster member on a team
+    # whose captain is somebody else. That remains a real active commitment.
     return get_committed_team_for_user(
         competition,
-        user_id,
+        normalized_user_id,
     )
 
 
@@ -5844,14 +5876,15 @@ def withdraw_registration(competition_id):
 
     if participant_type == "TEAM":
 
-        # Team registration is owned by its captain (participant.user_id).
-        # Club ownership is irrelevant to tournament registration.
-        active_captain_participants = (
+        # Tournament registration ownership is the captain identity stored on
+        # the participant row. Older registrations can have user_id=NULL, so
+        # also recognize a roster entry explicitly marked CAPTAIN. Club owner
+        # status is intentionally irrelevant.
+        active_team_participants = (
             CompetitionParticipant.query
             .filter_by(
                 competition_id=competition.id,
                 participant_type="TEAM",
-                user_id=user.id,
             )
             .filter(
                 CompetitionParticipant.registration_status.in_(
@@ -5865,14 +5898,44 @@ def withdraw_registration(competition_id):
             .all()
         )
 
-        if not active_captain_participants:
+        captain_participants = []
+        member_only_found = False
 
-            roster_membership_team = get_committed_team_for_user(
-                competition,
-                user.id,
-            )
+        for team_participant in active_team_participants:
+            if team_participant.user_id == user.id:
+                captain_participants.append(team_participant)
+                continue
 
-            if roster_membership_team:
+            roster = getattr(team_participant, "team_roster", None) or []
+            if not isinstance(roster, list):
+                continue
+
+            is_captain = False
+            is_roster_member = False
+
+            for roster_item in roster:
+                if not isinstance(roster_item, dict):
+                    continue
+                try:
+                    roster_user_id = int(roster_item.get("userId"))
+                except (TypeError, ValueError):
+                    continue
+
+                if roster_user_id != user.id:
+                    continue
+
+                is_roster_member = True
+                if str(roster_item.get("role") or "").upper() == "CAPTAIN":
+                    is_captain = True
+                break
+
+            if is_captain:
+                captain_participants.append(team_participant)
+            elif is_roster_member:
+                member_only_found = True
+
+        if not captain_participants:
+            if member_only_found:
                 return jsonify({
                     "success": False,
                     "message": "Only the team captain can withdraw the tournament registration."
@@ -5883,7 +5946,7 @@ def withdraw_registration(competition_id):
                 "message": "No active registration found for your account."
             }), 404
 
-        participants_to_cancel = active_captain_participants
+        participants_to_cancel = captain_participants
 
     else:
 
@@ -5969,6 +6032,23 @@ def withdraw_registration(competition_id):
                 invite.invited_user_id,
                 "CANCELLED",
             )
+
+        # A withdrawn registration cannot retain pending substitution
+        # requests. They are tied to the same participant and must stop
+        # being actionable immediately.
+        pending_substitutions = (
+            CompetitionSubstitutionRequest.query
+            .filter_by(
+                participant_id=participant.id,
+                status="PENDING",
+            )
+            .all()
+        )
+
+        for substitution_request in pending_substitutions:
+            substitution_request.status = "REJECTED"
+            substitution_request.decided_at = datetime.utcnow()
+            substitution_request.rejection_reason = "Tournament registration was withdrawn."
 
         participant_notified_ids = {
             user_id
