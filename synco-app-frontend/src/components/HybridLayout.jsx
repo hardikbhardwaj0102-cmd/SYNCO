@@ -6,7 +6,7 @@ import { useAuth } from '../context/AuthContext';
 import { useLocation } from 'react-router-dom';
 import { useEffect, useRef } from 'react';
 
-import rankBg from '../assets/comp-bg.png';
+import rankBg from '../assets/rank-bg.png';
 
 import '../styles/components/HybridLayout.css';
 
@@ -51,7 +51,7 @@ const HybridLayout = () => {
   */
 
   const isLeaderboardsPage =
-    pathname === '/leaderboards' ||
+    pathname === '/ranking' ||
     pathname.startsWith('/leaderboards/');
 
 
@@ -87,12 +87,17 @@ const HybridLayout = () => {
 
           <div
             className="leaderboards-shell-background"
-            style={{
-              backgroundImage:
-                `url(${rankBg})`,
-            }}
             aria-hidden="true"
-          />
+          >
+
+            <img
+              src={rankBg}
+              alt=""
+              className="leaderboards-shell-background-image"
+              draggable="false"
+            />
+
+          </div>
 
         )}
 
