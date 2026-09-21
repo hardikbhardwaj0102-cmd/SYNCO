@@ -12,6 +12,7 @@ import re
 
 from flask import Blueprint, current_app, jsonify, request, session
 from sqlalchemy import or_
+from sqlalchemy.exc import IntegrityError
 
 from models import (
     db,
@@ -3458,16 +3459,27 @@ def get_registration_info(competition_id):
     )
 
     substitution_requests = []
-    if current_registration and is_team:
-        rows = (
-            CompetitionSubstitutionRequest.query
-            .filter_by(
-                competition_id=competition.id,
-                participant_id=current_registration.id,
+    if is_team:
+        if user.id == competition.organizer_id:
+            rows = (
+                CompetitionSubstitutionRequest.query
+                .filter_by(competition_id=competition.id)
+                .order_by(CompetitionSubstitutionRequest.requested_at.desc())
+                .all()
             )
-            .order_by(CompetitionSubstitutionRequest.requested_at.desc())
-            .all()
-        )
+        elif current_registration:
+            rows = (
+                CompetitionSubstitutionRequest.query
+                .filter_by(
+                    competition_id=competition.id,
+                    participant_id=current_registration.id,
+                )
+                .order_by(CompetitionSubstitutionRequest.requested_at.desc())
+                .all()
+            )
+        else:
+            rows = []
+
         substitution_requests = [
             serialize_substitution_request(item)
             for item in rows
@@ -3491,6 +3503,27 @@ def get_registration_info(competition_id):
             serialized_current_registration["teamRoster"]
         )
 
+        if is_team and current_registration.user_id == user.id:
+            pending_replacements = (
+                CompetitionTeamInvite.query
+                .filter_by(
+                    participant_id=current_registration.id,
+                    invite_type="REPLACEMENT",
+                    status="PENDING",
+                )
+                .order_by(CompetitionTeamInvite.created_at.desc())
+                .all()
+            )
+            serialized_current_registration["pendingReplacementInvites"] = [
+                serialize_team_invite(item)
+                for item in pending_replacements
+            ]
+        else:
+            serialized_current_registration["pendingReplacementInvites"] = []
+
+    next_match_start = get_next_match_start(competition)
+    substitution_cutoff_at = substitution_cutoff(competition)
+
     return jsonify({
         "success": True,
         "competition": serialize_competition(competition),
@@ -3511,6 +3544,9 @@ def get_registration_info(competition_id):
         "modeConfig": mode_config,
         "registrationSettings": _registration_settings(competition),
         "currentUserId": user.id,
+        "isHost": competition.organizer_id == user.id,
+        "nextMatchStart": utc_iso(next_match_start),
+        "substitutionCutoff": utc_iso(substitution_cutoff_at),
         "isCaptain": bool(
             serialized_current_registration
             and str(serialized_current_registration.get("participantType", "")).upper() == "TEAM"
@@ -3591,7 +3627,9 @@ def register_player(competition_id):
     if existing:
         return jsonify({
             "success": False,
-            "message": "You are already committed to an entry in this competition."
+            "message": "You are already committed to an entry in this competition.",
+            "participant": serialize_participant(existing),
+            "participantId": existing.id,
         }), 409
 
     # Registering solo is an accepted commitment, so any other pending
@@ -3606,7 +3644,20 @@ def register_player(competition_id):
     )
 
     db.session.add(participant)
-    db.session.flush()
+    try:
+        db.session.flush()
+    except IntegrityError:
+        db.session.rollback()
+        existing = user_has_any_active_competition_entry(
+            competition,
+            user.id,
+        )
+        return jsonify({
+            "success": False,
+            "message": "You already have an active registration in this competition.",
+            "participant": serialize_participant(existing) if existing else None,
+            "participantId": existing.id if existing else None,
+        }), 409
 
     cancel_other_pending_competition_invites(
         competition,
@@ -3724,10 +3775,38 @@ def register_team(competition_id):
             "message": "The registering player must be included as the team captain."
         }), 400
 
-    if user_has_any_active_competition_entry(competition, user.id):
+    existing_captain_entry = (
+        CompetitionParticipant.query
+        .filter_by(
+            competition_id=competition.id,
+            user_id=user.id,
+        )
+        .filter(
+            CompetitionParticipant.registration_status.notin_(
+                ["REJECTED", "CANCELLED", "DISQUALIFIED"]
+            )
+        )
+        .order_by(CompetitionParticipant.registered_at.desc())
+        .first()
+    )
+
+    if existing_captain_entry:
         return jsonify({
             "success": False,
-            "message": "You are already committed to an entry in this competition."
+            "message": "You already have an active registration in this competition. Open the existing registration instead of submitting another one.",
+            "participant": serialize_participant(existing_captain_entry),
+            "participantId": existing_captain_entry.id,
+        }), 409
+
+    committed_entry = get_committed_team_for_user(
+        competition,
+        user.id,
+    )
+    if committed_entry:
+        return jsonify({
+            "success": False,
+            "message": "You are already committed to a team in this competition.",
+            "participantId": committed_entry.id,
         }), 409
 
     club = db.session.get(Club, club_id)
@@ -3898,7 +3977,46 @@ def register_team(competition_id):
     )
 
     db.session.add(participant)
-    db.session.flush()
+    try:
+        db.session.flush()
+    except IntegrityError:
+        db.session.rollback()
+        existing_captain_entry = (
+            CompetitionParticipant.query
+            .filter_by(
+                competition_id=competition.id,
+                user_id=user.id,
+            )
+            .filter(
+                CompetitionParticipant.registration_status.notin_(
+                    ["REJECTED", "CANCELLED", "DISQUALIFIED"]
+                )
+            )
+            .order_by(CompetitionParticipant.registered_at.desc())
+            .first()
+        )
+        return jsonify({
+            "success": False,
+            "message": "You already have an active registration in this competition. Open the existing registration instead of submitting another one.",
+            "participant": (
+                serialize_participant(existing_captain_entry)
+                if existing_captain_entry
+                else None
+            ),
+            "participantId": (
+                existing_captain_entry.id
+                if existing_captain_entry
+                else None
+            ),
+        }), 409
+
+    # Registering a new team is a commitment for the captain. Any other
+    # pending invitations for this competition must therefore be cancelled.
+    cancel_other_pending_competition_invites(
+        competition,
+        user.id,
+        accepted_invite_id=None,
+    )
 
     for index, membership in enumerate(roster_memberships, start=1):
 
@@ -4566,11 +4684,29 @@ def replace_team_player(competition_id):
         }), 400
 
     outgoing_status = str(outgoing_item.get("status") or "").upper()
-    if outgoing_status == "PENDING":
+    if outgoing_status not in {"ACCEPTED", "DECLINED", "EXPIRED", "CANCELLED"}:
         return jsonify({
             "success": False,
-            "message": "Wait for this player to respond before replacing them."
+            "message": "This roster slot cannot be replaced in its current state."
         }), 400
+
+    pending_slot_replacement = (
+        CompetitionTeamInvite.query
+        .filter_by(
+            participant_id=participant.id,
+            replaces_user_id=outgoing_user_id,
+            invite_type="REPLACEMENT",
+            status="PENDING",
+        )
+        .first()
+    )
+
+    if pending_slot_replacement:
+        return jsonify({
+            "success": False,
+            "message": "A replacement invitation is already pending for this roster slot.",
+            "invite": serialize_team_invite(pending_slot_replacement),
+        }), 409
 
     replacement_user = db.session.get(User, replacement_user_id)
     if not replacement_user:
@@ -5127,6 +5263,23 @@ def approve_substitution(competition_id, request_id):
             "message": "The replacement player is no longer game eligible."
         }), 400
 
+    if roster_player(participant, replacement_user.id):
+        return jsonify({
+            "success": False,
+            "message": "The replacement player is already on this roster."
+        }), 409
+
+    committed_replacement = get_committed_team_for_user(
+        competition,
+        replacement_user.id,
+        exclude_participant_id=participant.id,
+    )
+    if committed_replacement:
+        return jsonify({
+            "success": False,
+            "message": "The replacement player is already committed to another team in this competition."
+        }), 409
+
     if not (
         ClubMember.query
         .filter_by(
@@ -5197,6 +5350,7 @@ def approve_substitution(competition_id, request_id):
     )
 
     for involved_user_id in {
+        host.id,
         request_row.captain_id,
         request_row.outgoing_user_id,
     }:
@@ -5303,6 +5457,7 @@ def reject_substitution(competition_id, request_id):
     team_name = participant.club.name if participant and participant.club else "Tournament Team"
 
     for involved_user_id in {
+        host.id,
         request_row.captain_id,
         request_row.outgoing_user_id,
         request_row.replacement_user_id,

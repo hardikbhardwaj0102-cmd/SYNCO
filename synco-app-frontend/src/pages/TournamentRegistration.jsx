@@ -133,6 +133,12 @@ export default function TournamentRegistration() {
     const [replacementOutgoingUserId, setReplacementOutgoingUserId] = useState(null);
     const [replacementUserId, setReplacementUserId] = useState("");
     const [replacing, setReplacing] = useState(false);
+    const [showSubstitutionModal, setShowSubstitutionModal] = useState(false);
+    const [substitutionOutgoingUserId, setSubstitutionOutgoingUserId] = useState("");
+    const [substitutionReplacementUserId, setSubstitutionReplacementUserId] = useState("");
+    const [substitutionReason, setSubstitutionReason] = useState("");
+    const [submittingSubstitution, setSubmittingSubstitution] = useState(false);
+    const [substitutionActionId, setSubstitutionActionId] = useState(null);
     const [nowMs, setNowMs] = useState(() => Date.now());
     const [error, setError] = useState("");
     const [success, setSuccess] = useState("");
@@ -276,6 +282,52 @@ export default function TournamentRegistration() {
         replacementOutgoingUserId,
     ]);
 
+    const substitutionRequests = data?.substitutionRequests || [];
+    const isHost = Boolean(data?.isHost);
+    const registrationSettings = data?.registrationSettings || {};
+    const maxSubstitutions = Number(registrationSettings.maxSubstitutions ?? 1);
+    const completedSubstitutions = substitutionRequests.filter(
+        (item) => String(item.status || "").toUpperCase() === "COMPLETED"
+    ).length;
+    const pendingSubstitutionRequest = substitutionRequests.find(
+        (item) => String(item.status || "").toUpperCase() === "PENDING"
+    );
+    const substitutionCutoffDate = parseApiDate(data?.substitutionCutoff);
+    const substitutionWindowOpen = !substitutionCutoffDate || nowMs < substitutionCutoffDate.getTime();
+
+    const acceptedNonCaptainRoster = (currentRegistration?.teamRoster || []).filter(
+        (member) =>
+            String(member.status || "").toUpperCase() === "ACCEPTED" &&
+            Number(member.userId) !== Number(currentRegistration?.captainId || currentRegistration?.userId || 0)
+    );
+
+    const substitutionReplacementCandidates = useMemo(() => {
+        if (!selectedClub || !currentRegistration || !isCaptain) return [];
+
+        const currentRosterIds = new Set(
+            (currentRegistration.teamRoster || [])
+                .map((member) => Number(member.userId))
+                .filter((id) => Number.isFinite(id))
+        );
+
+        return (selectedClub.members || []).filter((member) => {
+            const memberId = Number(member.userId);
+            if (!Number.isFinite(memberId)) return false;
+            if (memberId === currentUserId) return false;
+            if (currentRosterIds.has(memberId)) return false;
+            return member.eligible !== false && !member.committedParticipantId;
+        });
+    }, [selectedClub, currentRegistration, isCaptain, currentUserId]);
+
+    const canRequestSubstitution =
+        isTeamCompetition &&
+        isCaptain &&
+        currentStatus === "LOCKED" &&
+        !pendingSubstitutionRequest &&
+        completedSubstitutions < maxSubstitutions &&
+        substitutionWindowOpen &&
+        acceptedNonCaptainRoster.length > 0;
+
     const hasActiveRegistration = ["PENDING", "ACCEPTED", "LOCKED", "ELIMINATED"].includes(
         currentStatus
     );
@@ -296,6 +348,7 @@ export default function TournamentRegistration() {
     const selectedEligible =
         !!selectedClub &&
         selectedClub.eligible !== false &&
+        Number(selectedClub.eligibleMemberCount || 0) >= teamSize &&
         !hasSelectedClubRegistration &&
         selectedMemberIds.length === teamSize;
 
@@ -307,8 +360,14 @@ export default function TournamentRegistration() {
 
         if (
             club.registration &&
-            registrationStatus !== "REJECTED"
+            registrationStatus !== "REJECTED" &&
+            registrationStatus !== "CANCELLED"
         ) {
+            return;
+        }
+
+        if (club.eligible === false) {
+            setError(club.unavailableReason || "This club is not eligible for this tournament.");
             return;
         }
 
@@ -438,6 +497,86 @@ export default function TournamentRegistration() {
             );
         } finally {
             setReplacing(false);
+        }
+    };
+
+    const openSubstitutionModal = () => {
+        const firstOutgoing = acceptedNonCaptainRoster[0];
+        setSubstitutionOutgoingUserId(firstOutgoing ? String(firstOutgoing.userId) : "");
+        setSubstitutionReplacementUserId("");
+        setSubstitutionReason("");
+        setShowSubstitutionModal(true);
+        setError("");
+        setSuccess("");
+    };
+
+    const closeSubstitutionModal = () => {
+        if (submittingSubstitution) return;
+        setShowSubstitutionModal(false);
+        setSubstitutionOutgoingUserId("");
+        setSubstitutionReplacementUserId("");
+        setSubstitutionReason("");
+    };
+
+    const handleRequestSubstitution = async () => {
+        if (!substitutionOutgoingUserId || !substitutionReplacementUserId) {
+            setError("Select the outgoing player and a replacement.");
+            return;
+        }
+        if (!substitutionReason.trim()) {
+            setError("Enter a reason for the substitution.");
+            return;
+        }
+        try {
+            setSubmittingSubstitution(true);
+            setError("");
+            setSuccess("");
+            const response = await apiRequest(
+                `/api/competitions/${competitionId}/registration/substitution-requests`,
+                {
+                    method: "POST",
+                    body: JSON.stringify({
+                        outgoingUserId: Number(substitutionOutgoingUserId),
+                        replacementUserId: Number(substitutionReplacementUserId),
+                        reason: substitutionReason.trim(),
+                    }),
+                }
+            );
+            setSuccess(response.message || "Substitution request sent to the host.");
+            closeSubstitutionModal();
+            await loadRegistration(false);
+        } catch (err) {
+            console.error("Substitution request failed:", err);
+            setError(err.message || "Unable to request substitution.");
+        } finally {
+            setSubmittingSubstitution(false);
+        }
+    };
+
+    const handleHostSubstitutionAction = async (requestId, action) => {
+        try {
+            setSubstitutionActionId(`${action}-${requestId}`);
+            setError("");
+            setSuccess("");
+            let rejectReason = "";
+            if (action === "reject") {
+                rejectReason = window.prompt("Reason for rejecting this substitution:", "") || "";
+            }
+            const response = await apiRequest(
+                `/api/competitions/${competitionId}/registration/substitution-requests/${requestId}/${action}`,
+                {
+                    method: "POST",
+                    ...(action === "reject" ? { body: JSON.stringify({ reason: rejectReason.trim() }) } : {}),
+                }
+            );
+            setSuccess(response.message || `Substitution ${action}ed.`);
+            await loadRegistration(false);
+        } catch (err) {
+            console.error(`Host substitution ${action} failed:`, err);
+            setError(err.message || `Unable to ${action} substitution.`);
+            await loadRegistration(false);
+        } finally {
+            setSubstitutionActionId(null);
         }
     };
 
@@ -736,7 +875,7 @@ export default function TournamentRegistration() {
                                                 : 0;
 
                                         const memberOk =
-                                            club.memberCount >= teamSize;
+                                            Number(club.eligibleMemberCount || 0) >= teamSize;
 
                                         const selectedRosterIds =
                                             isSelected
@@ -757,7 +896,7 @@ export default function TournamentRegistration() {
                                                     type="button"
                                                     className="registration-club-select-button"
                                                     onClick={() => handleClubSelect(club)}
-                                                    disabled={unavailable || !memberOk}
+                                                    disabled={unavailable || !memberOk || club.eligible === false}
                                                 >
                                                     <div className="registration-club-top">
                                                         <div className="registration-club-avatar">
@@ -792,7 +931,7 @@ export default function TournamentRegistration() {
                                                             <strong>
                                                                 {isSelected
                                                                     ? `${selectedCount}/${teamSize} selected`
-                                                                    : `${club.memberCount} club member${club.memberCount === 1 ? "" : "s"}`}
+                                                                    : `${club.eligibleMemberCount || 0}/${club.memberCount} eligible member${club.memberCount === 1 ? "" : "s"}`}
                                                             </strong>
                                                         </div>
 
@@ -815,9 +954,11 @@ export default function TournamentRegistration() {
                                                                     className={`registration-member-select ${
                                                                         checked ? "selected" : ""
                                                                     } ${
-                                                                        !isSelected || unavailable
+                                                                        !isSelected || unavailable || member.eligible === false
                                                                             ? "locked"
                                                                             : ""
+                                                                    } ${
+                                                                        member.eligible === false ? "ineligible" : ""
                                                                     }`}
                                                                     key={member.id || member.userId}
                                                                     onClick={(event) => event.stopPropagation()}
@@ -828,6 +969,7 @@ export default function TournamentRegistration() {
                                                                         disabled={
                                                                             !isSelected ||
                                                                             unavailable ||
+                                                                            member.eligible === false ||
                                                                             (!checked &&
                                                                                 selectedMemberIds.length >= teamSize)
                                                                         }
@@ -845,10 +987,13 @@ export default function TournamentRegistration() {
                                                                         {member.uid && (
                                                                             <span>{member.uid}</span>
                                                                         )}
+                                                                        {member.eligible === false && member.unavailableReason && (
+                                                                            <small>{member.unavailableReason}</small>
+                                                                        )}
                                                                     </div>
 
                                                                     <span className="registration-member-role">
-                                                                        {member.role || "MEMBER"}
+                                                                        {member.eligible === false ? "UNAVAILABLE" : (member.role || "MEMBER")}
                                                                     </span>
                                                                 </label>
                                                             );
@@ -856,12 +1001,12 @@ export default function TournamentRegistration() {
                                                     </div>
                                                 </div>
 
-                                                {!memberOk && !unavailable && (
+                                                {(!memberOk || club.eligible === false) && !unavailable && (
                                                     <div className="registration-card-warning">
                                                         <AlertCircle size={14} />
                                                         <span>
-                                                            This club has only {club.memberCount} member{club.memberCount === 1 ? "" : "s"};
-                                                            this tournament requires {teamSize}.
+                                                            {club.unavailableReason ||
+                                                                `Only ${club.eligibleMemberCount || 0} eligible player${Number(club.eligibleMemberCount || 0) === 1 ? "" : "s"}; ${teamSize} required.`}
                                                         </span>
                                                     </div>
                                                 )}
@@ -933,7 +1078,7 @@ export default function TournamentRegistration() {
                                                 </strong>
                                             </div>
                                             {isCaptain && data?.registrationOpen && (
-                                                <small>Captain can replace an accepted player before the deadline.</small>
+                                                <small>Captain can replace a roster player before the deadline. The old player stays until the replacement accepts.</small>
                                             )}
                                         </div>
 
@@ -944,6 +1089,10 @@ export default function TournamentRegistration() {
                                                 .map((member) => {
                                                     const memberStatus = String(member.status || "").toUpperCase();
                                                     const isCurrentCaptain = Number(member.userId) === Number(currentRegistration.captainId);
+                                                    const replacementPending = (currentRegistration.pendingReplacementInvites || []).some(
+                                                        (invite) => String(invite.replacesUserId) === String(member.userId) &&
+                                                            String(invite.status || "").toUpperCase() === "PENDING"
+                                                    );
                                                     const hasPendingInvite = memberStatus === "PENDING";
                                                     const inviteTimeLeft = formatRemaining(member.inviteExpiresAt, nowMs);
 
@@ -977,20 +1126,72 @@ export default function TournamentRegistration() {
                                                             {isCaptain &&
                                                                 data?.registrationOpen &&
                                                                 !isCurrentCaptain &&
-                                                                memberStatus === "ACCEPTED" && (
-                                                                    <button
-                                                                        type="button"
-                                                                        className="registration-replace-button"
-                                                                        onClick={() => openReplaceModal(member.userId)}
-                                                                    >
-                                                                        <UserPlus size={13} />
-                                                                        Replace
-                                                                    </button>
+                                                                ["ACCEPTED", "DECLINED", "EXPIRED", "CANCELLED"].includes(memberStatus) && (
+                                                                    replacementPending ? (
+                                                                        <span className="registration-replacement-pending">Replacement Pending</span>
+                                                                    ) : (
+                                                                        <button
+                                                                            type="button"
+                                                                            className="registration-replace-button"
+                                                                            onClick={() => openReplaceModal(member.userId)}
+                                                                        >
+                                                                            <UserPlus size={13} />
+                                                                            Replace
+                                                                        </button>
+                                                                    )
                                                                 )}
                                                         </div>
                                                     );
                                                 })}
                                         </div>
+
+                                        {isCaptain && (currentRegistration.pendingReplacementInvites || []).length > 0 && (
+                                            <div className="registration-pending-replacement-list">
+                                                <div className="registration-pending-replacement-heading">
+                                                    <span>PENDING REPLACEMENT INVITES</span>
+                                                    <small>Waiting for the replacement player to accept.</small>
+                                                </div>
+                                                {(currentRegistration.pendingReplacementInvites || []).map((invite) => (
+                                                    <div className="registration-pending-replacement-row" key={invite.id}>
+                                                        <div>
+                                                            <strong>{invite.user?.name || invite.user?.username || `Player ${invite.invitedUserId}`}</strong>
+                                                            <span>Replacing {invite.replacesUserId ? `player #${invite.replacesUserId}` : "roster slot"}</span>
+                                                        </div>
+                                                        <strong>{formatRemaining(invite.expiresAt, nowMs)} left</strong>
+                                                    </div>
+                                                ))}
+                                            </div>
+                                        )}
+
+                                        {isCaptain && isTeamCompetition && currentStatus === "LOCKED" && (
+                                            <div className="registration-substitution-tools">
+                                                <div>
+                                                    <span>POST-LOCK SUBSTITUTIONS</span>
+                                                    <strong>{completedSubstitutions}/{maxSubstitutions} substitutions used</strong>
+                                                    {substitutionCutoffDate && <small>Requests close {formatDate(data?.substitutionCutoff)}.</small>}
+                                                </div>
+                                                {canRequestSubstitution ? (
+                                                    <button
+                                                        type="button"
+                                                        className="registration-substitution-button"
+                                                        onClick={openSubstitutionModal}
+                                                    >
+                                                        <UserPlus size={14} />
+                                                        Request Substitution
+                                                    </button>
+                                                ) : (
+                                                    <span className="registration-substitution-closed">
+                                                        {pendingSubstitutionRequest
+                                                            ? "Awaiting host decision"
+                                                            : completedSubstitutions >= maxSubstitutions
+                                                                ? "Substitution limit reached"
+                                                                : !substitutionWindowOpen
+                                                                    ? "Substitution window closed"
+                                                                    : "No eligible substitution available"}
+                                                    </span>
+                                                )}
+                                            </div>
+                                        )}
                                     </div>
                                 )}
 
@@ -1034,6 +1235,43 @@ export default function TournamentRegistration() {
                         )}
                     </section>
 
+                    {isHost && isTeamCompetition && substitutionRequests.length > 0 && (
+                        <section className="registration-host-panel">
+                            <div className="registration-host-panel-heading">
+                                <div><span>HOST CONTROL</span><strong>Substitution requests</strong></div>
+                                <ShieldCheck size={17} />
+                            </div>
+                            <div className="registration-host-request-list">
+                                {substitutionRequests.map((request) => {
+                                    const requestStatus = String(request.status || "").toUpperCase();
+                                    const isPending = requestStatus === "PENDING";
+                                    return (
+                                        <div className="registration-host-request-card" key={request.id}>
+                                            <div className="registration-host-request-main">
+                                                <strong>{request.teamName || "Tournament Team"}</strong>
+                                                <span>
+                                                    {request.outgoingUser?.name || request.outgoingUser?.username || `Player ${request.outgoingUserId || ""}`} → {request.replacementUser?.name || request.replacementUser?.username || `Player ${request.replacementUserId || ""}`}
+                                                </span>
+                                                <small>{request.reason || "No reason provided"}</small>
+                                            </div>
+                                            <div className={`registration-host-request-status ${requestStatus.toLowerCase()}`}>{statusLabel(requestStatus)}</div>
+                                            {isPending && (
+                                                <div className="registration-host-request-actions">
+                                                    <button type="button" className="registration-host-approve" onClick={() => handleHostSubstitutionAction(request.id, "approve")} disabled={Boolean(substitutionActionId)}>
+                                                        {substitutionActionId === `approve-${request.id}` ? "Approving..." : "Approve"}
+                                                    </button>
+                                                    <button type="button" className="registration-host-reject" onClick={() => handleHostSubstitutionAction(request.id, "reject")} disabled={Boolean(substitutionActionId)}>
+                                                        {substitutionActionId === `reject-${request.id}` ? "Rejecting..." : "Reject"}
+                                                    </button>
+                                                </div>
+                                            )}
+                                        </div>
+                                    );
+                                })}
+                            </div>
+                        </section>
+                    )}
+
                     <aside className="registration-side">
                         <section className="registration-side-card">
                             <div className="registration-side-heading">
@@ -1060,10 +1298,21 @@ export default function TournamentRegistration() {
                                 <span>TOURNAMENT RULES</span>
                             </div>
                             <div className="registration-rule-list">
-                                <div><Check size={13} /> <span>Only registered SYNCO teams/players can participate.</span></div>
-                                <div><Check size={13} /> <span>The club owner selects the exact tournament roster from current club members.</span></div>
-                                <div><Check size={13} /> <span>Organizer approval and tournament locking happen in the Competition Engine.</span></div>
-                                <div><Check size={13} /> <span>Matches are generated from the selected game format after registration closes.</span></div>
+                                {isTeamCompetition ? (
+                                    <>
+                                        <div><Check size={13} /> <span>Any club member can start the team registration; the club owner has no special tournament role.</span></div>
+                                        <div><Check size={13} /> <span>Select exactly {teamSize} eligible club members, including yourself as captain.</span></div>
+                                        <div><Check size={13} /> <span>Each teammate receives a separate invite for up to 5 hours, capped by the registration deadline.</span></div>
+                                        <div><Check size={13} /> <span>Declined or expired slots can be replaced by the captain before the deadline.</span></div>
+                                        <div><Check size={13} /> <span>Rosters lock at the deadline; post-lock substitutions require host approval.</span></div>
+                                    </>
+                                ) : (
+                                    <>
+                                        <div><Check size={13} /> <span>Solo registration is direct from your existing SYNCO account.</span></div>
+                                        <div><Check size={13} /> <span>The tournament game must be linked to your SYNCO profile.</span></div>
+                                    </>
+                                )}
+                                <div><Check size={13} /> <span>Only confirmed full teams count toward tournament capacity.</span></div>
                             </div>
                         </section>
 
@@ -1172,6 +1421,58 @@ export default function TournamentRegistration() {
                                         Send Replacement Invite
                                     </>
                                 )}
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {showSubstitutionModal && (
+                <div
+                    className="registration-modal-backdrop"
+                    role="presentation"
+                    onMouseDown={(event) => {
+                        if (event.target === event.currentTarget && !submittingSubstitution) closeSubstitutionModal();
+                    }}
+                >
+                    <div className="registration-confirm-modal registration-substitution-modal" role="dialog" aria-modal="true" aria-labelledby="substitution-title">
+                        <div className="registration-confirm-modal-header">
+                            <div>
+                                <span>TEAM MANAGEMENT</span>
+                                <h3 id="substitution-title">Request substitution</h3>
+                            </div>
+                            <button type="button" className="registration-modal-close" onClick={closeSubstitutionModal} disabled={submittingSubstitution} aria-label="Close substitution dialog">
+                                <X size={16} />
+                            </button>
+                        </div>
+                        <div className="registration-replace-content">
+                            <p>Host approval is required. The roster changes only after the replacement player accepts the approved invitation.</p>
+
+                            <label className="registration-replace-field">
+                                <span>PLAYER TO REMOVE</span>
+                                <select value={substitutionOutgoingUserId} onChange={(event) => { setSubstitutionOutgoingUserId(event.target.value); setSubstitutionReplacementUserId(""); }} disabled={submittingSubstitution}>
+                                    <option value="">Select player</option>
+                                    {acceptedNonCaptainRoster.map((member) => <option key={member.userId} value={member.userId}>{member.name || member.username || `Player ${member.userId}`}</option>)}
+                                </select>
+                            </label>
+
+                            <label className="registration-replace-field">
+                                <span>REPLACEMENT PLAYER</span>
+                                <select value={substitutionReplacementUserId} onChange={(event) => setSubstitutionReplacementUserId(event.target.value)} disabled={submittingSubstitution}>
+                                    <option value="">Select eligible club member</option>
+                                    {substitutionReplacementCandidates.map((member) => <option key={member.userId} value={member.userId}>{member.name || member.username || `Player ${member.userId}`}{member.uid ? ` — ${member.uid}` : ""}</option>)}
+                                </select>
+                            </label>
+
+                            <label className="registration-replace-field">
+                                <span>REASON</span>
+                                <textarea value={substitutionReason} onChange={(event) => setSubstitutionReason(event.target.value)} placeholder="Why is this substitution required?" rows={4} disabled={submittingSubstitution} />
+                            </label>
+                        </div>
+                        <div className="registration-confirm-modal-actions">
+                            <button type="button" className="registration-modal-cancel" onClick={closeSubstitutionModal} disabled={submittingSubstitution}>Cancel</button>
+                            <button type="button" className="registration-modal-confirm" onClick={handleRequestSubstitution} disabled={submittingSubstitution || !substitutionOutgoingUserId || !substitutionReplacementUserId || !substitutionReason.trim()}>
+                                {submittingSubstitution ? <> <Loader2 size={15} className="registration-spin" /> Sending... </> : <> <UserPlus size={15} /> Send Request </>}
                             </button>
                         </div>
                     </div>

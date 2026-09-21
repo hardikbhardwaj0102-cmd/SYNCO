@@ -2,7 +2,7 @@ from datetime import datetime
 import secrets
 
 from flask_sqlalchemy import SQLAlchemy
-from sqlalchemy import event
+from sqlalchemy import event, text
 
 
 # =========================================================
@@ -3190,10 +3190,21 @@ class CompetitionParticipant(db.Model):
     )
 
     __table_args__ = (
-        db.UniqueConstraint(
+        # A player may have historical CANCELLED/REJECTED rows in the same
+        # competition. Only one active/locked/eliminated commitment is
+        # allowed for the same (competition, user). This also covers TEAM
+        # captains because the captain is stored in user_id.
+        db.Index(
+            "uq_competition_player_participant_active",
             "competition_id",
             "user_id",
-            name="uq_competition_player_participant"
+            unique=True,
+            postgresql_where=text(
+                "user_id IS NOT NULL AND registration_status NOT IN ('REJECTED', 'CANCELLED', 'DISQUALIFIED')"
+            ),
+            sqlite_where=text(
+                "user_id IS NOT NULL AND registration_status NOT IN ('REJECTED', 'CANCELLED', 'DISQUALIFIED')"
+            ),
         ),
         db.CheckConstraint(
             "(participant_type = 'PLAYER' AND user_id IS NOT NULL AND club_id IS NULL) "

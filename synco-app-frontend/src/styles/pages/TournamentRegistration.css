@@ -1607,3 +1607,251 @@
         grid-row: 2;
     }
 }
+
+/* =========================================================
+   FINAL REGISTRATION RULES — V4
+   ========================================================= */
+
+.registration-member-select.ineligible {
+    opacity: 0.48;
+    cursor: not-allowed;
+}
+
+.registration-member-select-info small {
+    display: block;
+    margin-top: 3px;
+    font-size: 10px;
+    line-height: 1.35;
+    font-weight: 700;
+    color: #9a9a9a;
+}
+
+.registration-replacement-pending {
+    display: inline-flex;
+    align-items: center;
+    min-height: 30px;
+    padding: 0 10px;
+    border: 1px solid #dedede;
+    border-radius: 9px;
+    font-size: 10px;
+    font-weight: 800;
+    text-transform: uppercase;
+    letter-spacing: .08em;
+    color: #777;
+    white-space: nowrap;
+}
+
+.registration-substitution-tools {
+    margin-top: 14px;
+    padding: 14px 15px;
+    border: 1px solid #e3e3e3;
+    border-radius: 12px;
+    background: #fafafa;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+}
+
+.registration-substitution-tools > div:first-child {
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+}
+
+.registration-substitution-tools span:first-child,
+.registration-host-panel-heading span {
+    font-size: 9px;
+    font-weight: 900;
+    letter-spacing: .13em;
+    text-transform: uppercase;
+    color: #999;
+}
+
+.registration-substitution-tools strong,
+.registration-host-panel-heading strong {
+    font-size: 12px;
+    color: #1b1b1b;
+}
+
+.registration-substitution-tools small {
+    font-size: 10px;
+    color: #858585;
+}
+
+.registration-substitution-button,
+.registration-host-approve,
+.registration-host-reject {
+    min-height: 34px;
+    border-radius: 9px;
+    padding: 0 12px;
+    border: 1px solid #1b1b1b;
+    background: #1b1b1b;
+    color: #fff;
+    font-size: 10px;
+    font-weight: 900;
+    letter-spacing: .05em;
+    text-transform: uppercase;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    white-space: nowrap;
+    cursor: pointer;
+}
+
+.registration-substitution-button:disabled,
+.registration-host-approve:disabled,
+.registration-host-reject:disabled {
+    opacity: .55;
+    cursor: not-allowed;
+}
+
+.registration-substitution-closed {
+    font-size: 10px;
+    font-weight: 800;
+    color: #8f8f8f;
+    text-transform: uppercase;
+    letter-spacing: .05em;
+    text-align: right;
+}
+
+.registration-host-panel {
+    grid-column: 1 / -1;
+    padding: 18px;
+    border: 1px solid #dedede;
+    border-radius: 14px;
+    background: #fff;
+}
+
+.registration-host-panel-heading {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    padding-bottom: 13px;
+    border-bottom: 1px solid #ececec;
+}
+
+.registration-host-panel-heading > div {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.registration-host-request-list {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    margin-top: 14px;
+}
+
+.registration-host-request-card {
+    padding: 13px;
+    border: 1px solid #e5e5e5;
+    border-radius: 11px;
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    gap: 12px;
+    align-items: center;
+}
+
+.registration-host-request-main {
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+    min-width: 0;
+}
+
+.registration-host-request-main strong {
+    font-size: 12px;
+    color: #1a1a1a;
+}
+
+.registration-host-request-main span {
+    font-size: 11px;
+    color: #555;
+}
+
+.registration-host-request-main small {
+    font-size: 10px;
+    line-height: 1.4;
+    color: #888;
+}
+
+.registration-host-request-status {
+    align-self: start;
+    padding: 5px 8px;
+    border-radius: 7px;
+    background: #f2f2f2;
+    font-size: 9px;
+    font-weight: 900;
+    text-transform: uppercase;
+    letter-spacing: .08em;
+    color: #777;
+}
+
+.registration-host-request-status.approved,
+.registration-host-request-status.completed {
+    background: #ededed;
+    color: #222;
+}
+
+.registration-host-request-status.rejected {
+    background: #f5f5f5;
+    color: #888;
+}
+
+.registration-host-request-actions {
+    grid-column: 1 / -1;
+    display: flex;
+    gap: 8px;
+}
+
+.registration-host-reject {
+    border-color: #ddd;
+    background: #fff;
+    color: #555;
+}
+
+.registration-substitution-modal {
+    max-width: 540px;
+}
+
+.registration-substitution-modal textarea,
+.registration-replace-field textarea {
+    width: 100%;
+    resize: vertical;
+    min-height: 92px;
+    border: 1px solid #dcdcdc;
+    border-radius: 9px;
+    padding: 10px 11px;
+    background: #fff;
+    color: #222;
+    font: inherit;
+    font-size: 12px;
+    outline: none;
+}
+
+.registration-substitution-modal textarea:focus,
+.registration-replace-field textarea:focus {
+    border-color: #999;
+}
+
+@media (max-width: 760px) {
+    .registration-substitution-tools {
+        align-items: flex-start;
+        flex-direction: column;
+    }
+
+    .registration-substitution-button,
+    .registration-substitution-closed {
+        width: 100%;
+        text-align: center;
+    }
+
+    .registration-host-request-card {
+        grid-template-columns: 1fr;
+    }
+}

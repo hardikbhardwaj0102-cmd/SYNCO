@@ -283,184 +283,148 @@ def serialize_notification(notification):
                     payload["is_read"] = True
 
     # =====================================================
-    # COMPETITION REGISTRATION / INVITE
+    # COMPETITION REGISTRATION / INVITES / SUBSTITUTIONS
     # =====================================================
 
     if (
-        reference_type == "COMPETITION"
-        or notification_type.startswith("COMPETITION_")
+        notification_type.startswith("COMPETITION_")
+        or reference_type == "COMPETITION"
     ):
 
-        invite_id = (
-            data.get("inviteId")
-            or data.get("invite_id")
-        )
-
+        invite_id = data.get("inviteId") or data.get("invite_id")
         substitution_id = (
             data.get("substitutionRequestId")
             or data.get("substitution_request_id")
         )
 
+        invite = None
+        substitution = None
+
         if invite_id:
+            invite = db.session.get(CompetitionTeamInvite, invite_id)
 
-            invite = db.session.get(
-                CompetitionTeamInvite,
-                invite_id,
-            )
-
-            if invite:
-
-                status = str(
-                    invite.status or ""
-                ).upper()
-
-                payload["actionStatus"] = status
-                payload["action_status"] = status
-
-                data["actionStatus"] = status
-                data["action_status"] = status
-                data["inviteStatus"] = status
-                data["invite_status"] = status
-                data["expiresAt"] = (
-                    invite.expires_at.isoformat()
-                    if invite.expires_at
-                    else data.get("expiresAt")
-                )
-
-                participant = invite.participant
-                data["participantId"] = (
-                    participant.id
-                    if participant
-                    else data.get("participantId")
-                )
-
-                data.setdefault(
-                    "actionUrl",
-                    f"/competitions/{invite.competition_id}/register"
-                )
-
-                payload["data"] = data
-
-                if status != "PENDING":
-                    payload["isRead"] = True
-                    payload["is_read"] = True
-
-        elif substitution_id:
-
+        if substitution_id:
             substitution = db.session.get(
                 CompetitionSubstitutionRequest,
                 substitution_id,
             )
 
-            if substitution:
+        if invite:
+            invite_status = str(invite.status or "").upper()
+            payload["actionStatus"] = invite_status
+            payload["action_status"] = invite_status
+            payload["inviteStatus"] = invite_status
+            payload["invite_status"] = invite_status
+            data["actionStatus"] = invite_status
+            data["action_status"] = invite_status
+            data["inviteStatus"] = invite_status
+            data["invite_status"] = invite_status
+            data["inviteId"] = invite.id
+            data["participantId"] = invite.participant_id
+            data["expiresAt"] = (
+                invite.expires_at.isoformat()
+                if invite.expires_at
+                else None
+            )
+            data["inviteType"] = invite.invite_type
+            data["actionUrl"] = f"/competitions/{invite.competition_id}/register"
+            payload["data"] = data
 
-                status = str(
-                    substitution.status or ""
-                ).upper()
+            if invite_status != "PENDING":
+                # Once the member responds or a competing invite is
+                # cancelled/expired, there is no longer an action to take.
+                payload["isRead"] = True
+                payload["is_read"] = True
 
-                payload["actionStatus"] = status
-                payload["action_status"] = status
+        if substitution:
+            substitution_status = str(substitution.status or "").upper()
+            payload["actionStatus"] = substitution_status
+            payload["action_status"] = substitution_status
+            payload["substitutionStatus"] = substitution_status
+            payload["substitution_status"] = substitution_status
+            data["actionStatus"] = substitution_status
+            data["action_status"] = substitution_status
+            data["substitutionStatus"] = substitution_status
+            data["substitution_status"] = substitution_status
+            data["substitutionRequestId"] = substitution.id
+            data["participantId"] = substitution.participant_id
+            data["decisionDeadline"] = (
+                substitution.decision_deadline.isoformat()
+                if substitution.decision_deadline
+                else None
+            )
+            payload["data"] = data
 
-                data["actionStatus"] = status
-                data["action_status"] = status
-                data["substitutionStatus"] = status
-                data["substitution_status"] = status
-                data["decisionDeadline"] = (
-                    substitution.decision_deadline.isoformat()
-                    if substitution.decision_deadline
-                    else data.get("decisionDeadline")
-                )
-
-                data.setdefault(
-                    "actionUrl",
-                    f"/competitions/{substitution.competition_id}/register"
-                )
-
-                payload["data"] = data
-
-                if status != "PENDING":
-                    payload["isRead"] = True
-                    payload["is_read"] = True
+            if substitution_status != "PENDING":
+                payload["isRead"] = True
+                payload["is_read"] = True
 
     return payload
 
 
 # =========================================================
-# COMPETITION TIMER MAINTENANCE FOR CURRENT USER
+# COMPETITION TIMER MAINTENANCE
 # =========================================================
 
 def process_current_user_competition_timers(current_user):
     """
-    Keep registration invite timers/reminders fresh whenever the current
-    user loads notifications. This is also safe to call repeatedly from a
-    scheduled maintenance job.
+    Process registration expiry/reminders for competitions that are relevant
+    to the current user. This keeps invite status and captain notifications
+    current whenever the notification center is opened or its unread badge is
+    refreshed.
     """
+
+    if not current_user:
+        return
 
     try:
         from competition import process_competition_registration_timers
-    except Exception:
-        return
 
-    competition_ids = set()
-
-    pending_invites = (
-        CompetitionTeamInvite.query
-        .filter_by(
-            invited_user_id=current_user.id,
-            status="PENDING",
-        )
-        .all()
-    )
-
-    competition_ids.update(
-        invite.competition_id
-        for invite in pending_invites
-        if invite.competition_id
-    )
-
-    captain_entries = (
-        CompetitionParticipant.query
-        .filter_by(
-            user_id=current_user.id,
-            participant_type="TEAM",
-        )
-        .filter(
-            CompetitionParticipant.registration_status.in_([
-                "PENDING",
-                "ACCEPTED",
-                "LOCKED",
-            ])
-        )
-        .all()
-    )
-
-    competition_ids.update(
-        participant.competition_id
-        for participant in captain_entries
-        if participant.competition_id
-    )
-
-    for competition_id in competition_ids:
-        competition = db.session.get(
-            Competition,
-            competition_id,
-        )
-        if not competition:
-            continue
-
-        try:
-            process_competition_registration_timers(
-                competition,
-                commit=False,
+        competition_ids = set(
+            row[0]
+            for row in (
+                db.session.query(CompetitionTeamInvite.competition_id)
+                .filter(
+                    CompetitionTeamInvite.invited_user_id == current_user.id
+                )
+                .distinct()
+                .all()
             )
-        except Exception:
-            db.session.rollback()
+        )
 
-    if competition_ids:
-        try:
+        captain_ids = {
+            row[0]
+            for row in (
+                db.session.query(CompetitionParticipant.competition_id)
+                .filter(
+                    CompetitionParticipant.user_id == current_user.id,
+                    CompetitionParticipant.participant_type == "TEAM",
+                    CompetitionParticipant.registration_status.in_([
+                        "PENDING",
+                        "ACCEPTED",
+                        "LOCKED",
+                    ]),
+                )
+                .distinct()
+                .all()
+            )
+        }
+        competition_ids.update(captain_ids)
+
+        for competition_id in competition_ids:
+            competition = db.session.get(Competition, competition_id)
+            if competition:
+                process_competition_registration_timers(
+                    competition,
+                    commit=False,
+                )
+
+        if competition_ids:
             db.session.commit()
-        except Exception:
-            db.session.rollback()
+
+    except Exception as exc:
+        db.session.rollback()
+        print("Competition notification maintenance error:", exc)
 
 
 # =========================================================
