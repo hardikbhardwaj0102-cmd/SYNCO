@@ -167,7 +167,7 @@ def display_team_name(participant):
 
 
 def get_team_participants(competition):
-    """Return accepted/locked team participants in the competition."""
+    """Return only confirmed/locked team registrations for the live event."""
 
     return (
         CompetitionParticipant.query
@@ -176,12 +176,13 @@ def get_team_participants(competition):
             participant_type="TEAM",
         )
         .filter(
-            CompetitionParticipant.registration_status.notin_(
-                ["REJECTED", "DISQUALIFIED"]
+            CompetitionParticipant.registration_status.in_(
+                ["ACCEPTED", "LOCKED"]
             )
         )
         .order_by(
             CompetitionParticipant.seed.asc().nullslast(),
+            CompetitionParticipant.registered_at.asc().nullslast(),
             CompetitionParticipant.id.asc(),
         )
         .all()
@@ -535,7 +536,9 @@ def validate_match_players(match, payload_players):
 
     for raw in payload_players:
         try:
-            user_id = int(raw.get("userId"))
+            user_id = int(
+                raw.get("userId", raw.get("user_id", raw.get("player_id")))
+            )
         except (TypeError, ValueError):
             return None, "Each player needs a valid userId."
 
@@ -673,9 +676,18 @@ def dashboard(competition_id):
         None,
     )
 
+    viewer = current_user()
+
     return jsonify({
         "success": True,
         "dashboard": {
+            "viewer": {
+                "authenticated": bool(viewer),
+                "userId": viewer.id if viewer else None,
+                "isOrganizer": bool(
+                    viewer and competition.organizer_id == viewer.id
+                ),
+            },
             "competition": {
                 "id": competition.id,
                 "title": competition.title,
@@ -734,8 +746,17 @@ def overview(competition_id):
         .all()
     )
 
+    viewer = current_user()
+
     return jsonify({
         "success": True,
+        "viewer": {
+            "authenticated": bool(viewer),
+            "userId": viewer.id if viewer else None,
+            "isOrganizer": bool(
+                viewer and competition.organizer_id == viewer.id
+            ),
+        },
         "overview": {
             "competition": {
                 "id": competition.id,
@@ -999,7 +1020,9 @@ def save_scores(competition_id, match_id):
 
     try:
         for raw in players:
-            user_id = int(raw.get("userId"))
+            user_id = int(
+                raw.get("userId", raw.get("user_id", raw.get("player_id")))
+            )
             points = int(raw.get("points", raw.get("score", 0)))
             kills = int(raw.get("kills", 0))
             assists = int(raw.get("assists", 0))
@@ -1058,8 +1081,12 @@ def save_scores(competition_id, match_id):
                 "source": "SYNCO_LIVE_DASHBOARD",
                 "players": [
                     {
-                        "userId": int(raw.get("userId")),
-                        "participantId": expected[int(raw.get("userId"))],
+                        "userId": int(
+                            raw.get("userId", raw.get("user_id", raw.get("player_id")))
+                        ),
+                        "participantId": expected[int(
+                            raw.get("userId", raw.get("user_id", raw.get("player_id")))
+                        )],
                         "points": int(raw.get("points", raw.get("score", 0))),
                         "kills": int(raw.get("kills", 0)),
                         "assists": int(raw.get("assists", 0)),
@@ -1177,8 +1204,17 @@ def results(competition_id):
     for rank, row in enumerate(rows, start=1):
         row["finalRank"] = rank
 
+    viewer = current_user()
+
     return jsonify({
         "success": True,
+        "viewer": {
+            "authenticated": bool(viewer),
+            "userId": viewer.id if viewer else None,
+            "isOrganizer": bool(
+                viewer and competition.organizer_id == viewer.id
+            ),
+        },
         "competition": {
             "id": competition.id,
             "title": competition.title,
