@@ -3357,6 +3357,22 @@ def get_registration_info(competition_id):
         .first()
     )
 
+    # For TEAM competitions, the participant row stores the captain in
+    # user_id. An accepted teammate therefore needs to resolve their current
+    # team through the committed-team helper. Pending invites are intentionally
+    # not treated as registrations.
+    if current_registration is None and is_team:
+        current_registration = get_committed_team_for_user(
+            competition,
+            user.id,
+        )
+
+    current_is_captain = bool(
+        current_registration
+        and str(current_registration.participant_type or "").upper() == "TEAM"
+        and current_registration.user_id == user.id
+    )
+
     # All current memberships for the competition game. Owner is simply
     # another membership; there is no special registration permission.
     memberships = (
@@ -3560,6 +3576,14 @@ def get_registration_info(competition_id):
     return jsonify({
         "success": True,
         "competition": serialize_competition(competition),
+        "currentUserId": user.id,
+        "isCaptain": current_is_captain,
+        "isHost": competition.organizer_id == user.id,
+        "substitutionCutoff": (
+            substitution_cutoff(competition).isoformat()
+            if substitution_cutoff(competition)
+            else None
+        ),
         "registrationOpen": registration_open,
         "registrationDeadline": (
             competition.registration_end.isoformat()
@@ -3622,6 +3646,21 @@ def register_player(competition_id):
 
     if sync_registration_status(competition):
         db.session.commit()
+
+    # Serialize registration writes for this competition. This prevents
+    # concurrent requests from both passing the capacity check.
+    competition = (
+        Competition.query
+        .filter_by(id=competition_id)
+        .with_for_update()
+        .first()
+    )
+
+    if not competition:
+        return jsonify({
+            "success": False,
+            "message": "Competition not found."
+        }), 404
 
     if not is_registration_open_now(competition):
         return jsonify({
@@ -3726,6 +3765,21 @@ def register_team(competition_id):
     if sync_registration_status(competition):
         db.session.commit()
 
+    # Serialize registration writes for this competition. This prevents
+    # concurrent requests from both passing the capacity check.
+    competition = (
+        Competition.query
+        .filter_by(id=competition_id)
+        .with_for_update()
+        .first()
+    )
+
+    if not competition:
+        return jsonify({
+            "success": False,
+            "message": "Competition not found."
+        }), 404
+
     if not is_registration_open_now(competition):
         return jsonify({
             "success": False,
@@ -3788,13 +3842,28 @@ def register_team(competition_id):
             "message": "The registering player must be included as the team captain."
         }), 400
 
+    # The player who starts the registration is always captain and occupies
+    # roster slot 1, regardless of the client-supplied order.
+    member_ids = [
+        user.id,
+        *[member_id for member_id in member_ids if member_id != user.id],
+    ]
+
     if user_has_any_active_competition_entry(competition, user.id):
         return jsonify({
             "success": False,
             "message": "You are already committed to an entry in this competition."
         }), 409
 
-    club = db.session.get(Club, club_id)
+    # Lock the club as well so two captains cannot concurrently register the
+    # same club before either request commits.
+    club = (
+        Club.query
+        .filter_by(id=club_id)
+        .with_for_update()
+        .first()
+    )
+
     if not club:
         return jsonify({
             "success": False,
@@ -3964,6 +4033,15 @@ def register_team(competition_id):
     db.session.add(participant)
     db.session.flush()
 
+    # Starting a team registration makes the captain immediately committed.
+    # Cancel any other pending team invitations for this player so other
+    # captains do not keep waiting on an invite that can no longer be accepted.
+    cancel_other_pending_competition_invites(
+        competition,
+        user.id,
+        accepted_invite_id=None,
+    )
+
     for index, membership in enumerate(roster_memberships, start=1):
 
         member_user = membership.user
@@ -4119,7 +4197,22 @@ def accept_team_invite(competition_id, invite_id):
         }), 404
 
     process_competition_registration_timers(competition, commit=True)
-    db.session.refresh(competition)
+
+    # Serialize invite acceptance within the competition. Without this lock,
+    # two rapid/concurrent accepts for the same player could both pass the
+    # commitment check before either transaction commits.
+    competition = (
+        Competition.query
+        .filter_by(id=competition_id)
+        .with_for_update()
+        .first()
+    )
+
+    if not competition:
+        return jsonify({
+            "success": False,
+            "message": "Competition not found."
+        }), 404
 
     invite = (
         CompetitionTeamInvite.query
@@ -4142,7 +4235,25 @@ def accept_team_invite(competition_id, invite_id):
             "message": "You cannot accept this invitation."
         }), 403
 
-    if invite.status != "PENDING":
+    invite_status = str(invite.status or "").upper()
+
+    # Idempotent success for a repeated accept request. This commonly happens
+    # when the notification UI and registration page race to refresh.
+    if invite_status == "ACCEPTED":
+        participant = invite.participant
+        return jsonify({
+            "success": True,
+            "message": "Tournament invitation already accepted.",
+            "participant": (
+                serialize_participant(participant)
+                if participant
+                else None
+            ),
+            "invite": serialize_team_invite(invite),
+            "alreadyAccepted": True,
+        })
+
+    if invite_status != "PENDING":
         return jsonify({
             "success": False,
             "message": f"This invitation is no longer pending. Current state: {invite.status.lower()}."
@@ -5458,6 +5569,17 @@ def withdraw_registration(competition_id):
             "message": "This registration cannot be withdrawn."
         }), 400
 
+    # Only the captain who started a team registration can withdraw it.
+    # Accepted teammates are participants, not captains.
+    if (
+        str(participant.participant_type or "").upper() == "TEAM"
+        and participant.user_id != user.id
+    ):
+        return jsonify({
+            "success": False,
+            "message": "Only the team captain can withdraw this tournament registration."
+        }), 403
+
     roster_before = getattr(participant, "team_roster", None) or []
 
     participant.registration_status = "CANCELLED"
@@ -5515,6 +5637,13 @@ def withdraw_registration(competition_id):
             "clubId": participant.club_id,
             "roster": roster_before,
         },
+    )
+
+    # The cancelled entry no longer consumes capacity. Re-check pending
+    # registrations so a complete pending team can claim the newly opened slot.
+    process_competition_registration_timers(
+        competition,
+        commit=False,
     )
 
     db.session.commit()

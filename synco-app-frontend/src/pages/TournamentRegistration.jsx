@@ -99,6 +99,68 @@ function getMemberCountLabel(count, teamSize) {
     return `${count}/${teamSize} players`;
 }
 
+
+function getCountdownTarget(registrationStart, registrationEnd, competitionStart) {
+    const now = Date.now();
+
+    const registrationStartDate = parseApiDate(registrationStart);
+    const registrationEndDate = parseApiDate(registrationEnd);
+    const competitionStartDate = parseApiDate(competitionStart);
+
+    const registrationStartTime = registrationStartDate?.getTime();
+    const registrationEndTime = registrationEndDate?.getTime();
+    const competitionStartTime = competitionStartDate?.getTime();
+
+    if (Number.isFinite(registrationStartTime) && now < registrationStartTime) {
+        return {
+            label: "REGISTRATION OPENS IN",
+            target: registrationStartTime,
+        };
+    }
+
+    if (Number.isFinite(competitionStartTime) && now < competitionStartTime) {
+        return {
+            label: "TOURNAMENT STARTS IN",
+            target: competitionStartTime,
+        };
+    }
+
+    if (Number.isFinite(competitionStartTime)) {
+        return {
+            label: "TOURNAMENT STARTED",
+            target: competitionStartTime,
+        };
+    }
+
+    if (Number.isFinite(registrationEndTime)) {
+        return {
+            label: "REGISTRATION CLOSES IN",
+            target: registrationEndTime,
+        };
+    }
+
+    return {
+        label: "SCHEDULE",
+        target: null,
+    };
+}
+
+function formatCountdownParts(target) {
+    if (!Number.isFinite(target)) {
+        return null;
+    }
+
+    const remaining = Math.max(0, target - Date.now());
+    const totalSeconds = Math.floor(remaining / 1000);
+
+    const days = Math.floor(totalSeconds / 86400);
+    const hours = Math.floor((totalSeconds % 86400) / 3600);
+    const minutes = Math.floor((totalSeconds % 3600) / 60);
+    const seconds = totalSeconds % 60;
+
+    return { days, hours, minutes, seconds, totalSeconds };
+}
+
 function formatRemaining(value, nowMs) {
     const expiry = parseApiDate(value);
     if (!expiry) return "—";
@@ -142,6 +204,7 @@ export default function TournamentRegistration() {
     const [nowMs, setNowMs] = useState(() => Date.now());
     const [error, setError] = useState("");
     const [success, setSuccess] = useState("");
+    const [countdownNow, setCountdownNow] = useState(Date.now());
 
     const loadRegistration = useCallback(async (showLoader = false) => {
         if (!competitionId) {
@@ -182,6 +245,14 @@ export default function TournamentRegistration() {
     useEffect(() => {
         loadRegistration(true);
     }, [loadRegistration]);
+
+    useEffect(() => {
+        const intervalId = window.setInterval(() => {
+            setCountdownNow(Date.now());
+        }, 1000);
+
+        return () => window.clearInterval(intervalId);
+    }, []);
 
     useEffect(() => {
         const interval = window.setInterval(() => {
@@ -230,10 +301,56 @@ export default function TournamentRegistration() {
 
     const competition = data?.competition || {};
     const modeConfig = data?.modeConfig || {};
+
+    const countdown = useMemo(() => {
+        // countdownNow is intentionally referenced so this value refreshes every second.
+        void countdownNow;
+        return getCountdownTarget(
+            competition.registrationStart,
+            competition.registrationEnd,
+            competition.competitionStart
+        );
+    }, [
+        competition.registrationStart,
+        competition.registrationEnd,
+        competition.competitionStart,
+        countdownNow,
+    ]);
+
+    const countdownParts = useMemo(
+        () => formatCountdownParts(countdown.target),
+        [countdown.target, countdownNow]
+    );
     const clubs = data?.myClubs || [];
     const teamSize = Number(competition.teamSize || 0);
     const isTeamCompetition =
         String(competition.participantType || "").toUpperCase() === "TEAM";
+
+    const currentUserId = useMemo(() => {
+        const explicit = Number(data?.currentUserId || 0);
+
+        if (Number.isFinite(explicit) && explicit > 0) {
+            return explicit;
+        }
+
+        // Backward-compatible fallback for older backend responses: the
+        // registration-info payload marks the logged-in member with
+        // isCurrentUser=true.
+        for (const club of clubs) {
+            const currentMember = (club?.members || []).find(
+                (member) => member?.isCurrentUser === true
+            );
+
+            if (currentMember) {
+                const memberId = Number(currentMember.userId);
+                if (Number.isFinite(memberId) && memberId > 0) {
+                    return memberId;
+                }
+            }
+        }
+
+        return 0;
+    }, [data?.currentUserId, clubs]);
 
     const selectedClub = useMemo(
         () => clubs.find((club) => String(club.id) === String(selectedClubId)) || null,
@@ -242,7 +359,6 @@ export default function TournamentRegistration() {
 
     const currentRegistration = data?.myRegistration || selectedClub?.registration || null;
     const currentStatus = String(currentRegistration?.registrationStatus || "").toUpperCase();
-    const currentUserId = Number(data?.currentUserId || 0);
     const isCaptain = Boolean(
         data?.isCaptain ||
         (currentRegistration?.participantType === "TEAM" &&
@@ -357,6 +473,16 @@ export default function TournamentRegistration() {
 
     const selectedEligible =
         selectedClubCanBeUsed &&
+        currentUserId > 0 &&
+        selectedMemberIds.includes(currentUserId) &&
+        selectedMemberIds.length === teamSize;
+
+    const canSubmitTeamRegistration =
+        !submitting &&
+        Boolean(data?.registrationOpen) &&
+        !Boolean(data?.full) &&
+        Boolean(selectedClubCanBeUsed) &&
+        currentUserId > 0 &&
         selectedMemberIds.includes(currentUserId) &&
         selectedMemberIds.length === teamSize;
 
@@ -400,6 +526,41 @@ export default function TournamentRegistration() {
         setError("");
         setSuccess("");
     };
+
+    useEffect(() => {
+        if (!isTeamCompetition || !selectedClubId || !currentUserId) {
+            return;
+        }
+
+        const activeClub = clubs.find(
+            (club) => String(club.id) === String(selectedClubId)
+        );
+
+        if (!activeClub) {
+            return;
+        }
+
+        setSelectedMemberIds((previous) => {
+            const normalized = Array.from(
+                new Set(
+                    previous
+                        .map((value) => Number(value))
+                        .filter((value) => Number.isFinite(value))
+                )
+            );
+
+            if (normalized.includes(currentUserId)) {
+                return normalized;
+            }
+
+            return [currentUserId, ...normalized];
+        });
+    }, [
+        isTeamCompetition,
+        selectedClubId,
+        currentUserId,
+        clubs,
+    ]);
 
     const toggleMember = (memberUserId) => {
         const memberId = Number(memberUserId);
@@ -665,6 +826,16 @@ export default function TournamentRegistration() {
                 return;
             }
 
+            if (!currentUserId) {
+                setError("Unable to identify your SYNCO account. Refresh the registration page.");
+                return;
+            }
+
+            if (!selectedMemberIds.includes(currentUserId)) {
+                setError("You must be selected as the team captain.");
+                return;
+            }
+
             if (selectedMemberIds.length !== teamSize) {
                 setError(
                     `Select exactly ${teamSize} player${teamSize === 1 ? "" : "s"} for this tournament.`
@@ -773,6 +944,45 @@ export default function TournamentRegistration() {
                     </button>
                 </div>
             )}
+
+            <section
+                className="registration-countdown-card"
+                style={{
+                    marginBottom: "20px",
+                    border: "1px solid rgba(0,0,0,0.08)",
+                    borderRadius: "16px",
+                    padding: "20px 22px",
+                    background: "#ffffff",
+                }}
+            >
+                <div style={{ display: "flex", justifyContent: "space-between", gap: "20px", alignItems: "center", flexWrap: "wrap" }}>
+                    <div>
+                        <span style={{ display: "block", fontSize: "11px", fontWeight: 800, letterSpacing: "0.12em", marginBottom: "7px" }}>
+                            {countdown.label}
+                        </span>
+                        <strong style={{ display: "block", fontSize: "30px", lineHeight: 1, letterSpacing: "0.02em" }}>
+                            {countdownParts
+                                ? countdownParts.totalSeconds === 0
+                                    ? (countdown.label === "TOURNAMENT STARTED" ? "LIVE" : "00:00:00")
+                                    : [
+                                        countdownParts.days > 0 ? `${String(countdownParts.days).padStart(2, "0")}d` : null,
+                                        `${String(countdownParts.hours).padStart(2, "0")}h`,
+                                        `${String(countdownParts.minutes).padStart(2, "0")}m`,
+                                        `${String(countdownParts.seconds).padStart(2, "0")}s`,
+                                    ].filter(Boolean).join(" ")
+                                : "Schedule unavailable"}
+                        </strong>
+                    </div>
+                    <div style={{ textAlign: "right" }}>
+                        <span style={{ display: "block", fontSize: "10px", fontWeight: 700, letterSpacing: "0.1em", opacity: 0.6 }}>
+                            START TIME
+                        </span>
+                        <strong style={{ display: "block", marginTop: "5px", fontSize: "14px" }}>
+                            {formatDate(competition.competitionStart)}
+                        </strong>
+                    </div>
+                </div>
+            </section>
 
             <main className="registration-content">
                 <section className="registration-summary">
@@ -1276,10 +1486,13 @@ export default function TournamentRegistration() {
                                 className="registration-submit"
                                 onClick={handleRegister}
                                 disabled={
-                                    submitting ||
-                                    !data?.registrationOpen ||
-                                    !!data?.full ||
-                                    (isTeamCompetition && !selectedEligible)
+                                    isTeamCompetition
+                                        ? !canSubmitTeamRegistration
+                                        : (
+                                            submitting ||
+                                            !data?.registrationOpen ||
+                                            !!data?.full
+                                        )
                                 }
                             >
                                 {submitting ? <Loader2 size={17} className="registration-spin" /> : <Trophy size={17} />}
