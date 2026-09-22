@@ -689,11 +689,6 @@ def dashboard(competition_id):
                 "numberOfMatches": competition.number_of_matches,
                 "structure": competition.structure,
                 "status": competition.status,
-                "registrationStart": (
-                    competition.registration_start.isoformat()
-                    if competition.registration_start
-                    else None
-                ),
                 "start": competition.competition_start.isoformat() if competition.competition_start else None,
                 "end": competition.competition_end.isoformat() if competition.competition_end else None,
             },
