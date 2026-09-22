@@ -1257,20 +1257,6 @@ def validate_competition_configuration(
             "participantType must be PLAYER or TEAM."
         )
 
-    expected_participant_type = mode_config.get(
-        "participant_type"
-    )
-
-    if expected_participant_type:
-
-        if participant_type != expected_participant_type:
-
-            return (
-                False,
-                f"This mode requires "
-                f"{expected_participant_type} participants."
-            )
-
     try:
 
         team_size = int(team_size)
@@ -1296,6 +1282,23 @@ def validate_competition_configuration(
             False,
             f"{game.name} {mode} does not support "
             f"{team_size}v{team_size}."
+        )
+
+    # Participation is derived from the selected size:
+    # 1 = solo player, 2+ = team. This keeps solo
+    # registration completely independent of clubs.
+    expected_participant_type = (
+        "PLAYER"
+        if team_size == 1
+        else "TEAM"
+    )
+
+    if participant_type != expected_participant_type:
+
+        return (
+            False,
+            f"A team size of {team_size} requires "
+            f"{expected_participant_type} participation."
         )
 
     if max_participants < 2:
@@ -1528,16 +1531,16 @@ def create_competition():
             }), 400
 
         # -----------------------------------------------------
-        # Clash Royale
+        # PARTICIPATION TYPE
         # -----------------------------------------------------
+        # A size of 1 means direct solo participation.
+        # Solo players must never be forced through club/team
+        # registration. Any size greater than 1 is a team.
 
-        if normalize_game_slug(game) == "clash-royale":
-
-            if team_size == 1:
-                participant_type = "PLAYER"
-
-            elif team_size == 2:
-                participant_type = "TEAM"
+        if team_size == 1:
+            participant_type = "PLAYER"
+        else:
+            participant_type = "TEAM"
 
         creation_step = "validate competition configuration"
 
