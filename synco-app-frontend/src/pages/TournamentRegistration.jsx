@@ -111,12 +111,6 @@ function getFutureCountdownTarget(value) {
     return timestamp;
 }
 
-function getRegistrationCountdownTarget(competition) {
-    return getFutureCountdownTarget(
-        competition?.registrationStart
-    );
-}
-
 function getTournamentCountdownTarget(competition) {
     return getFutureCountdownTarget(
         competition?.competitionStart
@@ -182,7 +176,6 @@ export default function TournamentRegistration() {
     const [nowMs, setNowMs] = useState(() => Date.now());
     const [error, setError] = useState("");
     const [success, setSuccess] = useState("");
-    const [countdownNow, setCountdownNow] = useState(Date.now());
 
     const loadRegistration = useCallback(async (showLoader = false) => {
         if (!competitionId) {
@@ -223,14 +216,6 @@ export default function TournamentRegistration() {
     useEffect(() => {
         loadRegistration(true);
     }, [loadRegistration]);
-
-    useEffect(() => {
-        const intervalId = window.setInterval(() => {
-            setCountdownNow(Date.now());
-        }, 1000);
-
-        return () => window.clearInterval(intervalId);
-    }, []);
 
     useEffect(() => {
         const interval = window.setInterval(() => {
@@ -280,25 +265,39 @@ export default function TournamentRegistration() {
     const competition = data?.competition || {};
     const modeConfig = data?.modeConfig || {};
 
-    const registrationCountdownTarget = useMemo(
-        () => getRegistrationCountdownTarget(competition),
-        [competition.registrationStart, countdownNow]
-    );
-
     const tournamentCountdownTarget = useMemo(
         () => getTournamentCountdownTarget(competition),
-        [competition.competitionStart, countdownNow]
-    );
-
-    const registrationCountdownParts = useMemo(
-        () => formatCountdownParts(registrationCountdownTarget),
-        [registrationCountdownTarget, countdownNow]
+        [competition.competitionStart, nowMs]
     );
 
     const tournamentCountdownParts = useMemo(
         () => formatCountdownParts(tournamentCountdownTarget),
-        [tournamentCountdownTarget, countdownNow]
+        [tournamentCountdownTarget, nowMs]
     );
+
+    useEffect(() => {
+        const status = String(competition.status || "").toUpperCase();
+        const start = parseApiDate(competition.competitionStart);
+
+        if (!competitionId) {
+            return;
+        }
+
+        if (["LIVE", "IN_PROGRESS", "ONGOING"].includes(status)) {
+            navigate(`/live-tournament/${competitionId}`, { replace: true });
+            return;
+        }
+
+        if (start && nowMs >= start.getTime()) {
+            navigate(`/live-tournament/${competitionId}`, { replace: true });
+        }
+    }, [
+        competition.status,
+        competition.competitionStart,
+        competitionId,
+        navigate,
+        nowMs,
+    ]);
     const clubs = data?.myClubs || [];
     const teamSize = Number(competition.teamSize || 0);
     const isTeamCompetition =
@@ -922,43 +921,6 @@ export default function TournamentRegistration() {
                     </button>
                 </div>
             )}
-
-            <section
-                className="registration-countdown-card"
-                style={{
-                    marginBottom: "12px",
-                    border: "1px solid rgba(0,0,0,0.08)",
-                    borderRadius: "16px",
-                    padding: "20px 22px",
-                    background: "#ffffff",
-                }}
-            >
-                <div style={{ display: "flex", justifyContent: "space-between", gap: "20px", alignItems: "center", flexWrap: "wrap" }}>
-                    <div>
-                        <span style={{ display: "block", fontSize: "11px", fontWeight: 800, letterSpacing: "0.12em", marginBottom: "7px" }}>
-                            REGISTRATION STARTS IN
-                        </span>
-                        <strong style={{ display: "block", fontSize: "30px", lineHeight: 1, letterSpacing: "0.02em" }}>
-                            {registrationCountdownParts
-                                ? [
-                                    registrationCountdownParts.days > 0 ? `${String(registrationCountdownParts.days).padStart(2, "0")}d` : null,
-                                    `${String(registrationCountdownParts.hours).padStart(2, "0")}h`,
-                                    `${String(registrationCountdownParts.minutes).padStart(2, "0")}m`,
-                                    `${String(registrationCountdownParts.seconds).padStart(2, "0")}s`,
-                                ].filter(Boolean).join(" ")
-                                : "REGISTRATION OPEN"}
-                        </strong>
-                    </div>
-                    <div style={{ textAlign: "right" }}>
-                        <span style={{ display: "block", fontSize: "10px", fontWeight: 700, letterSpacing: "0.1em", opacity: 0.6 }}>
-                            REGISTRATION START TIME
-                        </span>
-                        <strong style={{ display: "block", marginTop: "5px", fontSize: "14px" }}>
-                            {formatDate(competition.registrationStart)}
-                        </strong>
-                    </div>
-                </div>
-            </section>
 
             <section
                 className="registration-countdown-card"

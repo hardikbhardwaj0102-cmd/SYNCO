@@ -6,7 +6,6 @@ import {
   Grid2X2,
   Layers3,
   Plus,
-  Trash2,
 } from 'lucide-react';
 
 import GameCarousel from '../components/Pickem/GameCarousel';
@@ -40,7 +39,6 @@ const CompetitionEngine = () => {
 
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
-  const [deletingCompetitionId, setDeletingCompetitionId] = useState(null);
 
   const latestRequestId = useRef(0);
 
@@ -260,79 +258,7 @@ const CompetitionEngine = () => {
 
 
   /* =====================================================
-     DELETE TOURNAMENT
-     ===================================================== */
-
-  const deleteCompetition = async (competition) => {
-    if (!competition?.id || competition?.isOrganizer !== true) {
-      return;
-    }
-
-    const title =
-      competition.title ||
-      competition.name ||
-      'this tournament';
-
-    const confirmed = window.confirm(
-      `Delete \"${title}\" permanently?\n\n` +
-      'This will remove the tournament, registrations, matches, results, and related tournament data. This action cannot be undone.'
-    );
-
-    if (!confirmed) {
-      return;
-    }
-
-    const competitionId = String(competition.id);
-    setDeletingCompetitionId(competitionId);
-    setError('');
-
-    try {
-      const response = await fetch(
-        `${API_URL}/api/competitions/${encodeURIComponent(competitionId)}`,
-        {
-          method: 'DELETE',
-          credentials: 'include',
-        }
-      );
-
-      const contentType =
-        response.headers.get('content-type') || '';
-
-      const data = contentType.includes('application/json')
-        ? await response.json()
-        : null;
-
-      if (!response.ok) {
-        throw new Error(
-          data?.message ||
-          'Unable to delete tournament.'
-        );
-      }
-
-      setCompetitions((current) =>
-        current.filter(
-          (item) => String(item.id) !== competitionId
-        )
-      );
-
-    } catch (err) {
-      console.error(
-        'Failed to delete competition:',
-        err
-      );
-
-      setError(
-        err.message ||
-        'Unable to delete tournament.'
-      );
-    } finally {
-      setDeletingCompetitionId(null);
-    }
-  };
-
-
-  /* =====================================================
-     OPEN LIVE TOURNAMENT DASHBOARD
+     OPEN TOURNAMENT PHASE GATEWAY
      ===================================================== */
 
   const openLiveTournament = (competitionId) => {
@@ -342,14 +268,17 @@ const CompetitionEngine = () => {
       competitionId === ''
     ) {
       console.error(
-        'Unable to open live tournament: missing competition ID'
+        'Unable to open tournament: missing competition ID'
       );
 
       return;
     }
 
+    // Despite the historical helper name, this now enters the smart
+    // tournament phase route. That route decides whether to show the
+    // registration countdown, registration screen, or live dashboard.
     navigate(
-      `/live-tournament/${encodeURIComponent(
+      `/competitions/${encodeURIComponent(
         String(competitionId)
       )}`
     );
@@ -404,49 +333,41 @@ const CompetitionEngine = () => {
       competitionStatus === 'OPEN' ||
       competitionStatus === 'PUBLISHED';
 
-    const cardAction = isRegistrationOpen
-      ? () =>
-          navigate(
-            `/competitions/${encodeURIComponent(
-              String(card.id)
-            )}/register`
-          )
-      : () => openLiveTournament(card.id);
+    // Always enter through the tournament phase gateway. It decides whether
+    // this is pre-registration, registration, or already live using the
+    // authoritative competition schedule from the backend.
+    const cardAction = () =>
+      navigate(
+        `/competitions/${encodeURIComponent(
+          String(card.id)
+        )}`
+      );
 
-    const cardActionLabel = isRegistrationOpen
-      ? 'REGISTER NOW'
-      : 'OPEN LIVE DASHBOARD';
+    const registrationStartMs = card.competition?.registrationStart
+      ? new Date(
+        /(?:Z|[+-]\d{2}:?\d{2})$/i.test(String(card.competition.registrationStart))
+          ? String(card.competition.registrationStart)
+          : `${String(card.competition.registrationStart)}Z`
+      ).getTime()
+      : NaN;
 
-    const isOrganizer =
-      card.competition?.isOrganizer === true;
+    const nowMs = Date.now();
+    const preRegistration = Number.isFinite(registrationStartMs) && nowMs < registrationStartMs;
 
-    const isDeleting =
-      String(deletingCompetitionId || '') ===
-      String(card.id);
+    const cardActionLabel = preRegistration
+      ? 'REGISTRATION COUNTDOWN'
+      : isRegistrationOpen
+        ? 'REGISTER NOW'
+        : 'OPEN LIVE DASHBOARD';
 
     return (
-      <div
+      <button
         key={card.id}
-        className={`portrait-roster-card ${positionClass} ${
-          isActive ? 'active-tournament-card' : ''
-        }`}
-        role="button"
-        tabIndex={isDeleting ? -1 : 0}
+        type="button"
+        className={`portrait-roster-card ${positionClass} ${isActive ? 'active-tournament-card' : ''
+          }`}
         onClick={cardAction}
-        onKeyDown={(event) => {
-          if (
-            event.key === 'Enter' ||
-            event.key === ' '
-          ) {
-            event.preventDefault();
-            cardAction();
-          }
-        }}
-        aria-label={
-          isRegistrationOpen
-            ? `Register for ${card.title}`
-            : `Open ${card.title}`
-        }
+        aria-label={`Open ${card.title}`}
       >
         <img
           src={cardCharacter}
@@ -467,42 +388,7 @@ const CompetitionEngine = () => {
             {cardActionLabel}
           </span>
         </div>
-
-        {isOrganizer && (
-          <button
-            type="button"
-            disabled={isDeleting}
-            onClick={(event) => {
-              event.stopPropagation();
-              deleteCompetition(card.competition);
-            }}
-            onKeyDown={(event) => {
-              event.stopPropagation();
-            }}
-            aria-label={`Delete ${card.title}`}
-            title="Delete tournament"
-            style={{
-              position: 'absolute',
-              top: '12px',
-              right: '12px',
-              zIndex: 30,
-              width: '36px',
-              height: '36px',
-              display: 'inline-flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              border: '1px solid rgba(255,255,255,0.18)',
-              borderRadius: '10px',
-              background: 'rgba(0,0,0,0.72)',
-              color: '#fff',
-              cursor: isDeleting ? 'wait' : 'pointer',
-              opacity: isDeleting ? 0.65 : 1,
-            }}
-          >
-            <Trash2 size={16} strokeWidth={2.2} />
-          </button>
-        )}
-      </div>
+      </button>
     );
   };
 
@@ -748,11 +634,10 @@ const CompetitionEngine = () => {
                 type="button"
                 key={tab}
                 onClick={() => setActiveTab(tab)}
-                className={`comp-tab-btn ${
-                  activeTab === tab
+                className={`comp-tab-btn ${activeTab === tab
                     ? 'active'
                     : ''
-                }`}
+                  }`}
               >
                 {tab}
               </button>

@@ -10,6 +10,7 @@ import { AuthProvider, useAuth } from "./context/AuthContext";
 
 import LiveTournamentDashboard from "./pages/LiveTournamentDashboard";
 import TournamentRegistration from "./pages/TournamentRegistration";
+import TournamentRegistrationCountdown from "./pages/TournamentRegistrationCountdown";
 
 import OrganizerRegister from "./pages/OrganizerRegister";
 import OrganizerAdmin from "./pages/OrganizerAdmin";
@@ -263,6 +264,14 @@ function App() {
                   /competitions/1/register
                   /competitions/25/register
               */}
+              {/* Tournament phase entry point. This page shows ONLY the
+                  pre-registration countdown. It automatically moves to the
+                  existing registration screen when registration opens. */}
+              <Route
+                path="/competitions/:competitionId"
+                element={<TournamentRegistrationCountdown />}
+              />
+
               <Route
                 path="/competitions/:competitionId/register"
                 element={<TournamentRegistration />}
