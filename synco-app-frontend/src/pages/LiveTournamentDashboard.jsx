@@ -109,58 +109,99 @@ function formatDate(value) {
     }
 
     return date.toLocaleString(
-        "en-IN",
+        undefined,
         {
-            timeZone: "Asia/Kolkata",
-            day: "2-digit",
-            month: "short",
-            year: "numeric",
-            hour: "numeric",
-            minute: "2-digit",
-            hour12: true,
-            timeZoneName: "short",
+            dateStyle: "medium",
+            timeStyle: "short",
         }
     );
 }
 
 
-function formatCountdown(totalSeconds) {
-    if (
-        totalSeconds === null ||
-        totalSeconds === undefined
-    ) {
-        return "Awaiting schedule";
+function parseApiDate(value) {
+    if (!value) {
+        return null;
+    }
+
+    const raw = String(value).trim();
+    if (!raw) {
+        return null;
+    }
+
+    // Competition timestamps are historically stored/serialized as naive
+    // UTC values. Treat a timezone-less value as UTC consistently.
+    const hasTimezone = /(?:Z|[+\-]\d{2}:?\d{2})$/i.test(raw);
+    const date = new Date(hasTimezone ? raw : `${raw}Z`);
+
+    return Number.isNaN(date.getTime()) ? null : date;
+}
+
+
+function formatCountdown(totalSeconds, fallbackStartAt = null, nowMs = Date.now()) {
+    let seconds = null;
+
+    if (Number.isFinite(Number(totalSeconds))) {
+        seconds = Number(totalSeconds);
+    } else if (fallbackStartAt) {
+        const startDate = parseApiDate(fallbackStartAt);
+        const startMs = startDate?.getTime();
+
+        if (Number.isFinite(startMs)) {
+            seconds = Math.max(0, Math.floor((startMs - nowMs) / 1000));
+        }
+    }
+
+    if (!Number.isFinite(seconds)) {
+        return "Schedule unavailable";
+    }
+
+    seconds = Math.max(0, Math.floor(seconds));
+
+    const days = Math.floor(seconds / 86400);
+    const hours = Math.floor((seconds % 86400) / 3600);
+    const minutes = Math.floor((seconds % 3600) / 60);
+    const remainingSeconds = seconds % 60;
+
+    if (days > 0) {
+        return `${days}d ${String(hours).padStart(2, "0")}h ${String(minutes).padStart(2, "0")}m ${String(remainingSeconds).padStart(2, "0")}s`;
+    }
+
+    return `${String(hours).padStart(2, "0")}:${String(minutes).padStart(2, "0")}:${String(remainingSeconds).padStart(2, "0")}`;
+}
+
+
+function getRegistrationStart(competition) {
+    return (
+        competition?.registrationStart ||
+        competition?.registration_start ||
+        competition?.registration?.start ||
+        null
+    );
+}
+
+
+function getRegistrationCountdown(competition, nowMs = Date.now()) {
+    const startAt = getRegistrationStart(competition);
+    const startDate = parseApiDate(startAt);
+
+    if (!startDate) {
+        return {
+            startAt: null,
+            seconds: null,
+            state: "UNAVAILABLE",
+        };
     }
 
     const seconds = Math.max(
         0,
-        Math.floor(numberValue(totalSeconds))
+        Math.floor((startDate.getTime() - nowMs) / 1000)
     );
 
-    const days = Math.floor(
-        seconds / 86400
-    );
-
-    const hours = Math.floor(
-        (seconds % 86400) / 3600
-    );
-
-    const minutes = Math.floor(
-        (seconds % 3600) / 60
-    );
-
-    const remainingSeconds =
-        seconds % 60;
-
-    if (days > 0) {
-        return `${days}d ${hours}h ${minutes}m`;
-    }
-
-    if (hours > 0) {
-        return `${hours}h ${minutes}m ${remainingSeconds}s`;
-    }
-
-    return `${minutes}m ${remainingSeconds}s`;
+    return {
+        startAt,
+        seconds,
+        state: seconds > 0 ? "UPCOMING" : "OPEN",
+    };
 }
 
 
@@ -296,6 +337,9 @@ export default function LiveTournamentDashboard() {
     const [successMessage, setSuccessMessage] =
         useState("");
 
+    const [countdownNow, setCountdownNow] =
+        useState(Date.now());
+
 
     const competition =
         dashboard?.competition || {};
@@ -314,6 +358,20 @@ export default function LiveTournamentDashboard() {
 
     const isOrganizer =
         Boolean(access.isOrganizer);
+
+    const registrationStartAt =
+        competition?.registrationStart ||
+        competition?.registration_start ||
+        null;
+
+    const registrationCountdown = useMemo(
+        () =>
+            getRegistrationCountdown(
+                competition,
+                countdownNow
+            ),
+        [registrationStartAt, countdownNow]
+    );
 
 
     const loadDashboard =
@@ -508,6 +566,14 @@ export default function LiveTournamentDashboard() {
     useEffect(() => {
         loadDashboard(true);
     }, [loadDashboard]);
+
+    useEffect(() => {
+        const intervalId = window.setInterval(() => {
+            setCountdownNow(Date.now());
+        }, 1000);
+
+        return () => window.clearInterval(intervalId);
+    }, []);
 
 
     useEffect(() => {
@@ -735,7 +801,7 @@ export default function LiveTournamentDashboard() {
                             ),
                         placement:
                             stats.placement ===
-                            ""
+                                ""
                                 ? null
                                 : numberValue(
                                     stats.placement
@@ -921,7 +987,7 @@ export default function LiveTournamentDashboard() {
 
                     const draft =
                         scoreDraft[
-                            player.userId
+                        player.userId
                         ] || {};
 
                     groups[key].kills +=
@@ -1116,13 +1182,39 @@ export default function LiveTournamentDashboard() {
                             reaches that time.
                         </p>
 
+                        <div className="live-countdown" style={{ marginBottom: "12px" }}>
+                            <span>
+                                REGISTRATION STARTS IN
+                            </span>
+                            <strong>
+                                {registrationCountdown.state === "UPCOMING"
+                                    ? formatCountdown(
+                                        registrationCountdown.seconds,
+                                        registrationCountdown.startAt,
+                                        countdownNow
+                                    )
+                                    : registrationCountdown.state === "OPEN"
+                                        ? "REGISTRATION OPEN"
+                                        : "Schedule unavailable"}
+                            </strong>
+                            {registrationCountdown.startAt && (
+                                <small>
+                                    {formatDate(
+                                        registrationCountdown.startAt
+                                    )}
+                                </small>
+                            )}
+                        </div>
+
                         <div className="live-countdown">
                             <span>
                                 STARTS IN
                             </span>
                             <strong>
                                 {formatCountdown(
-                                    access.secondsUntilStart
+                                    access.secondsUntilStart,
+                                    access.startAt || competition.start || competition.competitionStart,
+                                    countdownNow
                                 )}
                             </strong>
                             {access.startAt && (
@@ -1281,35 +1373,35 @@ export default function LiveTournamentDashboard() {
 
             {(error ||
                 successMessage) && (
-                <div className="live-alert-wrap">
-                    {error && (
-                        <div className="live-alert error">
-                            <span>
-                                {error}
-                            </span>
-                            <button
-                                type="button"
-                                onClick={() =>
-                                    setError("")
-                                }
-                            >
-                                Dismiss
-                            </button>
-                        </div>
-                    )}
+                    <div className="live-alert-wrap">
+                        {error && (
+                            <div className="live-alert error">
+                                <span>
+                                    {error}
+                                </span>
+                                <button
+                                    type="button"
+                                    onClick={() =>
+                                        setError("")
+                                    }
+                                >
+                                    Dismiss
+                                </button>
+                            </div>
+                        )}
 
-                    {successMessage && (
-                        <div className="live-alert success">
-                            <Check
-                                size={15}
-                            />
-                            <span>
-                                {successMessage}
-                            </span>
-                        </div>
-                    )}
-                </div>
-            )}
+                        {successMessage && (
+                            <div className="live-alert success">
+                                <Check
+                                    size={15}
+                                />
+                                <span>
+                                    {successMessage}
+                                </span>
+                            </div>
+                        )}
+                    </div>
+                )}
 
 
             <section className="live-info-grid">
@@ -1452,243 +1544,505 @@ export default function LiveTournamentDashboard() {
             <main className="live-content">
                 {activeSection ===
                     "overview" && (
-                    <section className="live-section">
-                        <div className="live-section-heading">
-                            <div>
-                                <span>
-                                    TOURNAMENT OVERVIEW
-                                </span>
-                                <h2>
-                                    Control Center
-                                </h2>
-                                <p>
-                                    All tournament information comes
-                                    directly from the SYNCO competition
-                                    and match records.
-                                </p>
-                            </div>
-                        </div>
-
-                        <div className="live-stat-grid">
-                            <div className="live-stat-card">
-                                <div className="live-stat-icon">
-                                    <Users
-                                        size={18}
-                                    />
-                                </div>
+                        <section className="live-section">
+                            <div className="live-section-heading">
                                 <div>
-                                    <span>TEAMS</span>
-                                    <strong>
-                                        {teamCount}
-                                    </strong>
+                                    <span>
+                                        TOURNAMENT OVERVIEW
+                                    </span>
+                                    <h2>
+                                        Control Center
+                                    </h2>
+                                    <p>
+                                        All tournament information comes
+                                        directly from the SYNCO competition
+                                        and match records.
+                                    </p>
                                 </div>
                             </div>
 
-                            <div className="live-stat-card">
-                                <div className="live-stat-icon">
-                                    <Users
-                                        size={18}
-                                    />
-                                </div>
-                                <div>
-                                    <span>PLAYERS</span>
-                                    <strong>
-                                        {playerCount}
-                                    </strong>
-                                </div>
-                            </div>
-
-                            <div className="live-stat-card">
-                                <div className="live-stat-icon">
-                                    <Swords
-                                        size={18}
-                                    />
-                                </div>
-                                <div>
-                                    <span>MATCHES</span>
-                                    <strong>
-                                        {matchCount}
-                                    </strong>
-                                </div>
-                            </div>
-
-                            <div className="live-stat-card">
-                                <div className="live-stat-icon">
-                                    <Check
-                                        size={18}
-                                    />
-                                </div>
-                                <div>
-                                    <span>VERIFIED</span>
-                                    <strong>
-                                        {completedMatchCount}
-                                    </strong>
-                                </div>
-                            </div>
-
-                            <div className="live-stat-card">
-                                <div className="live-stat-icon">
-                                    <Play
-                                        size={18}
-                                    />
-                                </div>
-                                <div>
-                                    <span>LIVE MATCHES</span>
-                                    <strong>
-                                        {liveMatchCount}
-                                    </strong>
-                                </div>
-                            </div>
-
-                            <div className="live-stat-card">
-                                <div className="live-stat-icon">
-                                    <Activity
-                                        size={18}
-                                    />
-                                </div>
-                                <div>
-                                    <span>ROLE</span>
-                                    <strong>
-                                        {isOrganizer
-                                            ? "ORGANIZER"
-                                            : "VIEWER"}
-                                    </strong>
-                                </div>
-                            </div>
-                        </div>
-
-
-                        <div className="live-two-column">
-                            <div className="live-panel">
-                                <div className="live-panel-header">
+                            <div className="live-stat-grid">
+                                <div className="live-stat-card">
+                                    <div className="live-stat-icon">
+                                        <Users
+                                            size={18}
+                                        />
+                                    </div>
                                     <div>
-                                        <span>
-                                            CURRENT STATE
-                                        </span>
-                                        <h3>
-                                            Tournament Status
-                                        </h3>
+                                        <span>TEAMS</span>
+                                        <strong>
+                                            {teamCount}
+                                        </strong>
+                                    </div>
+                                </div>
+
+                                <div className="live-stat-card">
+                                    <div className="live-stat-icon">
+                                        <Users
+                                            size={18}
+                                        />
+                                    </div>
+                                    <div>
+                                        <span>PLAYERS</span>
+                                        <strong>
+                                            {playerCount}
+                                        </strong>
+                                    </div>
+                                </div>
+
+                                <div className="live-stat-card">
+                                    <div className="live-stat-icon">
+                                        <Swords
+                                            size={18}
+                                        />
+                                    </div>
+                                    <div>
+                                        <span>MATCHES</span>
+                                        <strong>
+                                            {matchCount}
+                                        </strong>
+                                    </div>
+                                </div>
+
+                                <div className="live-stat-card">
+                                    <div className="live-stat-icon">
+                                        <Check
+                                            size={18}
+                                        />
+                                    </div>
+                                    <div>
+                                        <span>VERIFIED</span>
+                                        <strong>
+                                            {completedMatchCount}
+                                        </strong>
+                                    </div>
+                                </div>
+
+                                <div className="live-stat-card">
+                                    <div className="live-stat-icon">
+                                        <Play
+                                            size={18}
+                                        />
+                                    </div>
+                                    <div>
+                                        <span>LIVE MATCHES</span>
+                                        <strong>
+                                            {liveMatchCount}
+                                        </strong>
+                                    </div>
+                                </div>
+
+                                <div className="live-stat-card">
+                                    <div className="live-stat-icon">
+                                        <Activity
+                                            size={18}
+                                        />
+                                    </div>
+                                    <div>
+                                        <span>ROLE</span>
+                                        <strong>
+                                            {isOrganizer
+                                                ? "ORGANIZER"
+                                                : "VIEWER"}
+                                        </strong>
+                                    </div>
+                                </div>
+                            </div>
+
+
+                            <div className="live-two-column">
+                                <div className="live-panel">
+                                    <div className="live-panel-header">
+                                        <div>
+                                            <span>
+                                                CURRENT STATE
+                                            </span>
+                                            <h3>
+                                                Tournament Status
+                                            </h3>
+                                        </div>
+
+                                        <div
+                                            className={`live-small-status ${statusClass(
+                                                competition.status
+                                            )}`}
+                                        >
+                                            {formatStatus(
+                                                competition.status
+                                            )}
+                                        </div>
                                     </div>
 
-                                    <div
-                                        className={`live-small-status ${statusClass(
-                                            competition.status
-                                        )}`}
-                                    >
-                                        {formatStatus(
-                                            competition.status
+                                    <div className="live-detail-list">
+                                        <div>
+                                            <span>Start time</span>
+                                            <strong>
+                                                {formatDate(
+                                                    competition.start
+                                                )}
+                                            </strong>
+                                        </div>
+
+                                        <div>
+                                            <span>Game mode</span>
+                                            <strong>
+                                                {competition.gameMode ||
+                                                    "—"}
+                                            </strong>
+                                        </div>
+
+                                        <div>
+                                            <span>Team size</span>
+                                            <strong>
+                                                {competition.teamSize ||
+                                                    "—"}
+                                            </strong>
+                                        </div>
+
+                                        <div>
+                                            <span>Competition format</span>
+                                            <strong>
+                                                {competition.competitionType ||
+                                                    "—"}
+                                            </strong>
+                                        </div>
+                                    </div>
+                                </div>
+
+
+                                <div className="live-panel">
+                                    <div className="live-panel-header">
+                                        <div>
+                                            <span>
+                                                MATCH PROGRESS
+                                            </span>
+                                            <h3>
+                                                Active Matches
+                                            </h3>
+                                        </div>
+
+                                        <button
+                                            type="button"
+                                            className="live-text-button"
+                                            onClick={() =>
+                                                setActiveSection(
+                                                    "matches"
+                                                )
+                                            }
+                                        >
+                                            Open Matches
+                                            <ChevronRight
+                                                size={14}
+                                            />
+                                        </button>
+                                    </div>
+
+                                    <div className="live-match-overview-list">
+                                        {matches
+                                            .filter(
+                                                (match) =>
+                                                    [
+                                                        "LIVE",
+                                                        "SCHEDULED",
+                                                        "READY",
+                                                        "VERIFIED",
+                                                    ].includes(
+                                                        String(
+                                                            match.status ||
+                                                            ""
+                                                        ).toUpperCase()
+                                                    )
+                                            )
+                                            .slice(0, 6)
+                                            .map(
+                                                (match) => (
+                                                    <button
+                                                        type="button"
+                                                        key={match.id}
+                                                        className="live-match-overview-item"
+                                                        onClick={() => {
+                                                            setActiveSection(
+                                                                "matches"
+                                                            );
+                                                            handleSelectMatch(
+                                                                match.id
+                                                            );
+                                                        }}
+                                                    >
+                                                        <div>
+                                                            <strong>
+                                                                Match{" "}
+                                                                {match.matchNumber ??
+                                                                    match.id}
+                                                            </strong>
+                                                            <span>
+                                                                {formatStatus(
+                                                                    match.status
+                                                                )}
+                                                            </span>
+                                                        </div>
+                                                        <ChevronRight
+                                                            size={15}
+                                                        />
+                                                    </button>
+                                                )
+                                            )}
+
+                                        {!matches.length && (
+                                            <div className="live-empty">
+                                                No matches have been created
+                                                for this tournament yet.
+                                            </div>
                                         )}
                                     </div>
                                 </div>
+                            </div>
+                        </section>
+                    )}
 
-                                <div className="live-detail-list">
-                                    <div>
-                                        <span>Start time</span>
-                                        <strong>
-                                            {formatDate(
-                                                competition.start
-                                            )}
-                                        </strong>
-                                    </div>
 
-                                    <div>
-                                        <span>Game mode</span>
-                                        <strong>
-                                            {competition.gameMode ||
-                                                "—"}
-                                        </strong>
-                                    </div>
-
-                                    <div>
-                                        <span>Team size</span>
-                                        <strong>
-                                            {competition.teamSize ||
-                                                "—"}
-                                        </strong>
-                                    </div>
-
-                                    <div>
-                                        <span>Competition format</span>
-                                        <strong>
-                                            {competition.competitionType ||
-                                                "—"}
-                                        </strong>
-                                    </div>
+                {activeSection ===
+                    "leaderboard" && (
+                        <section className="live-section">
+                            <div className="live-section-heading">
+                                <div>
+                                    <span>
+                                        LIVE STANDINGS
+                                    </span>
+                                    <h2>
+                                        Leaderboard
+                                    </h2>
+                                    <p>
+                                        Rankings use the existing SYNCO
+                                        tournament score. Kills and
+                                        placement are shown as additional
+                                        match information.
+                                    </p>
                                 </div>
                             </div>
 
-
-                            <div className="live-panel">
-                                <div className="live-panel-header">
-                                    <div>
+                            <div className="live-leaderboard">
+                                {!leaderboard.length ? (
+                                    <div className="live-empty large">
+                                        <Trophy
+                                            size={28}
+                                        />
+                                        <strong>
+                                            No leaderboard data yet
+                                        </strong>
                                         <span>
-                                            MATCH PROGRESS
+                                            Enter and save a match result
+                                            to update the standings.
                                         </span>
-                                        <h3>
-                                            Active Matches
-                                        </h3>
+                                    </div>
+                                ) : (
+                                    leaderboard.map(
+                                        (team) => (
+                                            <article
+                                                className="live-team-row"
+                                                key={
+                                                    team.participantId
+                                                }
+                                            >
+                                                <div className="live-rank">
+                                                    {team.rank}
+                                                </div>
+
+                                                <div className="live-team-main">
+                                                    <div className="live-team-heading">
+                                                        <div className="live-team-avatar">
+                                                            {getInitials(
+                                                                team.teamName
+                                                            )}
+                                                        </div>
+
+                                                        <div>
+                                                            <h3>
+                                                                {team.teamName ||
+                                                                    "Unnamed Team"}
+                                                            </h3>
+                                                            <span>
+                                                                {team.members?.length ||
+                                                                    0}{" "}
+                                                                players
+                                                            </span>
+                                                        </div>
+                                                    </div>
+
+                                                    <div className="live-player-list">
+                                                        {(
+                                                            team.members ||
+                                                            []
+                                                        ).map(
+                                                            (
+                                                                player
+                                                            ) => (
+                                                                <div
+                                                                    className="live-player-row"
+                                                                    key={
+                                                                        player.userId
+                                                                    }
+                                                                >
+                                                                    <div className="live-player-info">
+                                                                        <div className="live-player-avatar">
+                                                                            {getInitials(
+                                                                                player.name
+                                                                            )}
+                                                                        </div>
+
+                                                                        <div>
+                                                                            <strong>
+                                                                                {player.name ||
+                                                                                    player.username ||
+                                                                                    "Player"}
+                                                                            </strong>
+                                                                            {player.uid && (
+                                                                                <span>
+                                                                                    {player.uid}
+                                                                                </span>
+                                                                            )}
+                                                                        </div>
+                                                                    </div>
+
+                                                                    <div className="live-player-metrics">
+                                                                        <div>
+                                                                            <strong>
+                                                                                {numberValue(
+                                                                                    player.totalKills
+                                                                                )}
+                                                                            </strong>
+                                                                            <span>
+                                                                                KILLS
+                                                                            </span>
+                                                                        </div>
+
+                                                                        <div>
+                                                                            <strong>
+                                                                                {player.latestPlacement ??
+                                                                                    "—"}
+                                                                            </strong>
+                                                                            <span>
+                                                                                LAST PLACE
+                                                                            </span>
+                                                                        </div>
+
+                                                                        <div>
+                                                                            <strong>
+                                                                                {numberValue(
+                                                                                    player.points
+                                                                                )}
+                                                                            </strong>
+                                                                            <span>
+                                                                                POINTS
+                                                                            </span>
+                                                                        </div>
+                                                                    </div>
+                                                                </div>
+                                                            )
+                                                        )}
+                                                    </div>
+                                                </div>
+
+                                                <div className="live-team-total">
+                                                    <span>
+                                                        TEAM TOTAL
+                                                    </span>
+                                                    <strong>
+                                                        {numberValue(
+                                                            team.totalPoints
+                                                        )}
+                                                    </strong>
+                                                    <small>
+                                                        {numberValue(
+                                                            team.totalKills
+                                                        )}{" "}
+                                                        total kills
+                                                    </small>
+                                                </div>
+                                            </article>
+                                        )
+                                    )
+                                )}
+                            </div>
+                        </section>
+                    )}
+
+
+                {activeSection ===
+                    "matches" && (
+                        <section className="live-section">
+                            <div className="live-section-heading">
+                                <div>
+                                    <span>
+                                        {isOrganizer
+                                            ? "ORGANIZER CONTROL"
+                                            : "MATCH RESULTS"}
+                                    </span>
+                                    <h2>
+                                        {isOrganizer
+                                            ? "Match Control"
+                                            : "Matches"}
+                                    </h2>
+                                    <p>
+                                        {isOrganizer
+                                            ? "Start a match, enter each player's kills and placement, and save or finalize the result."
+                                            : "Review match status, player performance, kills, placement and points."}
+                                    </p>
+                                </div>
+                            </div>
+
+                            <div className="live-match-layout">
+                                <aside className="live-panel live-match-list">
+                                    <div className="live-panel-header">
+                                        <div>
+                                            <span>
+                                                TOURNAMENT MATCHES
+                                            </span>
+                                            <h3>
+                                                {matches.length} matches
+                                            </h3>
+                                        </div>
                                     </div>
 
-                                    <button
-                                        type="button"
-                                        className="live-text-button"
-                                        onClick={() =>
-                                            setActiveSection(
-                                                "matches"
-                                            )
-                                        }
-                                    >
-                                        Open Matches
-                                        <ChevronRight
-                                            size={14}
-                                        />
-                                    </button>
-                                </div>
-
-                                <div className="live-match-overview-list">
-                                    {matches
-                                        .filter(
-                                            (match) =>
-                                                [
-                                                    "LIVE",
-                                                    "SCHEDULED",
-                                                    "READY",
-                                                    "VERIFIED",
-                                                ].includes(
-                                                    String(
-                                                        match.status ||
-                                                        ""
-                                                    ).toUpperCase()
-                                                )
-                                        )
-                                        .slice(0, 6)
-                                        .map(
+                                    <div className="live-match-list-items">
+                                        {matches.map(
                                             (match) => (
                                                 <button
                                                     type="button"
                                                     key={match.id}
-                                                    className="live-match-overview-item"
-                                                    onClick={() => {
-                                                        setActiveSection(
-                                                            "matches"
-                                                        );
+                                                    className={`live-match-list-item ${String(
+                                                        selectedMatchId
+                                                    ) ===
+                                                        String(
+                                                            match.id
+                                                        )
+                                                        ? "selected"
+                                                        : ""
+                                                        }`}
+                                                    onClick={() =>
                                                         handleSelectMatch(
                                                             match.id
-                                                        );
-                                                    }}
+                                                        )
+                                                    }
                                                 >
-                                                    <div>
+                                                    <span className="live-match-number">
+                                                        {match.matchNumber ??
+                                                            match.id}
+                                                    </span>
+
+                                                    <span className="live-match-list-copy">
                                                         <strong>
                                                             Match{" "}
                                                             {match.matchNumber ??
                                                                 match.id}
                                                         </strong>
-                                                        <span>
+                                                        <small>
                                                             {formatStatus(
                                                                 match.status
                                                             )}
-                                                        </span>
-                                                    </div>
+                                                        </small>
+                                                    </span>
+
                                                     <ChevronRight
                                                         size={15}
                                                     />
@@ -1696,68 +2050,522 @@ export default function LiveTournamentDashboard() {
                                             )
                                         )}
 
-                                    {!matches.length && (
-                                        <div className="live-empty">
-                                            No matches have been created
-                                            for this tournament yet.
+                                        {!matches.length && (
+                                            <div className="live-empty">
+                                                No matches available.
+                                            </div>
+                                        )}
+                                    </div>
+                                </aside>
+
+
+                                <section className="live-panel live-match-editor">
+                                    {!selectedMatchId ? (
+                                        <div className="live-empty large">
+                                            <Swords
+                                                size={28}
+                                            />
+                                            <strong>
+                                                Select a match
+                                            </strong>
+                                            <span>
+                                                Choose a match from the list
+                                                to manage or review its data.
+                                            </span>
                                         </div>
+                                    ) : matchLoading ? (
+                                        <div className="live-empty large">
+                                            <div className="live-spinner" />
+                                            <strong>
+                                                Loading match...
+                                            </strong>
+                                        </div>
+                                    ) : !selectedMatch ? (
+                                        <div className="live-empty large">
+                                            <strong>
+                                                Match unavailable
+                                            </strong>
+                                            <span>
+                                                The selected match could not
+                                                be loaded.
+                                            </span>
+                                        </div>
+                                    ) : (
+                                        <>
+                                            <div className="live-editor-header">
+                                                <div>
+                                                    <span>
+                                                        MATCH{" "}
+                                                        {selectedMatch.matchNumber ??
+                                                            selectedMatch.id}
+                                                    </span>
+
+                                                    <h3>
+                                                        Match{" "}
+                                                        {selectedMatch.matchNumber ??
+                                                            selectedMatch.id}
+                                                    </h3>
+
+                                                    <p>
+                                                        {formatStatus(
+                                                            selectedMatch.status
+                                                        )}
+                                                    </p>
+                                                </div>
+
+                                                {isOrganizer && (
+                                                    <div className="live-editor-actions">
+                                                        {![
+                                                            "LIVE",
+                                                            "VERIFIED",
+                                                        ].includes(
+                                                            String(
+                                                                selectedMatch.status ||
+                                                                ""
+                                                            ).toUpperCase()
+                                                        ) && (
+                                                                <button
+                                                                    type="button"
+                                                                    className="live-button primary"
+                                                                    onClick={
+                                                                        handleStartMatch
+                                                                    }
+                                                                    disabled={
+                                                                        startingMatch
+                                                                    }
+                                                                >
+                                                                    <Play
+                                                                        size={15}
+                                                                    />
+                                                                    {startingMatch
+                                                                        ? "Starting..."
+                                                                        : "Start Match"}
+                                                                </button>
+                                                            )}
+
+                                                        {String(
+                                                            selectedMatch.status ||
+                                                            ""
+                                                        ).toUpperCase() ===
+                                                            "LIVE" && (
+                                                                <>
+                                                                    <button
+                                                                        type="button"
+                                                                        className="live-button secondary"
+                                                                        onClick={() =>
+                                                                            handleSaveScores(
+                                                                                false
+                                                                            )
+                                                                        }
+                                                                        disabled={
+                                                                            savingScores
+                                                                        }
+                                                                    >
+                                                                        <Save
+                                                                            size={15}
+                                                                        />
+                                                                        Save Scores
+                                                                    </button>
+
+                                                                    <button
+                                                                        type="button"
+                                                                        className="live-button primary"
+                                                                        onClick={() =>
+                                                                            handleSaveScores(
+                                                                                true
+                                                                            )
+                                                                        }
+                                                                        disabled={
+                                                                            savingScores
+                                                                        }
+                                                                    >
+                                                                        <Check
+                                                                            size={15}
+                                                                        />
+                                                                        Finalize Match
+                                                                    </button>
+                                                                </>
+                                                            )}
+                                                    </div>
+                                                )}
+                                            </div>
+
+
+                                            {isOrganizer &&
+                                                String(
+                                                    selectedMatch.status ||
+                                                    ""
+                                                ).toUpperCase() ===
+                                                "LIVE" && (
+                                                    <div className="live-editor-note">
+                                                        <strong>
+                                                            Enter match data
+                                                        </strong>
+                                                        <span>
+                                                            Kills and placement are
+                                                            stored per player.
+                                                            Points remain compatible
+                                                            with your existing SYNCO
+                                                            scoring field.
+                                                        </span>
+                                                    </div>
+                                                )}
+
+
+                                            <div className="live-team-summary">
+                                                {selectedTeamSummary.map(
+                                                    (team) => (
+                                                        <div
+                                                            className="live-team-summary-card"
+                                                            key={team.id}
+                                                        >
+                                                            <span>
+                                                                {team.name}
+                                                            </span>
+                                                            <strong>
+                                                                {team.placement ??
+                                                                    "—"}
+                                                            </strong>
+                                                            <small>
+                                                                PLACE
+                                                            </small>
+                                                            <div>
+                                                                {team.kills} kills
+                                                                <span />
+                                                                {team.points} points
+                                                            </div>
+                                                        </div>
+                                                    )
+                                                )}
+                                            </div>
+
+
+                                            <div className="live-table-wrap">
+                                                <table className="live-data-table">
+                                                    <thead>
+                                                        <tr>
+                                                            <th>
+                                                                PLAYER
+                                                            </th>
+                                                            <th>
+                                                                TEAM
+                                                            </th>
+                                                            <th>
+                                                                KILLS
+                                                            </th>
+                                                            <th>
+                                                                PLACEMENT
+                                                            </th>
+                                                            <th>
+                                                                POINTS
+                                                            </th>
+                                                            <th>
+                                                                ASSISTS
+                                                            </th>
+                                                            <th>
+                                                                DEATHS
+                                                            </th>
+                                                        </tr>
+                                                    </thead>
+
+                                                    <tbody>
+                                                        {selectedPlayers.length ===
+                                                            0 ? (
+                                                            <tr>
+                                                                <td
+                                                                    colSpan={7}
+                                                                    className="table-empty"
+                                                                >
+                                                                    No players are
+                                                                    attached to this
+                                                                    match.
+                                                                </td>
+                                                            </tr>
+                                                        ) : (
+                                                            selectedPlayers.map(
+                                                                (
+                                                                    player
+                                                                ) => {
+                                                                    const playerId =
+                                                                        player.userId;
+
+                                                                    const draft =
+                                                                        scoreDraft[
+                                                                        playerId
+                                                                        ] ||
+                                                                        {};
+
+                                                                    const locked =
+                                                                        String(
+                                                                            selectedMatch.status ||
+                                                                            ""
+                                                                        ).toUpperCase() ===
+                                                                        "VERIFIED";
+
+                                                                    return (
+                                                                        <tr
+                                                                            key={
+                                                                                playerId
+                                                                            }
+                                                                        >
+                                                                            <td>
+                                                                                <div className="table-player">
+                                                                                    <div className="live-player-avatar">
+                                                                                        {getInitials(
+                                                                                            player.name
+                                                                                        )}
+                                                                                    </div>
+                                                                                    <div>
+                                                                                        <strong>
+                                                                                            {player.name ||
+                                                                                                player.username ||
+                                                                                                "Player"}
+                                                                                        </strong>
+                                                                                        {player.uid && (
+                                                                                            <span>
+                                                                                                {player.uid}
+                                                                                            </span>
+                                                                                        )}
+                                                                                    </div>
+                                                                                </div>
+                                                                            </td>
+
+                                                                            <td>
+                                                                                {player.teamName ||
+                                                                                    "—"}
+                                                                            </td>
+
+                                                                            <td>
+                                                                                <input
+                                                                                    type="number"
+                                                                                    min="0"
+                                                                                    value={
+                                                                                        draft.kills ??
+                                                                                        0
+                                                                                    }
+                                                                                    disabled={
+                                                                                        locked ||
+                                                                                        !isOrganizer
+                                                                                    }
+                                                                                    onChange={(
+                                                                                        event
+                                                                                    ) =>
+                                                                                        updatePlayerStat(
+                                                                                            playerId,
+                                                                                            "kills",
+                                                                                            event.target.value
+                                                                                        )
+                                                                                    }
+                                                                                />
+                                                                            </td>
+
+                                                                            <td>
+                                                                                <input
+                                                                                    type="number"
+                                                                                    min="1"
+                                                                                    value={
+                                                                                        draft.placement ??
+                                                                                        ""
+                                                                                    }
+                                                                                    placeholder="—"
+                                                                                    disabled={
+                                                                                        locked ||
+                                                                                        !isOrganizer
+                                                                                    }
+                                                                                    onChange={(
+                                                                                        event
+                                                                                    ) =>
+                                                                                        updatePlayerStat(
+                                                                                            playerId,
+                                                                                            "placement",
+                                                                                            event.target.value
+                                                                                        )
+                                                                                    }
+                                                                                />
+                                                                            </td>
+
+                                                                            <td>
+                                                                                <input
+                                                                                    type="number"
+                                                                                    min="0"
+                                                                                    value={
+                                                                                        draft.points ??
+                                                                                        0
+                                                                                    }
+                                                                                    disabled={
+                                                                                        locked ||
+                                                                                        !isOrganizer
+                                                                                    }
+                                                                                    onChange={(
+                                                                                        event
+                                                                                    ) =>
+                                                                                        updatePlayerStat(
+                                                                                            playerId,
+                                                                                            "points",
+                                                                                            event.target.value
+                                                                                        )
+                                                                                    }
+                                                                                />
+                                                                            </td>
+
+                                                                            <td>
+                                                                                <input
+                                                                                    type="number"
+                                                                                    min="0"
+                                                                                    value={
+                                                                                        draft.assists ??
+                                                                                        0
+                                                                                    }
+                                                                                    disabled={
+                                                                                        locked ||
+                                                                                        !isOrganizer
+                                                                                    }
+                                                                                    onChange={(
+                                                                                        event
+                                                                                    ) =>
+                                                                                        updatePlayerStat(
+                                                                                            playerId,
+                                                                                            "assists",
+                                                                                            event.target.value
+                                                                                        )
+                                                                                    }
+                                                                                />
+                                                                            </td>
+
+                                                                            <td>
+                                                                                <input
+                                                                                    type="number"
+                                                                                    min="0"
+                                                                                    value={
+                                                                                        draft.deaths ??
+                                                                                        0
+                                                                                    }
+                                                                                    disabled={
+                                                                                        locked ||
+                                                                                        !isOrganizer
+                                                                                    }
+                                                                                    onChange={(
+                                                                                        event
+                                                                                    ) =>
+                                                                                        updatePlayerStat(
+                                                                                            playerId,
+                                                                                            "deaths",
+                                                                                            event.target.value
+                                                                                        )
+                                                                                    }
+                                                                                />
+                                                                            </td>
+                                                                        </tr>
+                                                                    );
+                                                                }
+                                                            )
+                                                        )}
+                                                    </tbody>
+                                                </table>
+                                            </div>
+
+                                            <div className="live-table-footer">
+                                                <span>
+                                                    {selectedPlayers.length} players
+                                                    attached to this match
+                                                </span>
+                                                <span>
+                                                    {String(
+                                                        selectedMatch.status ||
+                                                        ""
+                                                    ).toUpperCase() ===
+                                                        "VERIFIED"
+                                                        ? "Locked after verification"
+                                                        : isOrganizer
+                                                            ? "Organizer can edit scores"
+                                                            : "Read-only result view"}
+                                                </span>
+                                            </div>
+                                        </>
                                     )}
-                                </div>
+                                </section>
                             </div>
-                        </div>
-                    </section>
-                )}
+                        </section>
+                    )}
 
 
                 {activeSection ===
-                    "leaderboard" && (
-                    <section className="live-section">
-                        <div className="live-section-heading">
-                            <div>
-                                <span>
-                                    LIVE STANDINGS
-                                </span>
-                                <h2>
-                                    Leaderboard
-                                </h2>
-                                <p>
-                                    Rankings use the existing SYNCO
-                                    tournament score. Kills and
-                                    placement are shown as additional
-                                    match information.
-                                </p>
-                            </div>
-                        </div>
-
-                        <div className="live-leaderboard">
-                            {!leaderboard.length ? (
-                                <div className="live-empty large">
-                                    <Trophy
-                                        size={28}
-                                    />
-                                    <strong>
-                                        No leaderboard data yet
-                                    </strong>
+                    "results" && (
+                        <section className="live-section">
+                            <div className="live-section-heading">
+                                <div>
                                     <span>
-                                        Enter and save a match result
-                                        to update the standings.
+                                        TOURNAMENT OUTCOME
                                     </span>
+                                    <h2>
+                                        Final Results
+                                    </h2>
+                                    <p>
+                                        Verified match results and final
+                                        tournament standings.
+                                    </p>
                                 </div>
-                            ) : (
-                                leaderboard.map(
-                                    (team) => (
-                                        <article
-                                            className="live-team-row"
-                                            key={
-                                                team.participantId
-                                            }
-                                        >
-                                            <div className="live-rank">
-                                                {team.rank}
-                                            </div>
 
-                                            <div className="live-team-main">
-                                                <div className="live-team-heading">
+                                {tournamentCanBeFinalized && (
+                                    <button
+                                        type="button"
+                                        className="live-button primary"
+                                        onClick={
+                                            handleFinalizeTournament
+                                        }
+                                        disabled={
+                                            finalizingTournament
+                                        }
+                                    >
+                                        <Check
+                                            size={15}
+                                        />
+                                        {finalizingTournament
+                                            ? "Finalizing..."
+                                            : "Finalize Tournament"}
+                                    </button>
+                                )}
+                            </div>
+
+                            <div className="live-results">
+                                {(resultsData?.results ||
+                                    leaderboard).length ===
+                                    0 ? (
+                                    <div className="live-empty large">
+                                        <Medal
+                                            size={28}
+                                        />
+                                        <strong>
+                                            Final results not available
+                                        </strong>
+                                        <span>
+                                            Verify the match results first.
+                                        </span>
+                                    </div>
+                                ) : (
+                                    (
+                                        resultsData?.results ||
+                                        leaderboard
+                                    ).map(
+                                        (
+                                            team,
+                                            index
+                                        ) => (
+                                            <article
+                                                className="live-result-row"
+                                                key={
+                                                    team.participantId ||
+                                                    index
+                                                }
+                                            >
+                                                <div className="live-result-rank">
+                                                    {team.finalRank ||
+                                                        team.rank ||
+                                                        index +
+                                                        1}
+                                                </div>
+
+                                                <div className="live-result-team">
                                                     <div className="live-team-avatar">
                                                         {getInitials(
                                                             team.teamName
@@ -1765,10 +2573,10 @@ export default function LiveTournamentDashboard() {
                                                     </div>
 
                                                     <div>
-                                                        <h3>
+                                                        <strong>
                                                             {team.teamName ||
                                                                 "Unnamed Team"}
-                                                        </h3>
+                                                        </strong>
                                                         <span>
                                                             {team.members?.length ||
                                                                 0}{" "}
@@ -1777,762 +2585,46 @@ export default function LiveTournamentDashboard() {
                                                     </div>
                                                 </div>
 
-                                                <div className="live-player-list">
-                                                    {(
-                                                        team.members ||
-                                                        []
-                                                    ).map(
-                                                        (
-                                                            player
-                                                        ) => (
-                                                            <div
-                                                                className="live-player-row"
-                                                                key={
-                                                                    player.userId
-                                                                }
-                                                            >
-                                                                <div className="live-player-info">
-                                                                    <div className="live-player-avatar">
-                                                                        {getInitials(
-                                                                            player.name
-                                                                        )}
-                                                                    </div>
-
-                                                                    <div>
-                                                                        <strong>
-                                                                            {player.name ||
-                                                                                player.username ||
-                                                                                "Player"}
-                                                                        </strong>
-                                                                        {player.uid && (
-                                                                            <span>
-                                                                                {player.uid}
-                                                                            </span>
-                                                                        )}
-                                                                    </div>
-                                                                </div>
-
-                                                                <div className="live-player-metrics">
-                                                                    <div>
-                                                                        <strong>
-                                                                            {numberValue(
-                                                                                player.totalKills
-                                                                            )}
-                                                                        </strong>
-                                                                        <span>
-                                                                            KILLS
-                                                                        </span>
-                                                                    </div>
-
-                                                                    <div>
-                                                                        <strong>
-                                                                            {player.latestPlacement ??
-                                                                                "—"}
-                                                                        </strong>
-                                                                        <span>
-                                                                            LAST PLACE
-                                                                        </span>
-                                                                    </div>
-
-                                                                    <div>
-                                                                        <strong>
-                                                                            {numberValue(
-                                                                                player.points
-                                                                            )}
-                                                                        </strong>
-                                                                        <span>
-                                                                            POINTS
-                                                                        </span>
-                                                                    </div>
-                                                                </div>
-                                                            </div>
-                                                        )
-                                                    )}
-                                                </div>
-                                            </div>
-
-                                            <div className="live-team-total">
-                                                <span>
-                                                    TEAM TOTAL
-                                                </span>
-                                                <strong>
-                                                    {numberValue(
-                                                        team.totalPoints
-                                                    )}
-                                                </strong>
-                                                <small>
-                                                    {numberValue(
-                                                        team.totalKills
-                                                    )}{" "}
-                                                    total kills
-                                                </small>
-                                            </div>
-                                        </article>
-                                    )
-                                )
-                            )}
-                        </div>
-                    </section>
-                )}
-
-
-                {activeSection ===
-                    "matches" && (
-                    <section className="live-section">
-                        <div className="live-section-heading">
-                            <div>
-                                <span>
-                                    {isOrganizer
-                                        ? "ORGANIZER CONTROL"
-                                        : "MATCH RESULTS"}
-                                </span>
-                                <h2>
-                                    {isOrganizer
-                                        ? "Match Control"
-                                        : "Matches"}
-                                </h2>
-                                <p>
-                                    {isOrganizer
-                                        ? "Start a match, enter each player's kills and placement, and save or finalize the result."
-                                        : "Review match status, player performance, kills, placement and points."}
-                                </p>
-                            </div>
-                        </div>
-
-                        <div className="live-match-layout">
-                            <aside className="live-panel live-match-list">
-                                <div className="live-panel-header">
-                                    <div>
-                                        <span>
-                                            TOURNAMENT MATCHES
-                                        </span>
-                                        <h3>
-                                            {matches.length} matches
-                                        </h3>
-                                    </div>
-                                </div>
-
-                                <div className="live-match-list-items">
-                                    {matches.map(
-                                        (match) => (
-                                            <button
-                                                type="button"
-                                                key={match.id}
-                                                className={`live-match-list-item ${String(
-                                                    selectedMatchId
-                                                ) ===
-                                                    String(
-                                                        match.id
-                                                    )
-                                                    ? "selected"
-                                                    : ""
-                                                    }`}
-                                                onClick={() =>
-                                                    handleSelectMatch(
-                                                        match.id
-                                                    )
-                                                }
-                                            >
-                                                <span className="live-match-number">
-                                                    {match.matchNumber ??
-                                                        match.id}
-                                                </span>
-
-                                                <span className="live-match-list-copy">
-                                                    <strong>
-                                                        Match{" "}
-                                                        {match.matchNumber ??
-                                                            match.id}
-                                                    </strong>
-                                                    <small>
-                                                        {formatStatus(
-                                                            match.status
-                                                        )}
-                                                    </small>
-                                                </span>
-
-                                                <ChevronRight
-                                                    size={15}
-                                                />
-                                            </button>
-                                        )
-                                    )}
-
-                                    {!matches.length && (
-                                        <div className="live-empty">
-                                            No matches available.
-                                        </div>
-                                    )}
-                                </div>
-                            </aside>
-
-
-                            <section className="live-panel live-match-editor">
-                                {!selectedMatchId ? (
-                                    <div className="live-empty large">
-                                        <Swords
-                                            size={28}
-                                        />
-                                        <strong>
-                                            Select a match
-                                        </strong>
-                                        <span>
-                                            Choose a match from the list
-                                            to manage or review its data.
-                                        </span>
-                                    </div>
-                                ) : matchLoading ? (
-                                    <div className="live-empty large">
-                                        <div className="live-spinner" />
-                                        <strong>
-                                            Loading match...
-                                        </strong>
-                                    </div>
-                                ) : !selectedMatch ? (
-                                    <div className="live-empty large">
-                                        <strong>
-                                            Match unavailable
-                                        </strong>
-                                        <span>
-                                            The selected match could not
-                                            be loaded.
-                                        </span>
-                                    </div>
-                                ) : (
-                                    <>
-                                        <div className="live-editor-header">
-                                            <div>
-                                                <span>
-                                                    MATCH{" "}
-                                                    {selectedMatch.matchNumber ??
-                                                        selectedMatch.id}
-                                                </span>
-
-                                                <h3>
-                                                    Match{" "}
-                                                    {selectedMatch.matchNumber ??
-                                                        selectedMatch.id}
-                                                </h3>
-
-                                                <p>
-                                                    {formatStatus(
-                                                        selectedMatch.status
-                                                    )}
-                                                </p>
-                                            </div>
-
-                                            {isOrganizer && (
-                                                <div className="live-editor-actions">
-                                                    {![
-                                                        "LIVE",
-                                                        "VERIFIED",
-                                                    ].includes(
-                                                        String(
-                                                            selectedMatch.status ||
-                                                            ""
-                                                        ).toUpperCase()
-                                                    ) && (
-                                                        <button
-                                                            type="button"
-                                                            className="live-button primary"
-                                                            onClick={
-                                                                handleStartMatch
-                                                            }
-                                                            disabled={
-                                                                startingMatch
-                                                            }
-                                                        >
-                                                            <Play
-                                                                size={15}
-                                                            />
-                                                            {startingMatch
-                                                                ? "Starting..."
-                                                                : "Start Match"}
-                                                        </button>
-                                                    )}
-
-                                                    {String(
-                                                        selectedMatch.status ||
-                                                        ""
-                                                    ).toUpperCase() ===
-                                                        "LIVE" && (
-                                                        <>
-                                                            <button
-                                                                type="button"
-                                                                className="live-button secondary"
-                                                                onClick={() =>
-                                                                    handleSaveScores(
-                                                                        false
-                                                                    )
-                                                                }
-                                                                disabled={
-                                                                    savingScores
-                                                                }
-                                                            >
-                                                                <Save
-                                                                    size={15}
-                                                                />
-                                                                Save Scores
-                                                            </button>
-
-                                                            <button
-                                                                type="button"
-                                                                className="live-button primary"
-                                                                onClick={() =>
-                                                                    handleSaveScores(
-                                                                        true
-                                                                    )
-                                                                }
-                                                                disabled={
-                                                                    savingScores
-                                                                }
-                                                            >
-                                                                <Check
-                                                                    size={15}
-                                                                />
-                                                                Finalize Match
-                                                            </button>
-                                                        </>
-                                                    )}
-                                                </div>
-                                            )}
-                                        </div>
-
-
-                                        {isOrganizer &&
-                                            String(
-                                                selectedMatch.status ||
-                                                ""
-                                            ).toUpperCase() ===
-                                            "LIVE" && (
-                                                <div className="live-editor-note">
-                                                    <strong>
-                                                        Enter match data
-                                                    </strong>
-                                                    <span>
-                                                        Kills and placement are
-                                                        stored per player.
-                                                        Points remain compatible
-                                                        with your existing SYNCO
-                                                        scoring field.
-                                                    </span>
-                                                </div>
-                                            )}
-
-
-                                        <div className="live-team-summary">
-                                            {selectedTeamSummary.map(
-                                                (team) => (
-                                                    <div
-                                                        className="live-team-summary-card"
-                                                        key={team.id}
-                                                    >
+                                                <div className="live-result-stats">
+                                                    <div>
                                                         <span>
-                                                            {team.name}
+                                                            KILLS
                                                         </span>
                                                         <strong>
-                                                            {team.placement ??
+                                                            {numberValue(
+                                                                team.totalKills
+                                                            )}
+                                                        </strong>
+                                                    </div>
+
+                                                    <div>
+                                                        <span>
+                                                            BEST PLACE
+                                                        </span>
+                                                        <strong>
+                                                            {team.bestPlacement ??
                                                                 "—"}
                                                         </strong>
-                                                        <small>
-                                                            PLACE
-                                                        </small>
-                                                        <div>
-                                                            {team.kills} kills
-                                                            <span />
-                                                            {team.points} points
-                                                        </div>
                                                     </div>
-                                                )
-                                            )}
-                                        </div>
-
-
-                                        <div className="live-table-wrap">
-                                            <table className="live-data-table">
-                                                <thead>
-                                                    <tr>
-                                                        <th>
-                                                            PLAYER
-                                                        </th>
-                                                        <th>
-                                                            TEAM
-                                                        </th>
-                                                        <th>
-                                                            KILLS
-                                                        </th>
-                                                        <th>
-                                                            PLACEMENT
-                                                        </th>
-                                                        <th>
-                                                            POINTS
-                                                        </th>
-                                                        <th>
-                                                            ASSISTS
-                                                        </th>
-                                                        <th>
-                                                            DEATHS
-                                                        </th>
-                                                    </tr>
-                                                </thead>
-
-                                                <tbody>
-                                                    {selectedPlayers.length ===
-                                                        0 ? (
-                                                        <tr>
-                                                            <td
-                                                                colSpan={7}
-                                                                className="table-empty"
-                                                            >
-                                                                No players are
-                                                                attached to this
-                                                                match.
-                                                            </td>
-                                                        </tr>
-                                                    ) : (
-                                                        selectedPlayers.map(
-                                                            (
-                                                                player
-                                                            ) => {
-                                                                const playerId =
-                                                                    player.userId;
-
-                                                                const draft =
-                                                                    scoreDraft[
-                                                                        playerId
-                                                                    ] ||
-                                                                    {};
-
-                                                                const locked =
-                                                                    String(
-                                                                        selectedMatch.status ||
-                                                                        ""
-                                                                    ).toUpperCase() ===
-                                                                    "VERIFIED";
-
-                                                                return (
-                                                                    <tr
-                                                                        key={
-                                                                            playerId
-                                                                        }
-                                                                    >
-                                                                        <td>
-                                                                            <div className="table-player">
-                                                                                <div className="live-player-avatar">
-                                                                                    {getInitials(
-                                                                                        player.name
-                                                                                    )}
-                                                                                </div>
-                                                                                <div>
-                                                                                    <strong>
-                                                                                        {player.name ||
-                                                                                            player.username ||
-                                                                                            "Player"}
-                                                                                    </strong>
-                                                                                    {player.uid && (
-                                                                                        <span>
-                                                                                            {player.uid}
-                                                                                        </span>
-                                                                                    )}
-                                                                                </div>
-                                                                            </div>
-                                                                        </td>
-
-                                                                        <td>
-                                                                            {player.teamName ||
-                                                                                "—"}
-                                                                        </td>
-
-                                                                        <td>
-                                                                            <input
-                                                                                type="number"
-                                                                                min="0"
-                                                                                value={
-                                                                                    draft.kills ??
-                                                                                    0
-                                                                                }
-                                                                                disabled={
-                                                                                    locked ||
-                                                                                    !isOrganizer
-                                                                                }
-                                                                                onChange={(
-                                                                                    event
-                                                                                ) =>
-                                                                                    updatePlayerStat(
-                                                                                        playerId,
-                                                                                        "kills",
-                                                                                        event.target.value
-                                                                                    )
-                                                                                }
-                                                                            />
-                                                                        </td>
-
-                                                                        <td>
-                                                                            <input
-                                                                                type="number"
-                                                                                min="1"
-                                                                                value={
-                                                                                    draft.placement ??
-                                                                                    ""
-                                                                                }
-                                                                                placeholder="—"
-                                                                                disabled={
-                                                                                    locked ||
-                                                                                    !isOrganizer
-                                                                                }
-                                                                                onChange={(
-                                                                                    event
-                                                                                ) =>
-                                                                                    updatePlayerStat(
-                                                                                        playerId,
-                                                                                        "placement",
-                                                                                        event.target.value
-                                                                                    )
-                                                                                }
-                                                                            />
-                                                                        </td>
-
-                                                                        <td>
-                                                                            <input
-                                                                                type="number"
-                                                                                min="0"
-                                                                                value={
-                                                                                    draft.points ??
-                                                                                    0
-                                                                                }
-                                                                                disabled={
-                                                                                    locked ||
-                                                                                    !isOrganizer
-                                                                                }
-                                                                                onChange={(
-                                                                                    event
-                                                                                ) =>
-                                                                                    updatePlayerStat(
-                                                                                        playerId,
-                                                                                        "points",
-                                                                                        event.target.value
-                                                                                    )
-                                                                                }
-                                                                            />
-                                                                        </td>
-
-                                                                        <td>
-                                                                            <input
-                                                                                type="number"
-                                                                                min="0"
-                                                                                value={
-                                                                                    draft.assists ??
-                                                                                    0
-                                                                                }
-                                                                                disabled={
-                                                                                    locked ||
-                                                                                    !isOrganizer
-                                                                                }
-                                                                                onChange={(
-                                                                                    event
-                                                                                ) =>
-                                                                                    updatePlayerStat(
-                                                                                        playerId,
-                                                                                        "assists",
-                                                                                        event.target.value
-                                                                                    )
-                                                                                }
-                                                                            />
-                                                                        </td>
-
-                                                                        <td>
-                                                                            <input
-                                                                                type="number"
-                                                                                min="0"
-                                                                                value={
-                                                                                    draft.deaths ??
-                                                                                    0
-                                                                                }
-                                                                                disabled={
-                                                                                    locked ||
-                                                                                    !isOrganizer
-                                                                                }
-                                                                                onChange={(
-                                                                                    event
-                                                                                ) =>
-                                                                                    updatePlayerStat(
-                                                                                        playerId,
-                                                                                        "deaths",
-                                                                                        event.target.value
-                                                                                    )
-                                                                                }
-                                                                            />
-                                                                        </td>
-                                                                    </tr>
-                                                                );
-                                                            }
-                                                        )
-                                                    )}
-                                                </tbody>
-                                            </table>
-                                        </div>
-
-                                        <div className="live-table-footer">
-                                            <span>
-                                                {selectedPlayers.length} players
-                                                attached to this match
-                                            </span>
-                                            <span>
-                                                {String(
-                                                    selectedMatch.status ||
-                                                    ""
-                                                ).toUpperCase() ===
-                                                    "VERIFIED"
-                                                    ? "Locked after verification"
-                                                    : isOrganizer
-                                                        ? "Organizer can edit scores"
-                                                        : "Read-only result view"}
-                                            </span>
-                                        </div>
-                                    </>
-                                )}
-                            </section>
-                        </div>
-                    </section>
-                )}
-
-
-                {activeSection ===
-                    "results" && (
-                    <section className="live-section">
-                        <div className="live-section-heading">
-                            <div>
-                                <span>
-                                    TOURNAMENT OUTCOME
-                                </span>
-                                <h2>
-                                    Final Results
-                                </h2>
-                                <p>
-                                    Verified match results and final
-                                    tournament standings.
-                                </p>
-                            </div>
-
-                            {tournamentCanBeFinalized && (
-                                <button
-                                    type="button"
-                                    className="live-button primary"
-                                    onClick={
-                                        handleFinalizeTournament
-                                    }
-                                    disabled={
-                                        finalizingTournament
-                                    }
-                                >
-                                    <Check
-                                        size={15}
-                                    />
-                                    {finalizingTournament
-                                        ? "Finalizing..."
-                                        : "Finalize Tournament"}
-                                </button>
-                            )}
-                        </div>
-
-                        <div className="live-results">
-                            {(resultsData?.results ||
-                                leaderboard).length ===
-                                0 ? (
-                                <div className="live-empty large">
-                                    <Medal
-                                        size={28}
-                                    />
-                                    <strong>
-                                        Final results not available
-                                    </strong>
-                                    <span>
-                                        Verify the match results first.
-                                    </span>
-                                </div>
-                            ) : (
-                                (
-                                    resultsData?.results ||
-                                    leaderboard
-                                ).map(
-                                    (
-                                        team,
-                                        index
-                                    ) => (
-                                        <article
-                                            className="live-result-row"
-                                            key={
-                                                team.participantId ||
-                                                index
-                                            }
-                                        >
-                                            <div className="live-result-rank">
-                                                {team.finalRank ||
-                                                    team.rank ||
-                                                    index +
-                                                    1}
-                                            </div>
-
-                                            <div className="live-result-team">
-                                                <div className="live-team-avatar">
-                                                    {getInitials(
-                                                        team.teamName
-                                                    )}
                                                 </div>
 
-                                                <div>
-                                                    <strong>
-                                                        {team.teamName ||
-                                                            "Unnamed Team"}
-                                                    </strong>
+                                                <div className="live-result-points">
                                                     <span>
-                                                        {team.members?.length ||
-                                                            0}{" "}
-                                                        players
-                                                    </span>
-                                                </div>
-                                            </div>
-
-                                            <div className="live-result-stats">
-                                                <div>
-                                                    <span>
-                                                        KILLS
+                                                        POINTS
                                                     </span>
                                                     <strong>
                                                         {numberValue(
-                                                            team.totalKills
+                                                            team.totalPoints
                                                         )}
                                                     </strong>
                                                 </div>
-
-                                                <div>
-                                                    <span>
-                                                        BEST PLACE
-                                                    </span>
-                                                    <strong>
-                                                        {team.bestPlacement ??
-                                                            "—"}
-                                                    </strong>
-                                                </div>
-                                            </div>
-
-                                            <div className="live-result-points">
-                                                <span>
-                                                    POINTS
-                                                </span>
-                                                <strong>
-                                                    {numberValue(
-                                                        team.totalPoints
-                                                    )}
-                                                </strong>
-                                            </div>
-                                        </article>
+                                            </article>
+                                        )
                                     )
-                                )
-                            )}
-                        </div>
-                    </section>
-                )}
+                                )}
+                            </div>
+                        </section>
+                    )}
             </main>
         </div>
     );
