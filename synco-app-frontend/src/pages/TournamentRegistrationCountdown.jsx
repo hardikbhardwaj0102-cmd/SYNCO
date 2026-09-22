@@ -180,31 +180,31 @@ export default function TournamentRegistrationCountdown() {
     useEffect(() => {
         if (!competition) return;
 
-        const status = String(competition.status || "").toUpperCase();
+        // IMPORTANT: registrationStart is the first and highest-priority
+        // phase boundary. Even if the backend competition status was already
+        // marked LIVE, do NOT send the user to the live dashboard while the
+        // scheduled registration window has not started yet.
+        if (
+            Number.isFinite(registrationStartMs) &&
+            nowMs < registrationStartMs
+        ) {
+            return;
+        }
 
-        // Once the tournament is already live, bypass the registration
-        // countdown page completely.
-        if (isLiveStatus(status)) {
+        // Registration has opened. Keep the user on the normal registration
+        // page until the tournament/match start time is actually reached.
+        if (
+            Number.isFinite(competitionStartMs) &&
+            nowMs >= competitionStartMs
+        ) {
             navigate(`/live-tournament/${competitionId}`, { replace: true });
             return;
         }
 
-        // Registration opens exactly at registrationStart. Once that instant
-        // is reached, send everyone to the existing registration screen.
         if (
             Number.isFinite(registrationStartMs) &&
             nowMs >= registrationStartMs
         ) {
-            // If the tournament itself has already started, the live dashboard
-            // takes precedence over registration.
-            if (
-                Number.isFinite(competitionStartMs) &&
-                nowMs >= competitionStartMs
-            ) {
-                navigate(`/live-tournament/${competitionId}`, { replace: true });
-                return;
-            }
-
             navigate(`/competitions/${competitionId}/register`, { replace: true });
         }
     }, [
