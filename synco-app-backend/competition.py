@@ -5,14 +5,12 @@
 
 from datetime import datetime, timedelta, timezone
 from zoneinfo import ZoneInfo
-import copy
 import math
 import random
 import re
 
 from flask import Blueprint, current_app, jsonify, request, session
 from sqlalchemy import or_
-from sqlalchemy.exc import IntegrityError
 
 from models import (
     db,
@@ -46,7 +44,6 @@ from models import (
     VerificationRecord,
     CompetitionDispute,
     CompetitionAuditLog,
-    Notification,
 )
 
 
@@ -390,21 +387,6 @@ def as_utc_naive(value):
     return value.astimezone(timezone.utc).replace(tzinfo=None)
 
 
-def utc_iso(value):
-    """Serialize a DB UTC datetime as an explicit UTC ISO-8601 value.
-
-    The database stores naive UTC datetimes for compatibility. JavaScript
-    treats a timezone-less ISO string as browser-local time, which caused
-    tournament invite expiry/countdown values to appear several hours early.
-    Always expose these timestamps with an explicit UTC suffix.
-    """
-    if value is None:
-        return None
-
-    value = as_utc_naive(value)
-    return value.isoformat() + "Z"
-
-
 def slugify(value):
 
     value = str(value or "").strip().lower()
@@ -731,11 +713,23 @@ def serialize_participant(participant):
             participant.registration_status
         ),
 
-        "registeredAt": utc_iso(participant.registered_at),
+        "registeredAt": (
+            participant.registered_at.isoformat()
+            if participant.registered_at
+            else None
+        ),
 
-        "acceptedAt": utc_iso(participant.accepted_at),
+        "acceptedAt": (
+            participant.accepted_at.isoformat()
+            if participant.accepted_at
+            else None
+        ),
 
-        "eliminatedAt": utc_iso(participant.eliminated_at),
+        "eliminatedAt": (
+            participant.eliminated_at.isoformat()
+            if participant.eliminated_at
+            else None
+        ),
 
         "teamRoster": team_roster,
 
@@ -1075,6 +1069,11 @@ def serialize_competition(
             competition.organizer_id
         ),
 
+        "isOrganizer": bool(
+            (current := current_user())
+            and current.id == competition.organizer_id
+        ),
+
         "gameId": competition.game_id,
 
         "game": serialize_game(game),
@@ -1129,17 +1128,41 @@ def serialize_competition(
             competition.is_published
         ),
 
-        "registrationStart": utc_iso(competition.registration_start),
+        "registrationStart": (
+            competition.registration_start.isoformat()
+            if competition.registration_start
+            else None
+        ),
 
-        "registrationEnd": utc_iso(competition.registration_end),
+        "registrationEnd": (
+            competition.registration_end.isoformat()
+            if competition.registration_end
+            else None
+        ),
 
-        "competitionStart": utc_iso(competition.competition_start),
+        "competitionStart": (
+            competition.competition_start.isoformat()
+            if competition.competition_start
+            else None
+        ),
 
-        "competitionEnd": utc_iso(competition.competition_end),
+        "competitionEnd": (
+            competition.competition_end.isoformat()
+            if competition.competition_end
+            else None
+        ),
 
-        "createdAt": utc_iso(competition.created_at),
+        "createdAt": (
+            competition.created_at.isoformat()
+            if competition.created_at
+            else None
+        ),
 
-        "updatedAt": utc_iso(competition.updated_at),
+        "updatedAt": (
+            competition.updated_at.isoformat()
+            if competition.updated_at
+            else None
+        ),
     }
 
     if include_children:
@@ -1933,6 +1956,82 @@ def get_competition(
 
 
 # =========================================================
+# DELETE COMPETITION
+# =========================================================
+
+@competition_bp.route(
+    "/<int:competition_id>",
+    methods=["DELETE"]
+)
+def delete_competition(competition_id):
+
+    competition = db.session.get(
+        Competition,
+        competition_id
+    )
+
+    if not competition:
+
+        return jsonify({
+            "success": False,
+            "message": "Competition not found."
+        }), 404
+
+    # Security boundary: only the user who organized this
+    # competition can permanently delete it.
+    user, error = organizer_required(competition)
+
+    if error:
+        return error
+
+    competition_title = competition.title
+
+    try:
+
+        # Competition notifications do not have a foreign-key to
+        # competitions, so remove them explicitly to avoid leaving
+        # stale tournament notifications after deletion.
+        from models import Notification
+
+        Notification.query.filter(
+            Notification.reference_type == "COMPETITION",
+            Notification.reference_id == competition.id,
+        ).delete(
+            synchronize_session=False
+        )
+
+        # The Competition model has delete-orphan cascades for the
+        # tournament's stages, participants, matches, standings,
+        # bracket, disputes, audit logs, team invites, and
+        # substitution requests.
+        db.session.delete(competition)
+        db.session.commit()
+
+        return jsonify({
+            "success": True,
+            "message": "Competition deleted successfully.",
+            "competitionId": competition_id,
+            "title": competition_title,
+        })
+
+    except Exception as exc:
+
+        db.session.rollback()
+
+        current_app.logger.exception(
+            "Competition deletion failed for competition %s",
+            competition_id
+        )
+
+        return jsonify({
+            "success": False,
+            "message": "Competition could not be deleted.",
+            "error": str(exc).strip() or exc.__class__.__name__,
+            "errorType": exc.__class__.__name__,
+        }), 500
+
+
+# =========================================================
 # OPEN REGISTRATION
 # =========================================================
 
@@ -2274,263 +2373,29 @@ def get_committed_team_for_user(
     return None
 
 
-def _participant_captain_roster_status(participant, user_id):
-    """Return the stored roster status for the captain, if present."""
+def user_has_any_active_competition_entry(competition, user_id):
 
-    roster = getattr(participant, "team_roster", None) or []
-    if not isinstance(roster, list):
-        return None
-
-    try:
-        user_id = int(user_id)
-    except (TypeError, ValueError):
-        return None
-
-    for item in roster:
-        if not isinstance(item, dict):
-            continue
-        try:
-            roster_user_id = int(item.get("userId"))
-        except (TypeError, ValueError):
-            continue
-        if roster_user_id == user_id:
-            return str(item.get("status") or "").upper() or None
-
-    return None
-
-
-def _mark_participant_cancelled(participant):
-    """Synchronously cancel a participant, roster state, and pending invites."""
-
-    if not participant:
-        return
-
-    participant.registration_status = "CANCELLED"
-    participant.accepted_at = None
-
-    # Persist a cancellation marker on the tournament-specific roster.
-    # This gives future re-registration attempts explicit evidence that this
-    # particular participant was withdrawn.
-    if getattr(participant, "user_id", None):
-        set_roster_player_status(
-            participant,
-            participant.user_id,
-            "CANCELLED",
-        )
-
-    roster = getattr(participant, "team_roster", None) or []
-    if isinstance(roster, list):
-        for item in roster:
-            if not isinstance(item, dict):
-                continue
-            try:
-                roster_user_id = int(item.get("userId"))
-            except (TypeError, ValueError):
-                continue
-            # Pending/unaccepted members are also part of the cancelled
-            # registration. Keep their final tournament-registration state
-            # explicit without changing historical accepted players.
-            if str(item.get("status") or "").upper() in {
-                "PENDING",
-                "ACCEPTED",
-                "DECLINED",
-                "EXPIRED",
-            }:
-                item["status"] = "CANCELLED"
-        # Reassign the list so SQLAlchemy reliably persists JSON changes.
-        participant.team_roster = copy.deepcopy(roster)
-
-    invites = (
-        CompetitionTeamInvite.query
-        .filter_by(
-            participant_id=participant.id,
-            status="PENDING",
-        )
-        .all()
-    )
-
-    for invite in invites:
-        invite.status = "CANCELLED"
-        invite.responded_at = datetime.utcnow()
-
-
-def _withdrawal_evidence_exists(competition, user_id, participant):
-    """
-    Return True only when the database contains explicit evidence that this
-    participant was withdrawn.
-
-    Evidence sources:
-      1. Tournament audit log created by the captain.
-      2. Cancellation notification generated for this participant.
-      3. Explicit CANCELLED status on the captain's roster entry.
-    """
-
-    if not competition or not participant:
-        return False
-
-    # 1) Tournament audit log.
-    audit_rows = (
-        CompetitionAuditLog.query
-        .filter_by(
-            competition_id=competition.id,
-            actor_id=user_id,
-            action="REGISTRATION_WITHDRAWN",
-        )
-        .order_by(CompetitionAuditLog.created_at.desc())
-        .limit(100)
-        .all()
-    )
-
-    for audit in audit_rows:
-        metadata = getattr(audit, "audit_metadata", None) or {}
-        try:
-            audit_participant_id = int(metadata.get("participantId"))
-        except (TypeError, ValueError, AttributeError):
-            audit_participant_id = None
-
-        if audit_participant_id == participant.id:
-            return True
-
-    # 2) Cancellation notification.
-    notification_rows = (
-        Notification.query
-        .filter(
-            Notification.user_id == user_id,
-            Notification.notification_type == "COMPETITION_REGISTRATION_CANCELLED",
-        )
-        .order_by(Notification.created_at.desc())
-        .limit(100)
-        .all()
-    )
-
-    for notification in notification_rows:
-        data = getattr(notification, "data", None) or {}
-
-        try:
-            notification_participant_id = int(
-                data.get("participantId")
-            )
-        except (TypeError, ValueError, AttributeError):
-            notification_participant_id = None
-
-        if (
-            notification_participant_id == participant.id
-            and (
-                notification.reference_id == competition.id
-                or str(data.get("competitionId")) == str(competition.id)
-            )
-        ):
-            return True
-
-    # 3) Explicit roster cancellation marker.
-    roster_status = _participant_captain_roster_status(
-        participant,
-        user_id,
-    )
-
-    return roster_status == "CANCELLED"
-
-
-def _repair_withdrawn_registration_before_reregister(competition, user_id):
-    """
-    Repair stale active rows only when there is explicit withdrawal evidence.
-
-    This is deliberately conservative: an ordinary active PENDING/ACCEPTED
-    registration is never silently cancelled. That preserves the rule that a
-    player may not create a second active commitment in the same competition.
-    """
-
-    participants = (
+    # Captain / solo participant.
+    participant = (
         CompetitionParticipant.query
         .filter_by(
             competition_id=competition.id,
             user_id=user_id,
         )
         .filter(
-            CompetitionParticipant.registration_status.in_([
-                "PENDING",
-                "ACCEPTED",
-            ])
-        )
-        .order_by(
-            CompetitionParticipant.registered_at.desc(),
-            CompetitionParticipant.id.desc(),
-        )
-        .all()
-    )
-
-    repaired = []
-
-    for participant in participants:
-        if _withdrawal_evidence_exists(
-            competition,
-            user_id,
-            participant,
-        ):
-            _mark_participant_cancelled(participant)
-            repaired.append(participant.id)
-
-    if repaired:
-        db.session.commit()
-
-    return repaired
-
-
-def user_has_any_active_competition_entry(competition, user_id):
-
-    # First clean up any stale captain/solo rows for which the database
-    # already contains explicit evidence that this user withdrew. This is
-    # important for registrations created by older versions of the flow,
-    # where the participant row could survive the withdrawal action.
-    try:
-        normalized_user_id = int(user_id)
-    except (TypeError, ValueError):
-        return None
-
-    active_rows = (
-        CompetitionParticipant.query
-        .filter_by(
-            competition_id=competition.id,
-            user_id=normalized_user_id,
-        )
-        .filter(
             CompetitionParticipant.registration_status.notin_(
                 ["REJECTED", "CANCELLED", "DISQUALIFIED"]
             )
         )
-        .order_by(
-            CompetitionParticipant.registered_at.desc(),
-            CompetitionParticipant.id.desc(),
-        )
-        .all()
+        .first()
     )
 
-    stale_rows = []
-    remaining_rows = []
+    if participant:
+        return participant
 
-    for participant in active_rows:
-        if _withdrawal_evidence_exists(
-            competition,
-            normalized_user_id,
-            participant,
-        ):
-            _mark_participant_cancelled(participant)
-            stale_rows.append(participant)
-        else:
-            remaining_rows.append(participant)
-
-    # Persist the repaired state before returning a conflict to the caller.
-    if stale_rows:
-        db.session.flush()
-
-    if remaining_rows:
-        return remaining_rows[0]
-
-    # The user may still be committed as an accepted roster member on a team
-    # whose captain is somebody else. That remains a real active commitment.
     return get_committed_team_for_user(
         competition,
-        normalized_user_id,
+        user_id,
     )
 
 
@@ -2595,12 +2460,9 @@ def set_roster_player_status(participant, user_id, status):
     if not isinstance(roster, list):
         return False
 
-    # JSON columns are not mutable-tracked by default. Rebuild the list so
-    # SQLAlchemy always sees a new value and persists the status change.
-    updated_roster = copy.deepcopy(roster)
     changed = False
 
-    for item in updated_roster:
+    for item in roster:
         if not isinstance(item, dict):
             continue
 
@@ -2613,9 +2475,7 @@ def set_roster_player_status(participant, user_id, status):
             item["status"] = str(status).upper()
             changed = True
 
-    if changed:
-        participant.team_roster = updated_roster
-
+    participant.team_roster = roster
     return changed
 
 
@@ -2671,12 +2531,6 @@ def serialize_team_invite(invite):
     invite_data = invite.to_dict()
     participant = invite.participant
     competition = invite.competition
-
-    invite_data["expiresAt"] = utc_iso(invite.expires_at)
-    invite_data["createdAt"] = utc_iso(invite.created_at)
-    invite_data["respondedAt"] = utc_iso(invite.responded_at)
-    invite_data["halfwayRemindedAt"] = utc_iso(invite.halfway_reminded_at)
-    invite_data["lastHourRemindedAt"] = utc_iso(invite.last_hour_reminded_at)
 
     invite_data["competitionTitle"] = (
         competition.title if competition else "Tournament"
@@ -2740,7 +2594,11 @@ def enrich_roster_with_invites(participant, roster_payload=None):
         item["inviteId"] = invite.id
         item["inviteStatus"] = invite.status
         item["inviteType"] = invite.invite_type
-        item["inviteExpiresAt"] = utc_iso(invite.expires_at)
+        item["inviteExpiresAt"] = (
+            invite.expires_at.isoformat()
+            if invite.expires_at
+            else None
+        )
         item["replacesUserId"] = invite.replaces_user_id
 
     return payload
@@ -3294,24 +3152,6 @@ def process_competition_registration_timers(competition, commit=True):
         changed = True
 
     # -----------------------------------------------------
-    # Normalize team state before confirming entries.
-    # Older registrations could be stored as ACCEPTED while one or more
-    # teammate invitations were still pending. That incorrectly consumes a
-    # confirmed slot and makes the UI show an accepted team with an incomplete
-    # roster. Treat such a team as pending until every roster slot is accepted.
-    # -----------------------------------------------------
-
-    for participant in get_team_participant_rows(competition):
-
-        if (
-            participant.registration_status == "ACCEPTED"
-            and not team_is_complete(participant, competition)
-        ):
-            participant.registration_status = "PENDING"
-            participant.accepted_at = None
-            changed = True
-
-    # -----------------------------------------------------
     # Confirm full pending teams
     # -----------------------------------------------------
 
@@ -3488,15 +3328,6 @@ def get_registration_info(competition_id):
     )
     db.session.refresh(competition)
 
-    # Clean up only stale registrations that have explicit withdrawal evidence.
-    # This makes the registration page and a fresh registration attempt agree
-    # on the same source of truth.
-    _repair_withdrawn_registration_before_reregister(
-        competition,
-        user.id,
-    )
-    db.session.refresh(competition)
-
     mode_config = {}
     game_configuration = get_game_configuration(competition.game)
     if game_configuration:
@@ -3525,16 +3356,6 @@ def get_registration_info(competition_id):
         .order_by(CompetitionParticipant.registered_at.desc())
         .first()
     )
-
-    # Team members do not have CompetitionParticipant.user_id pointing to
-    # themselves; only the captain owns that field. Once an invite is
-    # accepted, resolve the team through the accepted roster so the invited
-    # player sees the same confirmed/pending state as the captain.
-    if current_registration is None and is_team:
-        current_registration = get_committed_team_for_user(
-            competition,
-            user.id,
-        )
 
     # All current memberships for the competition game. Owner is simply
     # another membership; there is no special registration permission.
@@ -3703,27 +3524,16 @@ def get_registration_info(competition_id):
     )
 
     substitution_requests = []
-    if is_team:
-        if user.id == competition.organizer_id:
-            rows = (
-                CompetitionSubstitutionRequest.query
-                .filter_by(competition_id=competition.id)
-                .order_by(CompetitionSubstitutionRequest.requested_at.desc())
-                .all()
+    if current_registration and is_team:
+        rows = (
+            CompetitionSubstitutionRequest.query
+            .filter_by(
+                competition_id=competition.id,
+                participant_id=current_registration.id,
             )
-        elif current_registration:
-            rows = (
-                CompetitionSubstitutionRequest.query
-                .filter_by(
-                    competition_id=competition.id,
-                    participant_id=current_registration.id,
-                )
-                .order_by(CompetitionSubstitutionRequest.requested_at.desc())
-                .all()
-            )
-        else:
-            rows = []
-
+            .order_by(CompetitionSubstitutionRequest.requested_at.desc())
+            .all()
+        )
         substitution_requests = [
             serialize_substitution_request(item)
             for item in rows
@@ -3747,32 +3557,15 @@ def get_registration_info(competition_id):
             serialized_current_registration["teamRoster"]
         )
 
-        if is_team and current_registration.user_id == user.id:
-            pending_replacements = (
-                CompetitionTeamInvite.query
-                .filter_by(
-                    participant_id=current_registration.id,
-                    invite_type="REPLACEMENT",
-                    status="PENDING",
-                )
-                .order_by(CompetitionTeamInvite.created_at.desc())
-                .all()
-            )
-            serialized_current_registration["pendingReplacementInvites"] = [
-                serialize_team_invite(item)
-                for item in pending_replacements
-            ]
-        else:
-            serialized_current_registration["pendingReplacementInvites"] = []
-
-    next_match_start = get_next_match_start(competition)
-    substitution_cutoff_at = substitution_cutoff(competition)
-
     return jsonify({
         "success": True,
         "competition": serialize_competition(competition),
         "registrationOpen": registration_open,
-        "registrationDeadline": utc_iso(competition.registration_end),
+        "registrationDeadline": (
+            competition.registration_end.isoformat()
+            if competition.registration_end
+            else None
+        ),
         "full": capacity_full,
         "capacity": competition.max_participants,
         "registeredCount": confirmed_count,
@@ -3787,15 +3580,6 @@ def get_registration_info(competition_id):
         ),
         "modeConfig": mode_config,
         "registrationSettings": _registration_settings(competition),
-        "currentUserId": user.id,
-        "isHost": competition.organizer_id == user.id,
-        "nextMatchStart": utc_iso(next_match_start),
-        "substitutionCutoff": utc_iso(substitution_cutoff_at),
-        "isCaptain": bool(
-            serialized_current_registration
-            and str(serialized_current_registration.get("participantType", "")).upper() == "TEAM"
-            and serialized_current_registration.get("captainId") == user.id
-        ),
         "currentUserGameLinked": user_has_linked_game(
             user,
             competition.game,
@@ -3871,9 +3655,7 @@ def register_player(competition_id):
     if existing:
         return jsonify({
             "success": False,
-            "message": "You are already committed to an entry in this competition.",
-            "participant": serialize_participant(existing),
-            "participantId": existing.id,
+            "message": "You are already committed to an entry in this competition."
         }), 409
 
     # Registering solo is an accepted commitment, so any other pending
@@ -3888,20 +3670,7 @@ def register_player(competition_id):
     )
 
     db.session.add(participant)
-    try:
-        db.session.flush()
-    except IntegrityError:
-        db.session.rollback()
-        existing = user_has_any_active_competition_entry(
-            competition,
-            user.id,
-        )
-        return jsonify({
-            "success": False,
-            "message": "You already have an active registration in this competition.",
-            "participant": serialize_participant(existing) if existing else None,
-            "participantId": existing.id if existing else None,
-        }), 409
+    db.session.flush()
 
     cancel_other_pending_competition_invites(
         competition,
@@ -4019,45 +3788,10 @@ def register_team(competition_id):
             "message": "The registering player must be included as the team captain."
         }), 400
 
-    # Repair only registrations that already carry explicit evidence of withdrawal.
-    # A normal active team is never silently cancelled.
-    _repair_withdrawn_registration_before_reregister(
-        competition,
-        user.id,
-    )
-
-    existing_captain_entry = (
-        CompetitionParticipant.query
-        .filter_by(
-            competition_id=competition.id,
-            user_id=user.id,
-        )
-        .filter(
-            CompetitionParticipant.registration_status.notin_(
-                ["REJECTED", "CANCELLED", "DISQUALIFIED"]
-            )
-        )
-        .order_by(CompetitionParticipant.registered_at.desc())
-        .first()
-    )
-
-    if existing_captain_entry:
+    if user_has_any_active_competition_entry(competition, user.id):
         return jsonify({
             "success": False,
-            "message": "You already have an active registration in this competition. Open the existing registration instead of submitting another one.",
-            "participant": serialize_participant(existing_captain_entry),
-            "participantId": existing_captain_entry.id,
-        }), 409
-
-    committed_entry = get_committed_team_for_user(
-        competition,
-        user.id,
-    )
-    if committed_entry:
-        return jsonify({
-            "success": False,
-            "message": "You are already committed to a team in this competition.",
-            "participantId": committed_entry.id,
+            "message": "You are already committed to an entry in this competition."
         }), 409
 
     club = db.session.get(Club, club_id)
@@ -4228,63 +3962,7 @@ def register_team(competition_id):
     )
 
     db.session.add(participant)
-    try:
-        db.session.flush()
-    except IntegrityError as exc:
-        # Do not turn every database integrity error into an
-        # "already registered" message. A cancelled row should be
-        # allowed to be followed by a new registration when the
-        # active-only unique index is installed.
-        db.session.rollback()
-
-        existing_captain_entry = (
-            CompetitionParticipant.query
-            .filter_by(
-                competition_id=competition.id,
-                user_id=user.id,
-            )
-            .filter(
-                CompetitionParticipant.registration_status.notin_(
-                    ["REJECTED", "CANCELLED", "DISQUALIFIED"]
-                )
-            )
-            .order_by(CompetitionParticipant.registered_at.desc())
-            .first()
-        )
-
-        if existing_captain_entry:
-            return jsonify({
-                "success": False,
-                "message": (
-                    "You already have an active registration in this competition. "
-                    "Open the existing registration instead of submitting another one."
-                ),
-                "participant": serialize_participant(existing_captain_entry),
-                "participantId": existing_captain_entry.id,
-                "code": "ACTIVE_REGISTRATION_EXISTS",
-            }), 409
-
-        current_app.logger.exception(
-            "Team registration insert failed for competition %s and user %s",
-            competition.id,
-            user.id,
-        )
-
-        return jsonify({
-            "success": False,
-            "message": "Unable to create the team registration because of a database constraint.",
-            "error": str(exc),
-            "errorType": exc.__class__.__name__,
-            "code": "REGISTRATION_DATABASE_CONFLICT",
-        }), 409
-
-    # Registering a new team is a commitment for the captain. Any other
-    # pending invitations for this competition must therefore be cancelled.
-    cancel_other_pending_competition_invites(
-        competition,
-        user.id,
-        accepted_invite_id=None,
-    )
+    db.session.flush()
 
     for index, membership in enumerate(roster_memberships, start=1):
 
@@ -4334,7 +4012,7 @@ def register_team(competition_id):
                 "playerName": player_name,
                 "actionStatus": "PENDING",
                 "actionUrl": f"/competitions/{competition.id}/register",
-                "expiresAt": utc_iso(invite.expires_at),
+                "expiresAt": invite.expires_at.isoformat(),
             },
         )
 
@@ -4348,7 +4026,7 @@ def register_team(competition_id):
             "captainId": user.id,
             "selectedUserIds": member_ids,
             "inviteIds": [invite.id for invite in invite_rows],
-            "expiresAt": utc_iso(min((invite.expires_at for invite in invite_rows), default=created_at)),
+            "expiresAt": min((invite.expires_at for invite in invite_rows), default=created_at).isoformat(),
         },
     )
 
@@ -4464,84 +4142,10 @@ def accept_team_invite(competition_id, invite_id):
             "message": "You cannot accept this invitation."
         }), 403
 
-    # Accept is intentionally idempotent. A notification center, another
-    # browser tab, or a double-click can retry the same action after the first
-    # request has already committed. In that case the invitation is already
-    # accepted, so return the authoritative state instead of HTTP 400.
-    if invite.status == "ACCEPTED":
-        participant = invite.participant
-
-        if not participant:
-            return jsonify({
-                "success": False,
-                "message": "The team registration no longer exists.",
-            }), 400
-
-        if invite.invite_type == "SUBSTITUTION":
-            substitution = None
-            if invite.substitution_request_id:
-                substitution = db.session.get(
-                    CompetitionSubstitutionRequest,
-                    invite.substitution_request_id,
-                )
-
-            return jsonify({
-                "success": True,
-                "alreadyAccepted": True,
-                "message": (
-                    "This substitution invitation was already accepted."
-                    if substitution and substitution.status == "COMPLETED"
-                    else "This substitution invitation was already accepted."
-                ),
-                "participant": serialize_participant(participant),
-                "invite": serialize_team_invite(invite),
-                "substitution": (
-                    serialize_substitution_request(substitution)
-                    if substitution else None
-                ),
-            })
-
-        # For a replacement, the roster may already contain the replacement
-        # from the first successful request. Keep it accepted and return the
-        # current state on repeated clicks.
-        if invite.invite_type == "REPLACEMENT" and roster_player(participant, user.id):
-            set_roster_player_status(participant, user.id, "ACCEPTED")
-            confirm_team_if_complete(competition, participant)
-            mark_competition_notifications_read(user.id, invite_id=invite.id)
-            db.session.commit()
-            return jsonify({
-                "success": True,
-                "alreadyAccepted": True,
-                "message": "This replacement invitation was already accepted.",
-                "participant": serialize_participant(participant),
-                "invite": serialize_team_invite(invite),
-            })
-
-        # Normal TEAM_MEMBER invite. Repair the roster snapshot if an older
-        # deployment committed the invite but did not persist the roster state.
-        set_roster_player_status(participant, user.id, "ACCEPTED")
-        cancel_other_pending_competition_invites(
-            competition,
-            user.id,
-            accepted_invite_id=invite.id,
-        )
-        confirm_team_if_complete(competition, participant)
-        mark_competition_notifications_read(user.id, invite_id=invite.id)
-        db.session.commit()
-
-        return jsonify({
-            "success": True,
-            "alreadyAccepted": True,
-            "message": "This tournament invitation was already accepted.",
-            "participant": serialize_participant(participant),
-            "invite": serialize_team_invite(invite),
-        })
-
     if invite.status != "PENDING":
         return jsonify({
             "success": False,
-            "message": f"This invitation is no longer pending. Current state: {invite.status.lower()}.",
-            "currentState": invite.status,
+            "message": f"This invitation is no longer pending. Current state: {invite.status.lower()}."
         }), 400
 
     if not is_registration_open_now(competition) and invite.invite_type != "SUBSTITUTION":
@@ -4648,8 +4252,7 @@ def accept_team_invite(competition_id, invite_id):
                 "message": "The player being replaced is no longer on this roster."
             }), 400
 
-        replacement_item = dict(current_item)
-        replacement_item.update({
+        current_item.update({
             "userId": user.id,
             "uid": user.uid,
             "name": user.username or user.name or f"Player {user.id}",
@@ -4660,11 +4263,7 @@ def accept_team_invite(competition_id, invite_id):
             "replacedFromUserId": outgoing_user_id,
         })
 
-        participant.team_roster = [
-            replacement_item if int(item.get("userId")) == int(outgoing_user_id) else dict(item)
-            for item in (participant.team_roster or [])
-            if isinstance(item, dict)
-        ]
+        participant.team_roster = participant.team_roster or []
         substitution.status = "COMPLETED"
         substitution.completed_at = datetime.utcnow()
         substitution.replacement_user_id = replacement_user_id
@@ -4760,9 +4359,9 @@ def accept_team_invite(competition_id, invite_id):
         }
 
         participant.team_roster = [
-            dict(new_item) if isinstance(item, dict) and int(item.get("userId")) == int(old_user_id) else dict(item)
+            new_item if item is old_item else item
             for item in (participant.team_roster or [])
-            if isinstance(item, dict)
+            if item is not None
         ]
 
         create_audit_log(
@@ -5026,29 +4625,11 @@ def replace_team_player(competition_id):
         }), 400
 
     outgoing_status = str(outgoing_item.get("status") or "").upper()
-    if outgoing_status not in {"ACCEPTED", "DECLINED", "EXPIRED", "CANCELLED"}:
+    if outgoing_status == "PENDING":
         return jsonify({
             "success": False,
-            "message": "This roster slot cannot be replaced in its current state."
+            "message": "Wait for this player to respond before replacing them."
         }), 400
-
-    pending_slot_replacement = (
-        CompetitionTeamInvite.query
-        .filter_by(
-            participant_id=participant.id,
-            replaces_user_id=outgoing_user_id,
-            invite_type="REPLACEMENT",
-            status="PENDING",
-        )
-        .first()
-    )
-
-    if pending_slot_replacement:
-        return jsonify({
-            "success": False,
-            "message": "A replacement invitation is already pending for this roster slot.",
-            "invite": serialize_team_invite(pending_slot_replacement),
-        }), 409
 
     replacement_user = db.session.get(User, replacement_user_id)
     if not replacement_user:
@@ -5160,7 +4741,7 @@ def replace_team_player(competition_id):
             "replacesUserId": outgoing_user_id,
             "actionStatus": "PENDING",
             "actionUrl": f"/competitions/{competition.id}/register",
-            "expiresAt": utc_iso(invite.expires_at),
+            "expiresAt": invite.expires_at.isoformat(),
         },
     )
 
@@ -5181,7 +4762,7 @@ def replace_team_player(competition_id):
             "replacementUserId": replacement_user_id,
             "actionStatus": "PENDING",
             "actionUrl": f"/competitions/{competition.id}/register",
-            "expiresAt": utc_iso(invite.expires_at),
+            "expiresAt": invite.expires_at.isoformat(),
         },
     )
 
@@ -5195,7 +4776,7 @@ def replace_team_player(competition_id):
             "outgoingUserId": outgoing_user_id,
             "replacementUserId": replacement_user_id,
             "inviteId": invite.id,
-            "expiresAt": utc_iso(invite.expires_at),
+            "expiresAt": invite.expires_at.isoformat(),
         },
     )
 
@@ -5475,7 +5056,7 @@ def request_substitution(competition_id):
             "teamName": team_name,
             "actionStatus": "PENDING",
             "actionUrl": f"/live-tournament/{competition.id}",
-            "decisionDeadline": utc_iso(decision_deadline),
+            "decisionDeadline": decision_deadline.isoformat(),
         },
     )
 
@@ -5502,7 +5083,7 @@ def request_substitution(competition_id):
                 "teamName": team_name,
                 "actionStatus": "PENDING",
                 "actionUrl": f"/competitions/{competition.id}/register",
-                "decisionDeadline": utc_iso(decision_deadline),
+                "decisionDeadline": decision_deadline.isoformat(),
             },
         )
 
@@ -5516,7 +5097,7 @@ def request_substitution(competition_id):
             "outgoingUserId": outgoing_user_id,
             "replacementUserId": replacement_user_id,
             "reason": reason,
-            "decisionDeadline": utc_iso(decision_deadline),
+            "decisionDeadline": decision_deadline.isoformat(),
         },
     )
 
@@ -5605,23 +5186,6 @@ def approve_substitution(competition_id, request_id):
             "message": "The replacement player is no longer game eligible."
         }), 400
 
-    if roster_player(participant, replacement_user.id):
-        return jsonify({
-            "success": False,
-            "message": "The replacement player is already on this roster."
-        }), 409
-
-    committed_replacement = get_committed_team_for_user(
-        competition,
-        replacement_user.id,
-        exclude_participant_id=participant.id,
-    )
-    if committed_replacement:
-        return jsonify({
-            "success": False,
-            "message": "The replacement player is already committed to another team in this competition."
-        }), 409
-
     if not (
         ClubMember.query
         .filter_by(
@@ -5687,12 +5251,11 @@ def approve_substitution(competition_id, request_id):
             "teamName": team_name,
             "actionStatus": "PENDING",
             "actionUrl": f"/competitions/{competition.id}/register",
-            "expiresAt": utc_iso(invite.expires_at),
+            "expiresAt": invite.expires_at.isoformat(),
         },
     )
 
     for involved_user_id in {
-        host.id,
         request_row.captain_id,
         request_row.outgoing_user_id,
     }:
@@ -5799,7 +5362,6 @@ def reject_substitution(competition_id, request_id):
     team_name = participant.club.name if participant and participant.club else "Tournament Team"
 
     for involved_user_id in {
-        host.id,
         request_row.captain_id,
         request_row.outgoing_user_id,
         request_row.replacement_user_id,
@@ -5879,249 +5441,87 @@ def withdraw_registration(competition_id):
             "message": "Registration withdrawal is closed."
         }), 400
 
-    participant_type = str(
-        competition.participant_type or ""
-    ).upper()
+    participant = user_has_any_active_competition_entry(
+        competition,
+        user.id,
+    )
 
-    # -----------------------------------------------------
-    # IMPORTANT: A previous version could leave more than one
-    # active participant row for the same captain after repeated
-    # test registrations.  The unique index now prevents new
-    # duplicates, but we also clean up any pre-existing active
-    # rows when the captain withdraws.
-    # -----------------------------------------------------
+    if not participant:
+        return jsonify({
+            "success": False,
+            "message": "No active registration found for your account."
+        }), 404
 
-    if participant_type == "TEAM":
+    if participant.registration_status not in ("PENDING", "ACCEPTED"):
+        return jsonify({
+            "success": False,
+            "message": "This registration cannot be withdrawn."
+        }), 400
 
-        # Tournament registration ownership is the captain identity stored on
-        # the participant row. Older registrations can have user_id=NULL, so
-        # also recognize a roster entry explicitly marked CAPTAIN. Club owner
-        # status is intentionally irrelevant.
-        active_team_participants = (
-            CompetitionParticipant.query
-            .filter_by(
-                competition_id=competition.id,
-                participant_type="TEAM",
-            )
-            .filter(
-                CompetitionParticipant.registration_status.in_(
-                    ["PENDING", "ACCEPTED"]
-                )
-            )
-            .order_by(
-                CompetitionParticipant.registered_at.desc(),
-                CompetitionParticipant.id.desc(),
-            )
-            .all()
+    roster_before = getattr(participant, "team_roster", None) or []
+
+    participant.registration_status = "CANCELLED"
+
+    invites = (
+        CompetitionTeamInvite.query
+        .filter_by(
+            participant_id=participant.id,
+            status="PENDING",
         )
+        .all()
+    )
 
-        captain_participants = []
-        member_only_found = False
-
-        for team_participant in active_team_participants:
-            if team_participant.user_id == user.id:
-                captain_participants.append(team_participant)
-                continue
-
-            roster = getattr(team_participant, "team_roster", None) or []
-            if not isinstance(roster, list):
-                continue
-
-            is_captain = False
-            is_roster_member = False
-
-            for roster_item in roster:
-                if not isinstance(roster_item, dict):
-                    continue
-                try:
-                    roster_user_id = int(roster_item.get("userId"))
-                except (TypeError, ValueError):
-                    continue
-
-                if roster_user_id != user.id:
-                    continue
-
-                is_roster_member = True
-                if str(roster_item.get("role") or "").upper() == "CAPTAIN":
-                    is_captain = True
-                break
-
-            if is_captain:
-                captain_participants.append(team_participant)
-            elif is_roster_member:
-                member_only_found = True
-
-        if not captain_participants:
-            if member_only_found:
-                return jsonify({
-                    "success": False,
-                    "message": "Only the team captain can withdraw the tournament registration."
-                }), 403
-
-            return jsonify({
-                "success": False,
-                "message": "No active registration found for your account."
-            }), 404
-
-        participants_to_cancel = captain_participants
-
-    else:
-
-        participant = (
-            CompetitionParticipant.query
-            .filter_by(
-                competition_id=competition.id,
-                participant_type="PLAYER",
-                user_id=user.id,
-            )
-            .filter(
-                CompetitionParticipant.registration_status.in_(
-                    ["PENDING", "ACCEPTED"]
-                )
-            )
-            .order_by(
-                CompetitionParticipant.registered_at.desc(),
-                CompetitionParticipant.id.desc(),
-            )
-            .first()
-        )
-
-        if not participant:
-            return jsonify({
-                "success": False,
-                "message": "No active registration found for your account."
-            }), 404
-
-        participants_to_cancel = [participant]
-
-    notified_ids = set()
-    cancelled_participant_ids = []
-
-    for participant in participants_to_cancel:
-
-        if participant.registration_status not in ("PENDING", "ACCEPTED"):
-            continue
-
-        roster_before = (
-            list(getattr(participant, "team_roster", None) or [])
-            if isinstance(getattr(participant, "team_roster", None), list)
-            else []
-        )
-
-        accepted_members_before = team_member_ids(
-            participant,
-            accepted_only=True,
-        )
-
-        participant.registration_status = "CANCELLED"
-        participant.accepted_at = None
+    for invite in invites:
+        invite.status = "CANCELLED"
+        invite.responded_at = datetime.utcnow()
         set_roster_player_status(
             participant,
-            participant.user_id,
+            invite.invited_user_id,
             "CANCELLED",
         )
-        # Also persist the state for every rostered player so a future
-        # re-registration repair can rely on durable evidence.
-        roster_cancelled = copy.deepcopy(roster_before)
-        for roster_item in roster_cancelled:
-            if not isinstance(roster_item, dict):
-                continue
-            roster_status = str(roster_item.get("status") or "").upper()
-            if roster_status in {"PENDING", "ACCEPTED", "DECLINED", "EXPIRED"}:
-                roster_item["status"] = "CANCELLED"
-        participant.team_roster = roster_cancelled
-        cancelled_participant_ids.append(participant.id)
 
-        invites = (
-            CompetitionTeamInvite.query
-            .filter_by(
-                participant_id=participant.id,
-                status="PENDING",
-            )
-            .all()
-        )
+    notified_ids = {
+        participant.user_id,
+        *team_member_ids(participant, accepted_only=True),
+    }
 
-        for invite in invites:
-            invite.status = "CANCELLED"
-            invite.responded_at = datetime.utcnow()
-            set_roster_player_status(
-                participant,
-                invite.invited_user_id,
-                "CANCELLED",
-            )
+    team_name = participant.club.name if participant.club else "Your tournament entry"
 
-        # A withdrawn registration cannot retain pending substitution
-        # requests. They are tied to the same participant and must stop
-        # being actionable immediately.
-        pending_substitutions = (
-            CompetitionSubstitutionRequest.query
-            .filter_by(
-                participant_id=participant.id,
-                status="PENDING",
-            )
-            .all()
-        )
-
-        for substitution_request in pending_substitutions:
-            substitution_request.status = "REJECTED"
-            substitution_request.decided_at = datetime.utcnow()
-            substitution_request.rejection_reason = "Tournament registration was withdrawn."
-
-        participant_notified_ids = {
-            user_id
-            for user_id in [
-                participant.user_id,
-                *accepted_members_before,
-            ]
-            if user_id
-        }
-        notified_ids.update(participant_notified_ids)
-
-        team_name = (
-            participant.club.name
-            if participant.club
-            else "Your tournament entry"
-        )
-
-        for user_id in participant_notified_ids:
-            create_competition_notification(
-                user_id,
-                "COMPETITION_REGISTRATION_CANCELLED",
-                "Tournament Registration Withdrawn",
-                f"{team_name} withdrew from {competition.title}.",
-                competition.id,
-                data={
-                    "participantId": participant.id,
-                    "clubId": participant.club_id,
-                    "teamName": team_name,
-                    "actionStatus": "CANCELLED",
-                    "actionUrl": f"/competitions/{competition.id}/register",
-                },
-            )
-
-        create_audit_log(
+    for user_id in notified_ids:
+        if not user_id:
+            continue
+        create_competition_notification(
+            user_id,
+            "COMPETITION_REGISTRATION_CANCELLED",
+            "Tournament Registration Withdrawn",
+            f"{team_name} withdrew from {competition.title}.",
             competition.id,
-            user.id,
-            "REGISTRATION_WITHDRAWN",
-            metadata={
+            data={
                 "participantId": participant.id,
-                "participantType": participant.participant_type,
                 "clubId": participant.club_id,
-                "roster": roster_before,
-                "cleanupDuplicateActiveRows": len(participants_to_cancel) > 1,
+                "teamName": team_name,
+                "actionStatus": "CANCELLED",
+                "actionUrl": f"/competitions/{competition.id}/register",
             },
         )
+
+    create_audit_log(
+        competition.id,
+        user.id,
+        "REGISTRATION_WITHDRAWN",
+        metadata={
+            "participantId": participant.id,
+            "participantType": participant.participant_type,
+            "clubId": participant.club_id,
+            "roster": roster_before,
+        },
+    )
 
     db.session.commit()
 
     return jsonify({
         "success": True,
-        "message": (
-            "Tournament registration withdrawn."
-            if len(cancelled_participant_ids) == 1
-            else "Tournament registrations withdrawn and stale duplicate registrations were cleaned up."
-        ),
-        "cancelledParticipantIds": cancelled_participant_ids,
+        "message": "Tournament registration withdrawn.",
     })
 
 
