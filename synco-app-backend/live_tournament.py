@@ -108,11 +108,12 @@ def organizer_required(competition):
             403,
         )
 
-    if str(competition.participant_type or "").upper() != "TEAM":
+    participant_type = str(competition.participant_type or "").strip().upper()
+    if participant_type not in ("TEAM", "PLAYER"):
         return None, (
             jsonify({
                 "success": False,
-                "message": "The live team dashboard requires a TEAM competition.",
+                "message": "Live dashboard is only available for TEAM or PLAYER competitions.",
             }),
             400,
         )
@@ -179,6 +180,26 @@ def get_team_participants(competition):
             CompetitionParticipant.registration_status.in_(
                 ["ACCEPTED", "LOCKED"]
             )
+        )
+        .order_by(
+            CompetitionParticipant.seed.asc().nullslast(),
+            CompetitionParticipant.registered_at.asc().nullslast(),
+            CompetitionParticipant.id.asc(),
+        )
+        .all()
+    )
+
+
+def get_player_participants(competition):
+    """Return confirmed/locked individual player registrations."""
+    return (
+        CompetitionParticipant.query
+        .filter_by(
+            competition_id=competition.id,
+            participant_type="PLAYER",
+        )
+        .filter(
+            CompetitionParticipant.registration_status.in_(["ACCEPTED", "LOCKED"])
         )
         .order_by(
             CompetitionParticipant.seed.asc().nullslast(),
@@ -360,25 +381,54 @@ def serialize_member(competition, participant, user):
 
 
 def build_leaderboard(competition):
-    rows = []
+    """Build leaderboard for TEAM or PLAYER competitions."""
+    participant_type = str(competition.participant_type or "").strip().upper()
 
+    if participant_type == "PLAYER":
+        rows = []
+        for participant in get_player_participants(competition):
+            user = participant.user
+            if not user:
+                continue
+
+            total_points = player_points_for_competition(
+                competition.id, participant.id, user.id
+            )
+
+            rows.append({
+                "participantId": participant.id,
+                "teamId": None,
+                "teamName": None,
+                "teamTag": None,
+                "teamAvatar": None,
+                "playerId": user.id,
+                "playerUid": user.uid,
+                "playerName": display_user_name(user),
+                "playerUsername": user.username,
+                "playerAvatar": user.avatar,
+                "seed": participant.seed,
+                "status": participant.registration_status,
+                "totalPoints": int(total_points or 0),
+                "members": [serialize_member(competition, participant, user)],
+            })
+
+        rows.sort(key=lambda row: (
+            -row["totalPoints"],
+            row["seed"] if row["seed"] is not None else 10**9,
+            row["participantId"],
+        ))
+        for index, row in enumerate(rows, start=1):
+            row["rank"] = index
+        return rows
+
+    rows = []
     for participant in get_team_participants(competition):
         members = get_team_members(participant)
-
         member_rows = [
-            serialize_member(
-                competition,
-                participant,
-                user,
-            )
+            serialize_member(competition, participant, user)
             for user in members
         ]
-
-        # IMPORTANT: team total is derived from the individual members.
-        total_points = sum(
-            int(member["individualPoints"])
-            for member in member_rows
-        )
+        total_points = sum(int(member["individualPoints"]) for member in member_rows)
 
         rows.append({
             "participantId": participant.id,
@@ -386,25 +436,24 @@ def build_leaderboard(competition):
             "teamName": display_team_name(participant),
             "teamTag": participant.club.tag if participant.club else None,
             "teamAvatar": participant.club.avatar if participant.club else None,
+            "playerId": None,
+            "playerUid": None,
+            "playerName": None,
+            "playerUsername": None,
+            "playerAvatar": None,
             "seed": participant.seed,
             "status": participant.registration_status,
             "totalPoints": total_points,
             "members": member_rows,
         })
 
-    # Team total points are primary. Seed / participant id are deterministic
-    # fallbacks so equal scores do not randomly reorder the live table.
-    rows.sort(
-        key=lambda row: (
-            -row["totalPoints"],
-            row["seed"] if row["seed"] is not None else 10**9,
-            row["participantId"],
-        )
-    )
-
+    rows.sort(key=lambda row: (
+        -row["totalPoints"],
+        row["seed"] if row["seed"] is not None else 10**9,
+        row["participantId"],
+    ))
     for index, row in enumerate(rows, start=1):
         row["rank"] = index
-
     return rows
 
 
@@ -417,8 +466,20 @@ def match_team_participants(match):
     ]
 
 
+def match_participants(match):
+    """Return TEAM and PLAYER participants attached to a match."""
+    return [
+        item.competition_participant
+        for item in match.participants
+        if item.competition_participant
+        and str(item.competition_participant.participant_type or "").upper()
+        in ("TEAM", "PLAYER")
+    ]
+
+
 def serialize_match(match, detailed=False):
     competition = match.competition
+    participant_type = str(competition.participant_type or "").strip().upper()
 
     result = {
         "id": match.id,
@@ -431,27 +492,70 @@ def serialize_match(match, detailed=False):
         "startedAt": match.started_at.isoformat() if match.started_at else None,
         "completedAt": match.completed_at.isoformat() if match.completed_at else None,
         "status": match.status,
+        "participantType": participant_type,
         "participants": [],
     }
 
-    for participant in match_team_participants(match):
+    for participant in match_participants(match):
+        if participant_type == "PLAYER":
+            user = participant.user
+            if not user:
+                continue
+
+            stat = get_player_match_stat(match.id, user.id)
+            entry = {
+                "participantId": participant.id,
+                "teamId": None,
+                "teamName": None,
+                "teamTag": None,
+                "teamAvatar": None,
+                "playerId": user.id,
+                "playerUid": user.uid,
+                "playerName": display_user_name(user),
+                "playerUsername": user.username,
+                "playerAvatar": user.avatar,
+                "totalPoints": player_points_for_competition(
+                    competition.id, participant.id, user.id
+                ),
+            }
+
+            if detailed:
+                entry["players"] = [{
+                    "userId": user.id,
+                    "uid": user.uid,
+                    "name": display_user_name(user),
+                    "username": user.username,
+                    "avatar": user.avatar,
+                    "points": int(stat.score if stat else 0),
+                    "kills": int(stat.kills if stat else 0),
+                    "assists": int(stat.assists if stat else 0),
+                    "deaths": int(stat.deaths if stat else 0),
+                }]
+                entry["matchPoints"] = int(stat.score if stat else 0)
+
+            result["participants"].append(entry)
+            continue
+
         entry = {
             "participantId": participant.id,
             "teamId": participant.club_id,
             "teamName": display_team_name(participant),
             "teamTag": participant.club.tag if participant.club else None,
+            "teamAvatar": participant.club.avatar if participant.club else None,
+            "playerId": None,
+            "playerUid": None,
+            "playerName": None,
+            "playerUsername": None,
+            "playerAvatar": None,
             "totalPoints": team_points_for_competition(
-                competition.id,
-                participant.id,
+                competition.id, participant.id
             ),
         }
 
         if detailed:
             players = []
-
             for user in get_team_members(participant):
                 stat = get_player_match_stat(match.id, user.id)
-
                 players.append({
                     "userId": user.id,
                     "uid": user.uid,
@@ -463,11 +567,8 @@ def serialize_match(match, detailed=False):
                     "assists": int(stat.assists if stat else 0),
                     "deaths": int(stat.deaths if stat else 0),
                 })
-
             entry["players"] = players
-            entry["matchPoints"] = sum(
-                player["points"] for player in players
-            )
+            entry["matchPoints"] = sum(player["points"] for player in players)
 
         result["participants"].append(entry)
 
@@ -475,7 +576,9 @@ def serialize_match(match, detailed=False):
 
 
 def sync_team_match_stats(match):
-    """Synchronize TeamMatchStats from PlayerMatchStats for one match."""
+    """Synchronize TeamMatchStats for TEAM matches only."""
+    if str(match.competition.participant_type or "").strip().upper() != "TEAM":
+        return
 
     for participant in match_team_participants(match):
         team_points = (
@@ -521,40 +624,34 @@ def sync_team_match_stats(match):
 
 
 def validate_match_players(match, payload_players):
-    """
-    Validate the exact roster already attached to the match.
-    This deliberately prevents adding players through the dashboard.
-    """
-
+    """Validate the exact roster already attached to the match."""
     expected = {}
 
-    for participant in match_team_participants(match):
-        for user in get_team_members(participant):
-            expected[user.id] = participant.id
+    for participant in match_participants(match):
+        if participant.participant_type == "PLAYER":
+            if participant.user:
+                expected[participant.user.id] = participant.id
+        else:
+            for user in get_team_members(participant):
+                expected[user.id] = participant.id
 
     received = set()
-
     for raw in payload_players:
         try:
-            user_id = int(
-                raw.get("userId", raw.get("user_id", raw.get("player_id")))
-            )
+            user_id = int(raw.get("userId", raw.get("user_id", raw.get("player_id"))))
         except (TypeError, ValueError):
             return None, "Each player needs a valid userId."
 
         if user_id in received:
             return None, f"Player {user_id} was submitted more than once."
-
         if user_id not in expected:
             return None, f"Player {user_id} is not part of this match roster."
-
         received.add(user_id)
 
     missing = sorted(set(expected) - received)
-
     if missing:
         return None, (
-            "Every participating team member needs a score before the match "
+            "Every participating player needs a score before the match "
             f"can be finalized. Missing user IDs: {missing}"
         )
 
@@ -658,7 +755,8 @@ def dashboard(competition_id):
             "message": "Competition not found.",
         }), 404
 
-    teams = build_leaderboard(competition)
+    participants = build_leaderboard(competition)
+    is_solo = str(competition.participant_type or '').strip().upper() == 'PLAYER'
 
     matches = (
         CompetitionMatch.query
@@ -705,13 +803,13 @@ def dashboard(competition_id):
                 "end": competition.competition_end.isoformat() if competition.competition_end else None,
             },
             "overview": {
-                "teams": len(teams),
-                "players": sum(len(item["members"]) for item in teams),
+                "teams": 0 if is_solo else len(participants),
+                "players": len(participants) if is_solo else sum(len(item["members"]) for item in participants),
                 "matches": len(matches),
                 "completedMatches": sum(1 for item in matches if item.status == "VERIFIED"),
                 "liveMatchId": live_match.id if live_match else None,
             },
-            "leaderboard": teams,
+            "leaderboard": participants,
             "matches": [serialize_match(item) for item in matches],
         },
         "updatedAt": datetime.utcnow().isoformat(),
@@ -733,7 +831,8 @@ def overview(competition_id):
             "message": "Competition not found.",
         }), 404
 
-    teams = build_leaderboard(competition)
+    participants = build_leaderboard(competition)
+    is_solo = str(competition.participant_type or '').strip().upper() == 'PLAYER'
 
     matches = (
         CompetitionMatch.query
@@ -769,8 +868,8 @@ def overview(competition_id):
                 "teamSize": competition.team_size,
                 "numberOfMatches": competition.number_of_matches,
             },
-            "teams": len(teams),
-            "players": sum(len(item["members"]) for item in teams),
+            "teams": 0 if is_solo else len(participants),
+            "players": len(participants) if is_solo else sum(len(item["members"]) for item in participants),
             "matches": len(matches),
             "liveMatches": [
                 serialize_match(item)
@@ -807,10 +906,10 @@ def leaderboard(competition_id):
             "message": "Competition not found.",
         }), 404
 
-    if str(competition.participant_type or "").upper() != "TEAM":
+    if str(competition.participant_type or "").strip().upper() not in ("TEAM", "PLAYER"):
         return jsonify({
             "success": False,
-            "message": "The live leaderboard is only available for TEAM competitions.",
+            "message": "Unsupported competition participant type.",
         }), 400
 
     return jsonify({
@@ -1172,7 +1271,7 @@ def results(competition_id):
 
     rows = []
 
-    for team in build_leaderboard(competition):
+    for participant in build_leaderboard(competition):
         if verified_only:
             points = (
                 db.session.query(
@@ -1185,13 +1284,13 @@ def results(competition_id):
                 .filter(
                     CompetitionMatch.competition_id == competition.id,
                     CompetitionMatch.status == "VERIFIED",
-                    PlayerMatchStats.competition_participant_id == team["participantId"],
+                    PlayerMatchStats.competition_participant_id == participant["participantId"],
                 )
                 .scalar()
             )
-            team["totalPoints"] = int(points or 0)
+            participant["totalPoints"] = int(points or 0)
 
-        rows.append(team)
+        rows.append(participant)
 
     rows.sort(
         key=lambda row: (
