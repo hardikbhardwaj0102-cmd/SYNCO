@@ -100,49 +100,27 @@ function getMemberCountLabel(count, teamSize) {
 }
 
 
-function getCountdownTarget(registrationStart, registrationEnd, competitionStart) {
-    const now = Date.now();
+function getFutureCountdownTarget(value) {
+    const date = parseApiDate(value);
+    const timestamp = date?.getTime();
 
-    const registrationStartDate = parseApiDate(registrationStart);
-    const registrationEndDate = parseApiDate(registrationEnd);
-    const competitionStartDate = parseApiDate(competitionStart);
-
-    const registrationStartTime = registrationStartDate?.getTime();
-    const registrationEndTime = registrationEndDate?.getTime();
-    const competitionStartTime = competitionStartDate?.getTime();
-
-    if (Number.isFinite(registrationStartTime) && now < registrationStartTime) {
-        return {
-            label: "REGISTRATION OPENS IN",
-            target: registrationStartTime,
-        };
+    if (!Number.isFinite(timestamp) || Date.now() >= timestamp) {
+        return null;
     }
 
-    if (Number.isFinite(competitionStartTime) && now < competitionStartTime) {
-        return {
-            label: "TOURNAMENT STARTS IN",
-            target: competitionStartTime,
-        };
-    }
+    return timestamp;
+}
 
-    if (Number.isFinite(competitionStartTime)) {
-        return {
-            label: "TOURNAMENT STARTED",
-            target: competitionStartTime,
-        };
-    }
+function getRegistrationCountdownTarget(competition) {
+    return getFutureCountdownTarget(
+        competition?.registrationStart
+    );
+}
 
-    if (Number.isFinite(registrationEndTime)) {
-        return {
-            label: "REGISTRATION CLOSES IN",
-            target: registrationEndTime,
-        };
-    }
-
-    return {
-        label: "SCHEDULE",
-        target: null,
-    };
+function getTournamentCountdownTarget(competition) {
+    return getFutureCountdownTarget(
+        competition?.competitionStart
+    );
 }
 
 function formatCountdownParts(target) {
@@ -302,24 +280,24 @@ export default function TournamentRegistration() {
     const competition = data?.competition || {};
     const modeConfig = data?.modeConfig || {};
 
-    const countdown = useMemo(() => {
-        // countdownNow is intentionally referenced so this value refreshes every second.
-        void countdownNow;
-        return getCountdownTarget(
-            competition.registrationStart,
-            competition.registrationEnd,
-            competition.competitionStart
-        );
-    }, [
-        competition.registrationStart,
-        competition.registrationEnd,
-        competition.competitionStart,
-        countdownNow,
-    ]);
+    const registrationCountdownTarget = useMemo(
+        () => getRegistrationCountdownTarget(competition),
+        [competition.registrationStart, countdownNow]
+    );
 
-    const countdownParts = useMemo(
-        () => formatCountdownParts(countdown.target),
-        [countdown.target, countdownNow]
+    const tournamentCountdownTarget = useMemo(
+        () => getTournamentCountdownTarget(competition),
+        [competition.competitionStart, countdownNow]
+    );
+
+    const registrationCountdownParts = useMemo(
+        () => formatCountdownParts(registrationCountdownTarget),
+        [registrationCountdownTarget, countdownNow]
+    );
+
+    const tournamentCountdownParts = useMemo(
+        () => formatCountdownParts(tournamentCountdownTarget),
+        [tournamentCountdownTarget, countdownNow]
     );
     const clubs = data?.myClubs || [];
     const teamSize = Number(competition.teamSize || 0);
@@ -948,6 +926,43 @@ export default function TournamentRegistration() {
             <section
                 className="registration-countdown-card"
                 style={{
+                    marginBottom: "12px",
+                    border: "1px solid rgba(0,0,0,0.08)",
+                    borderRadius: "16px",
+                    padding: "20px 22px",
+                    background: "#ffffff",
+                }}
+            >
+                <div style={{ display: "flex", justifyContent: "space-between", gap: "20px", alignItems: "center", flexWrap: "wrap" }}>
+                    <div>
+                        <span style={{ display: "block", fontSize: "11px", fontWeight: 800, letterSpacing: "0.12em", marginBottom: "7px" }}>
+                            REGISTRATION STARTS IN
+                        </span>
+                        <strong style={{ display: "block", fontSize: "30px", lineHeight: 1, letterSpacing: "0.02em" }}>
+                            {registrationCountdownParts
+                                ? [
+                                    registrationCountdownParts.days > 0 ? `${String(registrationCountdownParts.days).padStart(2, "0")}d` : null,
+                                    `${String(registrationCountdownParts.hours).padStart(2, "0")}h`,
+                                    `${String(registrationCountdownParts.minutes).padStart(2, "0")}m`,
+                                    `${String(registrationCountdownParts.seconds).padStart(2, "0")}s`,
+                                ].filter(Boolean).join(" ")
+                                : "REGISTRATION OPEN"}
+                        </strong>
+                    </div>
+                    <div style={{ textAlign: "right" }}>
+                        <span style={{ display: "block", fontSize: "10px", fontWeight: 700, letterSpacing: "0.1em", opacity: 0.6 }}>
+                            REGISTRATION START TIME
+                        </span>
+                        <strong style={{ display: "block", marginTop: "5px", fontSize: "14px" }}>
+                            {formatDate(competition.registrationStart)}
+                        </strong>
+                    </div>
+                </div>
+            </section>
+
+            <section
+                className="registration-countdown-card"
+                style={{
                     marginBottom: "20px",
                     border: "1px solid rgba(0,0,0,0.08)",
                     borderRadius: "16px",
@@ -958,19 +973,17 @@ export default function TournamentRegistration() {
                 <div style={{ display: "flex", justifyContent: "space-between", gap: "20px", alignItems: "center", flexWrap: "wrap" }}>
                     <div>
                         <span style={{ display: "block", fontSize: "11px", fontWeight: 800, letterSpacing: "0.12em", marginBottom: "7px" }}>
-                            {countdown.label}
+                            TOURNAMENT STARTS IN
                         </span>
                         <strong style={{ display: "block", fontSize: "30px", lineHeight: 1, letterSpacing: "0.02em" }}>
-                            {countdownParts
-                                ? countdownParts.totalSeconds === 0
-                                    ? (countdown.label === "TOURNAMENT STARTED" ? "LIVE" : "00:00:00")
-                                    : [
-                                        countdownParts.days > 0 ? `${String(countdownParts.days).padStart(2, "0")}d` : null,
-                                        `${String(countdownParts.hours).padStart(2, "0")}h`,
-                                        `${String(countdownParts.minutes).padStart(2, "0")}m`,
-                                        `${String(countdownParts.seconds).padStart(2, "0")}s`,
-                                    ].filter(Boolean).join(" ")
-                                : "Schedule unavailable"}
+                            {tournamentCountdownParts
+                                ? [
+                                    tournamentCountdownParts.days > 0 ? `${String(tournamentCountdownParts.days).padStart(2, "0")}d` : null,
+                                    `${String(tournamentCountdownParts.hours).padStart(2, "0")}h`,
+                                    `${String(tournamentCountdownParts.minutes).padStart(2, "0")}m`,
+                                    `${String(tournamentCountdownParts.seconds).padStart(2, "0")}s`,
+                                ].filter(Boolean).join(" ")
+                                : "STARTED / SCHEDULE UNAVAILABLE"}
                         </strong>
                     </div>
                     <div style={{ textAlign: "right" }}>
@@ -1140,10 +1153,13 @@ export default function TournamentRegistration() {
 
                                         return (
                                             <div
-                                                className={`registration-club-card ${isSelected ? "selected" : ""
-                                                    } ${unavailable ? "registered" : ""
-                                                    } ${insufficientPlayers ? "insufficient" : ""
-                                                    }`}
+                                                className={`registration-club-card ${
+                                                    isSelected ? "selected" : ""
+                                                } ${
+                                                    unavailable ? "registered" : ""
+                                                } ${
+                                                    insufficientPlayers ? "insufficient" : ""
+                                                }`}
                                                 key={club.id}
                                             >
 
@@ -1206,13 +1222,17 @@ export default function TournamentRegistration() {
 
                                                             return (
                                                                 <label
-                                                                    className={`registration-member-select ${checked ? "selected" : ""
-                                                                        } ${!isSelected || unavailable || member.eligible === false
+                                                                    className={`registration-member-select ${
+                                                                        checked ? "selected" : ""
+                                                                    } ${
+                                                                        !isSelected || unavailable || member.eligible === false
                                                                             ? "locked"
                                                                             : ""
-                                                                        } ${member.eligible === false ? "ineligible" : ""
-                                                                        } ${memberUserId === currentUserId ? "captain" : ""
-                                                                        }`}
+                                                                    } ${
+                                                                        member.eligible === false ? "ineligible" : ""
+                                                                    } ${
+                                                                        memberUserId === currentUserId ? "captain" : ""
+                                                                    }`}
                                                                     key={member.id || member.userId}
                                                                     onClick={(event) => event.stopPropagation()}
                                                                 >
@@ -1276,10 +1296,11 @@ export default function TournamentRegistration() {
                                                 )}
 
                                                 {isSelected && !unavailable && memberOk && (
-                                                    <div className={`registration-selection-status ${selectedCount === teamSize
+                                                    <div className={`registration-selection-status ${
+                                                        selectedCount === teamSize
                                                             ? "complete"
                                                             : "incomplete"
-                                                        }`}>
+                                                    }`}>
                                                         <span>
                                                             {selectedCount === teamSize
                                                                 ? "Tournament roster ready"
