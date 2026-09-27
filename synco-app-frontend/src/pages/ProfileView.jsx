@@ -1,30 +1,23 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
-
 import {
   Settings,
-  Video,
-  ShieldCheck,
   Share2,
-  Link2,
   Plus,
   X,
   ChevronDown,
   Copy,
   Check,
+  Video,
   Gamepad2,
   Users,
   Clock,
-  PlaySquare,
   Trophy,
-  UserPlus,
-  MessageCircle,
-  MapPin,
-  CalendarDays,
-  Medal,
-  Sparkles,
-  Swords,
-  Crown,
-  ArrowUpRight,
+  Edit3,
+  Instagram,
+  Youtube,
+  Twitch,
+  ShieldCheck,
+  ChevronRight,
 } from 'lucide-react';
 
 import { useAuth } from '../context/AuthContext';
@@ -33,7 +26,7 @@ import { useNavigate, useParams } from 'react-router-dom';
 import '../styles/pages/ProfileView.css';
 import '../styles/components/GameLogos.css';
 
-import characterBg from '../assets/profile-view-character.png';
+import characterBg from '../assets/hero-bg.png';
 
 const API_URL = 'https://synco-backend-vi7b.onrender.com';
 
@@ -53,23 +46,12 @@ const SOCIAL_PROFILE_BASES = {
   x: 'https://x.com/',
 };
 
-const ROLE_TAGS = [
-  'Duelist',
-  'IGL',
-  'Sniper',
-  'Support',
-  'Controller',
-  'Sentinel',
-  'Flex',
-];
-
-const SKILL_TAGS = [
-  'Clutch',
-  'Ace',
-  'Entry',
-  'Skill/Mechanics',
-  'Teamplay',
-  'Strategy',
+const TABS = [
+  'GAMES',
+  'HIGHLIGHTS',
+  'FRIENDS',
+  'CLUBS',
+  'ACTIVE COMP',
 ];
 
 const externalSocialUrl = (value, platform) => {
@@ -116,7 +98,7 @@ const getGameLogo = (gameId, gameName = '') => {
   return nameMap[normalizedName] || '';
 };
 
-const formatJoinedDate = (value) => {
+const formatDate = (value) => {
   if (!value) {
     return '—';
   }
@@ -124,26 +106,7 @@ const formatJoinedDate = (value) => {
   const date = new Date(value);
 
   if (Number.isNaN(date.getTime())) {
-    return String(value).toUpperCase();
-  }
-
-  return date
-    .toLocaleDateString('en-GB', {
-      month: 'short',
-      year: 'numeric',
-    })
-    .toUpperCase();
-};
-
-const formatCompactDate = (value) => {
-  if (!value) {
-    return '—';
-  }
-
-  const date = new Date(value);
-
-  if (Number.isNaN(date.getTime())) {
-    return String(value).toUpperCase();
+    return value;
   }
 
   return date
@@ -155,94 +118,60 @@ const formatCompactDate = (value) => {
     .toUpperCase();
 };
 
-const getArray = (value) => {
-  return Array.isArray(value) ? value : [];
-};
-
-const normalizePerformance = (profile) => {
-  const source =
-    profile?.performance?.last7 ||
-    profile?.performanceLast7 ||
-    profile?.last7Performance ||
-    profile?.stats?.last7 ||
-    [];
-
-  if (Array.isArray(source) && source.length > 0) {
-    return source.slice(-7);
-  }
-
-  return [];
-};
-
-const getPerformanceValue = (item) => {
-  if (typeof item === 'number') {
-    return item;
-  }
-
-  return Number(
-    item?.performance ??
-      item?.score ??
-      item?.rating ??
-      item?.value ??
-      item?.kills ??
-      0
+const getProfileAvatar = (profile) => {
+  return (
+    profile?.avatarUrl ||
+    profile?.avatar_url ||
+    profile?.avatar ||
+    profile?.profilePicture ||
+    profile?.profile_picture ||
+    ''
   );
 };
 
-const buildChartPoints = (values, width = 760, height = 220) => {
-  if (!values.length) {
-    return '';
-  }
-
-  const normalized = values.map((value) => {
-    const numericValue = Number.isFinite(value) ? value : 0;
-    return Math.max(0, numericValue);
-  });
-
-  const maxValue = Math.max(...normalized, 1);
-  const minValue = Math.min(...normalized, 0);
-
-  const range = Math.max(maxValue - minValue, 1);
-  const xStep =
-    normalized.length === 1
-      ? width
-      : width / (normalized.length - 1);
-
-  return normalized
-    .map((value, index) => {
-      const x = index * xStep;
-      const y =
-        height -
-        ((value - minValue) / range) * (height - 24) -
-        12;
-
-      return `${x},${y}`;
-    })
-    .join(' ');
+const getJoinedDate = (profile) => {
+  return (
+    profile?.joinedDate ||
+    profile?.joined_date ||
+    profile?.createdAt ||
+    profile?.created_at ||
+    ''
+  );
 };
 
-const MiniStat = ({ label, value, accent }) => (
-  <div className="profile-mini-stat">
-    <span>{label}</span>
-    <strong className={accent ? 'accent' : ''}>{value}</strong>
-  </div>
-);
+const getElo = (profile) => {
+  return (
+    profile?.stats?.elo ??
+    profile?.stats?.rating ??
+    profile?.elo ??
+    profile?.rating ??
+    2405
+  );
+};
 
-const EmptyState = ({ icon: Icon, title, description }) => (
-  <div className="profile-empty-state">
-    {Icon ? <Icon size={24} /> : null}
-    <strong>{title}</strong>
-    {description ? <span>{description}</span> : null}
-  </div>
-);
+const getMatches = (profile) => {
+  return (
+    profile?.stats?.matches ??
+    profile?.matchesPlayed ??
+    profile?.matches_played ??
+    0
+  );
+};
+
+const getRegion = (profile) => {
+  return (
+    profile?.region ||
+    profile?.country ||
+    'INDIA'
+  );
+};
 
 const ProfileView = () => {
   const navigate = useNavigate();
   const { username } = useParams();
   const { user } = useAuth();
 
-  const pageScrollRef = useRef(null);
-  const gamesMatchHistoryRef = useRef(null);
+  const contentRef = useRef(null);
 
   const [activeTab, setActiveTab] = useState('GAMES');
   const [profile, setProfile] = useState(null);
@@ -252,23 +181,10 @@ const ProfileView = () => {
 
   const [uidCopied, setUidCopied] = useState(false);
 
-  const [isAddClipModalOpen, setIsAddClipModalOpen] = useState(false);
-  const [isClipGameMenuOpen, setIsClipGameMenuOpen] = useState(false);
-
-  const [gamesSecondaryState, setGamesSecondaryState] =
+  const [isAddClipModalOpen, setIsAddClipModalOpen] =
     useState(false);
 
-  const [organizerApplication, setOrganizerApplication] =
-    useState(null);
-
-  const [organizerAccountRole, setOrganizerAccountRole] =
-    useState(
-      user?.account_role ||
-        user?.accountRole ||
-        'player'
-    );
-
-  const [isOrganizerStatusLoading, setIsOrganizerStatusLoading] =
+  const [isClipGameMenuOpen, setIsClipGameMenuOpen] =
     useState(false);
 
   const [newClip, setNewClip] = useState({
@@ -281,8 +197,34 @@ const ProfileView = () => {
     file: null,
   });
 
-  const [isUploadingClip, setIsUploadingClip] = useState(false);
-  const [clipUploadError, setClipUploadError] = useState('');
+  const [isUploadingClip, setIsUploadingClip] =
+    useState(false);
+
+  const [clipUploadError, setClipUploadError] =
+    useState('');
+
+  const roleTags = [
+    'Duelist',
+    'IGL',
+    'Sniper',
+    'Support',
+    'Controller',
+    'Sentinel',
+    'Flex',
+  ];
+
+  const skillTags = [
+    'Clutch',
+    'Ace',
+    'Entry',
+    'Skill/Mechanics',
+    'Teamplay',
+    'Strategy',
+  ];
+
+  // =========================================================
+  // LOAD PROFILE + GAME CATALOG
+  // =========================================================
 
   useEffect(() => {
     const loadData = async () => {
@@ -290,37 +232,44 @@ const ProfileView = () => {
       setError('');
 
       try {
-        const [profileResponse, catalogResponse] =
-          await Promise.all([
-            fetch(
-              `${API_URL}/api/profile/${encodeURIComponent(username)}`,
-              {
-                credentials: 'include',
-                headers: {
-                  Accept: 'application/json',
-                },
-                cache: 'no-store',
-              }
-            ),
-            fetch(`${API_URL}/api/games`, {
+        const [
+          profileResponse,
+          catalogResponse,
+        ] = await Promise.all([
+          fetch(
+            `${API_URL}/api/profile/${encodeURIComponent(
+              username
+            )}`,
+            {
               credentials: 'include',
               headers: {
                 Accept: 'application/json',
               },
               cache: 'no-store',
-            }),
-          ]);
+            }
+          ),
+
+          fetch(`${API_URL}/api/games`, {
+            credentials: 'include',
+            headers: {
+              Accept: 'application/json',
+            },
+            cache: 'no-store',
+          }),
+        ]);
 
         if (!profileResponse.ok) {
           throw new Error('Profile not found');
         }
 
-        const profileData = await profileResponse.json();
+        const profileData =
+          await profileResponse.json();
 
         setProfile(profileData);
 
         if (catalogResponse.ok) {
-          const catalogData = await catalogResponse.json();
+          const catalogData =
+            await catalogResponse.json();
 
           setGameCatalog(
             catalogData.games ||
@@ -348,142 +297,79 @@ const ProfileView = () => {
     }
   }, [username]);
 
+  // =========================================================
+  // OWNER
+  // =========================================================
+
   const isOwner =
     profile?.isOwner ||
     user?.username === username;
 
-  const resolvedAccountRole =
-    user?.account_role ||
-    user?.accountRole ||
-    profile?.account_role ||
-    profile?.accountRole ||
-    organizerAccountRole ||
-    'player';
+  // =========================================================
+  // PROFILE DATA
+  // =========================================================
 
-  useEffect(() => {
-    if (!isOwner) {
-      return;
-    }
+  const moments = profile?.clips || [];
+  const games = profile?.games || [];
 
-    let cancelled = false;
+  const avatar = getProfileAvatar(profile);
 
-    const loadOrganizerStatus = async () => {
-      setIsOrganizerStatusLoading(true);
+  const joinedDate = useMemo(
+    () => formatDate(getJoinedDate(profile)),
+    [profile]
+  );
 
-      try {
-        const response = await fetch(
-          `${API_URL}/api/organizers/application`,
-          {
-            method: 'GET',
-            credentials: 'include',
-            headers: {
-              Accept: 'application/json',
-            },
-            cache: 'no-store',
-          }
-        );
+  const region = getRegion(profile);
+  const elo = getElo(profile);
+  const matches = getMatches(profile);
 
-        const data = await response
-          .json()
-          .catch(() => ({}));
+  // =========================================================
+  // SCROLL TO PROFILE CONTENT
+  // =========================================================
 
-        if (cancelled) {
-          return;
-        }
+  const handleTabChange = (tab) => {
+    setActiveTab(tab);
 
-        if (response.ok) {
-          setOrganizerAccountRole(
-            data.accountRole ||
-              resolvedAccountRole ||
-              'player'
-          );
+    requestAnimationFrame(() => {
+      contentRef.current?.scrollIntoView({
+        behavior: 'smooth',
+        block: 'start',
+      });
+    });
+  };
 
-          setOrganizerApplication(
-            data.application || null
-          );
-        }
-      } catch (organizerError) {
-        if (!cancelled) {
-          console.error(
-            'Error loading organizer status:',
-            organizerError
-          );
-        }
-      } finally {
-        if (!cancelled) {
-          setIsOrganizerStatusLoading(false);
-        }
-      }
-    };
-
-    loadOrganizerStatus();
-
-    return () => {
-      cancelled = true;
-    };
-  }, [
-    isOwner,
-    user?.account_role,
-    user?.accountRole,
-    username,
-  ]);
-
-  useEffect(() => {
-    setGamesSecondaryState(false);
-
-    if (activeTab !== 'GAMES') {
-      return;
-    }
-
-    const root = pageScrollRef.current;
-    const target = gamesMatchHistoryRef.current;
-
-    if (!root || !target) {
-      return;
-    }
-
-    const observer = new IntersectionObserver(
-      ([entry]) => {
-        setGamesSecondaryState(entry.isIntersecting);
-      },
-      {
-        root,
-        threshold: 0.18,
-        rootMargin: '-8% 0px -45% 0px',
-      }
-    );
-
-    observer.observe(target);
-
-    return () => observer.disconnect();
-  }, [activeTab, profile]);
+  // =========================================================
+  // SHARE PROFILE
+  // =========================================================
 
   const shareProfile = async () => {
-    const profileUrl = window.location.href;
+    const profileUrl =
+      window.location.href;
 
     try {
       if (navigator.share) {
         await navigator.share({
-          title: `${profile?.username || username} on SYNCO`,
-          text: `View ${profile?.username || username}'s SYNCO profile`,
+          title: `${profile?.username || username} — SYNCO`,
           url: profileUrl,
         });
 
         return;
       }
 
-      await navigator.clipboard.writeText(profileUrl);
+      await navigator.clipboard.writeText(
+        profileUrl
+      );
     } catch {
-      try {
-        await navigator.clipboard.writeText(profileUrl);
-      } catch {
-        window.prompt(
-          'Copy this profile link:',
-          profileUrl
-        );
-      }
+      window.prompt(
+        'Copy this profile link:',
+        profileUrl
+      );
     }
   };
+
+  // =========================================================
+  // COPY UID
+  // =========================================================
 
   const copySyncoUid = async () => {
     if (!profile?.uid) {
@@ -491,7 +377,9 @@ const ProfileView = () => {
     }
 
     try {
-      await navigator.clipboard.writeText(profile.uid);
+      await navigator.clipboard.writeText(
+        profile.uid
+      );
 
       setUidCopied(true);
 
@@ -506,13 +394,18 @@ const ProfileView = () => {
     }
   };
 
-  const handleAddClipSubmit = async (event) => {
-    event.preventDefault();
+  // =========================================================
+  // ADD CLIP
+  // =========================================================
+
+  const handleAddClipSubmit = async (e) => {
+    e.preventDefault();
 
     if (!newClip.file) {
       setClipUploadError(
         'Please select a video file to upload.'
       );
+
       return;
     }
 
@@ -520,6 +413,7 @@ const ProfileView = () => {
       setClipUploadError(
         'Please select a game.'
       );
+
       return;
     }
 
@@ -527,39 +421,51 @@ const ProfileView = () => {
     setIsUploadingClip(true);
 
     try {
-      const metadata = await new Promise(
-        (resolve, reject) => {
-          const video =
-            document.createElement('video');
+      const metadata =
+        await new Promise(
+          (resolve, reject) => {
+            const video =
+              document.createElement(
+                'video'
+              );
 
-          const objectUrl =
-            URL.createObjectURL(newClip.file);
+            const objectUrl =
+              URL.createObjectURL(
+                newClip.file
+              );
 
-          video.preload = 'metadata';
+            video.preload = 'metadata';
 
-          video.onloadedmetadata = () => {
-            URL.revokeObjectURL(objectUrl);
+            video.onloadedmetadata = () => {
+              URL.revokeObjectURL(
+                objectUrl
+              );
 
-            resolve({
-              duration: video.duration,
-              width: video.videoWidth,
-              height: video.videoHeight,
-            });
-          };
+              resolve({
+                duration:
+                  video.duration,
+                width:
+                  video.videoWidth,
+                height:
+                  video.videoHeight,
+              });
+            };
 
-          video.onerror = () => {
-            URL.revokeObjectURL(objectUrl);
+            video.onerror = () => {
+              URL.revokeObjectURL(
+                objectUrl
+              );
 
-            reject(
-              new Error(
-                'The selected file is not a readable video.'
-              )
-            );
-          };
+              reject(
+                new Error(
+                  'The selected file is not a readable video.'
+                )
+              );
+            };
 
-          video.src = objectUrl;
-        }
-      );
+            video.src = objectUrl;
+          }
+        );
 
       if (metadata.duration > 120) {
         throw new Error(
@@ -578,11 +484,13 @@ const ProfileView = () => {
         );
       }
 
-      const formData = new FormData();
+      const formData =
+        new FormData();
 
       formData.append(
         'title',
-        newClip.title || 'Gameplay clip'
+        newClip.title ||
+          'Gameplay clip'
       );
 
       formData.append(
@@ -625,16 +533,18 @@ const ProfileView = () => {
         metadata.height
       );
 
-      const response = await fetch(
-        `${API_URL}/api/profile/clips`,
-        {
-          method: 'POST',
-          credentials: 'include',
-          body: formData,
-        }
-      );
+      const response =
+        await fetch(
+          `${API_URL}/api/profile/clips`,
+          {
+            method: 'POST',
+            credentials: 'include',
+            body: formData,
+          }
+        );
 
-      const data = await response.json();
+      const data =
+        await response.json();
 
       if (!response.ok) {
         throw new Error(
@@ -678,522 +588,130 @@ const ProfileView = () => {
     }
   };
 
-  const moments = getArray(profile?.clips);
-  const games = getArray(profile?.games);
-
-  const friends = getArray(
-    profile?.friends ||
-      profile?.friendList
-  );
-
-  const clubs = getArray(
-    profile?.clubs ||
-      profile?.joinedClubs
-  );
-
-  const activeCompetitions = getArray(
-    profile?.activeCompetitions ||
-      profile?.activeComps ||
-      profile?.competitions?.active
-  );
-
-  const performanceData =
-    normalizePerformance(profile);
-
-  const chartValues = useMemo(
-    () =>
-      performanceData.map(
-        getPerformanceValue
-      ),
-    [performanceData]
-  );
-
-  const chartPoints = useMemo(
-    () =>
-      buildChartPoints(
-        chartValues,
-        760,
-        220
-      ),
-    [chartValues]
-  );
-
-  const activeSeason =
-    profile?.activeSeason ||
-    profile?.season ||
-    null;
-
-  const matchHistory = getArray(
-    profile?.matchHistory ||
-      profile?.matches ||
-      profile?.stats?.matchHistory
-  );
-
-  const badges = getArray(
-    profile?.badges ||
-      profile?.achievements
-  );
-
-  const recentActivity = getArray(
-    profile?.recentActivity ||
-      profile?.activity
-  );
-
-  const joinedDate =
-    profile?.joinedDate ||
-    profile?.createdAt ||
-    profile?.created_at;
-
-  const region =
-    profile?.region ||
-    profile?.country ||
-    'INDIA';
-
-  const bio =
-    profile?.bio ||
-    profile?.about ||
-    'No profile bio available yet.';
-
-  const level = profile?.stats?.matches
-    ? Math.min(
-        99,
-        Math.floor(
-          profile.stats.matches / 5
-        ) + 1
-      )
-    : 1;
-
-  const rating =
-    activeSeason?.elo ||
-    activeSeason?.rating ||
-    profile?.stats?.elo ||
-    profile?.stats?.rating ||
-    profile?.elo ||
-    0;
-
-  const matchesPlayed =
-    activeSeason?.matchesPlayed ??
-    profile?.stats?.matches ??
-    profile?.matchesPlayed ??
-    0;
-
-  const activeSeasonName =
-    activeSeason?.name ||
-    activeSeason?.seasonName ||
-    'CURRENT SEASON';
-
-  const runes =
-    getArray(activeSeason?.runes);
-
-  const renderRecentActivity = () => {
-    if (recentActivity.length === 0) {
-      return (
-        <div className="profile-calendar">
-          {Array.from({
-            length: 42,
-          }).map((_, index) => (
-            <span
-              key={index}
-              className={
-                index % 7 === 0
-                  ? 'is-active'
-                  : ''
-              }
-            />
-          ))}
-        </div>
-      );
-    }
-
-    return (
-      <div className="profile-activity-list">
-        {recentActivity
-          .slice(0, 6)
-          .map((activity, index) => (
-            <div
-              key={
-                activity.id ||
-                activity.timestamp ||
-                index
-              }
-              className="profile-activity-item"
-            >
-              <span className="profile-activity-dot" />
-              <div>
-                <strong>
-                  {activity.title ||
-                    activity.type ||
-                    'Activity'}
-                </strong>
-
-                <span>
-                  {activity.description ||
-                    activity.game ||
-                    formatCompactDate(
-                      activity.createdAt ||
-                        activity.timestamp
-                    )}
-                </span>
-              </div>
-            </div>
-          ))}
-      </div>
-    );
-  };
-
-  const renderBadges = () => {
-    if (badges.length === 0) {
-      return (
-        <div className="profile-badge-empty">
-          <Medal size={18} />
-          <span>
-            Achievement badges will appear here.
-          </span>
-        </div>
-      );
-    }
-
-    return (
-      <div className="profile-badge-grid">
-        {badges.slice(0, 8).map(
-          (badge, index) => (
-            <div
-              key={
-                badge.id ||
-                badge.name ||
-                index
-              }
-              className="profile-badge"
-              title={
-                badge.description ||
-                badge.name ||
-                'Badge'
-              }
-            >
-              <Medal size={18} />
-              <span>
-                {badge.name ||
-                  badge.title ||
-                  `BADGE ${index + 1}`}
-              </span>
-            </div>
-          )
-        )}
-      </div>
-    );
-  };
-
-  const renderPrimaryLeftColumn = () => (
-    <>
-      <section className="profile-side-card profile-bio-card">
-        <div className="profile-section-kicker">
-          PLAYER BIO
-        </div>
-
-        <p className="profile-bio-text">
-          {bio}
-        </p>
-      </section>
-
-      <section className="profile-side-card">
-        <div className="profile-side-header">
-          <div>
-            <span className="profile-section-kicker">
-              RECENT ACTIVITY
-            </span>
-
-            <h3>PLAYER TIMELINE</h3>
-          </div>
-
-          <CalendarDays size={16} />
-        </div>
-
-        {renderRecentActivity()}
-
-        <div className="profile-meta-stack">
-          <div>
-            <span>JOINED</span>
-            <strong>
-              {formatJoinedDate(
-                joinedDate
-              )}
-            </strong>
-          </div>
-
-          <div>
-            <span>REGION</span>
-            <strong>
-              {region}
-            </strong>
-          </div>
-        </div>
-      </section>
-
-      <section className="profile-side-card">
-        <div className="profile-side-header">
-          <div>
-            <span className="profile-section-kicker">
-              COLLECTION
-            </span>
-
-            <h3>BADGES</h3>
-          </div>
-
-          <Medal size={16} />
-        </div>
-
-        {renderBadges()}
-      </section>
-    </>
-  );
-
-  const renderSeasonLeftColumn = () => (
-    <section className="profile-side-card profile-season-card">
-      <div className="profile-season-top">
-        <span className="profile-section-kicker">
-          ACTIVE SEASON
-        </span>
-
-        <Crown size={18} />
-      </div>
-
-      <h2>
-        {activeSeasonName}
-      </h2>
-
-      <div className="profile-season-status">
-        {activeSeason?.status ||
-          'IN PROGRESS'}
-      </div>
-
-      <div className="profile-rune-preview">
-        {runes.length > 0
-          ? runes.slice(0, 3).map(
-              (rune, index) => (
-                <div
-                  key={
-                    rune.id ||
-                    rune.name ||
-                    index
-                  }
-                  className="profile-rune"
-                >
-                  <Sparkles size={16} />
-                  <span>
-                    {rune.name ||
-                      rune.title ||
-                      `RUNE ${index + 1}`}
-                  </span>
-                </div>
-              )
-            )
-          : (
-            <>
-              <div className="profile-rune">
-                <Sparkles size={16} />
-                <span>
-                  CURRENT RUNE
-                </span>
-              </div>
-
-              <div className="profile-rune-number">
-                {rating}
-              </div>
-            </>
-          )}
-      </div>
-
-      <div className="profile-season-stat">
-        <span>ELO / RATING</span>
-        <strong>
-          {rating}
-        </strong>
-      </div>
-
-      <div className="profile-season-stat">
-        <span>MATCHES PLAYED</span>
-        <strong>
-          {matchesPlayed}
-        </strong>
-      </div>
-
-      <div className="profile-season-stat">
-        <span>WIN RATE</span>
-        <strong>
-          {profile?.stats?.winRate ??
-            activeSeason?.winRate ??
-            0}
-          %
-        </strong>
-      </div>
-
-      <div className="profile-season-footer">
-        <span>SEASON PROGRESS</span>
-
-        <div className="profile-season-progress">
-          <span
-            style={{
-              width: `${Math.max(
-                5,
-                Math.min(
-                  100,
-                  Number(
-                    activeSeason?.progress ||
-                      profile?.stats
-                        ?.seasonProgress ||
-                      0
-                  )
-                )
-              )}%`,
-            }}
-          />
-        </div>
-      </div>
-    </section>
-  );
+  // =========================================================
+  // LOADING
+  // =========================================================
 
   if (isLoading) {
     return (
-      <div className="profile-page-loading">
+      <div className="profile-view-state">
         Loading interface...
       </div>
     );
   }
 
+  // =========================================================
+  // ERROR
+  // =========================================================
+
   if (error || !profile) {
     return (
-      <div className="profile-page-loading">
+      <div className="profile-view-state">
         Operative Not Found.
       </div>
     );
   }
 
+  // =========================================================
+  // RENDER
+  // =========================================================
+
   return (
-    <div
-      ref={pageScrollRef}
-      className="public-profile-wrapper"
-    >
-      <div className="profile-environment" />
+    <div className="profile-page">
 
-      <div className="profile-vignette" />
+      {/* ===================================================
+          HERO
+          =================================================== */}
 
-      <div className="profile-page-content">
-        <aside className="profile-left-column">
-          <section className="profile-identity-card">
-            <div className="profile-avatar-wrap">
-              {profile.avatarUrl ? (
+      <section className="profile-hero">
+
+        <div className="profile-hero-background">
+          <img
+            src={characterBg}
+            alt=""
+            className="profile-character"
+          />
+        </div>
+
+        <div className="profile-hero-vignette" />
+
+        {/* LEFT IDENTITY CARD */}
+
+        <aside className="profile-hero-left">
+
+          <div className="profile-identity-card">
+
+            <div className="profile-avatar">
+              {avatar ? (
                 <img
-                  src={profile.avatarUrl}
+                  src={avatar}
                   alt={profile.username}
-                  className="profile-avatar"
                 />
               ) : (
-                <div className="profile-avatar profile-avatar-fallback">
+                <div className="profile-avatar-placeholder">
                   {profile.username
-                    ?.slice(0, 2)
+                    ?.slice(0, 1)
                     .toUpperCase()}
                 </div>
               )}
-
-              <span className="profile-online-dot" />
             </div>
 
-            <div className="profile-identity-body">
-              <div className="profile-level-badge">
-                LVL {level}
-              </div>
+            <div className="profile-identity-content">
 
-              <div className="profile-username-row">
-                <h1>
-                  {profile.username}
-                </h1>
+              <h1>
+                {profile.username}
+              </h1>
 
-                {profile.linkedStatus
-                  ?.discord && (
-                  <ShieldCheck
-                    size={17}
-                    className="profile-verified"
-                  />
-                )}
-              </div>
-
-              <p className="profile-real-name">
-                {profile.name ||
-                  'SYNCO PLAYER'}
-              </p>
-
-              <div className="profile-uid-row">
+              <button
+                type="button"
+                className="profile-uid"
+                onClick={copySyncoUid}
+                title="Copy SYNCO UID"
+              >
                 <span>
                   UID: {profile.uid || '—'}
                 </span>
 
-                {profile.uid && (
-                  <button
-                    type="button"
-                    onClick={copySyncoUid}
-                    title="Copy SYNCO UID"
-                  >
-                    {uidCopied ? (
-                      <Check
-                        size={11}
-                        className="profile-success"
-                      />
-                    ) : (
-                      <Copy size={11} />
-                    )}
-                  </button>
+                {uidCopied ? (
+                  <Check size={14} />
+                ) : (
+                  <Copy size={14} />
                 )}
-              </div>
+              </button>
 
-              <div className="profile-action-row">
-                {isOwner ? (
+              <div className="profile-identity-actions">
+
+                {isOwner && (
                   <button
                     type="button"
                     onClick={() =>
-                      navigate(
-                        '/settings'
-                      )
+                      navigate('/settings')
                     }
-                    className="profile-outline-action"
                   >
-                    <Settings size={14} />
-                    Settings
-                  </button>
-                ) : (
-                  <button
-                    type="button"
-                    className="profile-outline-action"
-                  >
-                    <UserPlus size={14} />
-                    Add Friend
+                    <Edit3 size={25} />
+                    <span>
+                      EDIT
+                      <br />
+                      PROFILE
+                    </span>
                   </button>
                 )}
 
                 <button
                   type="button"
-                  className="profile-solid-action"
+                  onClick={shareProfile}
                 >
-                  <MessageCircle
-                    size={14}
-                  />
-                  Message
+                  <Share2 size={25} />
+                  <span>
+                    SHARE
+                    <br />
+                    PROFILE
+                  </span>
                 </button>
+
               </div>
 
               <div className="profile-social-row">
-                {profile.socials?.youtube && (
-                  <a
-                    href={externalSocialUrl(
-                      profile.socials.youtube,
-                      'youtube'
-                    )}
-                    target="_blank"
-                    rel="noreferrer"
-                    title="YouTube"
-                  >
-                    <Link2 size={14} />
-                  </a>
-                )}
 
                 {profile.socials?.instagram && (
                   <a
@@ -1203,9 +721,23 @@ const ProfileView = () => {
                     )}
                     target="_blank"
                     rel="noreferrer"
-                    title="Instagram"
+                    aria-label="Instagram"
                   >
-                    <Link2 size={14} />
+                    <Instagram size={24} />
+                  </a>
+                )}
+
+                {profile.socials?.youtube && (
+                  <a
+                    href={externalSocialUrl(
+                      profile.socials.youtube,
+                      'youtube'
+                    )}
+                    target="_blank"
+                    rel="noreferrer"
+                    aria-label="YouTube"
+                  >
+                    <Youtube size={24} />
                   </a>
                 )}
 
@@ -1217,9 +749,9 @@ const ProfileView = () => {
                     )}
                     target="_blank"
                     rel="noreferrer"
-                    title="Twitch"
+                    aria-label="Twitch"
                   >
-                    <Link2 size={14} />
+                    <Twitch size={24} />
                   </a>
                 )}
 
@@ -1231,995 +763,862 @@ const ProfileView = () => {
                     )}
                     target="_blank"
                     rel="noreferrer"
-                    title="X"
+                    aria-label="X"
                   >
-                    <Link2 size={14} />
+                    X
                   </a>
                 )}
-              </div>
-            </div>
-          </section>
 
-          {activeTab === 'GAMES' &&
-          gamesSecondaryState
-            ? renderSeasonLeftColumn()
-            : renderPrimaryLeftColumn()}
+              </div>
+
+            </div>
+          </div>
+
+          <div className="profile-ad-card">
+            ADVERTISEMENT
+          </div>
+
         </aside>
 
-        <main className="profile-center-column">
-          <section className="profile-hero">
-            <div className="profile-hero-noise" />
+        {/* SETTINGS */}
 
-            <div className="profile-hero-copy">
+        <button
+          type="button"
+          className="profile-settings-button"
+          onClick={() =>
+            navigate('/settings')
+          }
+          aria-label="Settings"
+          title="Settings"
+        >
+          <Settings size={25} />
+        </button>
+
+        {/* XP BAR */}
+
+        <div className="profile-xp-bar">
+
+          <div className="profile-xp-character">
+            <img
+              src={
+                avatar ||
+                characterBg
+              }
+              alt=""
+            />
+          </div>
+
+          <div className="profile-xp-track">
+
+            <div className="profile-xp-fill" />
+
+            <div className="profile-xp-numbers">
               <span>
-                SYNCO OPERATIVE
+                {profile.xp?.current ||
+                  2056}
               </span>
 
-              <strong>
-                {profile.username}
-              </strong>
+              <span>/</span>
 
-              <p>
-                {profile.region ||
-                  region}
-              </p>
+              <span>
+                {profile.xp?.max ||
+                  4070}
+              </span>
             </div>
 
-            <img
-              src={characterBg}
-              alt="SYNCO Operative"
-              className="profile-character"
-            />
+          </div>
 
-            <div className="profile-character-status">
-              <span />
-              {profile.status ||
-                'ONLINE'}
-            </div>
+        </div>
 
-            <div className="profile-hero-utility">
-              <div className="profile-utility-buttons">
-                <button
-                  type="button"
-                  onClick={() =>
-                    navigate(
-                      `/profile/${encodeURIComponent(
-                        username
-                      )}/customize`
-                    )
-                  }
-                  className="profile-utility-button customize"
-                  title="Customize profile"
-                >
-                  <Sparkles
-                    size={16}
-                  />
+      </section>
 
-                  <span>
-                    Customize
-                  </span>
-                </button>
+      {/* ===================================================
+          CONTENT AREA
+          =================================================== */}
 
-                {isOwner && (
-                  <button
-                    type="button"
-                    onClick={() =>
-                      navigate(
-                        '/settings'
-                      )
-                    }
-                    className="profile-utility-button"
-                    title="Settings"
-                  >
-                    <Settings
-                      size={16}
+      <section
+        ref={contentRef}
+        className="profile-content"
+      >
+
+        {/* =================================================
+            COMMON LEFT COLUMN
+            ================================================= */}
+
+        <aside className="profile-common-column">
+
+          <div className="profile-common-card profile-bio-card">
+
+            <h2>BIO:</h2>
+
+            <p>
+              {profile.bio ||
+                profile.description ||
+                ''}
+            </p>
+
+          </div>
+
+          <div className="profile-common-card profile-activity-card">
+
+            <h2>
+              RECENT ACTIVITY:
+            </h2>
+
+            <div className="activity-calendar">
+
+              <div className="activity-calendar-header">
+                <span>
+                  November
+                </span>
+
+                <ChevronRight size={20} />
+              </div>
+
+              <div className="activity-grid">
+                {Array.from({
+                  length: 35,
+                }).map((_, index) => {
+                  const intensity =
+                    index === 11
+                      ? 'high'
+                      : index === 12 ||
+                        index === 13 ||
+                        index === 18 ||
+                        index === 19 ||
+                        index === 20
+                      ? 'medium'
+                      : index === 22 ||
+                        index === 27
+                      ? 'low'
+                      : '';
+
+                  return (
+                    <span
+                      key={index}
+                      className={`activity-cell ${intensity}`}
                     />
-                  </button>
-                )}
+                  );
+                })}
               </div>
 
-              <div className="profile-showcase-card">
-                <span className="profile-section-kicker">
-                  SHOWCASE
-                </span>
-
-                <div className="profile-showcase-art">
-                  <Trophy size={28} />
-                </div>
-
-                <strong>
-                  {profile.showcase?.[0]
-                    ?.name ||
-                    'NO SHOWCASE ITEM'}
-                </strong>
-
-                <span>
-                  Unlock achievements,
-                  cosmetics and special
-                  profile collectibles.
-                </span>
-              </div>
             </div>
 
-            <div className="profile-xp-bar">
-              <div className="profile-xp-label">
+            <div className="profile-meta-grid">
+
+              <div>
                 <span>
-                  LEVEL {level}
+                  JOINED
                 </span>
 
                 <strong>
-                  {profile.xp?.current ??
-                    profile.stats?.xp ??
-                    0}
-                  {' / '}
-                  {profile.xp?.max ??
-                    5000}
-                  {' XP'}
+                  {joinedDate}
                 </strong>
               </div>
 
-              <div className="profile-xp-track">
-                <span
-                  style={{
-                    width: `${Math.max(
-                      2,
-                      Math.min(
-                        100,
-                        (
-                          (
-                            profile.xp?.current ??
-                            profile.stats?.xp ??
-                            0
-                          ) /
-                          (
-                            profile.xp?.max ??
-                            5000
-                          )
-                        ) * 100
-                      )
-                    )}%`,
-                  }}
-                />
+              <div>
+                <span>
+                  REGION
+                </span>
+
+                <strong>
+                  {region}
+                </strong>
               </div>
+
             </div>
-          </section>
+
+          </div>
+
+          <div className="profile-common-card profile-badges-card">
+
+            <h2>
+              BADGES:
+            </h2>
+
+            <div className="profile-badges-content">
+
+              {(profile.badges || []).length ===
+              0 ? (
+                <span className="empty-label">
+                  No badges yet
+                </span>
+              ) : (
+                profile.badges
+                  .slice(0, 5)
+                  .map((badge) => (
+                    <div
+                      key={
+                        badge.id ||
+                        badge.name
+                      }
+                      className="badge-item"
+                    >
+                      {badge.image ? (
+                        <img
+                          src={badge.image}
+                          alt={
+                            badge.name
+                          }
+                        />
+                      ) : (
+                        <Trophy size={22} />
+                      )}
+                    </div>
+                  ))
+              )}
+
+            </div>
+
+          </div>
+
+        </aside>
+
+        {/* =================================================
+            RIGHT CONTENT
+            ================================================= */}
+
+        <main className="profile-main-column">
+
+          {/* =================================================
+              TAB BAR
+              ================================================= */}
 
           <nav className="profile-tab-bar">
-            {[
-              'GAMES',
-              'HIGHLIGHTS',
-              'FRIENDS',
-              'CLUBS',
-              'ACTIVE COMP',
-            ].map((tab) => (
+
+            {TABS.map((tab) => (
               <button
-                type="button"
                 key={tab}
+                type="button"
                 className={
                   activeTab === tab
                     ? 'active'
                     : ''
                 }
                 onClick={() =>
-                  setActiveTab(tab)
+                  handleTabChange(tab)
                 }
               >
                 {tab}
               </button>
             ))}
+
           </nav>
 
+          {/* =================================================
+              GAMES
+              ================================================= */}
+
           {activeTab === 'GAMES' && (
-            <section className="profile-tab-content games-content">
-              <div className="profile-content-header">
-                <div>
-                  <span className="profile-section-kicker">
-                    PLAYER LOADOUT
-                  </span>
+            <div className="profile-tab-content games-tab">
 
-                  <h2>
-                    GAME ROSTER
-                  </h2>
-                </div>
+              {/* FIRST GAMES SECTION */}
 
-                <span className="profile-content-count">
-                  {games.length} TITLES
-                </span>
-              </div>
+              <section className="games-primary-grid">
 
-              <div className="profile-game-roster">
-                {games.length > 0 ? (
-                  games.map((game) => (
-                    <div
-                      key={game.id}
-                      className="profile-game-card"
-                    >
-                      <div className="profile-game-logo">
-                        <img
-                          src={
-                            getGameLogo(
-                              game.id,
-                              game.gameName ||
-                                game.name
-                            ) ||
-                            '/games/default-placeholder.png'
+                <div className="games-primary-left" />
+
+                <div className="games-primary-right">
+
+                  <div className="game-roster">
+
+                    {games.length > 0 ? (
+                      games.map((game) => (
+                        <div
+                          key={
+                            game.id ||
+                            game.gameId ||
+                            game.gameName
                           }
-                          alt={
-                            game.gameName ||
-                            game.name ||
-                            'Game'
-                          }
-                        />
-                      </div>
-
-                      <div className="profile-game-info">
-                        <span>
-                          {game.gameName ||
-                            game.name ||
-                            'Game'}
-                        </span>
-
-                        <strong>
-                          {game.ign ||
-                            'REGISTERED'}
-                        </strong>
-                      </div>
-
-                      <div className="profile-game-meta">
-                        <span>
-                          {game.rank ||
-                            game.tier ||
-                            '—'}
-                        </span>
-
-                        <small>
-                          {game.elo ??
-                            game.rating ??
-                            '—'}
-                        </small>
-                      </div>
-                    </div>
-                  ))
-                ) : (
-                  <EmptyState
-                    icon={Gamepad2}
-                    title="No registered titles"
-                    description="Verified games will appear here."
-                  />
-                )}
-              </div>
-
-              <div className="profile-section-divider" />
-
-              <div className="profile-content-header">
-                <div>
-                  <span className="profile-section-kicker">
-                    PERFORMANCE
-                  </span>
-
-                  <h2>
-                    LAST 7 MATCHES
-                  </h2>
-                </div>
-
-                <span className="profile-content-count">
-                  {chartValues.length
-                    ? `${chartValues.length} MATCHES`
-                    : 'NO DATA'}
-                </span>
-              </div>
-
-              <div className="profile-performance-card">
-                {chartPoints ? (
-                  <>
-                    <svg
-                      viewBox="0 0 760 220"
-                      className="profile-performance-chart"
-                      preserveAspectRatio="none"
-                    >
-                      <defs>
-                        <linearGradient
-                          id="profileChartFill"
-                          x1="0"
-                          y1="0"
-                          x2="0"
-                          y2="1"
+                          className="game-roster-item"
                         >
-                          <stop
-                            offset="0%"
-                            stopColor="rgba(229,254,0,0.32)"
+                          <img
+                            src={
+                              getGameLogo(
+                                game.id ||
+                                  game.gameId,
+                                game.gameName ||
+                                  game.name
+                              ) ||
+                              '/games/default-placeholder.png'
+                            }
+                            alt={
+                              game.gameName ||
+                              game.name
+                            }
                           />
-                          <stop
-                            offset="100%"
-                            stopColor="rgba(229,254,0,0)"
-                          />
-                        </linearGradient>
-                      </defs>
+                        </div>
+                      ))
+                    ) : (
+                      <>
+                        <div className="game-roster-empty">
+                          No registered games
+                        </div>
+                      </>
+                    )}
 
-                      <path
-                        d={
-                          chartPoints
-                            ? `M ${chartPoints.replaceAll(
-                                ' ',
-                                ' L '
-                              )} L 760,220 L 0,220 Z`
-                            : ''
-                        }
-                        fill="url(#profileChartFill)"
-                      />
-
-                      <polyline
-                        points={chartPoints}
-                        fill="none"
-                        stroke="#E5FE00"
-                        strokeWidth="4"
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                      />
-
-                      {chartValues.map(
-                        (value, index) => {
-                          const points =
-                            chartPoints
-                              .split(' ')
-                              .map(
-                                (point) =>
-                                  point.split(
-                                    ','
-                                  )
-                              );
-
-                          const [x, y] =
-                            points[index] ||
-                            [0, 0];
-
-                          return (
-                            <circle
-                              key={index}
-                              cx={x}
-                              cy={y}
-                              r="5"
-                              fill="#0B0E14"
-                              stroke="#E5FE00"
-                              strokeWidth="3"
-                            />
-                          );
-                        }
-                      )}
-                    </svg>
-
-                    <div className="profile-chart-footer">
-                      {chartValues.map(
-                        (value, index) => (
-                          <span
-                            key={index}
-                          >
-                            M{index + 1}
-                          </span>
-                        )
-                      )}
-                    </div>
-                  </>
-                ) : (
-                  <EmptyState
-                    icon={Swords}
-                    title="Performance data unavailable"
-                    description="Recent competitive match data will appear here."
-                  />
-                )}
-              </div>
-
-              <div
-                ref={gamesMatchHistoryRef}
-                className="games-secondary-section"
-              >
-                <div className="profile-section-divider" />
-
-                <div className="profile-content-header">
-                  <div>
-                    <span className="profile-section-kicker">
-                      MATCH RECORD
-                    </span>
-
-                    <h2>
-                      MATCH HISTORY
-                    </h2>
                   </div>
 
-                  <span className="profile-content-count">
-                    {matchHistory.length ||
-                      matchesPlayed}{' '}
-                    MATCHES
-                  </span>
+                  <div className="performance-container">
+
+                    <h2>
+                      PERFORMANCE LAST 7 MATCHES:
+                    </h2>
+
+                    <div className="performance-chart">
+
+                      <svg
+                        viewBox="0 0 760 260"
+                        preserveAspectRatio="none"
+                        className="performance-svg"
+                      >
+
+                        <defs>
+                          <linearGradient
+                            id="performanceFill"
+                            x1="0"
+                            y1="0"
+                            x2="0"
+                            y2="1"
+                          >
+                            <stop
+                              offset="0%"
+                              stopColor="#d96868"
+                              stopOpacity="0.20"
+                            />
+
+                            <stop
+                              offset="100%"
+                              stopColor="#d96868"
+                              stopOpacity="0"
+                            />
+                          </linearGradient>
+                        </defs>
+
+                        <path
+                          d="M0 65 H760"
+                          className="chart-grid"
+                        />
+
+                        <path
+                          d="M0 130 H760"
+                          className="chart-grid"
+                        />
+
+                        <path
+                          d="M0 195 H760"
+                          className="chart-grid"
+                        />
+
+                        <polyline
+                          points="20,75 140,130 260,185 380,100 500,45 620,70 740,105"
+                          className="chart-area"
+                        />
+
+                        <polygon
+                          points="20,75 140,130 260,185 380,100 500,45 620,70 740,105 740,250 20,250"
+                          className="chart-fill"
+                        />
+
+                        <polyline
+                          points="20,75 140,130 260,185 380,100 500,45 620,70 740,105"
+                          className="chart-line"
+                        />
+
+                        {[
+                          [20, 75],
+                          [140, 130],
+                          [260, 185],
+                          [380, 100],
+                          [500, 45],
+                          [620, 70],
+                          [740, 105],
+                        ].map(
+                          ([cx, cy], index) => (
+                            <circle
+                              key={index}
+                              cx={cx}
+                              cy={cy}
+                              r="8"
+                              className="chart-point"
+                            />
+                          )
+                        )}
+
+                      </svg>
+
+                    </div>
+
+                    <div className="game-stat-cards">
+
+                      <div />
+                      <div />
+                      <div />
+
+                    </div>
+
+                  </div>
+
                 </div>
 
-                <div className="profile-match-history">
-                  {matchHistory.length > 0 ? (
-                    matchHistory.map(
-                      (match, index) => {
-                        const result =
-                          String(
-                            match.result ||
-                              match.outcome ||
-                              ''
-                          ).toLowerCase();
+              </section>
 
-                        return (
+              {/* SECOND GAMES SECTION */}
+
+              <section className="games-secondary-grid">
+
+                <aside className="active-season-card">
+
+                  <h2>
+                    ACTIVE SEASON
+                  </h2>
+
+                  <div className="season-number">
+                    SEASON 1
+                  </div>
+
+                  <div className="season-beginning">
+                    BEGINNING
+                  </div>
+
+                  <h3>
+                    CURRENT RUNES:
+                  </h3>
+
+                  <div className="season-rune">
+
+                    {profile.activeSeason?.runeImage ? (
+                      <img
+                        src={
+                          profile.activeSeason.runeImage
+                        }
+                        alt="Current rune"
+                      />
+                    ) : (
+                      <div className="rune-placeholder">
+                        R
+                      </div>
+                    )}
+
+                  </div>
+
+                  <div className="season-matches-label">
+                    MATCHES PLAYED:
+                  </div>
+
+                  <div className="season-matches">
+                    {matches}
+                  </div>
+
+                </aside>
+
+                <section className="match-history-container">
+
+                  <h2>
+                    MATCH HISTORY
+                  </h2>
+
+                  <div className="match-history-list">
+
+                    {(profile.matchHistory || []).length >
+                    0 ? (
+                      profile.matchHistory.map(
+                        (match, index) => (
                           <div
                             key={
                               match.id ||
                               index
                             }
-                            className="profile-match-row"
+                            className="match-history-row"
                           >
-                            <div
-                              className={`profile-match-result ${
-                                result ===
-                                'win'
-                                  ? 'win'
-                                  : result ===
-                                    'loss'
-                                  ? 'loss'
-                                  : ''
-                              }`}
-                            >
-                              {result ===
-                              'win'
-                                ? 'W'
-                                : result ===
-                                  'loss'
-                                ? 'L'
-                                : '—'}
-                            </div>
+                            <span>
+                              {match.game ||
+                                'MATCH'}
+                            </span>
 
-                            <div className="profile-match-main">
-                              <strong>
-                                {match.gameName ||
-                                  match.game ||
-                                  'Competitive Match'}
-                              </strong>
+                            <span>
+                              {match.result ||
+                                '—'}
+                            </span>
 
-                              <span>
-                                {match.eventName ||
-                                  match.tournament ||
-                                  match.mode ||
-                                  'SYNCO MATCH'}
-                              </span>
-                            </div>
-
-                            <div className="profile-match-stat">
-                              <span>
-                                SCORE
-                              </span>
-
-                              <strong>
-                                {match.score ||
-                                  `${match.kills ?? 0} / ${
-                                    match.deaths ??
-                                    0
-                                  }`}
-                              </strong>
-                            </div>
-
-                            <div className="profile-match-date">
-                              {formatCompactDate(
-                                match.date ||
-                                  match.createdAt
-                              )}
-                            </div>
+                            <span>
+                              {match.score ||
+                                '—'}
+                            </span>
                           </div>
-                        );
-                      }
-                    )
-                  ) : (
-                    <EmptyState
-                      icon={Clock}
-                      title="No match history available"
-                      description="Completed matches will appear in this section."
-                    />
-                  )}
-                </div>
-              </div>
-            </section>
+                        )
+                      )
+                    ) : (
+                      Array.from({
+                        length: 5,
+                      }).map(
+                        (_, index) => (
+                          <div
+                            key={index}
+                            className="match-history-row"
+                          />
+                        )
+                      )
+                    )}
+
+                  </div>
+
+                </section>
+
+              </section>
+
+            </div>
           )}
 
-          {activeTab === 'HIGHLIGHTS' && (
-            <section className="profile-tab-content">
-              <div className="profile-content-header">
-                <div>
-                  <span className="profile-section-kicker">
-                    PLAYER MEDIA
-                  </span>
+          {/* =================================================
+              HIGHLIGHTS
+              ================================================= */}
 
-                  <h2>
-                    HIGHLIGHTS
-                  </h2>
-                </div>
+          {activeTab === 'HIGHLIGHTS' && (
+            <div className="profile-tab-content">
+
+              <div className="tab-action-row">
 
                 {isOwner && (
                   <button
                     type="button"
-                    className="profile-add-button"
+                    className="pdf-pill-button"
                     onClick={() =>
                       setIsAddClipModalOpen(true)
                     }
                   >
-                    <Plus size={15} />
-                    Add
+                    ADD +
                   </button>
                 )}
+
               </div>
 
-              <div className="profile-highlight-grid">
+              <div className="highlight-grid">
+
                 {moments.length > 0 ? (
                   moments
                     .slice(0, 6)
                     .map((moment) => (
-                      <article
+                      <div
                         key={moment.id}
-                        className="profile-highlight-card"
+                        className="highlight-card"
                       >
                         <video
                           src={moment.url}
                           muted
                           loop
                           playsInline
-                          onMouseEnter={(event) =>
-                            event.currentTarget.play()
-                          }
-                          onMouseLeave={(event) => {
-                            event.currentTarget.pause();
-                            event.currentTarget.currentTime = 0;
-                          }}
+                          controls
                         />
-
-                        <div className="profile-highlight-overlay">
-                          <PlaySquare
-                            size={20}
-                          />
-
-                          <div>
-                            <strong>
-                              {moment.title ||
-                                'Gameplay Moment'}
-                            </strong>
-
-                            <span>
-                              {moment.gameName ||
-                                moment.game ||
-                                'SYNCO'}
-                            </span>
-                          </div>
-                        </div>
-                      </article>
+                      </div>
                     ))
                 ) : (
-                  <EmptyState
-                    icon={Video}
-                    title="No highlights yet"
-                    description="Upload your best moments to showcase them here."
-                  />
+                  Array.from({
+                    length: 6,
+                  }).map((_, index) => (
+                    <div
+                      key={index}
+                      className="highlight-card empty-card"
+                    >
+                      <Video size={32} />
+                    </div>
+                  ))
                 )}
+
               </div>
-            </section>
+
+              <Pagination />
+
+            </div>
           )}
 
+          {/* =================================================
+              FRIENDS
+              ================================================= */}
+
           {activeTab === 'FRIENDS' && (
-            <section className="profile-tab-content">
-              <div className="profile-content-header">
-                <div>
-                  <span className="profile-section-kicker">
-                    SOCIAL
-                  </span>
+            <div className="profile-tab-content">
 
-                  <h2>
-                    FRIENDS
-                  </h2>
-                </div>
+              <div className="tab-action-row">
 
-                <span className="profile-content-count">
-                  ALL ({friends.length})
-                </span>
+                <button
+                  type="button"
+                  className="pdf-pill-button"
+                >
+                  ALL (
+                  {profile.friends?.length ||
+                    0}
+                  )
+                </button>
+
               </div>
 
-              <div className="profile-friend-list">
-                {friends.length > 0 ? (
-                  friends.map(
+              <div className="friends-list">
+
+                {(profile.friends || []).length >
+                0 ? (
+                  profile.friends.map(
                     (friend, index) => (
-                      <button
+                      <div
                         key={
                           friend.id ||
                           friend.username ||
                           index
                         }
-                        type="button"
-                        className="profile-friend-row"
-                        onClick={() =>
-                          friend.username
-                            ? navigate(
-                                `/profile/${encodeURIComponent(
-                                  friend.username
-                                )}`
-                              )
-                            : null
-                        }
+                        className="friend-row"
                       >
-                        <div className="profile-friend-avatar">
-                          {friend.avatarUrl ? (
+
+                        <div className="friend-avatar">
+                          {friend.avatar ? (
                             <img
-                              src={
-                                friend.avatarUrl
-                              }
-                              alt={
-                                friend.username
-                              }
+                              src={friend.avatar}
+                              alt=""
                             />
                           ) : (
-                            (
-                              friend.username ||
-                              '?'
-                            )
-                              .slice(0, 2)
-                              .toUpperCase()
+                            <Users
+                              size={20}
+                            />
                           )}
                         </div>
 
-                        <div className="profile-friend-main">
+                        <div className="friend-info">
                           <strong>
                             {friend.username ||
-                              friend.name ||
-                              'SYNCO PLAYER'}
+                              friend.name}
                           </strong>
 
                           <span>
                             {friend.status ||
-                              friend.game ||
-                              friend.region ||
-                              'PLAYER'}
+                              'ONLINE'}
                           </span>
                         </div>
 
-                        <ArrowUpRight
-                          size={16}
-                        />
-                      </button>
+                      </div>
                     )
                   )
                 ) : (
-                  <EmptyState
-                    icon={Users}
-                    title="No friends to display"
-                    description="SYNCO connections will appear here."
-                  />
+                  Array.from({
+                    length: 5,
+                  }).map((_, index) => (
+                    <div
+                      key={index}
+                      className="friend-row empty-row"
+                    />
+                  ))
                 )}
+
               </div>
-            </section>
+
+              <Pagination />
+
+            </div>
           )}
+
+          {/* =================================================
+              CLUBS
+              ================================================= */}
 
           {activeTab === 'CLUBS' && (
-            <section className="profile-tab-content">
-              <div className="profile-content-header">
-                <div>
-                  <span className="profile-section-kicker">
-                    COMMUNITY
-                  </span>
+            <div className="profile-tab-content">
 
-                  <h2>
-                    JOINED / OWNED CLUBS
-                  </h2>
-                </div>
+              <h2 className="content-heading">
+                JOINED / OWNED CLUBS:
+              </h2>
 
-                <span className="profile-content-count">
-                  {clubs.length} CLUBS
-                </span>
-              </div>
+              <div className="club-grid">
 
-              <div className="profile-club-grid">
-                {clubs.length > 0 ? (
-                  clubs
+                {(profile.clubs || []).length >
+                0 ? (
+                  profile.clubs
                     .slice(0, 6)
                     .map((club, index) => (
-                      <article
+                      <div
                         key={
                           club.id ||
-                          club.slug ||
+                          club.name ||
                           index
                         }
-                        className="profile-club-card"
+                        className="club-card"
                       >
-                        <div className="profile-club-icon">
-                          {club.logoUrl ? (
-                            <img
-                              src={
-                                club.logoUrl
-                              }
-                              alt={
-                                club.name
-                              }
-                            />
-                          ) : (
-                            <Users
-                              size={24}
-                            />
-                          )}
-                        </div>
+                        {club.logo && (
+                          <img
+                            src={club.logo}
+                            alt=""
+                          />
+                        )}
 
-                        <div>
-                          <span className="profile-section-kicker">
-                            {club.role ||
-                              'MEMBER'}
-                          </span>
-
-                          <h3>
-                            {club.name ||
-                              'SYNCO CLUB'}
-                          </h3>
-
-                          <p>
-                            {club.members ??
-                              club.memberCount ??
-                              0}{' '}
-                            MEMBERS
-                          </p>
-                        </div>
-                      </article>
+                        <strong>
+                          {club.name}
+                        </strong>
+                      </div>
                     ))
                 ) : (
-                  <EmptyState
-                    icon={Users}
-                    title="No clubs to display"
-                    description="Joined and owned clubs will appear here."
-                  />
+                  Array.from({
+                    length: 6,
+                  }).map((_, index) => (
+                    <div
+                      key={index}
+                      className="club-card empty-card"
+                    />
+                  ))
                 )}
+
               </div>
-            </section>
+
+              <Pagination />
+
+            </div>
           )}
 
+          {/* =================================================
+              ACTIVE COMP
+              ================================================= */}
+
           {activeTab === 'ACTIVE COMP' && (
-            <section className="profile-tab-content">
-              <div className="profile-content-header">
-                <div>
-                  <span className="profile-section-kicker">
-                    COMPETITION
-                  </span>
+            <div className="profile-tab-content">
 
-                  <h2>
-                    ACTIVE / UPCOMING MATCHES
-                  </h2>
-                </div>
+              <h2 className="content-heading">
+                ACTIVE / UPCOMING
+                <br />
+                MATCHES:
+              </h2>
 
-                <span className="profile-content-count">
-                  {activeCompetitions.length}{' '}
-                  EVENTS
-                </span>
-              </div>
+              <div className="competition-grid">
 
-              <div className="profile-competition-grid">
-                {activeCompetitions.length >
-                0 ? (
-                  activeCompetitions
-                    .slice(0, 6)
+                {(profile.activeCompetitions ||
+                  []).length > 0 ? (
+                  profile.activeCompetitions
+                    .slice(0, 2)
                     .map(
                       (
                         competition,
                         index
                       ) => (
-                        <article
+                        <div
                           key={
                             competition.id ||
                             index
                           }
-                          className="profile-competition-card"
+                          className="competition-card"
                         >
-                          <div className="profile-competition-status">
-                            {competition.status ||
-                              'UPCOMING'}
-                          </div>
+                          <strong>
+                            {
+                              competition.name
+                            }
+                          </strong>
 
-                          <div>
-                            <span>
-                              {competition.gameName ||
-                                competition.game ||
-                                'COMPETITION'}
-                            </span>
-
-                            <h3>
-                              {competition.name ||
-                                competition.title ||
-                                'SYNCO EVENT'}
-                            </h3>
-                          </div>
-
-                          <div className="profile-competition-meta">
-                            <span>
-                              <Gamepad2
-                                size={12}
-                              />
-                              {competition.format ||
-                                competition.mode ||
-                                'MATCH'}
-                            </span>
-
-                            <span>
-                              <Clock
-                                size={12}
-                              />
-                              {competition.startDate ||
-                                competition.time ||
-                                'TBA'}
-                            </span>
-                          </div>
-                        </article>
+                          <span>
+                            {
+                              competition.game
+                            }
+                          </span>
+                        </div>
                       )
                     )
                 ) : (
-                  <EmptyState
-                    icon={Trophy}
-                    title="No active competitions"
-                    description="Active and upcoming matches will appear here."
-                  />
+                  <>
+                    <div className="competition-card empty-card" />
+                    <div className="competition-card empty-card" />
+                  </>
                 )}
+
               </div>
-            </section>
+
+            </div>
           )}
 
-          {isOwner &&
-            resolvedAccountRole !==
-              'admin' && (
-              <section className="profile-organizer-card">
-                <div className="profile-organizer-icon">
-                  <Trophy size={18} />
-                </div>
-
-                <div className="profile-organizer-copy">
-                  <span className="profile-section-kicker">
-                    SYNCO ORGANIZER
-                  </span>
-
-                  <h3>
-                    {organizerApplication
-                      ? 'ORGANIZER APPLICATION'
-                      : 'BECOME AN ORGANIZER'}
-                  </h3>
-
-                  <p>
-                    {organizerApplication
-                      ? `Application ${
-                          organizerApplication.status ||
-                          'pending'
-                        }`
-                      : 'Run tournaments, create competitions, and build your esports community on SYNCO.'}
-                  </p>
-                </div>
-
-                <button
-                  type="button"
-                  onClick={() =>
-                    navigate(
-                      '/organizer/register'
-                    )
-                  }
-                >
-                  {isOrganizerStatusLoading ? (
-                    <span className="profile-spinner" />
-                  ) : (
-                    <ChevronDown
-                      size={16}
-                      className="-rotate-90"
-                    />
-                  )}
-                </button>
-              </section>
-            )}
-
-          <button
-            type="button"
-            className="profile-competitive-profile-button"
-            onClick={() =>
-              navigate(
-                '/competitive-profile'
-              )
-            }
-          >
-            View Competitive Profile
-            <ArrowUpRight size={16} />
-          </button>
         </main>
-      </div>
+
+      </section>
+
+      {/* =====================================================
+          ADD CLIP MODAL
+          ===================================================== */}
 
       {isAddClipModalOpen && (
         <div
-          className="clip-modal-overlay"
+          className="profile-modal-overlay"
           onClick={() => {
             setIsAddClipModalOpen(false);
             setIsClipGameMenuOpen(false);
           }}
         >
+
           <div
-            className="clip-modal-content"
-            onClick={(event) =>
-              event.stopPropagation()
+            className="profile-modal"
+            onClick={(e) =>
+              e.stopPropagation()
             }
           >
-            <div className="clip-modal-header">
-              <div>
-                <span className="profile-section-kicker">
-                  PROFILE MEDIA
-                </span>
 
-                <h3>
-                  UPLOAD MOMENT
-                </h3>
-              </div>
+            <div className="profile-modal-header">
+
+              <h3>
+                UPLOAD MOMENT
+              </h3>
 
               <button
                 type="button"
                 onClick={() => {
-                  setIsAddClipModalOpen(
-                    false
-                  );
-                  setIsClipGameMenuOpen(
-                    false
-                  );
+                  setIsAddClipModalOpen(false);
+                  setIsClipGameMenuOpen(false);
                 }}
               >
-                <X size={18} />
+                <X size={20} />
               </button>
+
             </div>
 
             <form
               onSubmit={
                 handleAddClipSubmit
               }
-              className="clip-modal-form"
             >
-              <div className="clip-field">
-                <label>
-                  Video Title
-                </label>
+
+              <label>
+                VIDEO TITLE
 
                 <input
                   type="text"
-                  placeholder="e.g. 1v5 Clutch on Bind"
                   value={newClip.title}
-                  onChange={(event) =>
+                  onChange={(e) =>
                     setNewClip({
                       ...newClip,
                       title:
-                        event.target.value,
+                        e.target.value,
                     })
                   }
+                  placeholder="e.g. 1v5 Clutch on Bind"
                   required
                 />
-              </div>
+              </label>
 
-              <div className="clip-field">
-                <label>
-                  Description
-                </label>
+              <label>
+                DESCRIPTION
 
                 <textarea
-                  placeholder="Share details about this play..."
                   value={
                     newClip.description
                   }
-                  onChange={(event) =>
+                  onChange={(e) =>
                     setNewClip({
                       ...newClip,
                       description:
-                        event.target
-                          .value,
+                        e.target.value,
                     })
                   }
+                  placeholder="Share details about this play..."
                 />
-              </div>
+              </label>
 
-              <div className="clip-field">
-                <label>
-                  Game
-                </label>
+              <div className="profile-modal-field">
 
-                <div className="clip-game-select">
+                <span>
+                  GAME
+                </span>
+
+                <div className="profile-game-selector">
+
                   <button
                     type="button"
                     onClick={() =>
@@ -2230,156 +1629,137 @@ const ProfileView = () => {
                   >
                     <span>
                       {newClip.game ||
-                        'Select a registered game'}
+                        'SELECT A REGISTERED GAME'}
                     </span>
 
                     <ChevronDown
-                      size={15}
+                      size={16}
                       className={
                         isClipGameMenuOpen
-                          ? 'rotate-180'
+                          ? 'rotate'
                           : ''
                       }
                     />
                   </button>
 
                   {isClipGameMenuOpen && (
-                    <div className="clip-game-menu">
-                      {gameCatalog.length >
-                      0 ? (
-                        gameCatalog.map(
-                          (game) => (
-                            <button
-                              type="button"
-                              key={
-                                game.id
-                              }
-                              onClick={() => {
-                                setNewClip({
-                                  ...newClip,
-                                  game:
-                                    game.name,
-                                  gameId:
-                                    game.id,
-                                });
+                    <div className="profile-game-menu">
 
-                                setIsClipGameMenuOpen(
-                                  false
-                                );
-                              }}
-                            >
-                              {
-                                game.name
-                              }
-                            </button>
-                          )
+                      {gameCatalog.map(
+                        (game) => (
+                          <button
+                            key={game.id}
+                            type="button"
+                            onClick={() => {
+                              setNewClip({
+                                ...newClip,
+                                game:
+                                  game.name,
+                                gameId:
+                                  game.id,
+                              });
+
+                              setIsClipGameMenuOpen(
+                                false
+                              );
+                            }}
+                          >
+                            {game.name}
+                          </button>
                         )
-                      ) : (
-                        <span>
-                          No registered
-                          games available.
-                        </span>
                       )}
+
                     </div>
                   )}
+
                 </div>
+
               </div>
 
-              <div className="clip-field">
-                <label>
-                  Video File
-                </label>
+              <label>
+                VIDEO FILE
 
                 <input
                   type="file"
                   accept="video/mp4,video/webm,video/quicktime"
-                  onChange={(event) =>
+                  onChange={(e) =>
                     setNewClip({
                       ...newClip,
                       file:
-                        event.target
-                          .files?.[0] ||
+                        e.target.files?.[0] ||
                         null,
                     })
                   }
                   required
                 />
-              </div>
+              </label>
 
-              <div className="clip-tag-grid">
-                <div className="clip-field">
-                  <label>
-                    Role
-                  </label>
+              <label>
+                ROLE
 
-                  <select
-                    value={
-                      newClip.roleTag
-                    }
-                    onChange={(event) =>
-                      setNewClip({
-                        ...newClip,
-                        roleTag:
-                          event.target
-                            .value,
-                      })
-                    }
-                  >
-                    <option value="">
-                      Select role
-                    </option>
+                <select
+                  value={
+                    newClip.roleTag
+                  }
+                  onChange={(e) =>
+                    setNewClip({
+                      ...newClip,
+                      roleTag:
+                        e.target.value,
+                    })
+                  }
+                >
+                  <option value="">
+                    SELECT ROLE
+                  </option>
 
-                    {ROLE_TAGS.map(
-                      (tag) => (
-                        <option
-                          key={tag}
-                          value={tag}
-                        >
-                          {tag}
-                        </option>
-                      )
-                    )}
-                  </select>
-                </div>
+                  {roleTags.map(
+                    (role) => (
+                      <option
+                        key={role}
+                        value={role}
+                      >
+                        {role}
+                      </option>
+                    )
+                  )}
+                </select>
+              </label>
 
-                <div className="clip-field">
-                  <label>
-                    Skill
-                  </label>
+              <label>
+                SKILL
 
-                  <select
-                    value={
-                      newClip.skillTag
-                    }
-                    onChange={(event) =>
-                      setNewClip({
-                        ...newClip,
-                        skillTag:
-                          event.target
-                            .value,
-                      })
-                    }
-                  >
-                    <option value="">
-                      Select skill
-                    </option>
+                <select
+                  value={
+                    newClip.skillTag
+                  }
+                  onChange={(e) =>
+                    setNewClip({
+                      ...newClip,
+                      skillTag:
+                        e.target.value,
+                    })
+                  }
+                >
+                  <option value="">
+                    SELECT SKILL
+                  </option>
 
-                    {SKILL_TAGS.map(
-                      (tag) => (
-                        <option
-                          key={tag}
-                          value={tag}
-                        >
-                          {tag}
-                        </option>
-                      )
-                    )}
-                  </select>
-                </div>
-              </div>
+                  {skillTags.map(
+                    (skill) => (
+                      <option
+                        key={skill}
+                        value={skill}
+                      >
+                        {skill}
+                      </option>
+                    )
+                  )}
+                </select>
+              </label>
 
               {clipUploadError && (
-                <div className="clip-upload-error">
+                <div className="profile-upload-error">
                   {clipUploadError}
                 </div>
               )}
@@ -2389,18 +1769,40 @@ const ProfileView = () => {
                 disabled={
                   isUploadingClip
                 }
-                className="clip-submit-button"
+                className="profile-modal-submit"
               >
                 {isUploadingClip
-                  ? 'Uploading...'
-                  : 'Deploy Moment'}
+                  ? 'UPLOADING...'
+                  : 'DEPLOY MOMENT'}
               </button>
+
             </form>
+
           </div>
+
         </div>
       )}
+
     </div>
   );
 };
+
+// =========================================================
+// PAGINATION
+// =========================================================
+
+const Pagination = () => (
+  <div className="profile-pagination">
+    <button type="button">
+      &lt;
+    </button>
+
+    <span>1</span>
+
+    <button type="button">
+      &gt;
+    </button>
+  </div>
+);
 
 export default ProfileView;
