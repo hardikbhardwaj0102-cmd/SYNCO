@@ -183,7 +183,7 @@
 /* =========================================================
    LEADERBOARDS FULL-VIEWPORT SHELL
    ========================================================= */
-
+.hybrid-auth-container-profileview
 .hybrid-auth-container-leaderboards {
 
   position: relative;
@@ -218,6 +218,8 @@
 */
 
 .hybrid-auth-container-leaderboards
+.hybrid-auth-container-profileview
+.profile-shell-background
 .leaderboards-shell-background {
 
   position: fixed;
@@ -253,7 +255,9 @@
 */
 
 .hybrid-auth-container-leaderboards
-.leaderboards-shell-background-image {
+.leaderboards-shell-background-image
+.hybrid-auth-container-profileview
+.profile-shell-background {
 
   display: block;
 
@@ -281,7 +285,7 @@
 /* =========================================================
    LEADERBOARDS VIGNETTE
    ========================================================= */
-
+.hybrid-auth-container-profileview::before
 .hybrid-auth-container-leaderboards::before {
 
   content: "";
@@ -307,7 +311,7 @@
 /* =========================================================
    LEADERBOARDS MAIN
    ========================================================= */
-
+.hybrid-auth-main-profileview
 .hybrid-auth-main-leaderboards {
 
   position: relative;
@@ -335,7 +339,7 @@
 /* =========================================================
    LEADERBOARDS CONTENT
    ========================================================= */
-
+.hybrid-auth-content-profileview
 .hybrid-auth-content-leaderboards {
 
   width: 100%;

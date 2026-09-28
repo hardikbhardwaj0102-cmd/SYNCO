@@ -7,6 +7,7 @@ import { useLocation } from 'react-router-dom';
 import { useEffect, useRef } from 'react';
 
 import rankBg from '../assets/rank-bg.png';
+import profileBg from '../assets/pixel-landscape-bg.png';
 
 import '../styles/components/HybridLayout.css';
 
@@ -54,6 +55,10 @@ const HybridLayout = () => {
     pathname === '/ranking' ||
     pathname.startsWith('/leaderboards/');
 
+  const isProfilePage =
+    pathname === '//profile/:username' ||
+    pathname.startsWith('//profile/:username/');
+
 
   if (isAuthenticated) {
 
@@ -70,6 +75,11 @@ const HybridLayout = () => {
           ${
             isLeaderboardsPage
               ? 'hybrid-auth-container-leaderboards'
+              : ''
+          }
+          ${
+            isProfilePage
+              ? 'hybrid-auth-container-profileview'
               : ''
           }
         `}
@@ -101,6 +111,24 @@ const HybridLayout = () => {
 
         )}
 
+        {isProfilePage && (
+
+          <div
+            className="profile-shell-background"
+            aria-hidden="true"
+          >
+
+            <img
+              src={profileBg}
+              alt=""
+              className="profile-shell-background-image"
+              draggable="false"
+            />
+
+          </div>
+
+        )}
+
 
         <Sidebar />
 
@@ -118,6 +146,11 @@ const HybridLayout = () => {
                 ? 'hybrid-auth-main-leaderboards'
                 : ''
             }
+             ${
+            isProfilePage
+              ? 'hybrid-auth-main-profileview'
+              : ''
+          }
           `}
         >
 
@@ -132,6 +165,11 @@ const HybridLayout = () => {
               ${
                 isLeaderboardsPage
                   ? 'hybrid-auth-content-leaderboards'
+                  : ''
+              }
+               ${
+                isProfilePage
+                  ? 'hybrid-auth-content-profileview'
                   : ''
               }
             `}
