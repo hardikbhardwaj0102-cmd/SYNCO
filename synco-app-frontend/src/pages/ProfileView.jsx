@@ -13,12 +13,13 @@ import {
   Clock,
   Trophy,
   Edit3,
-  Instagram,
-  Youtube,
-  Twitch,
   ShieldCheck,
   ChevronRight,
 } from 'lucide-react';
+
+
+import { AiFillInstagram, AiFillYoutube, AiFillTwitch } from 'react-icons/ai'; 
+
 
 import { useAuth } from '../context/AuthContext';
 import { useNavigate, useParams } from 'react-router-dom';
@@ -43,7 +44,6 @@ const SOCIAL_PROFILE_BASES = {
   youtube: 'https://youtube.com/',
   instagram: 'https://instagram.com/',
   twitch: 'https://twitch.tv/',
-  x: 'https://x.com/',
 };
 
 const TABS = [
@@ -723,7 +723,7 @@ const ProfileView = () => {
                     rel="noreferrer"
                     aria-label="Instagram"
                   >
-                    <Instagram size={24} />
+                    <AiFillInstagram size={24} />
                   </a>
                 )}
 
@@ -737,7 +737,7 @@ const ProfileView = () => {
                     rel="noreferrer"
                     aria-label="YouTube"
                   >
-                    <Youtube size={24} />
+                    <AiFillYoutube size={24} />
                   </a>
                 )}
 
@@ -751,21 +751,7 @@ const ProfileView = () => {
                     rel="noreferrer"
                     aria-label="Twitch"
                   >
-                    <Twitch size={24} />
-                  </a>
-                )}
-
-                {profile.socials?.x && (
-                  <a
-                    href={externalSocialUrl(
-                      profile.socials.x,
-                      'x'
-                    )}
-                    target="_blank"
-                    rel="noreferrer"
-                    aria-label="X"
-                  >
-                    X
+                    <AiFillTwitch size={24} />
                   </a>
                 )}
 
